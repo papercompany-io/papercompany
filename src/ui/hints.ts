@@ -1,6 +1,7 @@
 // 다음에 할 일 안내(주 타깃: 일반인·타이쿤 팬). 상태를 보고 가장 급한 한 줄을 고릅니다.
+import { paydayForecast } from '../core/forecast';
 import { hasMvp } from '../core/data';
-import { nextPaydayForecast, runwayMonths } from '../core/finance';
+import { runwayMonths } from '../core/finance';
 import { formatDate } from '../core/calendar';
 import { openRound, activeRound } from '../core/funding';
 import { runningInstruction } from '../core/instructions';
@@ -12,7 +13,7 @@ export function nextHint(s: GameState, desktopOpenedOnce: boolean): string {
   const rw = runwayMonths(s);
   const r = activeRound(s);
   if (r?.status === 'offer') return '투자 제안서가 와 있습니다. 투자 앱에서 수락하거나 거절하세요.';
-  const fc = nextPaydayForecast(s);
+  const fc = paydayForecast(s);
   if (fc.cashAfter <= 0) {
     return `⚠ 이대로면 다음 월급일(${formatDate(s.day + fc.daysLeft)})에 자금이 약 ${Math.round(fc.cashAfter / 1e4).toLocaleString('ko-KR')}만원이 되어 파산합니다. 투자 앱에서 라운드를 열거나 매출을 늘리세요.`;
   }
@@ -30,7 +31,7 @@ export function nextHint(s: GameState, desktopOpenedOnce: boolean): string {
   if (!hasMvp(s)) {
     if (devMembers > 0 && !runningInstruction(s, 'dev')) return '개발팀이 쉬고 있습니다. 메신저의 개발팀 채널에서 "제품 개발 스프린트"를 지시하세요.';
     if (s.ceoAlloc.dev === 0) return '아직 MVP가 없습니다. 일정 앱에서 대표 행동 칸을 개발에 배분하세요(제품 점수 100이면 MVP).';
-    return `MVP까지 제품 점수 ${Math.max(0, 100 - s.productPoints).toFixed(0)}점 남았습니다. 개발 지시와 대표 개발 시간으로 채우세요.`;
+    return `MVP까지 제품 점수 ${Math.max(0, 100 - Math.floor(s.productPoints))}점 남았습니다. 개발 지시와 대표 개발 시간으로 채우세요.`;
   }
   const salesIdle = s.employees.some((e) => e.dept === 'sales') && !runningInstruction(s, 'sales');
   if (salesIdle) return '세일즈팀이 쉬고 있습니다. 메신저 세일즈팀 채널에서 "신규 고객 영업"을 지시하세요("끝나면 반복"을 켜 두면 편합니다).';

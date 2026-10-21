@@ -16,7 +16,7 @@ export function EmployeesApp({ openDm }: { openDm: (id: string) => void }) {
   const [sort, setSort] = useState<SortKey>('dept');
   const [filter, setFilter] = useState<DeptId | 'all'>('all');
   const [sel, setSel] = useState<string | null>(null);
-  const [msg, setMsg] = useState<string | null>(null);
+  const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
   const pay = payrollWithBenefits(monthlySalary(s));
   const counts = headcountByDept(s);
   const list = s.employees
@@ -115,7 +115,7 @@ export function EmployeesApp({ openDm }: { openDm: (id: string) => void }) {
                 value={e.dept}
                 onChange={(ev) => {
                   const err = act((g) => moveDept(g, e.id, ev.target.value as DeptId));
-                  setMsg(err ?? `${e.name}님을 ${dept(ev.target.value as DeptId).name}팀으로 옮겼습니다. 좌석은 다음 날 옮깁니다.`);
+                  setMsg(err ? { text: err, ok: false } : { text: `${e.name}님을 ${dept(ev.target.value as DeptId).name}팀으로 옮겼습니다. 좌석은 다음 날 옮깁니다.`, ok: true });
                 }}
               >
                 {DEPT_IDS.map((d) => (
@@ -125,7 +125,7 @@ export function EmployeesApp({ openDm }: { openDm: (id: string) => void }) {
                 ))}
               </select>
             </label>
-            {msg && <div className="tiny warn">{msg}</div>}
+            {msg && <div className={`tiny ${msg.ok ? 'ok' : 'err'}`}>{msg.text}</div>}
             <button className="btn small ghost" onClick={() => openDm(e.id)}>
               메시지 보내기(DM)
             </button>

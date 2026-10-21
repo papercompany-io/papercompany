@@ -67,7 +67,7 @@ export function ScheduleApp() {
         <div className="stat">
           <div className="stat-label">제품 단계</div>
           <div className="stat-value" data-testid="product-stage">
-            {ps.name} <span className="tiny muted">({s.productPoints.toFixed(1)}점, MVP 100)</span>
+            {ps.name} <span className="tiny muted">({Math.floor(s.productPoints)}점, MVP 100)</span>
           </div>
         </div>
         <div className="stat">

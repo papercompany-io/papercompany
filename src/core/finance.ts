@@ -106,17 +106,19 @@ export function projectedMonthlyPayroll(s: GameState, extraSalary = 0): number {
 }
 
 // FN-01 다음 월급일(다음 달 1일) 정산 뒤 예상 자금. 이번 달 남은 날은 지금 상태가 그대로 간다고 봅니다.
-export function nextPaydayForecast(s: GameState) {
+// futureEntertainment: 남은 날 대표 행동 칸에서 나갈 접대비·업무추진비(forecast.ts가 일정으로 계산, P2-10).
+export function nextPaydayForecast(s: GameState, futureEntertainment = 0) {
   const dim = daysInMonthOf(s.day);
   const d = s.day;
   const left = dim - (dateDay(d) - 1);
   const a = s.accrual;
-  const daily = monthlySalary(s) + pendingSalary(s);
-  const salary = Math.round((a.salaryUnits + daily * left) / dim);
+  // 입사 대기자는 입사하는 날부터 셉니다(P2-04).
+  const pendingUnits = s.pendingHires.reduce((sum, h) => sum + h.salary * Math.max(0, left - Math.max(0, h.startDay - d)), 0);
+  const salary = Math.round((a.salaryUnits + monthlySalary(s) * left + pendingUnits) / dim);
   const pay = payrollWithBenefits(salary);
   const revenue = Math.round(((a.customerDays + Math.floor(s.customers) * left) * F.pricePerCustomer) / dim);
   const vat = Math.round(revenue * F.vatRate);
-  const ent = a.entertainment;
+  const ent = a.entertainment + futureEntertainment;
   const op = revenue - vat - (pay.total + ent + a.recruiting + a.ads);
   const tax = op > 0 ? Math.round(op * F.corpTaxRate) : 0;
   const cashAfter = s.cash + revenue - vat - pay.total - ent - tax;

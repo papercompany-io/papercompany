@@ -54,14 +54,18 @@ export function InvestApp({ initialStage }: { initialStage?: string }) {
   );
 }
 
+// FR-01 단계 사다리: 받은 단계는 채우고, 지금 단계는 진하게, 다음 단계는 점선으로(P2-02)
 function Ladder() {
   const s = useGame();
   const cur = stageIndex(s.fundingStage);
+  const funded = new Set(s.rounds.filter((r) => r.status === 'accepted').map((r) => r.stage));
   return (
     <div className="ladder" data-testid="ladder">
+      <div className="rung now">{s.fundingStage ? `지금 ${stage(s.fundingStage).name}` : '지금 투자 전'}</div>
       {DATA.funding.stages.slice(0, 7).map((st, i) => (
-        <div key={st.id} className={`rung ${i <= cur ? 'done' : ''} ${i === cur ? 'cur' : ''}`}>
+        <div key={st.id} className={`rung ${funded.has(st.id as StageId) ? 'done' : ''} ${i === cur ? 'cur' : ''} ${i === cur + 1 ? 'next' : ''}`}>
           {st.name}
+          {i === cur + 1 && <small> 다음</small>}
         </div>
       ))}
       <div className="rung more">…</div>

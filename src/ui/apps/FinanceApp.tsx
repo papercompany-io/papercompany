@@ -1,7 +1,8 @@
 // F10 재무 앱: FN-01 보유 자금·장부, FN-02 비용, FN-03 손익(DEC-030 순서), VL-01 기업가치
+import { paydayForecast } from '../../core/forecast';
 import { useState } from 'react';
 import { formatDate, formatMonth } from '../../core/calendar';
-import { currentPL, nextPaydayForecast, runwayMonths } from '../../core/finance';
+import { currentPL, runwayMonths } from '../../core/finance';
 import { won } from '../../core/format';
 import { computeValuation } from '../../core/valuation';
 import { useGame } from '../store';
@@ -13,7 +14,7 @@ export function FinanceApp() {
   const s = useGame();
   const [tab, setTab] = useState<'pl' | 'cash' | 'value'>('pl');
   const rw = runwayMonths(s);
-  const fc = nextPaydayForecast(s);
+  const fc = paydayForecast(s);
   return (
     <div className="col">
       <div className="stats">

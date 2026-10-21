@@ -36,11 +36,6 @@
 .hint.urgent { background: #fff1ef; color: var(--red-d); }
 .hint.urgent .hint-tag { background: var(--red); }
 
-.pause-banner {
-  position: absolute; top: 118px; left: calc((100% - 300px) / 2); transform: translateX(-50%); z-index: 41;
-  background: #fff7e8; border: 2px solid var(--amber); border-radius: 6px; padding: 7px 10px 7px 14px; display: flex; gap: 12px; align-items: center;
-  box-shadow: var(--shadow); font-size: 13px; white-space: nowrap;
-}
 
 /* 오른쪽 위 회사 카드(Startup Company의 제품 카드) */
 .company-card {
@@ -58,6 +53,7 @@
 .cc-label { font-size: 10px; font-weight: 800; color: var(--ink-3); }
 .cc-value { font-size: 13px; font-weight: 800; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
 .cc-value small { color: #a96a00; font-size: 11px; }
+.cc-value small.cc-sub { color: var(--ink-3); }
 .cc-forecast { display: flex; justify-content: space-between; gap: 8px; background: #eef7ff; border-radius: 5px; padding: 6px 8px; font-size: 11px; color: var(--ink-2); font-weight: 700; }
 .cc-forecast > div { display: flex; flex-direction: column; gap: 1px; }
 .cc-forecast .money { font-size: 15px; }

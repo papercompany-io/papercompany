@@ -42,6 +42,9 @@ tr.sel td { background: #e3efff; }
 .rung.done { background: #cfe3ff; color: var(--blue-d); }
 .rung.cur { background: var(--blue); color: #fff; }
 .rung.more { flex: 0.4; }
+.rung.now { flex: 1.1; background: var(--hud); color: #fff; }
+.rung.next { background: #fff; color: var(--blue-d); box-shadow: inset 0 0 0 2px var(--blue); }
+.rung small { font-weight: 700; }
 .inv-list { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .inv { display: flex; flex-direction: column; gap: 6px; }
 .inv.lead { border: 2px solid var(--blue); }

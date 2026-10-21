@@ -1,11 +1,12 @@
 // 게임 화면: DT-09 사무실 메인 화면 + HUD(DT-05 시계·배속) + CEO 클릭 시 데스크탑(DT-02) + 개발용 상태 패널
 // 배치는 Startup Company를 참고했습니다: 가운데 위 HUD, 오른쪽 위 회사 카드, 화면 전체에 아이소메트릭 사무실.
+import { paydayForecast } from '../core/forecast';
 import { useEffect, useRef, useState } from 'react';
 import { advance, isRunning, setSpeed } from '../core/sim';
 import { clockOf, dateOf, formatDate } from '../core/calendar';
 import { founderPct } from '../core/equity';
 import { DATA, hasMvp, productStage, stage } from '../core/data';
-import { currentPL, nextPaydayForecast, runwayMonths } from '../core/finance';
+import { currentPL, runwayMonths } from '../core/finance';
 import { computeValuation } from '../core/valuation';
 import { act, getGame, touch, useGame } from './store';
 import { Desktop, type AppId } from './Desktop';
@@ -108,19 +109,16 @@ export function Game({ notice, clearNotice, onEnded }: Props) {
         {desktop.open && <Desktop app={desktop.app} arg={desktop.arg} setApp={(app, arg) => setDesktop({ open: true, app, arg })} onClose={() => setDesktop({ open: false, app: null })} />}
 
         <Hud s={s} />
-        <div className={`hint ${s.pauseReason || nextPaydayForecast(s).cashAfter <= 0 ? 'urgent' : ''}`} data-testid="hint">
-          <span className="hint-tag">다음 할 일</span>
+        {/* 다음 할 일. 중요한 일로 시간이 멈췄으면 같은 자리에 이유와 계속 버튼을 둡니다(P2-03). */}
+        <div className={`hint ${s.pauseReason || paydayForecast(s).cashAfter <= 0 ? 'urgent' : ''}`} data-testid="hint">
+          <span className="hint-tag">{s.pauseReason && !s.ended ? '⏸ 일시정지' : '다음 할 일'}</span>
           <span>{nextHint(s, openedOnce)}</span>
-        </div>
-        {s.pauseReason && !s.ended && (
-          <div className="pause-banner" data-testid="pause-banner">
-            <b>⏸ {s.pauseReason}</b>
-            <span>중요한 결정이라 시간을 멈췄습니다.</span>
-            <button className="btn small green" onClick={() => act((g) => setSpeed(g, g.speed || 1))}>
+          {s.pauseReason && !s.ended && (
+            <button className="btn small green" data-testid="pause-resume" onClick={() => act((g) => setSpeed(g, g.speed || 1))}>
               ▶ 계속
             </button>
-          </div>
-        )}
+          )}
+        </div>
         <CompanyCard s={s} />
         {notice && (
           <div className="notice">
@@ -142,7 +140,7 @@ export function Game({ notice, clearNotice, onEnded }: Props) {
 function Hud({ s }: { s: GameState }) {
   const d = dateOf(s.day);
   const frac = Math.min(1, s.msInDay / DATA.time.dayMs);
-  const fc = nextPaydayForecast(s);
+  const fc = paydayForecast(s);
   const net = currentPL(s).netIncome;
   return (
     <header className="hud" data-testid="hud">
@@ -175,7 +173,7 @@ function Hud({ s }: { s: GameState }) {
           <ClockIcon /> {clockOf(s.msInDay)}
         </span>
         <span className="hud-item" title="고객 수">
-          <UserIcon /> {s.customers.toLocaleString('ko-KR')}
+          <UserIcon /> {Math.floor(s.customers).toLocaleString('ko-KR')}
         </span>
         <span className="hud-cash" title="회사 자금">
           <Money v={s.cash} testId="hud-cash" />
@@ -190,7 +188,7 @@ function Hud({ s }: { s: GameState }) {
 function CompanyCard({ s }: { s: GameState }) {
   const ps = productStage(s.productPoints);
   const rw = runwayMonths(s);
-  const fc = nextPaydayForecast(s);
+  const fc = paydayForecast(s);
   return (
     <aside className="company-card" data-testid="company-card">
       <div className="cc-head">
@@ -207,11 +205,13 @@ function CompanyCard({ s }: { s: GameState }) {
         <Tile label="내 지분" testId="hud-equity">
           {pct(founderPct(s))}
         </Tile>
-        <Tile label="제품">{hasMvp(s) ? ps.name : `${ps.name} ${Math.floor(s.productPoints)}점`}</Tile>
+        <Tile label="제품" wide>
+          {hasMvp(s) ? ps.name : `${ps.name} · ${Math.floor(s.productPoints)}점`}
+          {!hasMvp(s) && <small className="cc-sub"> / MVP 100점</small>}
+        </Tile>
         <Tile label="직원">
           {s.employees.length}명{s.pendingHires.length > 0 && <small> +{s.pendingHires.length}</small>}
         </Tile>
-        <Tile label="고객">{s.customers.toLocaleString('ko-KR')}</Tile>
       </div>
       <div className={`cc-forecast ${fc.cashAfter <= 0 ? 'bad' : ''}`}>
         <div>
