@@ -10,7 +10,9 @@
     "build": "tsc -p tsconfig.electron.json && tsc -p tsconfig.json --noEmit && vite build",
     "build:web": "vite build --mode web",
     "start": "electron .",
-    "package": "npm run build && electron-builder --linux dir"
+    "package": "npm run build && electron-builder --linux dir",
+    "package:win": "npm run build && electron-builder --win dir",
+    "package:mac": "npm run build && electron-builder --mac dmg"
   },
   "build": {
     "appId": "us.sigmoid.papercompany",
@@ -24,7 +26,8 @@
       "output": "release"
     },
     "win": {
-      "target": "nsis"
+      "target": "nsis",
+      "signAndEditExecutable": false
     },
     "mac": {
       "target": "dmg",
@@ -43,9 +46,11 @@
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.4",
     "electron": "^33.2.1",
+    "electron-builder": "^25.1.8",
     "playwright": "^1.56.1",
     "typescript": "^5.6.3",
     "vite": "^5.4.11",
     "vite-plugin-singlefile": "^2.0.3"
-  }
+  },
+  "author": "iamfiro"
 }
