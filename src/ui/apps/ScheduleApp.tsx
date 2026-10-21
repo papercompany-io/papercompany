@@ -1,14 +1,16 @@
 // F14 일정 앱: CA-01 하루 행동 칸 배분, CA-02 스펙 효율, CA-03 조직이 생긴 뒤 대표 행동(경영 모드)
 import { DATA } from '../../core/data';
 import { actionDef, allocTotal, approveMultiplier, approveNeed, daySchedule, efficiency, executiveBlock, modeActions, setAlloc, setCeoMode } from '../../core/ceo';
+import { acceptContract, contractsOpen, dropContract } from '../../core/contracts';
 import { openRound } from '../../core/funding';
 import { enterpriseThreshold } from '../../core/orders';
 import { fxTotals, hasMvp } from '../../core/product';
 import { act, useGame } from '../store';
+import { Money } from '../common';
 import type { ActionId } from '../../core/types';
 import './apps.css';
 
-const COLORS: Record<ActionId, string> = { dev: '#4f8df5', sales: '#f2a33a', ir: '#e5484d', network: '#3fbf7f', enterprise: '#b5651d', approve: '#6b5bd6' };
+const COLORS: Record<ActionId, string> = { dev: '#4f8df5', contract: '#2bb3a8', sales: '#f2a33a', ir: '#e5484d', network: '#3fbf7f', enterprise: '#b5651d', approve: '#6b5bd6' };
 
 export function ScheduleApp() {
   const s = useGame();
@@ -79,6 +81,7 @@ export function ScheduleApp() {
           );
         })}
       </div>
+      <ContractsCard />
       <div className="tiny muted">
         배분 {total}/{slots}칸{total < slots ? ` · ${slots - total}칸이 비어 있습니다.` : ''}
       </div>
@@ -106,6 +109,67 @@ export function ScheduleApp() {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// 외주 일감(A-79): 제품을 만드는 동안 남의 일을 해서 런웨이를 늘립니다.
+function ContractsCard() {
+  const s = useGame();
+  const c = s.contracts;
+  const a = c?.active ?? null;
+  if (!a && (!contractsOpen(s) || !c?.offers.length)) return null;
+  return (
+    <div className="card col" data-testid="contracts">
+      <div className="row">
+        <div className="section-title grow">외주 일감</div>
+        {!!c?.completed && <span className="chip">완료 {c.completed}건</span>}
+      </div>
+      <div className="tiny muted">대표 "외주" 칸이나 개발팀 "외주 작업" 지시로 작업량을 채우면 대금이 들어옵니다. 그만큼 제품 개발은 늦어집니다. 마감을 넘기면 대금이 깎이고, 많이 넘기면 취소됩니다.</div>
+      {a && a.deadline !== null && (
+        <div className="card col" style={{ borderTop: `4px solid ${COLORS.contract}` }}>
+          <div className="row">
+            <b className="grow">
+              {a.title} · {a.client}
+            </b>
+            <span className={`chip ${s.day > a.deadline ? 'red' : a.deadline - s.day <= 3 ? 'amber' : 'blue'}`}>{s.day > a.deadline ? `마감 ${s.day - a.deadline}일 지남` : `마감 ${a.deadline - s.day}일 남음`}</span>
+          </div>
+          <div className="bar">
+            <div style={{ width: `${Math.min(100, (a.done / a.work) * 100)}%`, background: COLORS.contract }} />
+          </div>
+          <div className="row tiny">
+            <span className="grow">
+              작업량 {a.done.toFixed(1)} / {a.work}
+            </span>
+            대금 <Money v={a.pay} />
+            <button className="btn small ghost" data-testid="contract-drop" onClick={() => act((g) => dropContract(g))}>
+              포기
+            </button>
+          </div>
+          {s.ceoAlloc.contract === 0 && <div className="tiny warn">대표 "외주" 칸이 0칸입니다. 개발팀이 맡지 않으면 진행되지 않습니다.</div>}
+        </div>
+      )}
+      {!!c?.offers.length && (
+        <div className="furn-grid">
+          {c.offers.map((o) => (
+            <div key={o.id} className="card furn">
+              <b>{o.title}</b>
+              <div className="tiny muted">
+                {o.client} · 작업량 {o.work} · 기간 {o.days}일
+              </div>
+              <div className="row">
+                <b className="grow">
+                  <Money v={o.pay} />
+                </b>
+                <button className="btn small" data-testid={`contract-take-${o.id}`} disabled={!!a} title={a ? '진행 중인 외주를 먼저 끝내세요.' : ''} onClick={() => act((g) => acceptContract(g, o.id))}>
+                  받기
+                </button>
+              </div>
+              <div className="tiny muted">{o.offeredUntil - s.day}일 뒤 마감되는 제안</div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

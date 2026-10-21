@@ -34,6 +34,8 @@ export function nextHint(s: GameState, desktopOpenedOnce: boolean): string {
   if (!hasMvp(s)) {
     if (s.product.roadmap.length === 0) return '제품 앱에서 핵심(core) 기능을 로드맵에 넣으세요. 핵심 기능을 모두 만들면 MVP가 출시됩니다.';
     if (s.ceoAlloc.dev === 0 && !s.employees.some((e) => e.dept === 'dev')) return '개발할 사람이 없습니다. 일정 앱에서 대표 "개발" 칸을 늘리거나 개발자를 뽑으세요.';
+    if (s.contracts?.active && s.ceoAlloc.contract === 0 && s.company.orders.dev !== 'dev_contract') return `받은 외주 "${s.contracts.active.title}"가 멈춰 있습니다. 일정 앱에서 대표 "외주" 칸을 넣으세요.`;
+    if (!s.contracts?.active && s.contracts?.offers.length && s.cash < 30000000) return '돈이 빠듯합니다. 일정 앱의 외주 일감을 받아 대표 "외주" 칸을 넣으면 MVP를 만드는 동안 대금으로 버틸 수 있습니다.';
     return 'MVP를 만드는 중입니다. 제품 앱에서 진행률을 확인하세요. 그동안 투자 유치(엔젤·SAFE)나 채용을 준비할 수 있습니다.';
   }
   const waiting = s.applicants.filter((a) => a.status === 'waiting').length;

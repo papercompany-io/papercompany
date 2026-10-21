@@ -4,7 +4,7 @@
 export type DeptId = 'dev' | 'design' | 'sales' | 'marketing' | 'hr' | 'cs' | 'infra' | 'finlegal' | 'ai';
 export type MarketId = 'kr' | 'jp' | 'sea' | 'us' | 'eu';
 export type IndustryId = 'saas' | 'consumer' | 'commerce' | 'fintech' | 'ai';
-export type ActionId = 'dev' | 'sales' | 'ir' | 'network' | 'enterprise' | 'approve';
+export type ActionId = 'dev' | 'contract' | 'sales' | 'ir' | 'network' | 'enterprise' | 'approve';
 export type Grade = 'S' | 'A' | 'B' | 'C';
 export type StageId = 'angel' | 'preseed' | 'seed' | 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G';
 export type PriceTier = 'low' | 'standard' | 'premium';
@@ -472,6 +472,7 @@ export interface GameState {
   networkPoints: number;
   ceoAlloc: Record<ActionId, number>;
   todayLog: Record<ActionId, number>;
+  contracts?: import('./contracts').ContractState; // 외주 일감(A-79)
   valuation: { stored: number; storedDay: number; penaltyUntil: number | null; revenueStage: boolean };
   fundingStage: StageId | null;
   lastRoundDay: number | null;

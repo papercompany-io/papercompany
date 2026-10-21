@@ -3,11 +3,12 @@ import { DATA, specEffects } from './data';
 import { openRound } from './funding';
 import { legacyFx } from './career';
 import { applyWork, hasMvp } from './product';
+import { hasActiveContract, workOnContract } from './contracts';
 import type { ActionId, GameState } from './types';
 
 const C = DATA.ceo;
 
-export const FOUNDER_ACTIONS: ActionId[] = ['dev', 'sales', 'ir', 'network'];
+export const FOUNDER_ACTIONS: ActionId[] = ['dev', 'contract', 'sales', 'ir', 'network'];
 export const EXEC_ACTIONS: ActionId[] = ['enterprise', 'approve', 'network', 'ir'];
 
 export function actionDef(id: ActionId) {
@@ -90,6 +91,11 @@ export function runSlot(s: GameState, index: number) {
   switch (a) {
     case 'dev':
       applyWork(s, per * eff, 'dev', true, s.company.workPolicy === 'crunch' ? 1.3 : 1);
+      break;
+    case 'contract':
+      // 외주가 없으면 그 칸은 제품 개발로 돌립니다.
+      if (hasActiveContract(s)) workOnContract(s, per * eff);
+      else applyWork(s, per * eff, 'dev', true, 1);
       break;
     case 'sales':
       if (!hasMvp(s)) return; // MVP 전에는 팔 제품이 없습니다(A-13).

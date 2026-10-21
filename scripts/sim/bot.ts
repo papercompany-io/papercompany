@@ -17,6 +17,7 @@ import { resolveDecision } from '../../src/core/events';
 import { startExit, acceptSale, declineSale, annualRevenue, exitBlocked } from '../../src/core/exit';
 import { sellShares, resign } from '../../src/core/public';
 import { setCeoMode, executiveBlock, setAlloc } from '../../src/core/ceo';
+import { acceptContract } from '../../src/core/contracts';
 import { createEsop } from '../../src/core/equity';
 import { emptyProfile, retire, endingFor, founderAge } from '../../src/core/career';
 import { acquire, acquireBlock } from '../../src/core/competitors';
@@ -181,15 +182,21 @@ function opsStep(s: GameState) {
   // 대표 모드
   if (s.company.ceoMode === 'founder' && !executiveBlock(s) && s.employees.length >= 25) setCeoMode(s, 'executive');
   else if (s.company.ceoMode === 'founder') {
+    // 외주(A-79): 돈이 빠듯하면 가장 짧은 일감을 받아 2칸을 씁니다.
+    const ct = s.contracts;
+    if (ct && !ct.active && ct.offers.length && s.cash < 25000000) acceptContract(s, [...ct.offers].sort((a, b) => a.work - b.work)[0].id);
+    const cslots = s.contracts?.active ? 2 : 0;
+    setAlloc(s, 'contract', 0);
     if (!hasMvp(s)) {
       setAlloc(s, 'sales', 0);
       setAlloc(s, 'ir', 1);
       setAlloc(s, 'network', 1);
-      setAlloc(s, 'dev', 6);
+      setAlloc(s, 'dev', 6 - cslots);
     } else {
       setAlloc(s, 'dev', 2);
-      setAlloc(s, 'sales', 4);
+      setAlloc(s, 'sales', 4 - cslots);
     }
+    setAlloc(s, 'contract', cslots);
   } else {
     const need = Math.ceil(s.employees.length / DATA.ceo.approvePerEmployees);
     setAlloc(s, 'enterprise', 0);
@@ -311,7 +318,7 @@ for (let r = 0; r < runs; r++) {
     const { ms, days } = playCompany(s, log);
     decisions += s.company.decisions;
     const res = s.result!;
-    log(`  끝: ${res.kind} ${formatDate(s.day)} (${(days / 365).toFixed(1)}년) 창업자 몫 ${(res.amount / 1e8).toFixed(1)}억 최대가치 ${(res.maxValuation / 1e8).toFixed(0)}억 최대고객 ${Math.round(res.peakUsers)} 최대직원 ${res.peakEmployees} 결정 ${s.company.decisions} 출시 ${s.product.shipped.length} 장애 ${s.stats.outages} 퇴사 ${s.stats.quits}`);
+    log(`  끝: ${res.kind} ${formatDate(s.day)} (${(days / 365).toFixed(1)}년) 창업자 몫 ${(res.amount / 1e8).toFixed(1)}억 최대가치 ${(res.maxValuation / 1e8).toFixed(0)}억 최대고객 ${Math.round(res.peakUsers)} 최대직원 ${res.peakEmployees} 결정 ${s.company.decisions} 출시 ${s.product.shipped.length} 장애 ${s.stats.outages} 퇴사 ${s.stats.quits} 외주 ${s.contracts?.completed ?? 0}`);
     log(`  마일스톤(일): ${Object.entries(ms).map(([a, b]) => `${a}=${b ?? '-'}`).join(' ')}`);
     void t0;
     if (oneCompany || founderAge(s) >= 63 || k >= 8) {

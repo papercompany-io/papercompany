@@ -7,6 +7,7 @@ import { competitorsMonth } from './competitors';
 import { economyDay } from './economy';
 import { applySeatMoves } from './employees';
 import { eventsDay } from './events';
+import { contractsDay } from './contracts';
 import { checkBankruptcy, checkBoard, exitDayEnd, inboundOfferMonth } from './exit';
 import { accrueDay, closeMonth } from './finance';
 import { paydayForecast } from './forecast';
@@ -78,7 +79,7 @@ export function endDay(s: GameState) {
   s.day += 1;
   s.msInDay = 0;
   s.slotsDone = 0;
-  s.todayLog = { dev: 0, sales: 0, ir: 0, network: 0, enterprise: 0, approve: 0 };
+  s.todayLog = { dev: 0, contract: 0, sales: 0, ir: 0, network: 0, enterprise: 0, approve: 0 };
   staffDay(s);
   hiringDayEnd(s);
   roundDayEnd(s);
@@ -88,6 +89,7 @@ export function endDay(s: GameState) {
   applySeatMoves(s);
   officeDay(s);
   eventsDay(s);
+  contractsDay(s);
   bankruptcyWarning(s);
   economyDay(s);
   publicDay(s);

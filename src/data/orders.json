@@ -4,6 +4,7 @@
     { "id": "dev_build", "dept": "dev", "name": "로드맵 기능 개발", "desc": "제품 로드맵 맨 앞 기능부터 만듭니다.", "stage": 0 },
     { "id": "dev_stabilize", "dept": "dev", "name": "안정화·버그 수정", "desc": "버그를 줄여 이탈과 장애를 막습니다.", "stage": 0 },
     { "id": "dev_debt", "dept": "dev", "name": "기술 부채 정리", "desc": "버그를 크게 줄이고, 이후 개발에서 버그가 덜 생기게 합니다.", "stage": 2 },
+    { "id": "dev_contract", "dept": "dev", "name": "외주 작업", "desc": "개발팀이 받은 외주 일감을 합니다(끝내면 대금). 일감이 없으면 로드맵을 합니다.", "stage": 0 },
     { "id": "design_build", "dept": "design", "name": "기능 디자인", "desc": "로드맵 기능의 디자인 작업을 합니다.", "stage": 0 },
     { "id": "design_polish", "dept": "design", "name": "UX 다듬기", "desc": "완성도(매력도 배율)를 높입니다.", "stage": 0 },
     { "id": "design_brand", "dept": "design", "name": "브랜드 디자인", "desc": "모든 시장 인지도를 천천히 올립니다.", "stage": 1 },

@@ -60,7 +60,12 @@ function parse(text: string | null): GameState | null {
   if (!text) return null;
   try {
     const s = JSON.parse(text) as GameState;
-    if (s && s.version === 2 && typeof s.day === 'number' && Array.isArray(s.capTable) && s.career) return s;
+    if (s && s.version === 2 && typeof s.day === 'number' && Array.isArray(s.capTable) && s.career) {
+      // 예전 저장 보정: 대표 행동 "외주"(A-79)
+      s.ceoAlloc.contract ??= 0;
+      s.todayLog.contract ??= 0;
+      return s;
+    }
   } catch {
     /* 손상 */
   }

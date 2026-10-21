@@ -9,6 +9,7 @@ import { applyWork, appeal, fixBugs, fxTotals, hasMvp } from './product';
 import { deptCoverage, launchedMarkets, totalUsers, type DayPush } from './market';
 import { nextId } from './ids';
 import { ceoSalesToday } from './ceo';
+import { workOnContract } from './contracts';
 import { allDeptOutputs } from './staff';
 import { pick, rand, randInt, randRange } from './rng';
 import type { DeptId, GameState } from './types';
@@ -72,6 +73,9 @@ export function ordersDay(s: GameState): DayPush & { outputs: Record<DeptId, num
     if (o === 'dev_build') {
       const used = applyWork(s, out.dev, 'dev', !hasDesigners, devBugMult(s), aiBoost);
       if (used < out.dev * 0.5 && s.product.roadmap.length === 0) fixBugs(s, (out.dev - used) * 0.5, 'stabilize');
+    } else if (o === 'dev_contract') {
+      const left = workOnContract(s, out.dev);
+      if (left > 0) applyWork(s, left, 'dev', !hasDesigners, devBugMult(s), aiBoost);
     } else if (o === 'dev_stabilize') fixBugs(s, out.dev, 'stabilize');
     else if (o === 'dev_debt') fixBugs(s, out.dev, 'debt');
   }
