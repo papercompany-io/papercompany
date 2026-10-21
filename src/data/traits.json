@@ -1,0 +1,21 @@
+{
+  "_note": "EM-03 직원 특성(SSOT 예: 꼼꼼함·속도형·AI 친화·AI 회의적·눈치 빠름·원칙주의) + [Claude 제안] 확장. 효과는 [예시값]. output=출력 배율 가산, bugs=버그 발생 배율 가산, ai=AI 배율 효과 배율 가산, sat=만족도 목표 가산, health=건강 목표 가산, quit=퇴사 확률 배율 가산, skill=숙련 성장 배율 가산, lead=팀장일 때 부서 출력 가산, team=같은 부서 동료 만족도 가산, aiSat=AI 적용률 1당 만족도 가산",
+  "traits": [
+    { "id": "meticulous", "name": "꼼꼼함", "desc": "버그를 덜 만들지만 조금 느립니다.", "fx": { "output": -0.05, "bugs": -0.35 } },
+    { "id": "fast", "name": "속도형", "desc": "빠르게 만들지만 버그가 늘어납니다.", "fx": { "output": 0.15, "bugs": 0.3 } },
+    { "id": "ai_friendly", "name": "AI 친화", "desc": "AI 도구 효과를 더 크게 끌어냅니다.", "fx": { "ai": 0.5, "aiSat": 6 } },
+    { "id": "ai_skeptic", "name": "AI 회의적", "desc": "AI 도구 효과가 작고, 적용률이 높으면 불만이 생깁니다.", "fx": { "ai": -0.6, "aiSat": -14 } },
+    { "id": "perceptive", "name": "눈치 빠름", "desc": "분위기를 잘 읽어 갈등을 줄입니다.", "fx": { "team": 2, "sat": 2 } },
+    { "id": "principled", "name": "원칙주의", "desc": "규정을 지켜 사고를 막지만 야근을 싫어합니다.", "fx": { "bugs": -0.15, "crunchSat": -10 } },
+    { "id": "leader", "name": "리더십", "desc": "팀장이 되면 부서 전체가 더 잘 움직입니다.", "fx": { "lead": 0.12 } },
+    { "id": "mentor", "name": "멘토", "desc": "같은 부서 동료의 숙련이 빨리 오릅니다.", "fx": { "mentor": 0.5, "team": 1 } },
+    { "id": "creative", "name": "창의적", "desc": "디자인·마케팅에서 특히 뛰어납니다.", "fx": { "creative": 0.2 } },
+    { "id": "workaholic", "name": "워커홀릭", "desc": "많이 일하지만 건강이 빨리 닳습니다.", "fx": { "output": 0.12, "health": -12 } },
+    { "id": "steady", "name": "꾸준함", "desc": "잘 지치지 않고 쉽게 떠나지 않습니다.", "fx": { "health": 8, "quit": -0.3 } },
+    { "id": "social", "name": "사교적", "desc": "영업·네트워크에서 강하고 분위기를 띄웁니다.", "fx": { "social": 0.2, "team": 1 } },
+    { "id": "ambitious", "name": "야심가", "desc": "빨리 성장하지만 승진·보상이 없으면 떠납니다.", "fx": { "skill": 0.5, "quit": 0.4 } },
+    { "id": "loyal", "name": "충성", "desc": "회사가 어려워도 잘 떠나지 않습니다.", "fx": { "quit": -0.5, "sat": 3 } },
+    { "id": "perfectionist", "name": "완벽주의", "desc": "결과물 완성도가 높지만 느립니다.", "fx": { "output": -0.1, "bugs": -0.25, "polish": 0.15 } },
+    { "id": "hothead", "name": "다혈질", "desc": "능력은 있지만 동료와 자주 부딪힙니다.", "fx": { "output": 0.06, "team": -3 } }
+  ]
+}
