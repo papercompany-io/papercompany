@@ -33,7 +33,12 @@ export function getRound(s: GameState, id: string): Round | undefined {
 export function selectableStages(s: GameState): StageId[] {
   const cur = stageIndex(s.fundingStage);
   const lo = Math.max(0, cur);
-  const hi = Math.max(cur + 1, stageIndex('seed'));
+  let hi = Math.max(cur + 1, stageIndex('seed'));
+  // 건너뛰기(A-76): 매출(또는 사용자 규모) 기준을 80% 넘게 채운 단계까지는 바로 열 수 있습니다.
+  FD.stages.forEach((st, i) => {
+    const need = (st as { needRevenue?: number }).needRevenue;
+    if (i > hi && need && tractionRatio(s, need) >= 0.8) hi = i;
+  });
   return FD.stages.filter((_, i) => i >= lo && i <= hi).map((x) => x.id as StageId);
 }
 
