@@ -28,6 +28,8 @@ const runs = Number(process.argv[2] ?? 3);
 const seed0 = Number(process.argv[3] ?? 1);
 const verbose = process.argv.includes('-v');
 const oneCompany = process.argv.includes('--one');
+// STRAT=novice: 보통 플레이어 흉내 — 5일마다 들여다보고, 런웨이를 덜 따지고 뽑고, 광고는 LTV·CAC 대신 고정 예산, 버그는 늦게 잡고, 결정은 절반만 직접 고름
+const NOVICE = process.env.STRAT === 'novice';
 
 const CAT_PRI: Record<string, number> = { core: 0, growth: 2, monetize: 2, retention: 3, infra: 4, enterprise: 3, global: 5, ai: 4, platform: 6 };
 
@@ -79,7 +81,7 @@ function hireStep(s: GameState) {
     for (const a of apps.slice(0, Math.max(0, n - have))) {
       if (a.grade === 'C' && s.company.stage >= 2) continue;
       // 신중한 채용: 이 사람까지 더해도 런웨이 12개월 이상
-      if (s.cash / (burn + a.desiredSalary * 1.2) < 12) return;
+      if (s.cash / (burn + a.desiredSalary * 1.2) < (NOVICE ? 5 : 12)) return;
       if (offerJob(s, a.id, false).ok) burn += a.desiredSalary * 1.2;
     }
   }
@@ -125,8 +127,8 @@ function fundStep(s: GameState) {
 
 function opsStep(s: GameState) {
   // 지시
-  if (s.product.bugs > 35) setOrder(s, 'dev', 'dev_stabilize');
-  else if (s.product.bugs < 15) setOrder(s, 'dev', 'dev_build');
+  if (s.product.bugs > (NOVICE ? 60 : 35)) setOrder(s, 'dev', 'dev_stabilize');
+  else if (s.product.bugs < (NOVICE ? 25 : 15)) setOrder(s, 'dev', 'dev_build');
   if (s.company.stage >= 2 && fxTotals(s).enterprise && s.day % 60 < 30) setOrder(s, 'sales', 'sales_enterprise');
   else if (s.company.stage >= 1) setOrder(s, 'sales', 'sales_direct');
   if (s.company.stage >= 1) setOrder(s, 'marketing', s.markets.kr.adBudget > 0 ? 'mkt_perf' : 'mkt_content');
@@ -143,7 +145,7 @@ function opsStep(s: GameState) {
       const ind = DATA.industries.industries.find((x) => x.id === s.company.industry)!;
       const ltv = revenuePerUser(s, m).total / ind.churnM;
       const good = ltv > ind.cac * 1.5;
-      const b = rw !== null && rw < 6 ? 0 : good ? Math.min(s.cash / 18, Math.max(3e6, rev * 0.5)) : Math.min(rev * 0.08, s.cash / 30);
+      const b = NOVICE ? (rw !== null && rw < 3 ? 0 : Math.min(1e7, s.cash / 20)) : rw !== null && rw < 6 ? 0 : good ? Math.min(s.cash / 18, Math.max(3e6, rev * 0.5)) : Math.min(rev * 0.08, s.cash / 30);
       setAdBudget(s, m, m === 'kr' ? b : b * 0.5);
     }
   }
@@ -161,7 +163,7 @@ function opsStep(s: GameState) {
   for (const [n, id] of wf) if (s.employees.length >= n && !s.company.welfare.includes(id) && (runwayMonths(s) ?? 99) > 8) s.company.welfare.push(id);
   // AI
   const latest = latestModels(s).find((m) => m.vendor === 'neural');
-  if (latest && s.company.stage >= 1 && s.ai.modelId !== latest.id) {
+  if (!NOVICE && latest && s.company.stage >= 1 && s.ai.modelId !== latest.id) {
     chooseModel(s, latest.id);
     for (const d of ['dev', 'cs', 'design', 'marketing'] as DeptId[]) setAdoption(s, d, 0.5);
   }
@@ -193,7 +195,7 @@ function opsStep(s: GameState) {
     setAlloc(s, 'enterprise', Math.max(0, 8 - Math.min(6, need + 1) - 2));
   }
   // ESOP
-  if (s.company.stage >= 2 && !s.flags.includes('esop') && s.fundingStage && stageIndex(s.fundingStage) >= stageIndex('A')) createEsop(s, 0.08);
+  if (!NOVICE && s.company.stage >= 2 && !s.flags.includes('esop') && s.fundingStage && stageIndex(s.fundingStage) >= stageIndex('A')) createEsop(s, 0.08);
   // M&A
   if (s.company.stage >= 4) for (const c of s.competitors) if (c.alive && !acquireBlock(s, c) && s.cash > 5e10) acquire(s, c.id);
 }
@@ -203,6 +205,7 @@ function decide(s: GameState) {
     if (d.resolved) continue;
     const opts = d.choices.map((c, i) => ({ c, i })).filter((x) => x.c.enabled);
     if (!opts.length) continue;
+    if (NOVICE && (d.id.charCodeAt(d.id.length - 1) % 2 === 0) && s.day < d.deadline) continue; // 절반은 기한까지 두어 기본 선택
     // 돈이 넉넉하면 비싼 선택(보통 좋은 결과)도, 아니면 싼 것
     const rich = s.cash > 5e8;
     opts.sort((a, b) => (rich ? 0 : a.c.cost - b.c.cost));
@@ -243,9 +246,10 @@ function playCompany(s: GameState, log: (m: string) => void) {
   let guard = 0;
   while (!s.ended && guard++ < 365 * 40) {
     s.pauseReason = null;
-    planRoadmap(s);
-    if (s.day % 2 === 0) hireStep(s);
-    fundStep(s);
+    const look = !NOVICE || s.day % 5 === 0;
+    if (look) planRoadmap(s);
+    if (look && s.day % 2 === 0) hireStep(s);
+    if (look) fundStep(s);
     if (s.day % 7 === 0) opsStep(s);
     decide(s);
     exitStep(s, log);

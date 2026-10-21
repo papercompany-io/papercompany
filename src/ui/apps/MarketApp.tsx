@@ -10,7 +10,7 @@ import { wonShort } from '../../core/format';
 import { act, useGame } from '../store';
 import { Money, Tabs } from '../common';
 import { play } from '../sound';
-import type { DeptId, MarketId } from '../../core/types';
+import type { DeptId, MarketId, MarketState } from '../../core/types';
 import './apps.css';
 
 const SHARE_COLORS = ['#e5484d', '#f0a020', '#8b63e8', '#11a3a6', '#7a8597', '#c46be0', '#b5651d', '#5c6bc0'];
@@ -130,6 +130,7 @@ export function MarketApp() {
               ))}
               <span className="muted">나머지: 현지 기업·대체재·아직 고르지 않은 고객</span>
             </div>
+            {ms.launched && ms.flow && <GrowthPanel flow={ms.flow} users={ms.users} unit={ind.unit} />}
             {ms.launched && (
               <>
                 <div className="row">
@@ -327,3 +328,34 @@ export function MarketApp() {
     );
   }
 }
+
+// 성장 분석: 왜 고객이 늘거나 안 느는지(점유율 상한 vs 획득 속도 vs 이탈)
+function GrowthPanel({ flow, users, unit }: { flow: NonNullable<MarketState['flow']>; users: number; unit: string }) {
+  const gain = flow.inbound + flow.viral + flow.sales + flow.paid;
+  const net = gain - flow.lost;
+  const capped = users >= flow.target * 0.9;
+  const m = (v: number) => (v * 30 >= 100 ? Math.round(v * 30).toLocaleString('ko-KR') : (v * 30).toFixed(1));
+  const why = capped
+    ? `점유율 상한에 거의 닿았습니다(지금 ${Math.round(users).toLocaleString('ko-KR')} / 상한 ${Math.round(flow.target).toLocaleString('ko-KR')}${unit}). 더 크려면 인지도(광고·콘텐츠 마케팅·영업)나 매력도(제품 기능·품질)를 올려 점유율을 키워야 합니다.`
+    : net <= 0
+      ? '들어오는 고객보다 떠나는 고객이 많습니다. 버그(품질)·가격·고객지원 부족·경기가 이탈을 키웁니다.'
+      : `상한까지 여유가 있습니다(상한 ${Math.round(flow.target).toLocaleString('ko-KR')}${unit}). 영업·광고·입소문으로 획득 속도를 올리면 더 빨리 큽니다.`;
+  return (
+    <div className="growth" data-testid="growth-panel">
+      <div className="row tiny">
+        <b>성장 분석(최근 2주 평균, 한 달 환산)</b>
+        <span className="grow" />
+        <span className={net >= 0 ? 'good' : 'bad'}>순증 {net >= 0 ? '+' : ''}{m(net)}{unit}/월</span>
+      </div>
+      <div className="row tiny" style={{ flexWrap: 'wrap', gap: 10 }}>
+        <span>스스로 찾아옴 +{m(flow.inbound)}</span>
+        <span>입소문 +{m(flow.viral)}</span>
+        <span>영업 +{m(flow.sales)}</span>
+        <span>광고 +{m(flow.paid)}</span>
+        <span className="bad">이탈 −{m(flow.lost)}</span>
+      </div>
+      <div className="tiny muted">{why}</div>
+    </div>
+  );
+}
+

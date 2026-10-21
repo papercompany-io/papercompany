@@ -386,7 +386,10 @@ export function applyFx(s: GameState, fx: Record<string, unknown>, ctx: Ctx) {
     }
     if (fx.leaveTarget && s.employees.includes(t)) removeEmployee(s, t, 'event');
   }
-  if (num('awareness')) for (const m of Object.values(s.markets)) if (m.launched) m.awareness = Math.max(0, Math.min(1, m.awareness + num('awareness')));
+  // 인지도: 오르는 효과는 절대값, 깎이는 효과는 지금 인지도의 비율(−0.04 → 20% 감소, A-71). 작은 회사의 인지도가 통째로 사라지지 않게
+  if (num('awareness'))
+    for (const m of Object.values(s.markets))
+      if (m.launched) m.awareness = num('awareness') > 0 ? Math.min(1, m.awareness + num('awareness')) : m.awareness * (1 - Math.min(0.5, -num('awareness') * 5));
   if (num('users')) for (const m of Object.values(s.markets)) m.users = Math.max(0, m.users * (1 + num('users')));
   if (num('bugs')) s.product.bugs = Math.max(0, Math.min(100, s.product.bugs + num('bugs')));
   if (num('appeal')) s.product.appealBonus += num('appeal');

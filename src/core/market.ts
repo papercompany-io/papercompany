@@ -131,6 +131,7 @@ export function marketDay(s: GameState, push: DayPush) {
     const sh = shares(s, m).player;
     ms.peakShare = Math.max(ms.peakShare, sh);
     const target = D * sh;
+    const day = { inbound: 0, viral: 0, sales: 0, paid: 0, lost: 0 };
     // 획득(A-48): 스스로 찾아오는 고객 + 입소문 + 세일즈 계약 + 광고로 산 고객(CAC). 목표(점유율 × 수요)까지만.
     if (target > ms.users) {
       const gap = target - ms.users;
@@ -143,7 +144,11 @@ export function marketDay(s: GameState, push: DayPush) {
       // 광고로 사는 고객은 하루 수요의 0.1%에서 포화(돈을 더 써도 덜 늘어남)
       const cap = D * 0.001;
       const paid = daily > 0 && s.cash > daily ? cap * (1 - Math.exp(-daily / cac / Math.max(1, cap))) : 0;
-      ms.users += Math.min(gap * 0.05, (inbound + viral + sales + paid) * acqM);
+      const raw = (inbound + viral + sales + paid) * acqM;
+      const got = Math.min(gap * 0.05, raw);
+      const k = raw > 0 ? got / raw : 0;
+      Object.assign(day, { inbound: inbound * acqM * k, viral: viral * acqM * k, sales: sales * acqM * k, paid: paid * acqM * k });
+      ms.users += got;
     }
     // 이탈
     const bugF = 1 + s.product.bugs / 45;
@@ -151,6 +156,18 @@ export function marketDay(s: GameState, push: DayPush) {
     let lost = ms.users * (churnM / 30);
     if (ms.users > target) lost += (ms.users - target) * 0.012;
     ms.users = Math.max(0, ms.users - lost);
+    day.lost = lost;
+    // 성장 분석용 이동 평균(약 2주)
+    const f = ms.flow ?? { target, ...day };
+    const a = 1 / 14;
+    ms.flow = {
+      target,
+      inbound: f.inbound + (day.inbound - f.inbound) * a,
+      viral: f.viral + (day.viral - f.viral) * a,
+      sales: f.sales + (day.sales - f.sales) * a,
+      paid: f.paid + (day.paid - f.paid) * a,
+      lost: f.lost + (day.lost - f.lost) * a,
+    };
     // 매출 누적(일할)
     const rpu = revenuePerUser(s, m, fx);
     s.accrual.revSub += (ms.users * rpu.sub) / 30;

@@ -97,3 +97,6 @@ table.pl td.b { font-weight: 800; }
 .order.on { border-color: var(--green); background: #effaf1; }
 .unread { float: right; background: var(--red); color: #fff; border-radius: 8px; font-size: 10px; font-weight: 900; padding: 0 5px; }
 .msg-decision { margin-top: 6px; background: var(--panel-2); border-radius: 8px; padding: 8px; max-width: 680px; }
+.growth { display: flex; flex-direction: column; gap: 4px; background: var(--panel-2); border-radius: 6px; padding: 8px 10px; }
+.growth .good { color: var(--green); font-weight: 800; }
+.growth .bad { color: var(--red); font-weight: 700; }

@@ -41,6 +41,11 @@ export function nextHint(s: GameState, desktopOpenedOnce: boolean): string {
   if (s.product.roadmap.length === 0) return '로드맵이 비었습니다. 제품 앱에서 다음 기능을 넣으세요. 경쟁사는 계속 따라옵니다.';
   if (totalUsers(s) < 1) return 'MVP가 나왔습니다! 시장 앱에서 광고 예산을 정하거나, 일정 앱에서 대표 "영업" 칸을 늘려 첫 고객을 모으세요.';
   if (s.product.bugs > 40) return `버그가 많습니다(품질 ${Math.round(100 - s.product.bugs)}점). 개발팀에 "안정화·버그 수정"을 맡기세요. 버그는 이탈과 장애를 부릅니다.`;
+  const kr = s.markets.kr;
+  if (kr.flow && kr.users >= kr.flow.target * 0.9 && kr.awareness < 0.1 && s.plHistory.length >= 2) {
+    const hasMkt = s.employees.some((e) => e.dept === 'marketing');
+    return `고객이 점유율 상한(약 ${Math.round(kr.flow.target).toLocaleString('ko-KR')})에 막혀 있습니다. 인지도 ${(kr.awareness * 100).toFixed(1)}% — ${hasMkt ? '광고 예산을 늘리거나 디자인팀에 "브랜드 디자인"을 맡기세요' : '마케터를 뽑아 "콘텐츠·PR"을 맡기거나 광고 예산을 쓰세요'}. 시장 앱 "성장 분석"에서 원인을 볼 수 있습니다.`;
+  }
   if (isFull(s) && s.company.officeTier < 5) return '좌석이 꽉 찼습니다. 부동산 앱에서 더 큰 사무실로 옮기면 좌석과 새 부서 구역이 생깁니다.';
   for (const d of DATA.depts.departments.map((x) => x.id as DeptId)) {
     const li = leadInfo(s, d);

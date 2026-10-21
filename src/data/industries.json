@@ -39,7 +39,7 @@
       ],
       "adCost": 60000,
       "cac": 6000000,
-      "salesPer": 0.12,
+      "salesPer": 0.18,
       "userValue": 10000000
     },
     {
@@ -202,7 +202,7 @@
       ],
       "adCost": 80000,
       "cac": 9000000,
-      "salesPer": 0.08,
+      "salesPer": 0.12,
       "userValue": 15000000
     }
   ],

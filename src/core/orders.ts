@@ -83,7 +83,7 @@ export function ordersDay(s: GameState): DayPush & { outputs: Record<DeptId, num
       const used = applyWork(s, out.design, 'design', false, 1, aiBoost);
       if (used < out.design) s.product.polish = Math.min(0.4, s.product.polish + (out.design - used) * 0.0004 * (1 - s.product.polish / 0.4));
     } else if (o === 'design_polish') s.product.polish = Math.min(0.4, s.product.polish + out.design * 0.0008 * (1 - s.product.polish / 0.4));
-    else if (o === 'design_brand') push.contentAwareness += 0.00012 * Math.pow(out.design, 0.8);
+    else if (o === 'design_brand') push.contentAwareness += 0.00016 * Math.pow(out.design, 0.8);
   }
   // 세일즈
   if (out.sales > 0) {
@@ -93,12 +93,12 @@ export function ordersDay(s: GameState): DayPush & { outputs: Record<DeptId, num
     else if (o === 'sales_partner') s.networkPoints += out.sales * 0.3;
   }
   // 영업 콜·미팅도 회사를 알립니다(아웃바운드 인지도, A-59). 세일즈만으로 점유율 상한에 막히지 않게 합니다.
-  if (push.salesPush > 0) push.contentAwareness += 0.00008 * Math.pow(push.salesPush, 0.8);
+  if (push.salesPush > 0) push.contentAwareness += 0.0001 * Math.pow(push.salesPush, 0.8);
   // 마케팅
   if (out.marketing > 0) {
     const o = orderOf(s, 'marketing');
     if (o === 'mkt_perf') push.mktOutput = out.marketing;
-    else if (o === 'mkt_content') push.contentAwareness += 0.00025 * Math.pow(out.marketing, 0.8);
+    else if (o === 'mkt_content') push.contentAwareness += 0.0003 * Math.pow(out.marketing, 0.8);
     else if (o === 'mkt_retention') push.retention = out.marketing;
   }
   // 인사: 조직 문화
