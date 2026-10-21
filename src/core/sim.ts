@@ -9,6 +9,8 @@ import { applySeatMoves } from './employees';
 import { eventsDay } from './events';
 import { checkBankruptcy, checkBoard, exitDayEnd, inboundOfferMonth } from './exit';
 import { accrueDay, closeMonth } from './finance';
+import { paydayForecast } from './forecast';
+import { monthKey } from './calendar';
 import { founderAge, finishCompany } from './career';
 import { founderPct } from './equity';
 import { roundDayEnd } from './funding';
@@ -86,6 +88,7 @@ export function endDay(s: GameState) {
   applySeatMoves(s);
   officeDay(s);
   eventsDay(s);
+  bankruptcyWarning(s);
   economyDay(s);
   publicDay(s);
   updateStage(s);
@@ -125,3 +128,17 @@ function retirementCheck(s: GameState) {
     finishCompany(s, 'retired_ceo', Math.round(v * founderPct(s) * 0.7), { exitValue: v, founderPct: founderPct(s), reason: '은퇴 나이가 되어 지분을 넘기고 물러났습니다(기업가치의 70%로 정산).' });
   }
 }
+
+// FL-01 파산 경고(A-69): 이대로면 다음 월급일에 자금이 0 이하가 될 때, 월급일 10일 전과 3일 전에 한 번씩 멈추고 알립니다.
+function bankruptcyWarning(s: GameState) {
+  if (s.public) return;
+  const fc = paydayForecast(s);
+  if (fc.cashAfter > 0 || (fc.daysLeft !== 10 && fc.daysLeft !== 3)) return;
+  const key = `bkwarn-${monthKey(s.day)}-${fc.daysLeft}`;
+  if (s.flags.includes(key)) return;
+  s.flags = s.flags.filter((f) => !f.startsWith('bkwarn-')).concat(key);
+  const gap = Math.round(-fc.cashAfter / 1e4).toLocaleString('ko-KR');
+  notify(s, `⚠ 파산 경고: 이대로면 ${fc.daysLeft}일 뒤 월급일에 자금이 약 ${gap}만원 모자랍니다. 투자를 받거나(투자 앱) 광고비·인원을 줄이세요.`, 'urgent', 'finance');
+  s.pauseReason = `파산 경고 — ${fc.daysLeft}일 뒤 월급일에 약 ${gap}만원 부족`;
+}
+

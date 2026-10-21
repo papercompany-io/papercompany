@@ -103,7 +103,7 @@ export function runSlot(s: GameState, index: number) {
       s.accrual.entertainment += C.networkEntertainment;
       break;
     case 'enterprise':
-      s.entPipeline += per * eff * (1 + s.networkPoints / 400);
+      s.entPipeline += per * eff * (1 + Math.min(1, s.networkPoints / 400));
       s.accrual.entertainment += C.enterpriseEntertainment;
       break;
     case 'approve':

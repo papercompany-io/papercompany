@@ -293,9 +293,9 @@ function AutoHire() {
                       −
                     </button>
                     <b className="num" data-testid={`auto-${d}`}>
-                      {t || '-'}
+                      {t || '꺼짐'}
                     </b>
-                    <button className="btn small ghost" onClick={() => setMsg(act((g) => setAutoHire(g, d, Math.max(t, have) + 1)) ?? null)}>
+                    <button className="btn small ghost" data-testid={`auto-plus-${d}`} onClick={() => setMsg(act((g) => setAutoHire(g, d, Math.max(t, have) + 1)) ?? null)}>
                       +
                     </button>
                   </div>

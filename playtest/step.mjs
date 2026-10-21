@@ -33,6 +33,7 @@ while (Date.now() - t0 < secs * 1000) {
     console.log(`일시정지 day ${st.day}: ${st.pause}`);
     if (st.exit === 'offer') break; // 인수 제안은 사람이 판단
     if (st.pause.includes('제안서')) break; // 투자 제안서는 사람이 판단
+    if (st.pause.includes('파산')) break; // 파산 경고도 사람이 판단
     await send({ action: 'click', target: 't:pause-resume', label: 'resume' }).catch(() => {});
     await send({ action: 'key', key: speedKey, label: 'speed', noshot: true });
   }

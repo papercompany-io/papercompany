@@ -115,7 +115,7 @@ export function hrBoost(s: GameState): number {
 export function arrivalRate(s: GameState, p: Posting): number {
   const level = H.salaryLevels.find((l) => l.id === p.salaryLevel) ?? H.salaryLevels[1];
   const promo = H.promos.find((x) => x.id === p.promo) ?? H.promos[0];
-  const net = 1 + (s.networkPoints / 100) * H.networkArrivalBonusPer100;
+  const net = 1 + Math.min(0.6, (s.networkPoints / 100) * H.networkArrivalBonusPer100); // 인맥 효과는 +60%까지(A-68)
   const brand = 1 + Math.min(1.5, s.company.peakUsers > 0 ? Math.log10(1 + s.company.peakUsers) / 6 : 0) + Math.min(0.5, s.career.rep / 100);
   return H.baseArrivalPerDay * level.arrivalMult * promo.arrivalMult * stageMult(s) * net * brand * (1 + welfareApply(s)) * econ(s, 'apply') * hrBoost(s);
 }
@@ -130,7 +130,10 @@ export function hiringDayEnd(s: GameState) {
       p.status = 'closed';
       continue;
     }
-    const n = poisson(s, arrivalRate(s, p));
+    // 한 공고에 기다리는 지원자는 모집 인원 × 6 + 4명까지(A-68): 고를 만큼은 오되 목록이 수백 명으로 쌓이지 않게
+    const waitingHere = s.applicants.filter((a) => a.postingId === p.id && a.status === 'waiting').length;
+    const room = Math.max(0, (p.headcount - p.hired) * 6 + 4 - waitingHere);
+    const n = Math.min(room, poisson(s, arrivalRate(s, p)));
     if (n > 0) {
       addApplicants(s, p, n);
       notify(s, `채용: ${dept(p.dept).name} 공고에 지원자 ${n}명이 들어왔습니다(${H.applicantStayDays}일 동안 기다림).`, 'info', 'hiring');
