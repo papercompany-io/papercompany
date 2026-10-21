@@ -1,0 +1,17 @@
+.boot {
+  height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 28px;
+  background: radial-gradient(circle at 50% 40%, #2b3756 0%, #141a27 70%); color: #fff; user-select: none;
+}
+.boot-logo { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.boot-mark { display: grid; grid-template-columns: 28px 28px; gap: 6px; transform: rotate(45deg); margin-bottom: 18px; image-rendering: pixelated; }
+.boot-mark span { width: 28px; height: 28px; border-radius: 4px; }
+.boot-mark span:nth-child(1) { background: #2f8fff; }
+.boot-mark span:nth-child(2) { background: #2fbf71; }
+.boot-mark span:nth-child(3) { background: #f2a33a; }
+.boot-mark span:nth-child(4) { background: #e5484d; }
+.boot-name { font-size: 40px; font-weight: 900; letter-spacing: 0.04em; }
+.boot-sub { color: #9aa6c2; font-size: 14px; }
+.boot-bar { width: 320px; height: 10px; background: #0d121c; border-radius: 6px; overflow: hidden; border: 1px solid #3a4562; }
+.boot-bar div { height: 100%; background: linear-gradient(90deg, #2f8fff, #57b3ff); transition: width 60ms linear; }
+.boot-skip { color: #6f7b98; font-size: 12px; }
+.boot-choices { display: flex; flex-direction: column; gap: 12px; min-width: 320px; }

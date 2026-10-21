@@ -1,0 +1,37 @@
+.game { height: 100%; display: flex; flex-direction: column; }
+.hud { height: 64px; flex: none; background: var(--bar); color: #fff; display: flex; align-items: center; justify-content: space-between; padding: 0 18px; border-bottom: 3px solid #161c2a; z-index: 30; }
+.hud-company { display: flex; align-items: center; gap: 10px; min-width: 260px; }
+.hud-logo { width: 34px; height: 34px; border-radius: 8px; background: conic-gradient(#2f8fff 0 25%, #2fbf71 0 50%, #f2a33a 0 75%, #e5484d 0); }
+.hud-name { font-weight: 900; font-size: 16px; }
+.hud-stage { font-size: 12px; color: #8d99b6; }
+.hud-clock { display: flex; align-items: center; gap: 14px; }
+.hud-date { font-size: 18px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.hud-date span { color: #8d99b6; font-size: 14px; margin-left: 4px; }
+.speed { display: flex; background: #161c2a; border-radius: 8px; padding: 3px; gap: 2px; }
+.speed button { border: none; background: transparent; color: #c7d0e4; padding: 5px 10px; border-radius: 6px; font-weight: 800; font-size: 13px; }
+.speed button.on { background: var(--blue); color: #fff; }
+.hud-stats { display: flex; gap: 18px; min-width: 260px; justify-content: flex-end; }
+.hud-stats > div { display: flex; flex-direction: column; align-items: flex-end; }
+.hud-stats span { font-size: 11px; color: #8d99b6; font-weight: 700; }
+.hud-stats .money { font-size: 16px; color: #57d391; }
+.hud-stats .money.neg { color: #ff7b7f; }
+.stage { position: relative; flex: 1; min-height: 0; overflow: hidden; background: #2a3247; }
+.hint { position: absolute; left: 16px; bottom: 16px; max-width: 760px; background: rgba(255, 255, 255, 0.96); border-radius: 10px; padding: 10px 14px; font-size: 14px; box-shadow: var(--shadow); z-index: 10; }
+.hint-tag { display: inline-block; background: var(--blue); color: #fff; font-weight: 800; font-size: 12px; border-radius: 6px; padding: 2px 8px; margin-right: 6px; }
+.pause-banner { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); background: #fff7e6; border: 2px solid var(--amber); border-radius: 10px; padding: 8px 14px; display: flex; gap: 12px; align-items: center; z-index: 40; box-shadow: var(--shadow); }
+.notice { position: absolute; top: 14px; right: 14px; background: #fff; border-radius: 10px; padding: 10px 14px; z-index: 40; box-shadow: var(--shadow); font-size: 14px; }
+.modal-bg { position: fixed; inset: 0; background: rgba(10, 14, 24, 0.55); display: flex; align-items: center; justify-content: center; z-index: 60; }
+.modal { background: #fff; border-radius: 14px; padding: 16px; width: 420px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 12px; }
+.emp-head { display: flex; gap: 12px; align-items: center; color: #fff; border-radius: 10px; padding: 12px; }
+.emp-avatar { width: 48px; height: 48px; border-radius: 10px; background: linear-gradient(#ffd9b3 0 50%, rgba(255, 255, 255, 0.35) 50% 100%); }
+.emp-name { font-size: 20px; font-weight: 900; }
+.dev-panel { position: fixed; right: 12px; top: 76px; bottom: 12px; width: 520px; overflow: auto; background: rgba(13, 18, 28, 0.96); color: #dfe6f5; border: 1px solid #3a4562; border-radius: 10px; padding: 12px; z-index: 80; font-size: 12px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+.dev-panel table.t td, .dev-panel table.t th { color: #dfe6f5; border-color: #2c3650; padding: 3px 6px; }
+.dev-block { border-top: 1px solid #2c3650; padding: 6px 0; display: flex; flex-direction: column; gap: 2px; }
+/* M1 임시 평면 사무실 */
+.office-flat { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; padding: 18px 18px 90px; }
+.zone { background: #3a4562; border-radius: 12px; padding: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; align-content: start; }
+.zone-name { grid-column: 1 / -1; font-weight: 900; color: #fff; }
+.desk { height: 56px; border-radius: 8px; border: none; background: #fff; font-weight: 800; }
+.desk.empty { background: #2c3650; color: #8d99b6; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+.desk.ceo { background: var(--blue); color: #fff; }

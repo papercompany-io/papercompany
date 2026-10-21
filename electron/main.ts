@@ -54,7 +54,9 @@ function createWindow() {
       nodeIntegration: false,
     },
   });
-  win.loadFile(path.join(__dirname, '..', 'dist', 'index.html'));
+  // 플레이테스트에서 난수 시드를 고정할 수 있게 PC_SEED를 쿼리로 넘깁니다.
+  const query: Record<string, string> = process.env.PC_SEED ? { seed: process.env.PC_SEED } : {};
+  win.loadFile(path.join(__dirname, '..', 'dist', 'index.html'), { query });
 }
 
 app.whenReady().then(createWindow);

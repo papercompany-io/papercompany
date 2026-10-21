@@ -1,0 +1,6 @@
+.result { height: 100%; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle at 50% 30%, #2b3756 0%, #141a27 75%); padding: 24px; }
+.result-card { width: 640px; background: #fff; border-radius: 16px; padding: 26px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 12px; align-items: stretch; }
+.result-kind { align-self: center; background: var(--bar); color: #fff; border-radius: 999px; padding: 4px 14px; font-weight: 800; }
+.result-company { text-align: center; font-size: 22px; font-weight: 900; }
+.result-amount { text-align: center; font-size: 40px; font-weight: 900; color: var(--green); font-variant-numeric: tabular-nums; }
+.result-formula { text-align: center; color: var(--ink-2); font-size: 14px; }

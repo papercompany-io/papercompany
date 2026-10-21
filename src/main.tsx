@@ -1,8 +1,10 @@
-import React from 'react';
+import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import { App } from './ui/App';
+import './ui/styles.css';
 
-function App() {
-  return <div style={{ color: '#fff', fontFamily: 'sans-serif', padding: 40 }}>페이퍼컴퍼니 부팅 준비 중</div>;
-}
-
-createRoot(document.getElementById('root')!).render(<App />);
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <App />
+  </StrictMode>,
+);
