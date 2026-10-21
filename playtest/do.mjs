@@ -3,6 +3,8 @@
 //      node playtest/do.mjs fill t:company-name 페이퍼랩스
 //      node playtest/do.mjs clickxy 700 400
 //      node playtest/do.mjs wait --wait 3000 --label 대기
+//      node playtest/do.mjs drag 700 500 400 300   (끌어서 사무실 이동)
+//      node playtest/do.mjs wheel 700 500 -100      (휠로 확대, 양수는 축소)
 import http from 'http';
 
 const args = process.argv.slice(2);
@@ -15,7 +17,9 @@ for (let i = 0; i < args.length; i++) {
 }
 const [action, a1, a2] = pos;
 const cmd = { action, ...opts };
-if (action === 'clickxy') Object.assign(cmd, { x: Number(a1), y: Number(a2) });
+if (action === 'drag') cmd.pts = pos.slice(1, 5).map(Number);
+else if (action === 'wheel') Object.assign(cmd, { x: Number(a1), y: Number(a2), dy: Number(pos[3]) });
+else if (action === 'clickxy') Object.assign(cmd, { x: Number(a1), y: Number(a2) });
 else if (action === 'key') cmd.key = a1;
 else if (action === 'wait') cmd.wait = opts.wait ?? Number(a1 ?? 1000);
 else Object.assign(cmd, { target: a1, value: a2 });

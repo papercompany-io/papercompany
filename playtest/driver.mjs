@@ -62,6 +62,18 @@ async function exec(c) {
       break;
     case 'wait':
       break;
+    case 'drag': {
+      const [x1, y1, x2, y2] = c.pts;
+      await page.mouse.move(x1, y1);
+      await page.mouse.down();
+      for (let i = 1; i <= 8; i++) await page.mouse.move(x1 + ((x2 - x1) * i) / 8, y1 + ((y2 - y1) * i) / 8);
+      await page.mouse.up();
+      break;
+    }
+    case 'wheel':
+      await page.mouse.move(c.x, c.y);
+      await page.mouse.wheel(0, c.dy);
+      break;
     case 'hover':
       await page.hover(sel(c.target), { timeout: 5000 });
       break;

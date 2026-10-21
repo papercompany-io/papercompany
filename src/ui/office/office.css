@@ -1,4 +1,5 @@
-.office { position: absolute; inset: 0; overflow: hidden; background: #1a2034; }
+.office { position: absolute; inset: 0; overflow: hidden; background: #5d6473; cursor: grab; touch-action: none; user-select: none; }
+.office.dragging { cursor: grabbing; }
 .office-canvas { position: absolute; left: 0; top: 0; image-rendering: pixelated; image-rendering: crisp-edges; }
 
 /* 부서 구역 좌석 범례(OF-02) */
@@ -43,3 +44,13 @@
 }
 @keyframes tagpulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(45, 143, 213, 0.9); } 50% { box-shadow: 0 0 0 6px rgba(45, 143, 213, 0); } }
 @keyframes tagbounce { 0%, 100% { transform: translate(-50%, 0); } 50% { transform: translate(-50%, -4px); } }
+
+/* 카메라 도구(Startup Company의 둥근 흰 버튼) */
+.cam-tools { position: absolute; right: 16px; bottom: 16px; z-index: 6; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.round-btn {
+  width: 42px; height: 42px; border-radius: 50%; border: none; background: #fff; color: var(--hud); font-size: 20px; font-weight: 900; line-height: 1;
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.15), 0 4px 12px rgba(8, 12, 28, 0.3); display: flex; align-items: center; justify-content: center;
+}
+.round-btn:hover { background: #f2f6fb; }
+.round-btn:disabled { color: #b9bdc8; cursor: default; }
+.cam-hint { font-size: 11px; color: #fff; background: rgba(23, 27, 44, 0.7); border-radius: 4px; padding: 3px 7px; white-space: nowrap; }
