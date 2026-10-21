@@ -33,3 +33,4 @@
 .ach.gold.on { border-left-color: #f0b429; }
 .ach.platinum.on { border-left-color: #7a5cff; }
 .ach-medal { font-size: 20px; }
+.result-card table.t td:first-child { white-space: nowrap; color: var(--ink-2); }

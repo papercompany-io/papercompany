@@ -6,7 +6,7 @@ import { founderPct } from './equity';
 import { book, lastRevenue } from './finance';
 import { launchedMarkets, shares, totalUsers } from './market';
 import { notify } from './notify';
-import { featuresDoneCount, hasMvp } from './product';
+import { coreFeatures, featureLevel, featuresDoneCount, hasMvp } from './product';
 import { marketCap } from './public';
 import { avgSat } from './staff';
 import { computeValuation } from './valuation';
@@ -125,6 +125,17 @@ function meets(v: number, c: { gte?: number; lte?: number }) {
   if (c.gte !== undefined) return v >= c.gte;
   if (c.lte !== undefined) return v <= c.lte;
   return false;
+}
+
+// 미션 진행률(0~1). MVP 미션은 핵심 기능 완성 비율로 보여 줍니다.
+export function missionProgress(s: GameState, m: { metric: string; gte: number }): number {
+  if (m.metric === 'stage' && m.gte === 1 && s.company.stage < 1) {
+    const cores = coreFeatures(s);
+    return cores.length ? (cores.filter((c) => featureLevel(s, c.id) >= 1).length / cores.length) * 0.99 : 0;
+  }
+  if (m.metric === 'stage') return s.company.stage >= m.gte ? 1 : s.company.stage / m.gte;
+  const v = metric(s, m.metric);
+  return Math.max(0, Math.min(1, m.gte > 0 ? v / m.gte : 0));
 }
 
 // 지금 보이는 미션(앞에서부터 안 깬 것 3개)

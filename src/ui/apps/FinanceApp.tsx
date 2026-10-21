@@ -27,7 +27,7 @@ export function FinanceApp() {
         </div>
         <div className="stat">
           <div className="stat-label">런웨이(최근 소진 기준)</div>
-          <div className="stat-value">{rw === null ? '흑자' : `${rw.toFixed(1)}개월`}</div>
+          <div className="stat-value">{rw === null ? '흑자' : rw > 120 ? '10년 이상' : `${rw.toFixed(1)}개월`}</div>
         </div>
         <div className="stat">
           <div className="stat-label">기업가치(지금 산정, 투자·Exit 기준)</div>

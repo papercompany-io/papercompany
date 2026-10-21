@@ -10,7 +10,7 @@ import { currentPL, runwayMonths } from '../core/finance';
 import { computeValuation } from '../core/valuation';
 import { coreFeatures, featureLevel, hasMvp, quality } from '../core/product';
 import { totalUsers } from '../core/market';
-import { activeMissions, metric, STAGE_NAMES } from '../core/progress';
+import { activeMissions, missionProgress, STAGE_NAMES } from '../core/progress';
 import { founderAge } from '../core/career';
 import { act, getGame, touch, useGame } from './store';
 import { Desktop, type AppId } from './Desktop';
@@ -293,8 +293,7 @@ function Missions({ s, onOpen }: { s: GameState; onOpen: (a: AppId) => void }) {
       {open && (
         <div className="ms-list">
           {ms.map((m) => {
-            const v = metric(s, m.metric);
-            const p = Math.max(0, Math.min(1, m.gte > 0 ? v / m.gte : 0));
+            const p = missionProgress(s, m);
             return (
               <div key={m.id} className="ms-item" title={m.guide}>
                 <div className="row">
@@ -356,7 +355,7 @@ function CompanyCard({ s, onOpen }: { s: GameState; onOpen: (a: AppId) => void }
         </div>
         <div className={`cc-runway ${rw !== null && rw < 3 ? 'bad' : ''}`}>
           <span>런웨이</span>
-          <b>{rw === null ? '흑자' : `${rw.toFixed(1)}개월`}</b>
+          <b>{rw === null ? '흑자' : rw > 120 ? '10년 이상' : `${rw.toFixed(1)}개월`}</b>
         </div>
       </div>
     </aside>

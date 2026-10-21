@@ -74,7 +74,7 @@ export interface Camera {
   y: number;
 }
 
-export const ZOOM_MIN = 2;
+export const ZOOM_MIN = 1;
 export const ZOOM_MAX = 6;
 
 export function world(gx: number, gy: number, z = 0): Pt {
@@ -89,7 +89,11 @@ export function makeView(cssW: number, cssH: number, scale: number, cam: Camera)
 
 // 처음에는 사무실 전체가 거의 들어오는 배율(큰 화면 3배, 작은 화면 2배). HUD(위)와 회사 카드(오른쪽)를 피해 가운데를 맞춥니다.
 export function defaultZoom(cssW: number, cssH: number): number {
-  return cssW >= 1200 && cssH >= 720 ? 3 : 2;
+  // 사무실 전체(바닥 마름모)가 화면에 거의 들어오는 가장 큰 정수 배율. 작은 사무실은 3배까지.
+  const artW = ((FW + FH) * TW) / 2 + 60;
+  const artH = ((FW + FH) * TH) / 2 + WALL_H + 40;
+  const z = Math.floor(Math.min((cssW - 80) / artW, (cssH - 120) / artH) * 1.3);
+  return Math.max(ZOOM_MIN, Math.min(3, z));
 }
 
 export function defaultCamera(scale: number, reserveRight: number, reserveTop: number): Camera {

@@ -4,7 +4,13 @@ import { totalShares } from '../core/equity';
 import { currentPL, lastPL } from '../core/finance';
 import { pctsSumTo100, won } from '../core/format';
 import { computeValuation } from '../core/valuation';
-import { useGame } from './store';
+import { act, useGame } from './store';
+import { runDay } from '../core/sim';
+import { totalUsers } from '../core/market';
+import { appeal } from '../core/product';
+import { avgSat } from '../core/staff';
+import { trigger, EVENTS } from '../core/events';
+import { useState } from 'react';
 
 export function DevPanel({ onClose }: { onClose: () => void }) {
   const s = useGame();
@@ -38,6 +44,32 @@ export function DevPanel({ onClose }: { onClose: () => void }) {
         <button className="btn small ghost" onClick={onClose}>
           닫기
         </button>
+      </div>
+      <div className="dev-block">
+        <b>시간 빨리 감기(개발용)</b>
+        <div className="row">
+          {[1, 7, 30, 180, 365].map((n) => (
+            <button
+              key={n}
+              className="btn small ghost"
+              data-testid={`ff-${n}`}
+              onClick={() =>
+                act((g) => {
+                  for (let i = 0; i < n && !g.ended; i++) {
+                    g.pauseReason = null;
+                    runDay(g);
+                  }
+                })
+              }
+            >
+              +{n}일
+            </button>
+          ))}
+        </div>
+        <EventTrigger />
+        <div className="tiny">
+          고객 {Math.round(totalUsers(s)).toLocaleString()} · 매력 {appeal(s).toFixed(1)} · 버그 {s.product.bugs.toFixed(1)} · 만족 {avgSat(s).toFixed(0)} · 단계 {s.company.stage} · 경기 {s.economy.phase} · 결정 대기 {s.decisions.filter((d) => !d.resolved).length}
+        </div>
       </div>
       <div className="dev-block">
         <b>게임 날짜</b> {formatDate(s.day)} {clockOf(s.msInDay)} · 배속 {s.speed}x {s.pauseReason ? `· 일시정지(${s.pauseReason})` : ''} · 시드 {s.seed}
@@ -78,6 +110,24 @@ export function DevPanel({ onClose }: { onClose: () => void }) {
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+function EventTrigger() {
+  const [id, setId] = useState(EVENTS[0]?.id ?? '');
+  return (
+    <div className="row">
+      <select value={id} onChange={(e) => setId(e.target.value)} style={{ maxWidth: 300 }}>
+        {EVENTS.map((e) => (
+          <option key={e.id} value={e.id}>
+            {e.id}
+          </option>
+        ))}
+      </select>
+      <button className="btn small ghost" onClick={() => act((g) => trigger(g, id))}>
+        이벤트 발생
+      </button>
     </div>
   );
 }

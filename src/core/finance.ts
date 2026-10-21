@@ -185,10 +185,13 @@ export function nextPaydayForecast(s: GameState, rates: DailyRates, futureEntert
 }
 
 // FN-01 런웨이(개월): 최근 월 순손실 기준 [Claude 제안]
+// 최근 3개월 평균, 일회성 비용(이벤트·진출·인수)은 뺍니다.
 export function runwayMonths(s: GameState): number | null {
-  const last = lastPL(s);
+  const h = s.plHistory.slice(-3);
+  const avgNet = h.length ? h.reduce((a, m) => a + m.netIncome + m.other, 0) / h.length : 0;
+  const lastRev = h.length ? h[h.length - 1].revenue - h[h.length - 1].vat : 0;
   const fixed = projectedMonthlyPayroll(s) + rentMonthly(s) + welfareMonthly(s);
-  const burn = Math.max(last ? -last.netIncome : 0, fixed - (last ? last.revenue - last.vat : 0));
+  const burn = Math.max(-avgNet, fixed - lastRev);
   if (burn <= 0) return null;
   return Math.max(0, s.cash) / burn;
 }

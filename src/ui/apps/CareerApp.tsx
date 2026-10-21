@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { DATA } from '../../core/data';
 import { careerStats, endingFor, founderAge } from '../../core/career';
-import { metric, STAGE_NAMES, STAGE_UNLOCKS } from '../../core/progress';
+import { missionProgress, STAGE_NAMES, STAGE_UNLOCKS } from '../../core/progress';
 import { useGame } from '../store';
 import { Money, Tabs } from '../common';
 import { AchievementGrid } from '../Hall';
@@ -29,8 +29,7 @@ export function CareerApp() {
           <tbody>
             {DATA.missions.missions.map((m) => {
               const done = s.company.missionsDone.includes(m.id);
-              const v = metric(s, m.metric);
-              const p = Math.max(0, Math.min(1, v / m.gte));
+              const p = missionProgress(s, m);
               const r = m.reward as { cash?: number; rep?: number; legacy?: number };
               return (
                 <tr key={m.id} style={{ opacity: done ? 0.55 : 1 }}>

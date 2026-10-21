@@ -399,7 +399,7 @@ function InvestorsTab() {
               </div>
               {t && (
                 <div className="row tiny">
-                  관심도
+                  <span style={{ whiteSpace: 'nowrap' }}>관심도</span>
                   <div className="bar">
                     <div style={{ width: `${t.interest}%` }} />
                   </div>

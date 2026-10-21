@@ -1,5 +1,6 @@
 // 밸런싱용 전략 봇(G4): 코어 엔진(src/core)을 화면 없이 돌려 커리어 전체를 플레이하고 진행 속도를 잽니다.
 // 실행: npm run sim -- [판 수] [시드] [전략]
+import fs from 'fs';
 import { DATA, featuresOf, stageIndex } from '../../src/core/data';
 import { runDay } from '../../src/core/sim';
 import { newCareer, nextCompany, defaultPicks, type SetupChoices } from '../../src/core/state';
@@ -223,6 +224,8 @@ interface Milestones {
   [k: string]: number | null;
 }
 
+const dumped = new Set<string>();
+
 function playCompany(s: GameState, log: (m: string) => void) {
   const start = s.day;
   const ms: Milestones = { mvp: null, rev1: null, staff5: null, seed: null, A: null, B: null, C: null, stage3: null, stage4: null, ipo: null };
@@ -246,6 +249,15 @@ function playCompany(s: GameState, log: (m: string) => void) {
     if (ms.stage3 === null && s.company.stage >= 3) ms.stage3 = d;
     if (ms.stage4 === null && s.company.stage >= 4) ms.stage4 = d;
     if (ms.ipo === null && s.public) ms.ipo = d;
+    const dumpDir = process.argv.find((a) => a.startsWith('--dump='))?.slice(7);
+    if (dumpDir) {
+      const key = `stage${s.company.stage}`;
+      if (!dumped.has(key)) {
+        dumped.add(key);
+        fs.mkdirSync(dumpDir, { recursive: true });
+        fs.writeFileSync(`${dumpDir}/${s.company.industry}-${key}.json`, JSON.stringify({ ...s, events: [], speed: 1, pauseReason: '저장한 회사를 불러왔습니다' }));
+      }
+    }
     if (process.argv.includes('--pl') && s.plHistory.length && s.accrual.days === 0) {
       const m = s.plHistory[s.plHistory.length - 1];
       log(`   PL ${m.month} 매출 ${(m.revenue / 1e6).toFixed(1)} (구독 ${(m.revSub / 1e6).toFixed(1)} 광고 ${(m.revAd / 1e6).toFixed(1)} 수수료 ${(m.revTake / 1e6).toFixed(1)} 대기업 ${(m.revEnt / 1e6).toFixed(1)}) 월급 ${(m.salary / 1e6).toFixed(1)} 광고비 ${(m.ads / 1e6).toFixed(1)} 인프라 ${(m.infra / 1e6).toFixed(1)} 월세 ${(m.rent / 1e6).toFixed(1)} 복지 ${(m.welfare / 1e6).toFixed(1)} AI ${(m.ai / 1e6).toFixed(1)} 기타 ${(m.other / 1e6).toFixed(1)} 채용 ${(m.recruiting / 1e6).toFixed(1)} 접대 ${(m.entertainment / 1e6).toFixed(1)} 순익 ${(m.netIncome / 1e6).toFixed(1)} 자금 ${(m.cashAfter / 1e6).toFixed(0)} 고객 ${m.usersEnd} 인지도 ${s.markets.kr.awareness.toFixed(3)} 점유 ${(shares(s, 'kr').player * 100).toFixed(1)}% 매력 ${appeal(s).toFixed(0)} 직원 ${s.employees.length} 만족 ${avgSat(s).toFixed(0)}`);
