@@ -102,14 +102,6 @@ export function Desktop({ app, arg, setApp, onClose }: Props) {
         <span className="dw-monitor" />
         <b>대표 컴퓨터</b>
         <span className="dw-os">PaperOS</span>
-        {cur && (
-          <>
-            <span className="dw-sep">›</span>
-            <AppIcon id={cur.id} small />
-            <b>{cur.name}</b>
-            <span className="dw-unit">{cur.unit}</span>
-          </>
-        )}
         <div className="grow" />
         <button className="dw-x" data-testid="desktop-x" onClick={onClose} title="컴퓨터 닫고 사무실 보기 (Esc)">
           ✕
@@ -144,11 +136,18 @@ export function Desktop({ app, arg, setApp, onClose }: Props) {
           </div>
         )}
         {cur && (
-          <div className="app-window" data-testid={`window-${cur.id}`}>
-            <div className="app-bar">
+          <div className="app-window" data-testid={`window-${cur.id}`} style={{ ['--ac' as string]: APP_COLORS[cur.id] }}>
+            <div className="app-head">
               <button className="app-back" data-testid="app-close" onClick={() => setApp(null)} title="바탕화면으로 (Esc)">
                 ← 바탕화면
               </button>
+              <span className="app-head-icon">
+                <AppIcon id={cur.id} />
+              </span>
+              <div>
+                <div className="app-head-name">{cur.name}</div>
+                <div className="app-head-desc">{cur.desc}</div>
+              </div>
               <div className="app-tabs">
                 {APPS.filter((a) => appOpen(s, a.id)).map((a) => (
                   <button key={a.id} className={`app-tab ${a.id === app ? 'on' : ''}`} title={a.name} onClick={() => open(a.id)}>

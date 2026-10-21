@@ -117,7 +117,7 @@ function RoundTab({ initialStage, goInvestors }: { initialStage?: string; goInve
             </select>
           </label>
           {safeOk && (
-            <div className="seg" title="SAFE: 지금 기업가치를 정하지 않고 투자받아, 다음 지분 라운드에서 주식으로 바뀝니다(FR-12)">
+            <div className="seg" title="SAFE: 지금 기업가치를 정하지 않고 투자받아, 다음 지분 라운드에서 주식으로 바뀝니다">
               <button className={instrument === 'equity' ? 'on' : ''} data-testid="inst-equity" onClick={() => setInstrument('equity')}>
                 지분 투자
               </button>
@@ -134,7 +134,7 @@ function RoundTab({ initialStage, goInvestors }: { initialStage?: string; goInve
         <table className="t">
           <tbody>
             <tr>
-              <th>프리밸류(지금 기업가치, VL-01)</th>
+              <th>프리밸류(지금 기업가치)</th>
               <td className="r" data-testid="preview-pre">
                 {won(m.preValue)}
               </td>
@@ -155,7 +155,7 @@ function RoundTab({ initialStage, goInvestors }: { initialStage?: string; goInve
         </table>
         {safeOk && instrument === 'safe' && (
           <div className="ok tiny">
-            SAFE: 지금은 주식을 주지 않고 투자금만 받습니다. 다음 지분 라운드에서 밸류 캡 {won(m.postValue)}과 할인 {DATA.funding.safe.discount * 100}% 중 유리한 가격으로 주식이 됩니다(OQ-049 [Claude 제안]). 희석이 미뤄질 뿐 사라지지는 않습니다.
+            SAFE: 지금은 주식을 주지 않고 투자금만 받습니다. 다음 지분 라운드에서 밸류 캡 {won(m.postValue)}과 할인 {DATA.funding.safe.discount * 100}% 중 유리한 가격으로 주식이 됩니다. 희석이 미뤄질 뿐 사라지지는 않습니다.
           </div>
         )}
         {s.safes.length > 0 && <div className="tiny">아직 전환되지 않은 SAFE: {won(s.safes.reduce((a, x) => a + x.amount, 0))} (다음 지분 라운드에서 주식으로 바뀜)</div>}
@@ -540,7 +540,7 @@ function CapTab() {
         </div>
       )}
       <div className="card">
-        <div className="section-title">창업자 지분 변화(EQ-03)</div>
+        <div className="section-title">창업자 지분 변화</div>
         <table className="t">
           <tbody>
             {s.equityHistory.map((h, i) => (
@@ -571,7 +571,7 @@ function EsopCard() {
   const granted = s.employees.reduce((a, e) => a + e.options, 0);
   return (
     <div className="card col">
-      <div className="section-title">ESOP 풀(임직원 스톡옵션, EQ-04)</div>
+      <div className="section-title">ESOP 풀(임직원 스톡옵션)</div>
       {pool ? (
         <div className="tiny">
           풀 {pool.shares.toLocaleString('ko-KR')}주 · 지급 {granted.toLocaleString('ko-KR')}주 · 남음 {esopFree(s).toLocaleString('ko-KR')}주. 직원 관리 앱에서 직원에게 옵션을 줄 수 있습니다(베스팅 2년 20% → 3년 40% → 4년 80% → 5년 100%).

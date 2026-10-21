@@ -65,7 +65,7 @@ export function CompanyResultCard({ r }: { r: CompanyResult }) {
             <td className="r">{r.rounds}회</td>
           </tr>
           <tr>
-            <td>성장 경로(ED-01)</td>
+            <td>성장 경로</td>
             <td className="r">
               <b>{r.path}</b> — {pathSummary(r.path)}
             </td>

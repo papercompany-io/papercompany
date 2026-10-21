@@ -24,7 +24,7 @@ export function ScheduleApp() {
       <div className="row">
         <div className="muted grow">
           하루 {slots}칸을 나눠 쓰세요. 배분은 다음 날에도 이어지고, 한 칸이 근무 1시간처럼 차례로 실행됩니다.
-          {exec ? ' 경영 모드: 실무는 조직이 맡고 대표는 큰일에 집중합니다(CA-03).' : ''}
+          {exec ? ' 경영 모드: 실무는 조직이 맡고 대표는 큰일에 집중합니다.' : ''}
         </div>
         <div className="seg">
           <button className={!exec ? 'on' : ''} data-testid="mode-founder" onClick={() => act((g) => setCeoMode(g, 'founder'))}>
@@ -47,7 +47,7 @@ export function ScheduleApp() {
             </div>
           ))}
         </div>
-        {round && <div className="warn">투자 라운드 진행 중: 앞 {DATA.funding.lockedSlots}칸이 투자자 미팅에 묶여 다른 일이 밀립니다(FR-13). 라운드가 끝나면 풀립니다.</div>}
+        {round && <div className="warn">투자 라운드 진행 중: 앞 {DATA.funding.lockedSlots}칸이 투자자 미팅에 묶여 다른 일이 밀립니다. 라운드가 끝나면 풀립니다.</div>}
       </div>
       <div className="alloc-grid">
         {actions.map((a) => {
@@ -58,7 +58,7 @@ export function ScheduleApp() {
               <div className="row">
                 <b>{def.name}</b>
                 <div className="grow" />
-                <span className="chip blue" title="창업자 스펙·레거시에 따른 효율(CA-02)">×{eff.toFixed(2)}</span>
+                <span className="chip blue" title="창업자 스펙·레거시에 따른 효율">×{eff.toFixed(2)}</span>
               </div>
               <div className="tiny muted">{def.desc}</div>
               <div className="row stepper">

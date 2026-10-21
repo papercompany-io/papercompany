@@ -21,7 +21,7 @@ export function AiApp() {
           <div className="stat-value">{cur ? `${aiVendor(cur.vendor).name} ${cur.name}` : '없음'}</div>
         </div>
         <div className="stat">
-          <div className="stat-label">적응도(AT-07 교체하면 일부 초기화)</div>
+          <div className="stat-label">적응도(교체하면 일부 초기화)</div>
           <div className="stat-value">{Math.round(s.ai.adaptation * 100)}%</div>
           <div className="meter">
             <div style={{ width: `${s.ai.adaptation * 100}%` }} />
@@ -40,7 +40,7 @@ export function AiApp() {
           </div>
         </div>
       </div>
-      <div className="section-title">모델 고르기 (가상 공급사, OQ-029)</div>
+      <div className="section-title">모델 고르기 (가상 공급사)</div>
       <table className="t">
         <thead>
           <tr>
@@ -79,7 +79,7 @@ export function AiApp() {
         </tbody>
       </table>
       {upcoming.length > 0 && <div className="tiny muted">다가오는 출시(소문): {upcoming.map((m) => `${aiVendor(m.vendor).name} ${m.name}(${m.release})`).join(', ')}</div>}
-      <div className="section-title">부서별 적용률(AT-04)</div>
+      <div className="section-title">부서별 적용률</div>
       {!cur && <div className="warn">먼저 모델을 고르세요.</div>}
       {cur && (
         <div className="col">

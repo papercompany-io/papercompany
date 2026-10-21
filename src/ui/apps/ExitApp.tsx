@@ -25,7 +25,7 @@ export function ExitApp() {
     <div className="col">
       <div className="stats">
         <div className="stat">
-          <div className="stat-label">지금 기업가치(VL-01)</div>
+          <div className="stat-label">지금 기업가치</div>
           <div className="stat-value">
             <Money v={v} full testId="exit-valuation" />
           </div>
@@ -47,7 +47,7 @@ export function ExitApp() {
 
       {a?.status === 'offer' && (
         <div className="card col offer" data-testid="sale-offer">
-          <b style={{ fontSize: 18 }}>{a.buyer ?? '인수 희망 기업'}의 인수 제안{a.inbound ? '(먼저 연락해 옴, EX-05)' : ''}</b>
+          <b style={{ fontSize: 18 }}>{a.buyer ?? '인수 희망 기업'}의 인수 제안{a.inbound ? '(먼저 연락해 옴)' : ''}</b>
           {a.deadline !== null && <div className="tiny">답변 기한: {formatDate(a.deadline)} ({a.deadline - s.day}일 남음). 지나면 무산됩니다.</div>}
           <table className="t">
             <tbody>

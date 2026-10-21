@@ -92,22 +92,25 @@ export function DecisionModal({ d, onClose, onOpenMessenger }: { d: PendingDecis
     <div className="modal-bg">
       <div className="modal decision-modal" data-testid="urgent-decision">
         <div className="dm-head">
-          <span className="chip red">긴급 결정</span>
-          <b>{d.from}</b>
-          <span className="grow" />
-          <span className="tiny muted">기한 {d.deadline - d.day}일 · 시간이 멈췄습니다</span>
+          <span className="dm-siren">!</span>
+          <div className="grow">
+            <div className="dm-kind">긴급 결정</div>
+            <b className="dm-from">{d.from}</b>
+          </div>
+          <span className="dm-deadline">기한 {d.deadline - d.day}일 · 시간 멈춤</span>
         </div>
-        <div className="dm-text">{d.text}</div>
-        <DecisionView d={d} onDone={onClose} />
-        <div className="row">
-          <button className="btn small ghost" onClick={onOpenMessenger}>
-            메신저에서 보기
-          </button>
-          <span className="tiny muted">나중에 답하면 기한이 지날 때 기본 선택이 적용됩니다.</span>
-          <span className="grow" />
-          <button className="btn small ghost" onClick={onClose}>
-            나중에
-          </button>
+        <div className="dm-body">
+          <div className="dm-text">{d.text}</div>
+          <DecisionView d={d} onDone={onClose} />
+          <div className="row dm-foot">
+            <button className="btn small ghost" onClick={onOpenMessenger}>
+              메신저에서 보기
+            </button>
+            <span className="tiny muted grow">나중에 답하면 기한이 지날 때 기본 선택이 적용됩니다.</span>
+            <button className="btn small ghost" onClick={onClose}>
+              나중에
+            </button>
+          </div>
         </div>
       </div>
     </div>

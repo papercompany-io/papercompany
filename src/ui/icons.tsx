@@ -29,3 +29,23 @@ export function AppIcon({ id, small }: { id: string; small?: boolean }) {
     </svg>
   );
 }
+
+// HUD·패널용 여러 색 픽셀 아이콘(12x12). 글자 하나가 색 하나: k 윤곽, y/Y 금색, w 흰색, b/B 파랑, g 초록, r 빨강, p 보라, s 살색
+const PX_COLORS: Record<string, string> = { k: '#120f24', y: '#ffc93c', Y: '#c98f0c', w: '#ffffff', b: '#7fb2ff', B: '#3f6fe0', g: '#3ddc97', G: '#1e8a4f', r: '#ff6b6b', p: '#b49bff', P: '#6a4fd6', s: '#ffd2a8', o: '#ff9f43' };
+const PX: Record<string, string[]> = {
+  coin: ['...kkkkkk...', '..kyyyyyyk..', '.kyywwyyyYk.', 'kyywyyyyyyYk', 'kyyyykkyyyYk', 'kyyykyyyyyYk', 'kyyykyyyyyYk', 'kyyyykkyyyYk', 'kyyyyyyyyyYk', '.kYyyyyyyYk.', '..kYYYYYYk..', '...kkkkkk...'],
+  users: ['..kkk.......', '.kssk..kkk..', '.kssk.kssk..', '..kk..kssk..', '.kbbk..kk...', 'kbbbbkkggk..', 'kbbbbkggggk.', 'kbbbbkggggk.', 'kBBBBkggggk.', '.kkkk.kGGGk.', '.......kkk..', '............'],
+  clock: ['...kkkkkk...', '..kwwwwwwk..', '.kwwwkwwwwk.', 'kwwwwkwwwwwk', 'kwwwwkwwwwwk', 'kwwwwkkkkwwk', 'kwwwwwwwwwwk', 'kwwwwwwwwwwk', '.kwwwwwwwwk.', '..kwwwwwwk..', '...kkkkkk...', '............'],
+  chart: ['............', '.........kk.', '........kggk', '...kk..kggk.', '..kggk.kggk.', '..kggkkggk..', '.kggkkgggk..', '.kgggggggk..', 'kggggggggk..', 'kGGGGGGGGk..', 'kkkkkkkkkk..', '............'],
+  case: ['............', '....kkkk....', '...k....k...', 'kkkkkkkkkkkk', 'kooooooooook', 'kooooooooook', 'kkkkkyykkkkk', 'kooooyyooook', 'kooooooooook', 'kooooooooook', 'kkkkkkkkkkkk', '............'],
+  trophy: ['.kkkkkkkkkk.', 'kyyyyyyyyyyk', 'kykyyyyyykyk', 'kykyyyyyykyk', '.kkyyyyyykk.', '..kyyyyyyk..', '...kyyyyk...', '....kyyk....', '....kYYk....', '...kkkkkk...', '..kYYYYYYk..', '..kkkkkkkk..'],
+};
+
+export function PxIcon({ id, size = 22 }: { id: keyof typeof PX; size?: number }) {
+  const rows = PX[id];
+  return (
+    <svg className="px" width={size} height={size} viewBox="0 0 12 12" shapeRendering="crispEdges" aria-hidden>
+      {rows.map((row, y) => row.split('').map((c, x) => (PX_COLORS[c] ? <rect key={`${x}-${y}`} x={x} y={y} width={1} height={1} fill={PX_COLORS[c]} /> : null)))}
+    </svg>
+  );
+}

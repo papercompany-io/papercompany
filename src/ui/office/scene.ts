@@ -158,7 +158,7 @@ function outline(g: Pix, v: View, x0: number, y0: number, x1: number, y1: number
 
 // ── 색 ──
 const C = {
-  asphalt: hex('#5d6473'),
+  asphalt: hex('#3e4160'),
   grass: hex('#7db35f'),
   grassDark: hex('#6a9e50'),
   walk: hex('#d8d4ca'),

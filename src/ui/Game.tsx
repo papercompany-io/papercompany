@@ -25,6 +25,7 @@ import { play, type Sfx } from './sound';
 import { getSettings, useSettings } from './meta';
 import { Toasts, DecisionModal, Confetti } from './Feedback';
 import type { GameState } from '../core/types';
+import { PxIcon } from './icons';
 import './game.css';
 
 interface Props {
@@ -270,13 +271,14 @@ function Hud({ s }: { s: GameState }) {
             </button>
           ))}
         </div>
-        <span className="hud-item" title="게임 시각">
-          <ClockIcon /> {clockOf(s.msInDay)}
+        <span className="hud-pill" title="게임 시각">
+          <PxIcon id="clock" /> {clockOf(s.msInDay)}
         </span>
-        <span className="hud-item" title={`${industry(s.company.industry).unit} 수`} data-testid="hud-users">
-          <UserIcon /> {Math.floor(totalUsers(s)).toLocaleString('ko-KR')}
+        <span className="hud-pill" title={`${industry(s.company.industry).unit} 수`} data-testid="hud-users">
+          <PxIcon id="users" /> {Math.floor(totalUsers(s)).toLocaleString('ko-KR')}
         </span>
-        <span className="hud-cash" title="회사 자금">
+        <span className="hud-pill cash" title={`회사 자금 · 이번 달 손익 ${net >= 0 ? '흑자' : '적자'}`}>
+          <PxIcon id="coin" />
           <Money v={s.cash} testId="hud-cash" />
           <span className={net >= 0 ? 'up' : 'down'}>{net >= 0 ? '▲' : '▼'}</span>
         </span>
@@ -390,17 +392,5 @@ const PlayIcon = ({ n }: { n: number }) => (
     {Array.from({ length: n }, (_, i) => (
       <path key={i} d={`M${i * 6 + 1} 1 L${i * 6 + 8} 6 L${i * 6 + 1} 11 Z`} fill="currentColor" />
     ))}
-  </svg>
-);
-const ClockIcon = () => (
-  <svg width="13" height="13" viewBox="0 0 13 13">
-    <circle cx="6.5" cy="6.5" r="5.3" fill="none" stroke="currentColor" strokeWidth="1.6" />
-    <path d="M6.5 3.3 V6.7 H9" fill="none" stroke="currentColor" strokeWidth="1.6" />
-  </svg>
-);
-const UserIcon = () => (
-  <svg width="12" height="13" viewBox="0 0 12 13">
-    <circle cx="6" cy="3.6" r="2.8" fill="currentColor" />
-    <path d="M0.8 12.5 C1.2 8.4 3.2 7.4 6 7.4 S10.8 8.4 11.2 12.5 Z" fill="currentColor" />
   </svg>
 );

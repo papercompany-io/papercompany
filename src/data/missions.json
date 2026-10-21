@@ -18,7 +18,7 @@
     { "id": "m_ai", "name": "AI 도구 도입", "metric": "aiAdoption", "gte": 0.3, "reward": { "rep": 1 }, "guide": "AI 도입 앱에서 공급사와 모델을 고르고 부서별 적용률을 정하세요. 부작용(슬롭)도 조심하세요." },
     { "id": "m_mrr_100m", "name": "월 매출 1억원", "metric": "mrr", "gte": 100000000, "reward": { "rep": 3, "legacy": 1 }, "guide": "대기업 계약, 해외 진출, 수익화 기능이 매출 규모를 키웁니다." },
     { "id": "m_emp20", "name": "직원 20명", "metric": "staff", "gte": 20, "reward": { "rep": 2 }, "guide": "부서가 커지면 팀장을 세워야 효율이 떨어지지 않습니다." },
-    { "id": "m_series_b", "name": "시리즈 B", "metric": "fundingIndex", "gte": 4, "reward": { "rep": 4, "legacy": 1 }, "guide": "시리즈 B부터 대표는 대기업 영업·결재·인맥·투자자 미팅에 집중할 수 있습니다(CA-03)." },
+    { "id": "m_series_b", "name": "시리즈 B", "metric": "fundingIndex", "gte": 4, "reward": { "rep": 4, "legacy": 1 }, "guide": "시리즈 B부터 대표는 대기업 영업·결재·인맥·투자자 미팅에 집중할 수 있습니다(일정 앱의 경영 모드)." },
     { "id": "m_global", "name": "첫 해외 진출", "metric": "markets", "gte": 2, "reward": { "rep": 3, "legacy": 1 }, "guide": "현지화 기능을 만들고 시장 앱에서 진출 비용을 내면 해외 시장이 열립니다." },
     { "id": "m_enterprise", "name": "대기업 첫 계약", "metric": "enterprise", "gte": 1, "reward": { "rep": 3 }, "guide": "대기업용 기능을 만들고 세일즈팀에 '대기업 영업'을 지시하세요." },
     { "id": "m_profit", "name": "흑자 3개월", "metric": "profitMonths", "gte": 3, "reward": { "rep": 3, "legacy": 1 }, "guide": "흑자가 이어지면 이익 배수로 기업가치를 평가받을 수 있습니다." },

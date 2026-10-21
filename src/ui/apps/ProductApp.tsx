@@ -195,7 +195,7 @@ export function ProductApp() {
             <tr>
               <th>날짜</th>
               <th>기능</th>
-              <th>판정(MG-04)</th>
+              <th>판정</th>
             </tr>
           </thead>
           <tbody>

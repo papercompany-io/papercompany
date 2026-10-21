@@ -273,7 +273,7 @@ function Depts() {
           <th className="r">인원</th>
           <th>팀장(필요)</th>
           <th className="r">하루 작업량</th>
-          <th>맡은 일(MG-03)</th>
+          <th>맡은 일</th>
         </tr>
       </thead>
       <tbody>
@@ -322,7 +322,7 @@ function Welfare() {
   const n = s.employees.length;
   return (
     <div className="col">
-      <div className="section-title">복지(WF-01~04 + 확장) — 직원 1명당 월 비용</div>
+      <div className="section-title">복지(+ 확장) — 직원 1명당 월 비용</div>
       <div className="feat-grid">
         {DATA.welfare.items.map((w) => {
           const on = s.company.welfare.includes(w.id);
