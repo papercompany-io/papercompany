@@ -62,6 +62,9 @@ async function exec(c) {
       break;
     case 'wait':
       break;
+    case 'eval':
+      out.value = await page.evaluate(c.target);
+      break;
     case 'text':
       out.text = await page.innerText(sel(c.target), { timeout: 5000 });
       break;

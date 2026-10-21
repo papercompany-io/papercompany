@@ -13,6 +13,8 @@ function emit() {
 
 export function setGame(s: GameState | null) {
   current = s;
+  // 디버그용 읽기 창구(플레이테스트에서 상태 확인)
+  (window as unknown as { __pc?: () => GameState | null }).__pc = () => current;
   emit();
 }
 
