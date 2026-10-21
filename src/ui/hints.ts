@@ -3,11 +3,11 @@ import { paydayForecast } from '../core/forecast';
 import { runwayMonths } from '../core/finance';
 import { formatDate } from '../core/calendar';
 import { openRound, activeRound } from '../core/funding';
-import { hasMvp } from '../core/product';
-import { totalUsers } from '../core/market';
+import { fxTotals, hasMvp } from '../core/product';
+import { launchedMarkets, totalUsers } from '../core/market';
 import { isFull } from '../core/office';
 import { leadInfo, avgSat } from '../core/staff';
-import { DATA } from '../core/data';
+import { DATA, featuresOf } from '../core/data';
 import type { DeptId, GameState } from '../core/types';
 
 export function nextHint(s: GameState, desktopOpenedOnce: boolean): string {
@@ -53,5 +53,15 @@ export function nextHint(s: GameState, desktopOpenedOnce: boolean): string {
   }
   if (s.employees.length >= 5 && avgSat(s) < 50) return `직원 만족도가 낮습니다(평균 ${Math.round(avgSat(s))}). 월급·복지·근무 방침을 살펴보세요. 낮으면 퇴사가 늘어납니다.`;
   if (!s.fundingStage && !s.safes.length && s.career.challenge !== 'bootstrap') return '고객이 생기면 기업가치가 올라갑니다. 투자 앱에서 시드(또는 SAFE)로 성장 자금을 받을 수 있습니다. 투자 없이 매출로 키우는 길도 있습니다.';
+  // 중후반 전략 안내(A-75): 지금 회사에서 아직 안 쓴 큰 성장 수단을 하나 짚어 줍니다.
+  const fx = fxTotals(s);
+  const ent = featuresOf(s.company.industry).find((f) => f.cat === 'enterprise');
+  if (s.company.stage >= 2 && ent && !fx.enterprise) return `대기업 계약은 한 건이 큰 매출입니다. 제품 앱에서 대기업용 기능(${ent.name} 등)을 만들고 세일즈팀에 "대기업 영업"을 맡겨 보세요.`;
+  if (s.company.stage >= 2 && fx.enterprise && s.enterprise.length === 0 && s.company.orders.sales !== 'sales_enterprise' && s.ceoAlloc.enterprise === 0) return '대기업용 기능이 준비됐습니다. 세일즈팀에 "대기업 영업"을 맡기거나 일정 앱에서 대표 "대기업 영업" 칸을 넣으세요.';
+  const foreign = launchedMarkets(s).length;
+  if (s.company.stage >= 3 && foreign === 1) return '국내 시장만으로는 점유율 상한이 있습니다. 제품 앱의 현지화 기능을 만들고 시장 앱에서 해외 시장(일본·동남아부터)에 진출해 보세요.';
+  if (s.company.stage >= 3 && !s.public && s.company.ipoReady < 50) return `상장하려면 재무법무팀의 "상장 준비"가 필요합니다(지금 준비도 ${Math.round(s.company.ipoReady)}). 재무법무 직원을 뽑고 지시하세요.`;
+  const rw2 = runwayMonths(s);
+  if (!s.public && rw2 !== null && rw2 < 9 && !r) return `런웨이 ${rw2.toFixed(1)}개월. 성장 중이라면 다음 라운드를 미리 여세요 — 런웨이가 짧을수록 협상력(매각가·투자 확률)이 떨어집니다.`;
   return '미션을 따라가 보세요. 로드맵·채용·마케팅으로 회사를 키우고, 기업가치가 충분히 크면 Exit 앱에서 매각이나 IPO를 시도할 수 있습니다.';
 }
