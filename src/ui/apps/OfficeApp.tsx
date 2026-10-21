@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { DATA, OFFICE_TIERS } from '../../core/data';
 import { buyFurniture, buyFurnitureBlock, currentTier, deskCapacity, desks, furnitureFits, furnitureItems, moveBlock, moveOffice, officeComfort, ownsFurniture, seatsAvailable } from '../../core/office';
 import { act, useGame } from '../store';
-import { Money } from '../common';
+import { Money, Help } from '../common';
 import './apps.css';
 
 export function OfficeApp() {
@@ -111,7 +111,7 @@ export function OfficeApp() {
           );
         })}
       </div>
-      <div className="tiny muted">이전하면 지금 보증금을 돌려받고 새 보증금을 냅니다. 책상·가구는 들고 가고, 책상은 새 사무실 빈 자리에 차례로 놓입니다(배치는 다시 바꿀 수 있음).</div>
+      <Help text="이전하면 지금 보증금을 돌려받고 새 보증금을 냅니다. 책상·가구는 들고 가고, 책상은 새 사무실 빈 자리에 차례로 놓입니다(배치는 다시 바꿀 수 있음)." />
     </div>
   );
 }

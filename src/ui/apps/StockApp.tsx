@@ -6,7 +6,7 @@ import { buyback, marketCap, resign, resignPreview, sellPreview, sellShares, set
 import { formatDate } from '../../core/calendar';
 import { wonShort, pct } from '../../core/format';
 import { act, useGame } from '../store';
-import { Money } from '../common';
+import { Money, Help } from '../common';
 import { play } from '../sound';
 import './apps.css';
 
@@ -32,7 +32,7 @@ export function StockApp() {
   const [msg, setMsg] = useState<string | null>(null);
   const [confirm, setConfirm] = useState(false);
   const p = s.public;
-  if (!p) return <div className="muted">상장사가 아닙니다. Exit 메뉴에서 IPO를 시도하세요.</div>;
+  if (!p) return <Help text="상장사가 아닙니다. Exit 메뉴에서 IPO를 시도하세요." />;
   const locked = s.day < p.lockupUntil;
   const pv = sellPreview(s, frac);
   const rv = resignPreview(s);
@@ -91,7 +91,7 @@ export function StockApp() {
               </button>
             ))}
           </div>
-          <div className="tiny muted">높게 약속하면 지금 주가가 오르지만, 못 지키면 크게 떨어집니다.</div>
+          <Help text="높게 약속하면 지금 주가가 오르지만, 못 지키면 크게 떨어집니다." />
         </div>
         <div className="card col grow">
           <b>지분 매각</b>
@@ -122,7 +122,7 @@ export function StockApp() {
         </div>
         <div className="card col grow">
           <b>자사주 매입</b>
-          <div className="tiny muted">회사 자금으로 주식을 사서 없애면 주당 가치가 오릅니다(보유 자금의 50%까지).</div>
+          <Help text="회사 자금으로 주식을 사서 없애면 주당 가치가 오릅니다(보유 자금의 50%까지)." />
           <button className="btn ghost" onClick={() => setMsg(act((g) => buyback(g, Math.floor(g.cash * 0.1))) ?? '자금 10%로 자사주를 샀습니다.')}>
             자금 10% 매입
           </button>

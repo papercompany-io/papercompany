@@ -485,3 +485,64 @@ input[type='checkbox'] { accent-color: var(--violet); width: 16px; height: 16px;
 .sb-name { font-size: 10px; }
 .office .cam-tools { z-index: 5; }
 .app-panel { z-index: 44; }
+
+/* ────────────────── 창 안을 덜 복잡하게(A-84) ──────────────────
+   상자 안의 상자를 줄이고, 테두리·그림자는 한 겹, 숫자 줄은 하나의 띠, 제목은 띠 없이 글자만 */
+.app-panel .app-body { padding: 18px 22px 22px; }
+.app-panel .card, .app-panel .feat, .app-panel .rm-item, .app-panel .mk, .app-panel .inv, .app-panel .applicant, .app-panel .growth:not(.cat), .app-panel .order, .app-panel .furn {
+  border: 1px solid var(--line); box-shadow: none; border-radius: 8px; background: var(--panel);
+}
+.app-panel .feat:hover:not(:disabled), .app-panel .mk:hover { border-color: var(--violet); transform: none; }
+.app-panel .rm-item.first { border-color: var(--violet); box-shadow: inset 3px 0 0 var(--violet); }
+.app-panel .order.on { border-color: var(--green); box-shadow: inset 3px 0 0 var(--green); }
+.app-panel .card .card { border: none; background: var(--panel-2); }
+
+/* 숫자 줄: 칸마다 상자 대신 한 줄 띠 + 칸 사이 선 */
+.app-panel .kpi, .app-panel .stats {
+  display: flex; flex-wrap: wrap; gap: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 4px 0;
+}
+.app-panel .kpi > .stat, .app-panel .stats > .stat {
+  flex: 1 1 160px; background: transparent; border: none; box-shadow: none; border-radius: 0; padding: 8px 16px; min-width: 0;
+}
+.app-panel .kpi > .stat + .stat, .app-panel .stats > .stat + .stat { border-left: 1px solid var(--line); }
+.app-panel .stat-label { font-size: 11px; font-weight: 700; color: var(--ink-3); letter-spacing: 0; }
+.app-panel .stat-value { font-family: inherit; font-weight: 800; font-size: 20px; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
+.app-panel .stat-value .money { font-weight: 800; }
+.app-panel .stat .tiny { color: var(--ink-3); }
+
+/* 제목: 띠 없이 */
+.app-panel .section-title {
+  background: none; border: none; padding: 0; margin: 14px 0 6px; font-family: inherit; font-size: 13px; font-weight: 800; color: var(--ink-2); border-radius: 0;
+}
+
+/* 표: 줄무늬 없이 가는 선 */
+.app-panel table.t th { background: transparent; border-bottom: 1px solid var(--line-2); color: var(--ink-3); font-size: 11px; font-weight: 700; padding: 6px 9px; }
+.app-panel table.t td { border-bottom: 1px solid var(--line); padding: 7px 9px; }
+.app-panel table.t tbody tr:nth-child(even) td { background: transparent; }
+.app-panel table.t tbody tr:hover td { background: #f6f1e6; }
+.app-panel table.t tr.total td { background: transparent; border-top: 1px solid var(--line-2); }
+
+/* 버튼·알림·탭은 한 겹 가볍게 */
+.app-panel .btn { box-shadow: 0 2px 0 var(--blue-d); }
+.app-panel .btn.ghost { box-shadow: 0 2px 0 var(--line-2); }
+.app-panel .btn.green { box-shadow: 0 2px 0 var(--green-d); }
+.app-panel .btn.red { box-shadow: 0 2px 0 var(--red-d); }
+.app-panel .warn { border-width: 0 0 0 4px; border-radius: 6px; background: #fff6df; }
+.app-panel .ok { border-width: 0 0 0 4px; border-radius: 6px; }
+.app-panel .tabs { padding: 3px; border-radius: 9px; margin-bottom: 14px; }
+.app-panel .tab { padding: 6px 13px; border-radius: 7px; }
+
+/* "?" 설명 */
+.help { display: inline-flex; align-items: flex-start; gap: 6px; vertical-align: middle; }
+.help-q {
+  flex: none; width: 18px; height: 18px; border-radius: 50%; border: 1px solid var(--line-2); background: var(--panel); color: var(--ink-3);
+  font-size: 11px; font-weight: 900; line-height: 1; cursor: help; padding: 0;
+}
+.help-q:hover, .help.open .help-q { background: var(--violet); border-color: var(--violet); color: #fff; }
+.help-text { font-size: 12px; color: var(--ink-2); line-height: 1.45; max-width: 640px; }
+
+/* 투자 단계 줄: 알약 대신 밑줄 진행 표시 */
+.app-panel .rung { background: transparent; box-shadow: none; border: none; border-bottom: 3px solid var(--line); border-radius: 0; color: var(--ink-3); font-weight: 700; }
+.app-panel .rung.done { color: var(--ink-2); border-bottom-color: #8fcfc6; }
+.app-panel .rung.cur, .app-panel .rung.now { background: transparent; color: var(--violet-d); border-bottom-color: var(--violet-d); font-weight: 900; }
+.app-panel .rung.next { box-shadow: none; color: var(--ink); border-bottom: 3px dashed var(--violet); }

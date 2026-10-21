@@ -6,7 +6,7 @@ import { deptOutput } from '../../core/staff';
 import { orderOf, setOrder } from '../../core/orders';
 import { formatDate } from '../../core/calendar';
 import { act, useGame } from '../store';
-import { Tabs } from '../common';
+import { Tabs, Help } from '../common';
 import { play } from '../sound';
 import type { PriceTier } from '../../core/types';
 import './apps.css';
@@ -163,7 +163,7 @@ export function ProductApp() {
                 </div>
               );
             })}
-            <div className="tiny muted">디자이너가 없으면 개발자·대표가 디자인 작업을 절반 효율로 합니다. 새 코드는 버그를 만들고, 버그가 많으면 이탈과 장애가 늘어납니다.</div>
+            <Help text="디자이너가 없으면 개발자·대표가 디자인 작업을 절반 효율로 합니다. 새 코드는 버그를 만들고, 버그가 많으면 이탈과 장애가 늘어납니다." />
           </div>
           <div className="col grow">
             <div className="row">

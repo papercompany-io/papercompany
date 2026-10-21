@@ -6,7 +6,7 @@ import { openRound } from '../../core/funding';
 import { enterpriseThreshold } from '../../core/orders';
 import { fxTotals, hasMvp } from '../../core/product';
 import { act, useGame } from '../store';
-import { Money } from '../common';
+import { Money, Help } from '../common';
 import type { ActionId } from '../../core/types';
 import './apps.css';
 
@@ -24,9 +24,9 @@ export function ScheduleApp() {
   return (
     <div className="col">
       <div className="row">
-        <div className="muted grow">
-          하루 {slots}칸을 나눠 쓰세요. 배분은 다음 날에도 이어지고, 한 칸이 근무 1시간처럼 차례로 실행됩니다.
-          {exec ? ' 경영 모드: 실무는 조직이 맡고 대표는 큰일에 집중합니다.' : ''}
+        <div className="grow row" style={{ gap: 6 }}>
+          <b>하루 {slots}칸</b>
+          <Help text={`하루 ${slots}칸을 나눠 쓰세요. 배분은 다음 날에도 이어지고, 한 칸이 근무 1시간처럼 차례로 실행됩니다.${exec ? ' 경영 모드: 실무는 조직이 맡고 대표는 큰일에 집중합니다.' : ''}`} />
         </div>
         <div className="seg">
           <button className={!exec ? 'on' : ''} data-testid="mode-founder" onClick={() => act((g) => setCeoMode(g, 'founder'))}>
@@ -125,7 +125,7 @@ function ContractsCard() {
         <div className="section-title grow">외주 일감</div>
         {!!c?.completed && <span className="chip">완료 {c.completed}건</span>}
       </div>
-      <div className="tiny muted">대표 "외주" 칸이나 개발팀 "외주 작업" 지시로 작업량을 채우면 대금이 들어옵니다. 그만큼 제품 개발은 늦어집니다. 마감을 넘기면 대금이 깎이고, 많이 넘기면 취소됩니다.</div>
+      <Help text="대표 &quot;외주&quot; 칸이나 개발팀 &quot;외주 작업&quot; 지시로 작업량을 채우면 대금이 들어옵니다. 그만큼 제품 개발은 늦어집니다. 마감을 넘기면 대금이 깎이고, 많이 넘기면 취소됩니다." />
       {a && a.deadline !== null && (
         <div className="card col" style={{ borderTop: `4px solid ${COLORS.contract}` }}>
           <div className="row">

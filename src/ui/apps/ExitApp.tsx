@@ -8,7 +8,7 @@ import { wonShort } from '../../core/format';
 import { pct, won } from '../../core/format';
 import { computeValuation } from '../../core/valuation';
 import { act, useGame } from '../store';
-import { Money, chanceLabel } from '../common';
+import { Money, chanceLabel, Help } from '../common';
 import './apps.css';
 
 export function ExitApp() {
@@ -27,7 +27,7 @@ export function ExitApp() {
         <div className="stat">
           <div className="stat-label">지금 기업가치</div>
           <div className="stat-value">
-            <Money v={v} full testId="exit-valuation" />
+            <Money v={v} testId="exit-valuation" />
           </div>
         </div>
         <div className="stat">
@@ -39,9 +39,9 @@ export function ExitApp() {
         <div className="stat">
           <div className="stat-label">지금 Exit하면 받을 결과 금액(예상)</div>
           <div className="stat-value">
-            <Money v={Math.round(v * fp)} full />
+            <Money v={Math.round(v * fp)} />
           </div>
-          <div className="tiny muted">기업가치 × 창업자 지분율. 실제 금액은 제안가·공모가에 따라 달라집니다.</div>
+          <Help text="기업가치 × 창업자 지분율. 실제 금액은 제안가·공모가에 따라 달라집니다." />
         </div>
       </div>
 
@@ -54,7 +54,7 @@ export function ExitApp() {
               <tr>
                 <th>제안가(Exit 기업가치)</th>
                 <td className="r" data-testid="sale-price">
-                  {won(a.price!)}
+                  {wonShort(a.price!)}
                 </td>
               </tr>
               <tr>
@@ -64,7 +64,7 @@ export function ExitApp() {
               <tr className="total">
                 <th>받을 결과 금액 = 제안가 × 지분율</th>
                 <td className="r" data-testid="sale-result">
-                  {won(Math.round(a.price! * fp))}
+                  {wonShort(Math.round(a.price! * fp))}
                 </td>
               </tr>
             </tbody>
@@ -98,7 +98,10 @@ export function ExitApp() {
 
       {(!a || a.status === 'failed' || a.status === 'declined') && (
         <>
-          <div className="tiny muted">원할 때 언제든 Exit을 시도할 수 있습니다. 매각에 성공하면 이 회사가 끝나고 결과 금액이 정해집니다. IPO에 성공하면 상장사로 회사가 이어지고, 락업(180일) 뒤 지분을 팔거나 물러날 때 돈을 받습니다. 최근 12개월 평균으로 본 연매출 {wonShort(annualRevenue(s))}.</div>
+          <div className="row tiny muted" style={{ gap: 6 }}>
+            연매출(최근 12개월) {wonShort(annualRevenue(s))}
+            <Help text="원할 때 언제든 Exit을 시도할 수 있습니다. 매각에 성공하면 이 회사가 끝나고 결과 금액이 정해집니다. IPO에 성공하면 상장사로 회사가 이어지고, 락업(180일) 뒤 지분을 팔거나 물러날 때 돈을 받습니다." />
+          </div>
           {blocked && <div className="warn">{blocked}</div>}
           <div className="exit-choices">
             {(['sale', 'ipo'] as const).map((m) => {
@@ -114,7 +117,7 @@ export function ExitApp() {
                   <div className="tiny">
                     성공 가능성 <b>{chanceLabel(ep.p)}</b>
                   </div>
-                  <div className="tiny muted">{ep.factors.map((f) => `${f.label} ${f.value >= 0 ? '+' : ''}${Math.round(f.value * 100)}%p`).join(' · ')}</div>
+                  <Help text={ep.factors.map((f) => `${f.label} ${f.value >= 0 ? '+' : ''}${Math.round(f.value * 100)}%p`).join(' · ')} />
                   <button className="btn" data-testid={`exit-${m}`} disabled={!!blocked} onClick={() => setConfirm(m)}>
                     {m === 'sale' ? '매각 시도' : 'IPO 시도'}
                   </button>

@@ -8,7 +8,7 @@ import { arrivalRate, closePosting, createPosting, hireWarning, offerJob, postin
 import { marketSalary } from '../../core/staff';
 import { trait } from '../../core/data';
 import { act, useGame } from '../store';
-import { Tabs } from '../common';
+import { Tabs, Help } from '../common';
 import type { DeptId } from '../../core/types';
 import './apps.css';
 
@@ -231,7 +231,7 @@ function OfferDialog({ applicantId, onClose, onResult }: { applicantId: string; 
         <div className="tiny">
           {dept(a.dept).name} · 능력 {a.grade} · 경력 {a.years}년 · 희망 월급 {(a.desiredSalary / 1e4).toLocaleString()}만원 · 특성 {traitNames(a.traits)}
         </div>
-        <div className="tiny muted">월급 외에 4대보험(9.4%)과 퇴직연금(8.3%) 회사 부담분이 함께 나갑니다. 입사는 다음 날입니다.</div>
+        <Help text="월급 외에 4대보험(9.4%)과 퇴직연금(8.3%) 회사 부담분이 함께 나갑니다. 입사는 다음 날입니다." />
         {warn && <div className="warn">{warn}</div>}
         <button className="btn" data-testid="offer-full" onClick={() => onResult(act((g) => offerJob(g, a.id, false))!)}>
           희망 월급 그대로 제안 (월 {(a.desiredSalary / 1e4).toLocaleString()}만원)

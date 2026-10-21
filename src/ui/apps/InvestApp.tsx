@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { DATA, investor, stage, stageIndex } from '../../core/data';
 import { formatDate } from '../../core/calendar';
 import { totalShares } from '../../core/equity';
-import { pct, pctsSumTo100, won, wonShort } from '../../core/format';
+import { pct, pctsSumTo100, wonShort } from '../../core/format';
 import {
   acceptOffer,
   activeRound,
@@ -28,7 +28,7 @@ import {
 import { externalChannelId } from '../../core/messenger';
 import { computeValuation } from '../../core/valuation';
 import { act, useGame } from '../store';
-import { Money, Tabs, chanceLabel } from '../common';
+import { Money, Tabs, chanceLabel, Help } from '../common';
 import { esopEntry, esopFree, investorPct, topUpEsop } from '../../core/equity';
 import type { Round, StageId } from '../../core/types';
 import './apps.css';
@@ -103,8 +103,10 @@ function RoundTab({ initialStage, goInvestors }: { initialStage?: string; goInve
   return (
     <div className="col">
       <div className="card col">
-        <b>투자 라운드 열기</b>
-        <div className="tiny muted">라운드는 원할 때 언제든 열 수 있고, 실패해도 다시 열 수 있습니다. 다만 맞지 않는 시점에 열면 실패하기 쉽고, 진행하는 {DATA.funding.roundDays}일 동안 대표 행동 칸 {DATA.funding.lockedSlots}칸이 투자자 미팅에 묶입니다.</div>
+        <div className="row" style={{ gap: 6 }}>
+          <b>투자 라운드 열기</b>
+          <Help text={`라운드는 원할 때 언제든 열 수 있고, 실패해도 다시 열 수 있습니다. 다만 맞지 않는 시점에 열면 실패하기 쉽고, 진행하는 ${DATA.funding.roundDays}일 동안 대표 행동 칸 ${DATA.funding.lockedSlots}칸이 투자자 미팅에 묶입니다.`} />
+        </div>
         <div className="row">
           <label className="tiny">
             단계
@@ -137,29 +139,29 @@ function RoundTab({ initialStage, goInvestors }: { initialStage?: string; goInve
             <tr>
               <th>프리밸류(지금 기업가치)</th>
               <td className="r" data-testid="preview-pre">
-                {won(m.preValue)}
+                {wonShort(m.preValue)}
               </td>
             </tr>
             <tr>
               <th>포스트밸류 = 프리밸류 ÷ (1 − 룸)</th>
               <td className="r" data-testid="preview-post">
-                {won(m.postValue)}
+                {wonShort(m.postValue)}
               </td>
             </tr>
             <tr>
               <th>예상 투자금 = 포스트밸류 × 룸</th>
               <td className="r" data-testid="preview-amount">
-                <Money v={m.amount} full />
+                <Money v={m.amount} />
               </td>
             </tr>
           </tbody>
         </table>
         {safeOk && instrument === 'safe' && (
           <div className="ok tiny">
-            SAFE: 지금은 주식을 주지 않고 투자금만 받습니다. 다음 지분 라운드에서 밸류 캡 {won(m.postValue)}과 할인 {DATA.funding.safe.discount * 100}% 중 유리한 가격으로 주식이 됩니다. 희석이 미뤄질 뿐 사라지지는 않습니다.
+            SAFE: 지금은 주식을 주지 않고 투자금만 받습니다. 다음 지분 라운드에서 밸류 캡 {wonShort(m.postValue)}과 할인 {DATA.funding.safe.discount * 100}% 중 유리한 가격으로 주식이 됩니다. 희석이 미뤄질 뿐 사라지지는 않습니다.
           </div>
         )}
-        {s.safes.length > 0 && <div className="tiny">아직 전환되지 않은 SAFE: {won(s.safes.reduce((a, x) => a + x.amount, 0))} (다음 지분 라운드에서 주식으로 바뀜)</div>}
+        {s.safes.length > 0 && <div className="tiny">아직 전환되지 않은 SAFE: {wonShort(s.safes.reduce((a, x) => a + x.amount, 0))} (다음 지분 라운드에서 주식으로 바뀜)</div>}
         <div className="section-title">이 단계에 맞는 시점인가요?</div>
         {stageConditions(s, stageId).length === 0 && <div className="tiny muted">특별한 조건이 없습니다.</div>}
         {stageConditions(s, stageId).map((c) => (
@@ -206,15 +208,15 @@ function OpenRound({ r, goInvestors }: { r: Round; goInvestors: () => void }) {
           </tr>
           <tr>
             <th>프리밸류(라운드를 연 날 산정)</th>
-            <td className="r">{won(m.preValue)}</td>
+            <td className="r">{wonShort(m.preValue)}</td>
           </tr>
           <tr>
             <th>포스트밸류</th>
-            <td className="r">{won(m.postValue)}</td>
+            <td className="r">{wonShort(m.postValue)}</td>
           </tr>
           <tr>
             <th>투자금 = 포스트밸류 × 룸</th>
-            <td className="r">{won(m.amount)}</td>
+            <td className="r">{wonShort(m.amount)}</td>
           </tr>
           <tr>
             <th>리드 투자사</th>
@@ -230,7 +232,7 @@ function OpenRound({ r, goInvestors }: { r: Round; goInvestors: () => void }) {
           </tr>
         </tbody>
       </table>
-      <div className="tiny muted">투자사 목록에서 레터를 보내 관심을 높이고 "투자 결정 요청"을 하세요. 리드가 정해지면 다른 투자사에 공동 투자를 제안해 클럽딜을 만들 수 있습니다. 협상 결과(희망 기업가치)는 리드의 투자 제안 레터를 따릅니다.</div>
+      <Help text="투자사 목록에서 레터를 보내 관심을 높이고 &quot;투자 결정 요청&quot;을 하세요. 리드가 정해지면 다른 투자사에 공동 투자를 제안해 클럽딜을 만들 수 있습니다. 협상 결과(희망 기업가치)는 리드의 투자 제안 레터를 따릅니다." />
       {err && <div className="err">{err}</div>}
       <div className="row">
         <button className="btn ghost" onClick={goInvestors}>
@@ -267,7 +269,7 @@ function OfferView({ r }: { r: Round }) {
       <b style={{ fontSize: 18 }}>
         {stage(r.stage).name} {o.instrument === 'safe' ? 'SAFE ' : ''}투자 제안서
       </b>
-      {o.instrument === 'safe' && <div className="ok tiny">SAFE라 지금은 지분이 줄지 않습니다. 밸류 캡 {won(o.safeCap ?? 0)}, 할인 {DATA.funding.safe.discount * 100}%로 다음 지분 라운드에서 주식이 됩니다.</div>}
+      {o.instrument === 'safe' && <div className="ok tiny">SAFE라 지금은 지분이 줄지 않습니다. 밸류 캡 {wonShort(o.safeCap ?? 0)}, 할인 {DATA.funding.safe.discount * 100}%로 다음 지분 라운드에서 주식이 됩니다.</div>}
       {o.safeShares > 0 && <div className="tiny">이번 라운드에서 기존 SAFE가 주식 {o.safeShares.toLocaleString('ko-KR')}주로 전환됩니다(창업자 지분 계산에 포함).</div>}
       {o.down && <div className="warn">다운라운드입니다: 지난 라운드 포스트밸류보다 낮은 가격입니다. 수락하면 직원 사기와 명성이 떨어집니다.</div>}
       <table className="t">
@@ -275,7 +277,7 @@ function OfferView({ r }: { r: Round }) {
           <tr>
             <th>프리밸류(협상 반영)</th>
             <td className="r" data-testid="offer-pre">
-              {won(o.preValue)}
+              {wonShort(o.preValue)}
             </td>
           </tr>
           <tr>
@@ -287,13 +289,13 @@ function OfferView({ r }: { r: Round }) {
           <tr>
             <th>포스트밸류 = 프리밸류 ÷ (1 − 룸)</th>
             <td className="r" data-testid="offer-post">
-              {won(o.postValue)}
+              {wonShort(o.postValue)}
             </td>
           </tr>
           <tr className="total">
             <th>투자금 = 포스트밸류 × 룸</th>
             <td className="r" data-testid="offer-amount">
-              {won(o.amount)}
+              {wonShort(o.amount)}
             </td>
           </tr>
         </tbody>
@@ -316,7 +318,7 @@ function OfferView({ r }: { r: Round }) {
               </td>
               <td className="r num">{x.newShares.toLocaleString()}주</td>
               <td className="r">{pct(x.pct, 2)}</td>
-              <td className="r num">{won(x.amount)}</td>
+              <td className="r num">{wonShort(x.amount)}</td>
             </tr>
           ))}
         </tbody>
@@ -360,7 +362,7 @@ function RoundHistory({ rounds }: { rounds: Round[] }) {
                 </td>
                 <td>룸 {pct(x.room, 1)}</td>
                 <td>{label[x.status]}</td>
-                <td className="r">{x.offer && x.status === 'accepted' ? won(x.offer.amount) : ''}</td>
+                <td className="r">{x.offer && x.status === 'accepted' ? wonShort(x.offer.amount) : ''}</td>
               </tr>
             ))}
         </tbody>
@@ -537,7 +539,7 @@ function CapTab() {
             </div>
             <b>{Math.round(s.company.board)}</b>
           </div>
-          <div className="tiny muted">투자자 지분이 과반이면 이사회가 대표를 평가합니다. 매출이 줄면 신뢰가 떨어지고, 0이 되면 대표에서 해임됩니다(회사 종료).</div>
+          <Help text="투자자 지분이 과반이면 이사회가 대표를 평가합니다. 매출이 줄면 신뢰가 떨어지고, 0이 되면 대표에서 해임됩니다(회사 종료)." />
         </div>
       )}
       <div className="card">
@@ -578,7 +580,7 @@ function EsopCard() {
           풀 {pool.shares.toLocaleString('ko-KR')}주 · 지급 {granted.toLocaleString('ko-KR')}주 · 남음 {esopFree(s).toLocaleString('ko-KR')}주. 직원 관리 메뉴에서 직원에게 옵션을 줄 수 있습니다(베스팅 2년 20% → 3년 40% → 4년 80% → 5년 100%).
         </div>
       ) : (
-        <div className="tiny muted">ESOP 풀을 만들면 모든 주주가 같은 비율로 희석되지만, 핵심 인재에게 옵션을 줘 만족도를 올리고 이직을 막을 수 있습니다.</div>
+        <Help text="ESOP 풀을 만들면 모든 주주가 같은 비율로 희석되지만, 핵심 인재에게 옵션을 줘 만족도를 올리고 이직을 막을 수 있습니다." />
       )}
       <div className="row">
         {[0.05, 0.1].map((p) => (

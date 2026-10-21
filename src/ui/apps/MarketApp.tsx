@@ -8,7 +8,7 @@ import { enterpriseThreshold, orderOf, setOrder } from '../../core/orders';
 import { formatDate } from '../../core/calendar';
 import { wonShort } from '../../core/format';
 import { act, useGame } from '../store';
-import { Money, Tabs } from '../common';
+import { Money, Tabs, Help } from '../common';
 import { play } from '../sound';
 import type { DeptId, MarketId, MarketState } from '../../core/types';
 import './apps.css';
@@ -97,7 +97,7 @@ export function MarketApp() {
                       >
                         진출
                       </button>
-                      {block && <div className="tiny muted">{block}</div>}
+                      {block && <div className="tiny muted">잠김: 현지화 기능 필요</div>}
                     </>
                   )}
                 </div>
@@ -151,9 +151,7 @@ export function MarketApp() {
                     <Money v={ms.adBudget} />
                   </b>
                 </div>
-                <div className="tiny muted">
-                  광고는 인지도(브랜드)를 올리고 고객을 직접 데려옵니다(CAC). 점유율이 높아질수록 고객 한 명 데려오는 비용이 비싸집니다. 마케팅팀이 "퍼포먼스 광고 운영"을 하면 효율이 오릅니다. 매일 예산의 1/30씩 나갑니다.
-                </div>
+                <Help text="광고는 인지도(브랜드)를 올리고 고객을 직접 데려옵니다(CAC). 점유율이 높아질수록 고객 한 명 데려오는 비용이 비싸집니다. 마케팅팀이 &quot;퍼포먼스 광고 운영&quot;을 하면 효율이 오릅니다. 매일 예산의 1/30씩 나갑니다." />
               </>
             )}
           </div>

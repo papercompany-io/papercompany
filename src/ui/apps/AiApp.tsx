@@ -3,7 +3,7 @@ import { DATA, aiModel, aiVendor, dept } from '../../core/data';
 import { aiMonthlyCost, avgAdoption, chooseModel, releasedModels, setAdoption } from '../../core/aiadopt';
 import { formatDate, dayOfMonthKey } from '../../core/calendar';
 import { act, useGame } from '../store';
-import { Money } from '../common';
+import { Money, Help } from '../common';
 import type { DeptId } from '../../core/types';
 import './apps.css';
 
@@ -103,8 +103,9 @@ export function AiApp() {
               </div>
             );
           })}
-          <div className="tiny muted">
-            적용률이 높을수록 효과와 부작용(AI 슬롭) 위험이 함께 커집니다. AX 복지와 AI연구팀의 "사내 AI 도구 고도화"가 적응을 빠르게 하고 부작용을 줄입니다. 마지막 교체: {s.ai.switchedDay !== null ? formatDate(s.ai.switchedDay) : '-'}.
+          <div className="row tiny muted" style={{ gap: 6 }}>
+            마지막 교체 {s.ai.switchedDay !== null ? formatDate(s.ai.switchedDay) : '-'}
+            <Help text='적용률이 높을수록 효과와 부작용(AI 슬롭) 위험이 함께 커집니다. AX 복지와 AI연구팀의 "사내 AI 도구 고도화"가 적응을 빠르게 하고 부작용을 줄입니다.' />
           </div>
         </div>
       )}

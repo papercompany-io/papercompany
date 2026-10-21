@@ -57,3 +57,16 @@ export function useTween(target: number, ms = 400): number {
   }, [target, ms]);
   return v;
 }
+
+// 설명 문구: 화면에는 작은 "?"만 두고, 올리거나 누르면 펼쳐집니다(화면을 덜 복잡하게, A-84).
+export function Help({ text }: { text: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <span className={`help ${open ? 'open' : ''}`}>
+      <button type="button" className="help-q" title={text} onClick={() => setOpen((o) => !o)} aria-label="설명">
+        ?
+      </button>
+      {open && <span className="help-text">{text}</span>}
+    </span>
+  );
+}

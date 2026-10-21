@@ -1,4 +1,5 @@
 // F06 메신저: MG-01 채널 구성(#전체·팀 채널·그룹·DM·외부 연락처), MG-03 부서 지시(맡은 일 선택지), DC-01 메시지 속 결정 버튼
+import { Help } from '../common';
 import { PxIcon } from '../icons';
 import { useEffect, useRef, useState } from 'react';
 import { dept, ordersFor } from '../../core/data';
@@ -92,8 +93,8 @@ export function MessengerApp({ initial, openInvest }: { initial?: string; openIn
         </div>
         <div className="msg-compose">
           {ch.kind === 'team' && ch.dept && <TeamOrders deptId={ch.dept} onErr={setErr} />}
-          {ch.kind === 'all' && <div className="tiny muted">#전체는 회사 소식을 보는 채널입니다. 일은 각 팀 채널에서 부서가 맡을 일을 정합니다.</div>}
-          {(ch.kind === 'dm' || ch.kind === 'group') && <div className="tiny muted">지시는 팀 채널에서 부서 단위로 내립니다(개인 지시 없음). 직원의 고민·제안은 DM으로 옵니다.</div>}
+          {ch.kind === 'all' && <Help text="#전체는 회사 소식을 보는 채널입니다. 일은 각 팀 채널에서 부서가 맡을 일을 정합니다." />}
+          {(ch.kind === 'dm' || ch.kind === 'group') && <Help text="지시는 팀 채널에서 부서 단위로 내립니다(개인 지시 없음). 직원의 고민·제안은 DM으로 옵니다." />}
           {ch.kind === 'external' && (
             <div className="row tiny muted">
               투자사에 보내는 레터는 투자 메뉴에서 선택지로 고릅니다. 다른 외부 연락은 메시지 속 버튼으로 답합니다.
