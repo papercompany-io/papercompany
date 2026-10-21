@@ -134,9 +134,12 @@ export function StockApp() {
           남은 지분 {rv.shares.toLocaleString('ko-KR')}주를 블록딜로 넘기고 이 회사를 마칩니다. 예상 수령 {wonShort(rv.proceeds)} + 이미 판 돈 {wonShort(p.founderSold)}. 주식 수 {totalShares(s.capTable).toLocaleString('ko-KR')}주.
         </div>
         {!confirm ? (
-          <button className="btn red" disabled={locked} data-testid="resign" onClick={() => setConfirm(true)}>
-            물러나기
-          </button>
+          <>
+            {locked && <div className="tiny muted">락업 기간({formatDate(p.lockupUntil)}까지)에는 물러날 수 없습니다.</div>}
+            <button className="btn red" disabled={locked} data-testid="resign" onClick={() => setConfirm(true)}>
+              물러나기
+            </button>
+          </>
         ) : (
           <div className="row">
             <span className="warn">이 회사가 끝나고 커리어 화면으로 갑니다.</span>

@@ -51,6 +51,8 @@ input, select { font: inherit; }
 .btn.red { background: var(--red); }
 .btn.small { padding: 4px 10px; font-size: 12px; }
 .btn.big { padding: 11px 22px; font-size: 15px; }
+/* 색 버튼(red·green 등)도 비활성일 때는 회색으로 보이게(같은 우선순위라 뒤에 둠) */
+.btn.btn:disabled { background: #c9ccd6; box-shadow: none; cursor: not-allowed; color: #f4f5f8; }
 
 .money { color: var(--money); font-weight: 800; font-variant-numeric: tabular-nums; }
 .money.neg { color: var(--red); }

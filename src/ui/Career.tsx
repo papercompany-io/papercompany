@@ -1,9 +1,10 @@
 // 회사 한 판이 끝난 화면(SC-01 결과 금액, ED-01 성장 경로, ED-03 파산) + 커리어 요약 → 다음 회사 또는 은퇴(OQ-020).
 // 은퇴하면 엔딩(ED-02)과 명예의 전당(RK-01 로컬)으로 갑니다.
+import { useState } from 'react';
 import { DATA, industry } from '../core/data';
 import { careerStats, endingFor, founderAge, legacyEarned, mustRetire, pathSummary } from '../core/career';
 import { formatDate } from '../core/calendar';
-import { pct, won, wonShort } from '../core/format';
+import { pct, won, wonCompact, wonShort } from '../core/format';
 import { STAGE_NAMES } from '../core/progress';
 import type { CompanyResult, GameState } from '../core/types';
 import { Money } from './common';
@@ -78,6 +79,7 @@ export function CompanyResultCard({ r }: { r: CompanyResult }) {
 
 export function Career({ s, onNext, onRetire }: { s: GameState; onNext: () => void; onRetire: () => void }) {
   const r = s.result;
+  const [askRetire, setAskRetire] = useState(false);
   const st = careerStats(s);
   const age = founderAge(s);
   const forced = mustRetire(s) || age + DATA.career.breakDays / 365 >= DATA.career.retireAge;
@@ -99,8 +101,8 @@ export function Career({ s, onNext, onRetire }: { s: GameState; onNext: () => vo
               <div className="career-stats">
                 <div>
                   <span>개인 자산</span>
-                  <b data-testid="career-wealth">
-                    <Money v={s.career.wealth} />
+                  <b data-testid="career-wealth" title={won(s.career.wealth)}>
+                    <span className="money">{wonCompact(s.career.wealth)}</span>
                   </b>
                 </div>
                 <div>
@@ -152,9 +154,21 @@ export function Career({ s, onNext, onRetire }: { s: GameState; onNext: () => vo
                   다음 회사 창업하기
                 </button>
               )}
-              <button className={`btn big ${forced ? 'green' : 'ghost'}`} data-testid="retire" onClick={onRetire}>
-                {forced ? '은퇴하기(65세)' : '은퇴하고 엔딩 보기'}
-              </button>
+              {!askRetire ? (
+                <button className={`btn big ${forced ? 'green' : 'ghost'}`} data-testid="retire" onClick={() => (forced ? onRetire() : setAskRetire(true))}>
+                  {forced ? '은퇴하기(65세)' : '은퇴하고 엔딩 보기'}
+                </button>
+              ) : (
+                <>
+                  <span className="warn">은퇴하면 이 커리어가 끝나고 되돌릴 수 없습니다({Math.floor(age)}세).</span>
+                  <button className="btn big red" data-testid="retire-confirm" onClick={onRetire}>
+                    은퇴 확정
+                  </button>
+                  <button className="btn ghost" onClick={() => setAskRetire(false)}>
+                    취소
+                  </button>
+                </>
+              )}
             </div>
             {forced && <div className="warn">은퇴 나이가 되었습니다. 이 커리어를 마칩니다.</div>}
             {!forced && <div className="tiny muted">다음 회사는 {DATA.career.breakDays}일 쉰 뒤 시작합니다. 엔딩은 은퇴할 때의 개인 자산과 기록으로 정해집니다(지금이라면: {endingFor(s).name}).</div>}
@@ -181,7 +195,7 @@ export function Ending({ s, onHome }: { s: GameState; onHome: () => void }) {
             <div>
               <span>최종 개인 자산</span>
               <b>
-                <Money v={s.career.wealth} />
+                <span className="money" title={won(s.career.wealth)}>{wonCompact(s.career.wealth)}</span>
               </b>
             </div>
             <div>

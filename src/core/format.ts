@@ -17,8 +17,17 @@ export function wonShort(n: number): string {
   const parts: string[] = [];
   if (jo) parts.push(`${jo.toLocaleString('ko-KR')}조`);
   if (eok) parts.push(`${eok.toLocaleString('ko-KR')}억`);
-  if (man) parts.push(`${man.toLocaleString('ko-KR')}만`);
+  if (man && !jo) parts.push(`${man.toLocaleString('ko-KR')}만`); // 조 단위면 만 단위는 생략(카드에 다 들어가게)
   return `${sign}${parts.join(' ')}원`;
+}
+
+// 큰 금액을 짧게: 1조 이상은 "1.23조원", 1억 이상은 "3,744억원", 그 아래는 wonShort
+export function wonCompact(n: number): string {
+  const a = Math.abs(n);
+  const sign = n < 0 ? '-' : '';
+  if (a >= 1e12) return `${sign}${(a / 1e12).toFixed(2)}조원`;
+  if (a >= 1e8) return `${sign}${Math.floor(a / 1e8).toLocaleString('ko-KR')}억원`;
+  return wonShort(n);
 }
 
 export function pct(f: number, digits = 2): string {

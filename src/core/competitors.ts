@@ -36,7 +36,7 @@ export function makeCompetitor(s: GameState, strength: number): Competitor | nul
 
 // 시장이 성숙할수록(늦게 창업할수록) 기존 강자가 강합니다(A-53).
 export function marketMaturity(s: GameState): number {
-  return 1 + 0.1 * Math.max(0, yearOf(s.day) - 2027);
+  return 1 + Math.min(1, 0.07 * Math.max(0, yearOf(s.day) - 2027)); // 연 7%, 최대 2배(A-70)
 }
 
 export function seedCompetitors(s: GameState, extra = 0, strength = 1) {
