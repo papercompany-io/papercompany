@@ -34,3 +34,8 @@
 .choice { text-align: left; background: #fff; border: 2px solid var(--line); border-radius: 8px; padding: 16px; display: flex; flex-direction: column; gap: 8px; min-height: 140px; }
 .choice:hover { border-color: var(--blue); }
 .seed { width: 120px; padding: 4px 6px; border-radius: 6px; border: 1px solid #d5dbe7; }
+.industries { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+.industry { text-align: left; background: #fff; border: 2px solid var(--line); border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 6px; min-height: 170px; }
+.industry.sel { border-color: var(--blue); background: #eef6fd; box-shadow: inset 0 -3px 0 var(--blue); }
+.industry:disabled { opacity: 0.5; cursor: not-allowed; }
+.cand:disabled { opacity: 0.45; cursor: not-allowed; }

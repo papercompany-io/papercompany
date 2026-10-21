@@ -17,3 +17,4 @@
 .boot-bar i.on { background: var(--violet); }
 .boot-skip { color: #7d84a3; font-size: 12px; font-family: var(--pixel); }
 .boot-choices { display: flex; flex-direction: column; gap: 12px; min-width: 340px; z-index: 1; }
+.boot-meta { display: block; font-size: 12px; font-weight: 600; opacity: 0.8; margin-top: 2px; }

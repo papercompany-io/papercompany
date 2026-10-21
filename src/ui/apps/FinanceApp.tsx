@@ -8,6 +8,7 @@ import { computeValuation } from '../../core/valuation';
 import { useGame } from '../store';
 import { Money, Tabs } from '../common';
 import type { MonthPL } from '../../core/types';
+import { Spark } from './StockApp';
 import './apps.css';
 
 export function FinanceApp() {
@@ -88,8 +89,13 @@ function PLTable() {
   const s = useGame();
   const cur = currentPL(s);
   const months: (Omit<MonthPL, 'cashAfter'> & { cashAfter?: number; partial?: boolean })[] = [...s.plHistory.slice(-5), { ...cur, partial: true }];
+  const [chart, setChart] = useState(false);
   const rows: [string, (m: (typeof months)[number]) => number, string?][] = [
     ['총매출', (m) => m.revenue, 'strong'],
+    ['  구독·유료', (m) => m.revSub],
+    ['  광고', (m) => m.revAd],
+    ['  거래 수수료', (m) => m.revTake],
+    ['  대기업 계약', (m) => m.revEnt],
     ['− 부가가치세', (m) => -m.vat],
     ['− 월급', (m) => -m.salary],
     ['− 4대보험(회사 부담)', (m) => -m.insurance],
@@ -97,6 +103,11 @@ function PLTable() {
     ['− 접대비·업무추진비', (m) => -m.entertainment],
     ['− 채용 홍보비', (m) => -m.recruiting],
     ['− 광고비', (m) => -m.ads],
+    ['− 인프라(클라우드)', (m) => -m.infra],
+    ['− 월세', (m) => -m.rent],
+    ['− 복지비', (m) => -m.welfare],
+    ['− AI 도구 구독', (m) => -m.ai],
+    ['− 기타(이벤트·진출·인수·위로금)', (m) => -m.other],
     ['영업비용 합계', (m) => -m.opex, 'sub'],
     ['= 영업이익', (m) => m.operatingProfit, 'strong'],
     ['− 법인세', (m) => -m.tax],
@@ -106,7 +117,22 @@ function PLTable() {
   ];
   return (
     <div className="col">
-      <div className="tiny muted">손익 = 총매출 − 부가가치세 − 영업비용 − 법인세. 매월 1일(월급일)에 지난달을 정산합니다. 홍보비·광고비는 쓰는 날 바로 빠지고, 나머지는 정산일에 빠집니다.</div>
+      <div className="row">
+        <div className="tiny muted grow">손익 = 총매출 − 부가가치세 − 영업비용 − 법인세. 매월 1일(월급일)에 지난달을 정산합니다. 홍보비·광고비·이벤트 비용은 쓰는 날 바로 빠지고, 나머지는 정산일에 빠집니다.</div>
+        <button className="btn small ghost" onClick={() => setChart((c) => !c)}>
+          {chart ? '표 보기' : '추이 그래프'}
+        </button>
+      </div>
+      {chart && (
+        <div className="card col">
+          <b className="tiny">월 매출(최근 {Math.min(36, s.plHistory.length)}개월)</b>
+          <Spark points={s.plHistory.slice(-36).map((m) => m.revenue)} h={90} />
+          <b className="tiny">월 순이익</b>
+          <Spark points={s.plHistory.slice(-36).map((m) => m.netIncome)} h={90} />
+          <b className="tiny">월말 자금</b>
+          <Spark points={s.plHistory.slice(-36).map((m) => m.cashAfter)} h={90} />
+        </div>
+      )}
       <table className="t pl" data-testid="pl-table">
         <thead>
           <tr>
@@ -142,7 +168,7 @@ function PLTable() {
             <td>월말 고객 수</td>
             {months.map((m) => (
               <td key={m.month} className="r num">
-                {m.customersEnd}
+                {m.partial ? '-' : m.usersEnd.toLocaleString('ko-KR')}
               </td>
             ))}
           </tr>
@@ -155,7 +181,7 @@ function PLTable() {
 function ValueView() {
   const s = useGame();
   const v = computeValuation(s);
-  const methodName = { scorecard: '매출 전: 스코어카드', revenue: '매출 발생 뒤: 연 환산 매출 × 매출 배수', profit: '흑자 지속: 영업이익 × 이익 배수' }[v.method];
+  const methodName = { scorecard: '매출 전: 스코어카드(또는 사용자 기반)', revenue: '매출 발생 뒤: 연 환산 매출 × 매출 배수(또는 사용자 기반)', profit: '흑자 지속: 영업이익 × 이익 배수', market: '상장사: 시가총액' }[v.method];
   return (
     <div className="card col">
       <div className="row">

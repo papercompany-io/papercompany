@@ -21,11 +21,13 @@ import {
   sendLetter,
   stageConditions,
   startRound,
+  canSafe,
 } from '../../core/funding';
 import { externalChannelId } from '../../core/messenger';
 import { computeValuation } from '../../core/valuation';
 import { act, useGame } from '../store';
 import { Money, Tabs, chanceLabel } from '../common';
+import { esopEntry, esopFree, investorPct, topUpEsop } from '../../core/equity';
 import type { Round, StageId } from '../../core/types';
 import './apps.css';
 
@@ -84,13 +86,17 @@ function RoundTab({ initialStage, goInvestors }: { initialStage?: string; goInve
   const [stageId, setStageId] = useState<StageId>(fromArg ?? next);
   const st = stage(stageId);
   const [room, setRoom] = useState(0.1);
+  const [instrument, setInstrument] = useState<'equity' | 'safe'>('equity');
   const [err, setErr] = useState<string | null>(null);
+  const safeOk = canSafe(stageId);
   const v = computeValuation(s);
   const m = roundMath(v.value, room);
   const history = s.rounds.filter((x) => x.status !== 'open' && x.status !== 'offer');
 
   if (r?.status === 'offer') return <OfferView r={r} />;
   if (r?.status === 'open') return <OpenRound r={r} goInvestors={goInvestors} />;
+  if (s.career.challenge === 'bootstrap') return <div className="warn">무투자 도전 중입니다. 투자를 받을 수 없습니다. 매출로 키우세요!</div>;
+  if (s.public) return <div className="card ok">상장사입니다. 투자 라운드 대신 주식 앱에서 주가·지분을 관리합니다.</div>;
 
   return (
     <div className="col">
@@ -109,6 +115,16 @@ function RoundTab({ initialStage, goInvestors }: { initialStage?: string; goInve
               ))}
             </select>
           </label>
+          {safeOk && (
+            <div className="seg" title="SAFE: 지금 기업가치를 정하지 않고 투자받아, 다음 지분 라운드에서 주식으로 바뀝니다(FR-12)">
+              <button className={instrument === 'equity' ? 'on' : ''} data-testid="inst-equity" onClick={() => setInstrument('equity')}>
+                지분 투자
+              </button>
+              <button className={instrument === 'safe' ? 'on' : ''} data-testid="inst-safe" onClick={() => setInstrument('safe')}>
+                SAFE
+              </button>
+            </div>
+          )}
           <label className="tiny grow">
             이번에 열 지분(룸): <b data-testid="room-value">{pct(room, 0)}</b> <span className="muted">· 보통 {st.typicalRoom}</span>
             <input data-testid="room-slider" type="range" min={DATA.funding.roomMin} max={DATA.funding.roomMax} step={0.01} value={room} onChange={(e) => setRoom(Number(e.target.value))} />
@@ -136,6 +152,12 @@ function RoundTab({ initialStage, goInvestors }: { initialStage?: string; goInve
             </tr>
           </tbody>
         </table>
+        {safeOk && instrument === 'safe' && (
+          <div className="ok tiny">
+            SAFE: 지금은 주식을 주지 않고 투자금만 받습니다. 다음 지분 라운드에서 밸류 캡 {won(m.postValue)}과 할인 {DATA.funding.safe.discount * 100}% 중 유리한 가격으로 주식이 됩니다(OQ-049 [Claude 제안]). 희석이 미뤄질 뿐 사라지지는 않습니다.
+          </div>
+        )}
+        {s.safes.length > 0 && <div className="tiny">아직 전환되지 않은 SAFE: {won(s.safes.reduce((a, x) => a + x.amount, 0))} (다음 지분 라운드에서 주식으로 바뀜)</div>}
         <div className="section-title">이 단계에 맞는 시점인가요?</div>
         {stageConditions(s, stageId).length === 0 && <div className="tiny muted">특별한 조건이 없습니다.</div>}
         {stageConditions(s, stageId).map((c) => (
@@ -148,12 +170,12 @@ function RoundTab({ initialStage, goInvestors }: { initialStage?: string; goInve
           className="btn big"
           data-testid="round-open"
           onClick={() => {
-            const e = act((g) => startRound(g, stageId, room));
+            const e = act((g) => startRound(g, stageId, room, safeOk ? instrument : 'equity'));
             setErr(e ?? null);
             if (!e) goInvestors();
           }}
         >
-          {st.name} 라운드 열기
+          {st.name} {safeOk && instrument === 'safe' ? 'SAFE ' : ''}라운드 열기
         </button>
       </div>
       {history.length > 0 && <RoundHistory rounds={history} />}
@@ -235,7 +257,12 @@ function OfferView({ r }: { r: Round }) {
   const [err, setErr] = useState<string | null>(null);
   return (
     <div className="card col offer" data-testid="offer">
-      <b style={{ fontSize: 18 }}>{stage(r.stage).name} 투자 제안서</b>
+      <b style={{ fontSize: 18 }}>
+        {stage(r.stage).name} {o.instrument === 'safe' ? 'SAFE ' : ''}투자 제안서
+      </b>
+      {o.instrument === 'safe' && <div className="ok tiny">SAFE라 지금은 지분이 줄지 않습니다. 밸류 캡 {won(o.safeCap ?? 0)}, 할인 {DATA.funding.safe.discount * 100}%로 다음 지분 라운드에서 주식이 됩니다.</div>}
+      {o.safeShares > 0 && <div className="tiny">이번 라운드에서 기존 SAFE가 주식 {o.safeShares.toLocaleString('ko-KR')}주로 전환됩니다(창업자 지분 계산에 포함).</div>}
+      {o.down && <div className="warn">다운라운드입니다: 지난 라운드 포스트밸류보다 낮은 가격입니다. 수락하면 직원 사기와 명성이 떨어집니다.</div>}
       <table className="t">
         <tbody>
           <tr>
@@ -471,7 +498,7 @@ function CapTab() {
             {s.capTable.map((c, i) => (
               <tr key={c.holderId}>
                 <td>{c.name}</td>
-                <td>{c.kind === 'founder' ? '창업자' : c.kind === 'cofounder' ? '코파운더' : `투자사 · ${c.round}`}</td>
+                <td>{c.kind === 'founder' ? '창업자' : c.kind === 'cofounder' ? '코파운더' : c.kind === 'esop' ? 'ESOP 풀' : c.kind === 'employee' ? '임직원(행사)' : c.kind === 'public' ? '일반 주주' : `투자사 · ${c.round}`}</td>
                 <td className="r num">{c.shares.toLocaleString()}주</td>
                 <td className="r num">{pcts[i]}</td>
               </tr>
@@ -492,6 +519,20 @@ function CapTab() {
           ))}
         </div>
       </div>
+      <EsopCard />
+      {investorPct(s) > 0 && !s.public && (
+        <div className="card col">
+          <div className="section-title">이사회</div>
+          <div className="row">
+            <span className="tiny">투자자 지분 {pct(investorPct(s), 1)} · 이사회 신뢰도</span>
+            <div className="bar">
+              <div style={{ width: `${s.company.board}%`, background: s.company.board < 30 ? 'var(--red)' : undefined }} />
+            </div>
+            <b>{Math.round(s.company.board)}</b>
+          </div>
+          <div className="tiny muted">투자자 지분이 과반이면 이사회가 대표를 평가합니다. 매출이 줄면 신뢰가 떨어지고, 0이 되면 대표에서 해임됩니다(회사 종료).</div>
+        </div>
+      )}
       <div className="card">
         <div className="section-title">창업자 지분 변화(EQ-03)</div>
         <table className="t">
@@ -512,6 +553,34 @@ function CapTab() {
           </tbody>
         </table>
       </div>
+    </div>
+  );
+}
+
+// EQ-04 ESOP 풀과 스톡옵션
+function EsopCard() {
+  const s = useGame();
+  const [err, setErr] = useState<string | null>(null);
+  const pool = esopEntry(s);
+  const granted = s.employees.reduce((a, e) => a + e.options, 0);
+  return (
+    <div className="card col">
+      <div className="section-title">ESOP 풀(임직원 스톡옵션, EQ-04)</div>
+      {pool ? (
+        <div className="tiny">
+          풀 {pool.shares.toLocaleString('ko-KR')}주 · 지급 {granted.toLocaleString('ko-KR')}주 · 남음 {esopFree(s).toLocaleString('ko-KR')}주. 직원 관리 앱에서 직원에게 옵션을 줄 수 있습니다(베스팅 2년 20% → 3년 40% → 4년 80% → 5년 100%).
+        </div>
+      ) : (
+        <div className="tiny muted">ESOP 풀을 만들면 모든 주주가 같은 비율로 희석되지만, 핵심 인재에게 옵션을 줘 만족도를 올리고 이직을 막을 수 있습니다.</div>
+      )}
+      <div className="row">
+        {[0.05, 0.1].map((p) => (
+          <button key={p} className="btn small" data-testid={`esop-${p * 100}`} onClick={() => setErr(act((g) => topUpEsop(g, p)) ?? null)}>
+            {pool ? '풀 늘리기' : '풀 만들기'} {p * 100}%
+          </button>
+        ))}
+      </div>
+      {err && <div className="err">{err}</div>}
     </div>
   );
 }

@@ -54,3 +54,10 @@
 .round-btn:hover { background: #f2f6fb; }
 .round-btn:disabled { color: #b9bdc8; cursor: default; }
 .cam-hint { font-size: 11px; color: #fff; background: rgba(23, 27, 44, 0.7); border-radius: 4px; padding: 3px 7px; white-space: nowrap; }
+.tag-emoji { font-size: 11px; }
+.tag-mood { height: 3px; background: #e6eaf2; border-radius: 2px; overflow: hidden; margin-top: 2px; }
+.tag-mood i { display: block; height: 100%; }
+.nametag.ceo .tag-mood { display: none; }
+.mood-bubble { position: absolute; transform: translate(-50%, -100%); z-index: 4; background: #fff; border-radius: 10px; padding: 1px 5px; font-size: 13px; box-shadow: 0 2px 6px rgba(10, 14, 30, 0.3); pointer-events: none; animation: bob 1.4s ease-in-out infinite; }
+@keyframes bob { 0%, 100% { transform: translate(-50%, -100%); } 50% { transform: translate(-50%, -115%); } }
+.zone-legend { flex-wrap: wrap; max-width: calc(100% - 120px); }

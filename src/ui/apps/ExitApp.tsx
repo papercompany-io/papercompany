@@ -3,7 +3,8 @@ import { useState } from 'react';
 import { DATA } from '../../core/data';
 import { formatDate } from '../../core/calendar';
 import { founderPct } from '../../core/equity';
-import { acceptSale, declineSale, exitBlocked, exitProbability, startExit } from '../../core/exit';
+import { acceptSale, annualRevenue, declineSale, exitBlocked, exitProbability, saleProbability, startExit } from '../../core/exit';
+import { wonShort } from '../../core/format';
 import { pct, won } from '../../core/format';
 import { computeValuation } from '../../core/valuation';
 import { act, useGame } from '../store';
@@ -18,6 +19,7 @@ export function ExitApp() {
   const fp = founderPct(s);
   const a = s.exitAttempt;
   const blocked = exitBlocked(s);
+  if (s.public) return <div className="card ok">상장사입니다. 주식 앱에서 지분을 팔거나 대표에서 물러날 수 있습니다(그때 이 회사가 끝납니다).</div>;
 
   return (
     <div className="col">
@@ -45,7 +47,8 @@ export function ExitApp() {
 
       {a?.status === 'offer' && (
         <div className="card col offer" data-testid="sale-offer">
-          <b style={{ fontSize: 18 }}>인수 제안이 들어왔습니다</b>
+          <b style={{ fontSize: 18 }}>{a.buyer ?? '인수 희망 기업'}의 인수 제안{a.inbound ? '(먼저 연락해 옴, EX-05)' : ''}</b>
+          {a.deadline !== null && <div className="tiny">답변 기한: {formatDate(a.deadline)} ({a.deadline - s.day}일 남음). 지나면 무산됩니다.</div>}
           <table className="t">
             <tbody>
               <tr>
@@ -66,7 +69,7 @@ export function ExitApp() {
               </tr>
             </tbody>
           </table>
-          <div className="tiny">거래 성사 가능성 {chanceLabel(exitProbability(s, 'sale').p)} · 무산되면 {DATA.exit.cooldownDays}일 동안 기업가치가 {Math.round((1 - DATA.exit.failPenaltyFactor) * 100)}% 낮아지고 다시 시도할 수 없습니다. 회사는 계속 운영됩니다.</div>
+          <div className="tiny">거래 성사 가능성 {chanceLabel(saleProbability(s))} · 무산되면 {DATA.exit.cooldownDays}일 동안 기업가치가 {Math.round((1 - DATA.exit.failPenaltyFactor) * 100)}% 낮아지고 다시 시도할 수 없습니다. 회사는 계속 운영됩니다.</div>
           {err && <div className="err">{err}</div>}
           <div className="row">
             <button className="btn ghost" data-testid="sale-decline" onClick={() => setErr(act((g) => declineSale(g)) ?? null)}>
@@ -74,7 +77,7 @@ export function ExitApp() {
             </button>
             <div className="grow" />
             <button className="btn green big" data-testid="sale-accept" onClick={() => setErr(act((g) => acceptSale(g)) ?? null)}>
-              매각 진행(판 종료)
+              매각 진행(회사 종료)
             </button>
           </div>
         </div>
@@ -94,7 +97,7 @@ export function ExitApp() {
 
       {(!a || a.status === 'failed' || a.status === 'declined') && (
         <>
-          <div className="tiny muted">원할 때 언제든 Exit을 시도할 수 있습니다. 성공하면 판이 끝나고 결과 금액이 정해집니다.</div>
+          <div className="tiny muted">원할 때 언제든 Exit을 시도할 수 있습니다. 매각에 성공하면 이 회사가 끝나고 결과 금액이 정해집니다. IPO에 성공하면 상장사로 회사가 이어지고, 락업(180일) 뒤 지분을 팔거나 물러날 때 돈을 받습니다. 최근 12개월 평균으로 본 연매출 {wonShort(annualRevenue(s))}.</div>
           {blocked && <div className="warn">{blocked}</div>}
           <div className="exit-choices">
             {(['sale', 'ipo'] as const).map((m) => {
@@ -105,7 +108,7 @@ export function ExitApp() {
                   <div className="tiny">
                     {m === 'sale'
                       ? `인수 희망 기업이 기업가치의 ${DATA.exit.sale.priceMin * 100}~${DATA.exit.sale.priceMax * 100}%로 제안합니다. 제안을 보고 진행할지 정합니다.`
-                      : `${DATA.exit.ipo.prepDays}일 상장 준비 뒤, 공모가가 기업가치의 ${DATA.exit.ipo.priceMin * 100}~${DATA.exit.ipo.priceMax * 100}%로 정해지고 바로 판정합니다.`}
+                      : `${DATA.exit.ipo.prepDays}일 상장 심사 뒤, 공모가가 기업가치의 ${DATA.exit.ipo.priceMin * 100}~${DATA.exit.ipo.priceMax * 100}%로 정해집니다. 성공하면 새 주식 ${DATA.public.ipoNewShares * 100}%를 팔아 회사에 자금이 들어옵니다.`}
                   </div>
                   <div className="tiny">
                     성공 가능성 <b>{chanceLabel(ep.p)}</b>
@@ -125,7 +128,7 @@ export function ExitApp() {
         <div className="modal-bg" onClick={() => setConfirm(null)}>
           <div className="modal" data-testid="exit-confirm" onClick={(e) => e.stopPropagation()}>
             <b>{confirm === 'sale' ? '매각을 시도할까요?' : 'IPO를 시도할까요?'}</b>
-            <div className="warn">Exit에 성공하면 이 판이 끝납니다. 결과 금액은 Exit 기업가치 × 창업자 지분율입니다.</div>
+            <div className="warn">{confirm === 'sale' ? '매각에 성공하면 이 회사가 끝납니다. 결과 금액은 Exit 기업가치 × 창업자 지분율입니다.' : 'IPO에 성공하면 상장사가 되어 회사가 이어집니다. 실패하면 60일 동안 기업가치가 떨어집니다.'}</div>
             <div className="row" style={{ justifyContent: 'flex-end' }}>
               <button className="btn ghost" onClick={() => setConfirm(null)}>
                 취소

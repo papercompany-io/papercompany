@@ -39,6 +39,26 @@ ipcMain.handle('save:clear', () => {
   return true;
 });
 
+// 메타 진행(레거시·업적·명예의 전당)은 판 저장과 따로 둡니다.
+const profileFile = () => path.join(saveDir(), 'profile.json');
+ipcMain.handle('profile:read', () => {
+  try {
+    return fs.readFileSync(profileFile(), 'utf8');
+  } catch {
+    return null;
+  }
+});
+ipcMain.handle('profile:write', (_e, data: string) => {
+  fs.mkdirSync(saveDir(), { recursive: true });
+  const tmp = profileFile() + '.tmp';
+  fs.writeFileSync(tmp, data, 'utf8');
+  fs.renameSync(tmp, profileFile());
+  return true;
+});
+
+ipcMain.on('app:toggle-fullscreen', () => win?.setFullScreen(!win.isFullScreen()));
+ipcMain.on('app:quit', () => win?.close());
+
 let win: BrowserWindow | null = null;
 let allowClose = false;
 

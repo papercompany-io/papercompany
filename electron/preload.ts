@@ -9,4 +9,8 @@ contextBridge.exposeInMainWorld('pcSave', {
     ipcRenderer.on('app:before-close', () => cb());
   },
   closeReady: () => ipcRenderer.send('app:close-ready'),
+  readProfile: () => ipcRenderer.invoke('profile:read') as Promise<string | null>,
+  writeProfile: (data: string) => ipcRenderer.invoke('profile:write', data) as Promise<boolean>,
+  toggleFullscreen: () => ipcRenderer.send('app:toggle-fullscreen'),
+  quit: () => ipcRenderer.send('app:quit'),
 });

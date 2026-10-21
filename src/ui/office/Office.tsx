@@ -2,13 +2,16 @@
 // Startup Company처럼 사무실이 화면을 채우는 탑뷰입니다. 끌어서 이동, 휠·버튼으로 확대·축소, 방향키로도 이동합니다.
 // 그림은 캔버스에 픽셀로 그리고, 이름표와 클릭 영역은 그 위에 DOM으로 겹칩니다(글자를 또렷하게, 테스트에서 클릭 가능하게).
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { DATA, dept, instructionOption } from '../../core/data';
+import { dept } from '../../core/data';
 import { formatDate } from '../../core/calendar';
-import { runningInstruction } from '../../core/instructions';
+import { orderLabel } from '../../core/orders';
+import { isSick } from '../../core/staff';
+import { currentTier } from '../../core/office';
 import type { DeptId, GameState } from '../../core/types';
 import { getGame, useGame } from '../store';
 import { Pix } from './pixel';
-import { ZOOM_MAX, ZOOM_MIN, actors, clampCamera, defaultCamera, defaultZoom, drawOffice, makeView, type Actor, type Camera } from './scene';
+import { ZOOM_MAX, ZOOM_MIN, actors, clampCamera, defaultCamera, defaultZoom, drawOffice, makeView, setLayout, type Actor, type Camera } from './scene';
+import type { FloatFx } from '../Game';
 import './office.css';
 
 // HUD(위)와 회사 카드(오른쪽)가 가리는 영역
@@ -20,10 +23,21 @@ interface Props {
   onEmployee: (id: string) => void;
   pulseCeo: boolean;
   keysEnabled: boolean;
+  floats?: FloatFx[];
 }
 
-export function Office({ onCeo, onEmployee, pulseCeo, keysEnabled }: Props) {
+export function Office({ onCeo, onEmployee, pulseCeo, keysEnabled, floats = [] }: Props) {
   const s = useGame();
+  if (s) setLayout(s.company.officeTier);
+  // 이사하면 카메라를 새 사무실 가운데로
+  const tierRef = useRef(s?.company.officeTier);
+  useEffect(() => {
+    if (s && tierRef.current !== s.company.officeTier) {
+      tierRef.current = s.company.officeTier;
+      setCam(null);
+      setZoom(null);
+    }
+  });
   const wrap = useRef<HTMLDivElement>(null);
   const cv = useRef<HTMLCanvasElement>(null);
   const hover = useRef<string | null>(null);
@@ -111,6 +125,8 @@ export function Office({ onCeo, onEmployee, pulseCeo, keysEnabled }: Props) {
   if (!s) return null;
   const sc = view.scale;
   const list = actors(s, view).sort((a, b) => a.head[1] - b.head[1]);
+  // 직원이 많으면 이름표는 확대했을 때만(말풍선·대표·입사 예정은 항상)
+  const showTags = list.length <= 22 || scale >= 4;
   const click = (a: Actor) => {
     if (suppressClick.current) return;
     if (a.kind === 'ceo') onCeo();
@@ -164,13 +180,20 @@ export function Office({ onCeo, onEmployee, pulseCeo, keysEnabled }: Props) {
           />
         ),
       )}
-      {list.map((a) => (
-        <NameTag key={`tag-${a.id}`} a={a} s={s} sc={sc} pulse={pulseCeo && a.kind === 'ceo'} onClick={() => click(a)} />
-      ))}
+      {list.map((a) => (showTags || a.kind !== 'emp' ? <NameTag key={`tag-${a.id}`} a={a} s={s} sc={sc} pulse={pulseCeo && a.kind === 'ceo'} onClick={() => click(a)} /> : <Bubble key={`b-${a.id}`} a={a} s={s} sc={sc} />))}
+      {floats.map((f) => {
+        const a = (f.seat && list.find((x) => x.seat.id === f.seat)) || list.find((x) => x.kind === 'ceo');
+        if (!a) return null;
+        return (
+          <div key={f.id} className={`floater ${f.kind}`} style={{ left: a.head[0] * sc, top: (a.head[1] - 10) * sc }}>
+            {f.text}
+          </div>
+        );
+      })}
 
       <div className="zone-legend" data-testid="zone-legend" onPointerDown={(e) => e.stopPropagation()}>
-        <div className="zl-title">부서 구역 좌석</div>
-        {DATA.office.zones.map(({ dept: id }) => {
+        <div className="zl-title">{currentTier(s).name}</div>
+        {currentTier(s).zones.map(({ dept: id }) => {
           const d = id as DeptId;
           return (
             <div key={d} className="zl-item" style={{ ['--dc' as string]: dept(d).color }} onMouseEnter={() => (hoverZone.current = d)} onMouseLeave={() => (hoverZone.current = null)}>
@@ -234,23 +257,33 @@ function NameTag({ a, s, sc, pulse, onClick }: { a: Actor; s: GameState; sc: num
   }
   const e = s.employees.find((x) => x.id === a.id);
   if (!e) return null;
-  const run = runningInstruction(s, e.dept);
-  let status: string;
-  let busy = false;
-  if (run) {
-    const span = Math.max(1, run.endDay - run.startDay);
-    const done = Math.min(1, (s.day - run.startDay + s.msInDay / DATA.time.dayMs) / span);
-    status = `${instructionOption(run.optionId).name} ${Math.floor(done * 100)}%`;
-    busy = true;
-  } else status = '지시 대기';
+  const sick = isSick(s, e);
+  const status = sick ? '병가' : e.leaving !== null ? '퇴사 예정' : s.company.movingUntil !== null ? '이사 중' : orderLabel(s, e.dept);
+  const busy = !sick && e.leaving === null;
   return (
     <div className="nametag" style={{ ...style, ['--dc' as string]: dept(e.dept).color }} onClick={onClick}>
       <div className="tag-name">
         <span className="tag-dept" />
         {e.name}
         {e.kind === 'cofounder' && <span className="tag-badge">코파운더</span>}
+        {e.lead && <span className="tag-badge">팀장</span>}
+        {e.bubble && <span className="tag-emoji">{e.bubble.text}</span>}
       </div>
       <div className={`tag-sub ${busy ? '' : 'idle'}`}>{status}</div>
+      <div className="tag-mood" title={`만족도 ${Math.round(e.sat)} · 건강 ${Math.round(e.health)}`}>
+        <i style={{ width: `${e.sat}%`, background: e.sat < 35 ? '#d9453b' : e.sat < 55 ? '#f0a020' : '#36b44a' }} />
+      </div>
+    </div>
+  );
+}
+
+// OF-05 직원 상태 표시: 이름표를 숨겼을 때도 말풍선(병가·불만·새 결정·입사 박스)은 보입니다.
+function Bubble({ a, s, sc }: { a: Actor; s: GameState; sc: number }) {
+  const e = s.employees.find((x) => x.id === a.id);
+  if (!e || !e.bubble) return null;
+  return (
+    <div className="mood-bubble" style={{ left: a.head[0] * sc, top: a.head[1] * sc }}>
+      {e.bubble.text}
     </div>
   );
 }

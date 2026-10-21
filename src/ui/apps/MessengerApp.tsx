@@ -1,15 +1,14 @@
-// F06 메신저: MG-01 채널 구성(#전체·팀 채널·그룹·DM·외부 연락처), MG-03 부서 지시(선택지), MG-04 판정 결과
+// F06 메신저: MG-01 채널 구성(#전체·팀 채널·그룹·DM·외부 연락처), MG-03 부서 지시(맡은 일 선택지), DC-01 메시지 속 결정 버튼
 import { useEffect, useRef, useState } from 'react';
-import { dept } from '../../core/data';
+import { dept, ordersFor } from '../../core/data';
 import { formatDate } from '../../core/calendar';
-import { cannotInstruct, optionsFor, runningInstruction, successProbability } from '../../core/instructions';
-import { issueInstruction, setRepeat } from '../../core/instructions';
-import { useState as useLocalState } from 'react';
-import { createGroup } from '../../core/messenger';
+import { orderOf, setOrder } from '../../core/orders';
+import { createGroup, markRead } from '../../core/messenger';
 import { deptMembers } from '../../core/employees';
+import { deptOutput } from '../../core/staff';
 import { act, useGame } from '../store';
-import { chanceLabel } from '../common';
-import type { Channel } from '../../core/types';
+import { DecisionView } from '../Feedback';
+import type { Channel, DeptId } from '../../core/types';
 import './apps.css';
 
 export function MessengerApp({ initial, openInvest }: { initial?: string; openInvest: () => void }) {
@@ -22,7 +21,9 @@ export function MessengerApp({ initial, openInvest }: { initial?: string; openIn
 
   useEffect(() => {
     bottom.current?.scrollIntoView({ block: 'end' });
+    if (ch.unread) act((g) => markRead(g, ch.id));
   }, [sel, ch.messages.length]);
+  const pending = s.decisions.filter((d) => !d.resolved);
 
   const groups: { title: string; kind: Channel['kind'][] }[] = [
     { title: '채널', kind: ['all', 'team'] },
@@ -35,6 +36,17 @@ export function MessengerApp({ initial, openInvest }: { initial?: string; openIn
     <div className="messenger">
       <aside className="msg-side">
         <div className="ws-name">{s.company.name}</div>
+        {pending.length > 0 && (
+          <div className="side-title" style={{ color: '#ffb3ad' }}>
+            답을 기다리는 결정 {pending.length}
+          </div>
+        )}
+        {pending.map((d) => (
+          <button key={d.id} className={`side-item ${d.channelId === sel ? 'on' : ''}`} onClick={() => setSel(d.channelId)}>
+            {d.urgent ? '🚨 ' : '💬 '}
+            {d.from}
+          </button>
+        ))}
         {groups.map((g) => (
           <div key={g.title}>
             <div className="side-title">
@@ -51,6 +63,7 @@ export function MessengerApp({ initial, openInvest }: { initial?: string; openIn
                 <button key={c.id} data-testid={`ch-${c.id}`} className={`side-item ${c.id === sel ? 'on' : ''}`} onClick={() => { setSel(c.id); setErr(null); }}>
                   {c.kind === 'all' || c.kind === 'team' ? '# ' : c.kind === 'external' ? '✉ ' : '● '}
                   {c.name}
+                  {c.unread > 0 && c.id !== sel && <span className="unread">{c.unread > 99 ? '99+' : c.unread}</span>}
                 </button>
               ))}
           </div>
@@ -72,17 +85,18 @@ export function MessengerApp({ initial, openInvest }: { initial?: string; openIn
                 <b>{m.from}</b> <span>{formatDate(m.day)}</span>
               </div>
               <div>{m.text}</div>
+              {m.decisionId && <MsgDecision id={m.decisionId} />}
             </div>
           ))}
           <div ref={bottom} />
         </div>
         <div className="msg-compose">
           {ch.kind === 'team' && ch.dept && <TeamOrders deptId={ch.dept} onErr={setErr} />}
-          {ch.kind === 'all' && <div className="tiny muted">#전체는 회사 소식을 보는 채널입니다. 일은 각 팀 채널에서 부서 단위로 지시합니다.</div>}
-          {(ch.kind === 'dm' || ch.kind === 'group') && <div className="tiny muted">지시는 팀 채널에서 부서 단위로 내립니다(개인 지시 없음).</div>}
+          {ch.kind === 'all' && <div className="tiny muted">#전체는 회사 소식을 보는 채널입니다. 일은 각 팀 채널에서 부서가 맡을 일을 정합니다.</div>}
+          {(ch.kind === 'dm' || ch.kind === 'group') && <div className="tiny muted">지시는 팀 채널에서 부서 단위로 내립니다(개인 지시 없음). 직원의 고민·제안은 DM으로 옵니다.</div>}
           {ch.kind === 'external' && (
             <div className="row tiny muted">
-              투자사에 보내는 레터는 투자 앱에서 선택지로 고릅니다.
+              투자사에 보내는 레터는 투자 앱에서 선택지로 고릅니다. 다른 외부 연락은 메시지 속 버튼으로 답합니다.
               <button className="btn small" onClick={openInvest}>
                 투자 앱 열기
               </button>
@@ -126,57 +140,54 @@ export function MessengerApp({ initial, openInvest }: { initial?: string; openIn
   );
 }
 
-function TeamOrders({ deptId, onErr }: { deptId: Parameters<typeof optionsFor>[0]; onErr: (e: string | null) => void }) {
+function MsgDecision({ id }: { id: string }) {
   const s = useGame();
-  const running = runningInstruction(s, deptId);
+  const d = s.decisions.find((x) => x.id === id);
+  if (!d) return null;
+  return (
+    <div className="msg-decision">
+      {!d.resolved && (
+        <div className="tiny muted">
+          답변 기한 {formatDate(d.deadline)} ({Math.max(0, d.deadline - s.day)}일 남음) · 지나면 기본 선택
+        </div>
+      )}
+      <DecisionView d={d} />
+    </div>
+  );
+}
+
+// MG-03 부서 지시 v2: 팀 전체가 맡을 일을 고릅니다(바꿀 때까지 매일 그 일을 함, A-41).
+function TeamOrders({ deptId, onErr }: { deptId: DeptId; onErr: (e: string | null) => void }) {
+  const s = useGame();
   const members = deptMembers(s, deptId);
-  const [repeat, setRepeatLocal] = useLocalState(true);
-  if (running) {
-    return (
-      <div className="ok row" data-testid="order-running">
-        <span className="grow">
-          {dept(deptId).name}팀이 지시를 수행 중입니다 · {formatDate(running.endDay)} 완료 예정 · 성공 가능성 {chanceLabel(running.p)}
-        </span>
-        <label className="row tiny">
-          <input type="checkbox" data-testid="repeat-running" checked={running.repeat} onChange={(e) => act((g) => setRepeat(g, deptId, e.target.checked))} />
-          끝나면 반복
-        </label>
-      </div>
-    );
-  }
+  const cur = orderOf(s, deptId);
   return (
     <div className="col">
       <div className="row tiny muted">
         <span className="grow">
-          {dept(deptId).name}팀 전체({members.length}명)에게 지시합니다. 결과는 끝나는 날 알고리즘으로 판정됩니다(완전 수행·부분 수행·실패).
+          {dept(deptId).name}팀 {members.length}명 · 하루 작업량 {deptOutput(s, deptId).toFixed(1)} · 고른 일은 바꿀 때까지 매일 계속합니다.
         </span>
-        <label className="row">
-          <input type="checkbox" data-testid="repeat-new" checked={repeat} onChange={(e) => setRepeatLocal(e.target.checked)} />
-          끝나면 같은 지시 반복
-        </label>
       </div>
       <div className="orders">
-        {optionsFor(deptId).map((o) => {
-          const why = cannotInstruct(s, deptId, o.id);
-          const p = successProbability(members, o.baseP);
+        {ordersFor(deptId).map((o) => {
+          const locked = s.company.stage < o.stage;
           return (
             <button
               key={o.id}
-              className="order"
+              className={`order ${cur === o.id ? 'on' : ''}`}
               data-testid={`order-${o.id}`}
-              disabled={!!why}
-              title={why ?? ''}
+              disabled={locked}
               onClick={() => {
-                const e = act((g) => issueInstruction(g, deptId, o.id, repeat));
+                const e = act((g) => setOrder(g, deptId, o.id));
                 onErr(e ?? null);
               }}
             >
-              <b>{o.name}</b>
+              <b>
+                {cur === o.id ? '✔ ' : ''}
+                {o.name}
+              </b>
               <span className="tiny">{o.desc}</span>
-              <span className="tiny muted">
-                {o.days}일 · 성공 가능성 {chanceLabel(p)}
-              </span>
-              {why && <span className="tiny" style={{ color: '#b5363a' }}>{why}</span>}
+              {locked && <span className="tiny muted">회사 단계 {o.stage}부터</span>}
             </button>
           );
         })}

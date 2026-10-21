@@ -1,16 +1,64 @@
 // OF-01 2.5D 아이소메트릭 픽셀 사무실 장면, OF-02 부서별 좌석(빈 책상·입사 대기 상자·직원).
 // Startup Company처럼 사무실이 화면을 채우는 탑뷰입니다. 카메라(가운데 오는 월드 좌표)와 정수 배율로 화면을 정하고,
 // 타일 1칸 = 가로 24 × 세로 12 아트 픽셀(2:1 아이소메트릭)을 정수배로 키워 그립니다.
-import { DATA, dept } from '../../core/data';
+import { DATA, dept, officeTier } from '../../core/data';
+import { seatGrid } from '../../core/office';
 import type { DeptId, Employee, GameState, Seat } from '../../core/types';
 import { Pix, hex, mix, shade, type Col, type Pt } from './pixel';
 import { SPRITES, SPRITE_H, SPRITE_W, hashStr, lookFor } from './sprites';
 
 export const TW = 24;
 export const TH = 12;
-const FW = DATA.office.size.w;
-const FH = DATA.office.size.h;
+// 사무실 등급(OF-07)마다 크기·방·소품 배치가 다릅니다. 그릴 때 setLayout으로 지금 등급의 배치를 고릅니다.
+let FW = 24;
+let FH = 18;
+let TIER = 2;
 const WALL_H = 44;
+
+interface Rect {
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
+}
+
+interface Layout {
+  id: number;
+  W: number;
+  H: number;
+  zones: { dept: DeptId; x: number; y: number; cols: number; rows: number }[];
+  exec: Rect;
+  meeting: Rect | null;
+  lounge: Rect | null;
+  loungeLeft: boolean;
+  kitchen: Rect | null;
+  doorY: number;
+  board: [number, number] | null;
+  winX: [number, number][];
+  winY: [number, number][];
+  decor: Decor[];
+  glass: [number, number, number, number][];
+}
+
+let L: Layout;
+const layouts = new Map<number, Layout>();
+
+export function setLayout(tier: number) {
+  if (L && L.id === tier) return;
+  let lay = layouts.get(tier);
+  if (!lay) {
+    lay = buildLayout(tier);
+    layouts.set(tier, lay);
+  }
+  L = lay;
+  FW = lay.W;
+  FH = lay.H;
+  TIER = tier;
+}
+
+export function officeSize() {
+  return { w: FW, h: FH };
+}
 
 export interface View {
   artW: number;
@@ -63,13 +111,7 @@ export function P(v: View, gx: number, gy: number, z = 0): Pt {
 
 // 좌석 위치는 저장된 좌표가 아니라 지금 배치표(office.json)에서 좌석 id로 계산합니다(배치를 바꿔도 이어하기가 맞게).
 export function seatPos(seat: Seat): { gx: number; gy: number } {
-  const o = DATA.office;
-  if (seat.zone === 'ceo') return { gx: o.ceoSeat.x, gy: o.ceoSeat.y };
-  if (seat.zone === 'exec') return { gx: o.execSeat.x, gy: o.execSeat.y };
-  const z = o.zones.find((x) => x.dept === seat.zone);
-  const i = Number(seat.id.split('-')[1] ?? 0);
-  if (!z) return { gx: seat.gx, gy: seat.gy };
-  return { gx: z.x + (i % 2) * 2, gy: z.y + Math.floor(i / 2) * 2 };
+  return seatGrid(officeTier(TIER), seat);
 }
 
 interface BoxCols {
@@ -190,6 +232,7 @@ interface DrawCtx {
 }
 
 export function drawOffice(g: Pix, v: View, s: GameState, t: number, hover: string | null, hoverZone: DeptId | null = null) {
+  setLayout(s.company.officeTier);
   const ctx: DrawCtx = { g, v, t, s, hover, hoverZone };
   drawGround(ctx);
   drawFloor(ctx);
@@ -199,8 +242,8 @@ export function drawOffice(g: Pix, v: View, s: GameState, t: number, hover: stri
     const p = seatPos(seat);
     items.push({ key: p.gx + p.gy + 1, draw: () => drawSeat(ctx, seat, p.gx, p.gy) });
   }
-  for (const d of DECOR) items.push({ key: d.x + d.y + (d.k ?? 0), draw: () => d.draw(ctx, d.x, d.y) });
-  for (const w of GLASS) {
+  for (const d of L.decor) items.push({ key: d.x + d.y + (d.k ?? 0), draw: () => d.draw(ctx, d.x, d.y) });
+  for (const w of L.glass) {
     // 긴 유리벽은 1칸씩 잘라 앞뒤 순서를 맞춥니다.
     const len = Math.hypot(w[2] - w[0], w[3] - w[1]);
     const n = Math.max(1, Math.ceil(len));
@@ -247,25 +290,33 @@ function drawFloor({ g, v, hoverZone, t }: DrawCtx) {
     for (let jx = ((k * 7) % 5) * 0.6 + 0.8; jx < FW; jx += 3) g.line(P(v, jx, y0), P(v, jx, y1), C.seam);
   }
   // 대표실 카펫·러그
-  rect(g, v, 18.6, 0, FW, 4.8, hex('#5b4b5f'));
-  rect(g, v, 18.9, 0.5, 23.8, 3.9, hex('#7b2f3b'));
-  outline(g, v, 19.1, 0.7, 23.6, 3.7, hex('#d6a84a'));
+  const ex = L.exec;
+  rect(g, v, ex.x0, 0, FW, ex.y1, hex('#5b4b5f'));
+  rect(g, v, ex.x0 + 0.3, 0.5, FW - 0.2, ex.y1 - 0.9, hex('#7b2f3b'));
+  outline(g, v, ex.x0 + 0.5, 0.7, FW - 0.4, ex.y1 - 1.1, hex('#d6a84a'));
   // 회의실 카펫
-  rect(g, v, 13.4, 0, 18.6, 6.2, hex('#55607a'));
-  for (let i = 0; i < 10; i++) for (let j = 0; j < 12; j++) if ((i + j) % 2) rect(g, v, 13.4 + i * 0.52, j * 0.52, 13.92 + i * 0.52, (j + 1) * 0.52, hex('#5c6884'));
+  const mt = L.meeting;
+  if (mt) {
+    rect(g, v, mt.x0, 0, mt.x1, mt.y1, hex('#55607a'));
+    for (let i = 0; i < 10; i++) for (let j = 0; j < 12; j++) if ((i + j) % 2) rect(g, v, mt.x0 + i * 0.52, j * 0.52, mt.x0 + 0.52 + i * 0.52, (j + 1) * 0.52, hex('#5c6884'));
+  }
   // 라운지 러그
-  rect(g, v, 1.0, 13.4, 6.8, 17.4, hex('#d9b26a'));
-  outline(g, v, 1.2, 13.6, 6.6, 17.2, hex('#b98d43'));
+  const lo = L.lounge;
+  if (lo) {
+    rect(g, v, lo.x0, lo.y0, lo.x1, lo.y1, hex('#d9b26a'));
+    outline(g, v, lo.x0 + 0.2, lo.y0 + 0.2, lo.x1 - 0.2, lo.y1 - 0.2, hex('#b98d43'));
+  }
   // 탕비실 타일
-  for (let i = 0; i < 10; i++) for (let j = 0; j < 9; j++) rect(g, v, 14 + i * 0.5, 13.5 + j * 0.5, 14.5 + i * 0.5, 14 + j * 0.5, (i + j) % 2 ? hex('#eef0f3') : hex('#d6dae1'));
+  const kt = L.kitchen;
+  if (kt) for (let i = 0; i < 10; i++) for (let j = 0; j < 9; j++) rect(g, v, kt.x0 + i * 0.5, kt.y0 + j * 0.5, kt.x0 + 0.5 + i * 0.5, kt.y0 + 0.5 + j * 0.5, (i + j) % 2 ? hex('#eef0f3') : hex('#d6dae1'));
   // 부서 구역 카펫(OF-02 부서별 좌석 구역)
-  for (const z of DATA.office.zones) {
+  for (const z of L.zones) {
     const dc = hex(dept(z.dept as DeptId).color);
     const base = mix(hex('#6a7184'), dc, 0.3);
     const x0 = Math.max(0, z.x - 0.25);
     const y0 = Math.max(0, z.y - 0.25);
-    const x1 = Math.min(FW, z.x + 4.25);
-    const y1 = Math.min(FH, z.y + 3.85);
+    const x1 = Math.min(FW, z.x + z.cols * 2 + 0.25);
+    const y1 = Math.min(FH, z.y + z.rows * 2 - 0.15);
     for (let i = Math.floor(x0 * 2); i < Math.ceil(x1 * 2); i++) {
       for (let j = Math.floor(y0 * 2); j < Math.ceil(y1 * 2); j++) {
         rect(g, v, Math.max(x0, i / 2), Math.max(y0, j / 2), Math.min(x1, (i + 1) / 2), Math.min(y1, (j + 1) / 2), (i + j) % 2 ? base : shade(base, 0.93));
@@ -275,7 +326,7 @@ function drawFloor({ g, v, hoverZone, t }: DrawCtx) {
     outline(g, v, x0, y0, x1, y1, lit ? hex('#ffffff') : shade(dc, 0.85));
   }
   // 출입문 앞 매트
-  rect(g, v, 0.05, 10.9, 0.9, 12.1, hex('#4a3b33'));
+  rect(g, v, 0.05, L.doorY - 0.1, 0.9, L.doorY + 1.1, hex('#4a3b33'));
 }
 
 function drawWalls({ g, v, s, t }: DrawCtx) {
@@ -293,46 +344,44 @@ function drawWalls({ g, v, s, t }: DrawCtx) {
 
   // 뒤 벽 통유리 창
   const winY = (x: number, z: number) => P(v, x, 0, z);
-  for (const [a, b] of [
-    [0.6, 3.4],
-    [4.0, 6.8],
-    [7.4, 10.2],
-    [10.8, 12.9],
-    [13.8, 18.2],
-    [19.0, 23.4],
-  ] as [number, number][])
-    drawWindow(g, winY, a, b, 12, 38, sky);
+  for (const [a, b] of L.winY) drawWindow(g, winY, a, b, 12, 38, sky);
   const winX = (y: number, z: number) => P(v, 0, y, z);
-  drawWindow(g, winX, 0.6, 3.4, 12, 38, sky);
-  drawWindow(g, winX, 4.0, 6.8, 12, 38, sky);
+  for (const [a, b] of L.winX) drawWindow(g, winX, a, b, 12, 38, sky);
 
-  // 화이트보드(왼쪽 벽)
   const wb = (y: number, z: number) => P(v, 0, y, z);
-  g.poly([wb(7.4, 14), wb(10.2, 14), wb(10.2, 34), wb(7.4, 34)], hex('#b7bcc6'));
-  g.poly([wb(7.5, 15), wb(10.1, 15), wb(10.1, 33), wb(7.5, 33)], hex('#fdfdfb'));
-  g.line(wb(7.8, 18), wb(8.4, 22), hex('#3f8cff'));
-  g.line(wb(8.4, 22), wb(9.0, 20), hex('#3f8cff'));
-  g.line(wb(9.0, 20), wb(9.8, 29), hex('#3f8cff'));
-  g.line(wb(7.8, 30), wb(8.8, 30), hex('#e5484d'));
-  g.line(wb(7.8, 27), wb(8.4, 27), C.ink);
+  // 화이트보드(왼쪽 벽)
+  if (L.board) {
+    const [b0, b1] = L.board;
+    g.poly([wb(b0, 14), wb(b1, 14), wb(b1, 34), wb(b0, 34)], hex('#b7bcc6'));
+    g.poly([wb(b0 + 0.1, 15), wb(b1 - 0.1, 15), wb(b1 - 0.1, 33), wb(b0 + 0.1, 33)], hex('#fdfdfb'));
+    g.line(wb(b0 + 0.4, 18), wb(b0 + 1.0, 22), hex('#3f8cff'));
+    g.line(wb(b0 + 1.0, 22), wb(b0 + 1.6, 20), hex('#3f8cff'));
+    g.line(wb(b0 + 1.6, 20), wb(b0 + 2.4, 29), hex('#3f8cff'));
+    g.line(wb(b0 + 0.4, 30), wb(b0 + 1.4, 30), hex('#e5484d'));
+    g.line(wb(b0 + 0.4, 27), wb(b0 + 1.0, 27), C.ink);
+  }
 
   // 출입문
-  g.poly([wb(10.8, 0), wb(12.2, 0), wb(12.2, 30), wb(10.8, 30)], hex('#e9e2d2'));
-  g.poly([wb(10.9, 0), wb(12.1, 0), wb(12.1, 29), wb(10.9, 29)], hex('#8a5a3c'));
-  g.poly([wb(11.05, 4), wb(11.95, 4), wb(11.95, 26), wb(11.05, 26)], hex('#9d6a47'));
-  const knob = wb(11.85, 14);
+  const d0 = L.doorY - 0.2;
+  g.poly([wb(d0, 0), wb(d0 + 1.4, 0), wb(d0 + 1.4, 30), wb(d0, 30)], hex('#e9e2d2'));
+  g.poly([wb(d0 + 0.1, 0), wb(d0 + 1.3, 0), wb(d0 + 1.3, 29), wb(d0 + 0.1, 29)], hex('#8a5a3c'));
+  g.poly([wb(d0 + 0.25, 4), wb(d0 + 1.15, 4), wb(d0 + 1.15, 26), wb(d0 + 0.25, 26)], hex('#9d6a47'));
+  const knob = wb(d0 + 1.05, 14);
   g.px(knob[0], knob[1], hex('#f1c453'));
   g.px(knob[0] + 1, knob[1], hex('#f1c453'));
 
-  // 라운지 벽걸이 TV
-  g.poly([wb(13.9, 12), wb(16.6, 12), wb(16.6, 30), wb(13.9, 30)], hex('#1d2130'));
-  const tv = (u: number, z: number) => wb(14.1 + u, z);
-  const hue = Math.floor(t / 1500) % 3;
-  g.poly([tv(0, 14), tv(2.3, 14), tv(2.3, 28), tv(0, 28)], [hex('#3f8cff'), hex('#2fbf71'), hex('#f2a33a')][hue]);
-  g.poly([tv(0.4, 17), tv(1.4, 17), tv(1.4, 24), tv(0.4, 24)], hex('#ffffff', 160));
+  // 라운지 벽걸이 TV(라운지가 왼쪽 벽에 붙어 있을 때)
+  if (L.lounge && L.loungeLeft) {
+    const ty = L.lounge.y0 + 0.5;
+    g.poly([wb(ty, 12), wb(ty + 2.7, 12), wb(ty + 2.7, 30), wb(ty, 30)], hex('#1d2130'));
+    const tv = (u: number, z: number) => wb(ty + 0.2 + u, z);
+    const hue = Math.floor(t / 1500) % 3;
+    g.poly([tv(0, 14), tv(2.3, 14), tv(2.3, 28), tv(0, 28)], [hex('#3f8cff'), hex('#2fbf71'), hex('#f2a33a')][hue]);
+    g.poly([tv(0.4, 17), tv(1.4, 17), tv(1.4, 24), tv(0.4, 24)], hex('#ffffff', 160));
+  }
 
   // 벽시계
-  const clk = P(v, 13.35, 0, 30);
+  const clk = P(v, (L.meeting ? L.meeting.x0 : L.exec.x0) - 0.05, 0, 30);
   for (let dy = -4; dy <= 4; dy++) for (let dx = -4; dx <= 4; dx++) if (dx * dx + dy * dy <= 17) g.px(clk[0] + dx, clk[1] + dy, dx * dx + dy * dy >= 13 ? C.ink : hex('#ffffff'));
   const ang = (Math.min(1, s.msInDay / DATA.time.dayMs) * 9 + 9) * ((Math.PI * 2) / 12);
   g.line(clk, [clk[0] + Math.sin(ang) * 2.5, clk[1] - Math.cos(ang) * 2.5], C.ink);
@@ -355,25 +404,7 @@ function drawWindow(g: Pix, q: (u: number, z: number) => Pt, a: number, b: numbe
   g.line(q(a, z0), q(b, z0), shade(C.frame, 0.8));
 }
 
-// ── 유리 칸막이(대표실·회의실·부서 구역 사이) ──
-// [x0, y0, x1, y1] 바닥 위 선분
-const GLASS: [number, number, number, number][] = [
-  // 대표실
-  [18.6, 0, 18.6, 4.8],
-  [18.6, 4.8, 20.3, 4.8],
-  [21.5, 4.8, 24, 4.8],
-  // 회의실
-  [13.4, 0, 13.4, 6.2],
-  [13.4, 6.2, 15.2, 6.2],
-  [16.4, 6.2, 18.6, 6.2],
-  [18.6, 4.8, 18.6, 6.2],
-  // 부서 구역 사이(통로는 비움)
-  [7.0, 1.6, 7.0, 6.2],
-  [7.0, 7.8, 7.0, 12.2],
-  [13.2, 7.8, 13.2, 12.2],
-  [1.4, 7.0, 5.4, 7.0],
-  [8.6, 7.0, 12.4, 7.0],
-];
+// ── 유리 칸막이(대표실·회의실) ── 배치는 buildLayout에서 만듭니다.
 const GLASS_H = 24;
 
 function glassSeg(ctx: DrawCtx, x0: number, y0: number, x1: number, y1: number, first: boolean, last: boolean) {
@@ -429,7 +460,7 @@ function drawBackSeat(ctx: DrawCtx, seat: Seat, x: number, y: number) {
   g.poly([scr(0.64, 14), scr(1.36, 14), scr(1.36, 22), scr(0.64, 22)], on ? C.screenBg : C.screenOff);
   if (on && occ.emp) {
     const dc = hex(dept(occ.emp.dept).color);
-    const busy = s.instructions.some((xx) => xx.status === 'running' && xx.dept === occ.emp!.dept);
+    const busy = s.speed > 0 && !s.pauseReason;
     const tick = busy && s.speed > 0 ? Math.floor(t / 260 + hashStr(occ.emp.id)) : hashStr(occ.emp.id);
     const linesC = [dc, hex('#e9edf5'), hex('#57d391'), dc];
     for (let i = 0; i < 4; i++) {
@@ -463,7 +494,7 @@ function drawBackPerson(ctx: DrawCtx, seat: Seat, emp: Employee) {
   const { g, v, s, t, hover } = ctx;
   const a = anchor(v, seat);
   const look = lookFor(emp.id, dept(emp.dept).color);
-  const busy = s.instructions.some((x) => x.status === 'running' && x.dept === emp.dept);
+  const busy = !(emp.sickUntil !== null && emp.sickUntil > s.day);
   const running = s.speed > 0;
   const cyc = (t / 1000 + look.phase * 13) % 13;
   let rows: string[];
@@ -663,54 +694,113 @@ function lamp(ctx: DrawCtx, x: number, y: number) {
   box(g, v, x - 0.15, y - 0.15, 30, 0.3, 0.3, 3, { top: hex('#fff3c4'), left: hex('#ffe08a'), right: hex('#f0c75e') });
 }
 
-const DECOR: Decor[] = [
-  // 대표실·회의실
-  { x: 15.0, y: 2.4, k: 1.2, draw: meeting },
-  { x: 23.4, y: 4.2, draw: plant },
-  { x: 14.0, y: 5.6, draw: plant },
-  // 벽 쪽
-  { x: 0.5, y: 0.5, draw: plant },
-  { x: 0.7, y: 12.8, draw: plant },
-  { x: 0.2, y: 6.9, draw: cooler },
-  // 부서 사이 통로
-  { x: 6.6, y: 6.8, draw: plant },
-  { x: 12.8, y: 6.8, draw: plant },
-  { x: 13.0, y: 12.8, draw: bigPlant },
-  // 라운지
-  { x: 2.6, y: 14.3, k: 1, draw: lounge },
-  { x: 5.0, y: 14.0, draw: beanbag },
-  { x: 5.4, y: 16.3, draw: beanbag },
-  { x: 6.6, y: 17.4, draw: bigPlant },
-  // 가운데 탁구대
-  { x: 8.9, y: 14.2, k: 1.4, draw: pingpong },
-  { x: 12.0, y: 13.4, k: 0.5, draw: vending },
-  // 탕비실
-  { x: 14.4, y: 13.6, k: 1.5, draw: kitchen },
-  { x: 15.0, y: 15.6, k: 1, draw: diningTable },
+function treadmill(ctx: DrawCtx, x: number, y: number) {
+  const { g, v, t } = ctx;
+  box(g, v, x, y, 0, 0.7, 1.6, 2, cols('#2e323c'));
+  box(g, v, x + 0.05, y + 0.1, 2, 0.6, 1.3, 1, { top: (Math.floor(t / 120) % 2 ? hex('#3a3f4b') : hex('#444a57')), left: hex('#2e323c'), right: hex('#262a33') });
+  box(g, v, x + 0.05, y, 2, 0.6, 0.12, 10, cols('#9aa3b5'));
+}
+
+function weights(ctx: DrawCtx, x: number, y: number) {
+  const { g, v } = ctx;
+  box(g, v, x, y, 0, 1.6, 0.4, 6, cols('#5b6170'));
+  for (let i = 0; i < 4; i++) box(g, v, x + 0.15 + i * 0.36, y + 0.1, 6, 0.22, 0.22, 2, cols(['#e5484d', '#3f8cff', '#f2a33a', '#2fbf71'][i]));
+}
+
+function stage(ctx: DrawCtx, x: number, y: number) {
+  const { g, v } = ctx;
+  box(g, v, x, y, 0, 4.4, 1.2, 4, cols('#6b3e26'));
+  box(g, v, x + 1.6, y + 0.2, 4, 1.2, 0.12, 14, cols('#1d2130'));
+  for (let r = 0; r < 3; r++) for (let c = 0; c < 5; c++) box(g, v, x + 0.2 + c * 0.85, y + 2 + r * 1.2, 0, 0.45, 0.4, 6, cols('#7b2f3b'));
+}
+
+function buildLayout(tierId: number): Layout {
+  const t = officeTier(tierId);
+  const W = t.size.w;
+  const H = t.size.h;
+  const has = (r: string) => t.rooms.includes(r);
+  const exec: Rect = { x0: W - 5.4, y0: 0, x1: W, y1: 4.8 };
+  const meeting: Rect | null = has('meeting') ? { x0: W - 10.6, y0: 0, x1: W - 5.4, y1: 6.2 } : null;
+  const loungeLeft = has('lounge');
+  const lounge: Rect | null = loungeLeft ? { x0: 1, y0: H - 4.6, x1: 6.8, y1: H - 0.6 } : has('lounge_small') ? { x0: W - 5.6, y0: H - 4, x1: W - 0.6, y1: H - 0.4 } : null;
+  const kitchen: Rect | null = has('kitchen') ? { x0: W - 10, y0: H - 4.5, x1: W - 5, y1: H } : null;
+  const doorY = Math.round(H * 0.6);
+  const board: [number, number] | null = doorY - 3.6 >= 4 ? [doorY - 3.6, doorY - 0.8] : null;
+  const winY: [number, number][] = [];
+  for (let a = 0.6; a + 2.8 <= W - 0.5; a += 3.4) winY.push([a, a + 2.8]);
+  const winX: [number, number][] = [];
+  const winEnd = board ? board[0] - 0.4 : doorY - 0.6;
+  for (let a = 0.6; a + 2.8 <= winEnd; a += 3.4) winX.push([a, a + 2.8]);
+  const glass: [number, number, number, number][] = [
+    [exec.x0, 0, exec.x0, exec.y1],
+    [exec.x0, exec.y1, exec.x0 + 1.7, exec.y1],
+    [exec.x0 + 2.9, exec.y1, W, exec.y1],
+  ];
+  if (meeting) glass.push([meeting.x0, 0, meeting.x0, meeting.y1], [meeting.x0, meeting.y1, meeting.x0 + 1.8, meeting.y1], [meeting.x0 + 3.0, meeting.y1, meeting.x1, meeting.y1], [meeting.x1, exec.y1, meeting.x1, meeting.y1]);
+  const decor: Decor[] = [];
+  const add = (x: number, y: number, draw: Decor['draw'], k?: number) => decor.push({ x, y, k, draw });
+  if (meeting) {
+    add(meeting.x0 + 1.6, 2.4, meeting2, 1.2);
+    add(meeting.x0 + 0.6, 5.6, plant);
+  }
+  add(W - 0.6, 4.2, plant);
+  add(0.5, 0.5, plant);
+  add(0.7, doorY + 1.8, plant);
+  if (board) add(0.2, board[0] - 0.5, cooler);
   // 오른쪽 열린 공간
-  { x: 19.4, y: 5.6, draw: cooler },
-  { x: 20.4, y: 5.6, draw: printer },
-  { x: 22.6, y: 6.0, draw: bigPlant },
-  { x: 20.0, y: 9.0, draw: cafeTable },
-  { x: 22.6, y: 9.0, draw: cafeTable },
-  { x: 20.0, y: 12.2, draw: cafeTable },
-  { x: 22.6, y: 12.2, draw: cafeTable },
-  { x: 23.4, y: 16.8, draw: bigPlant },
-  { x: 19.6, y: 16.8, draw: plant },
+  const openTop = Math.max(exec.y1, meeting ? 0 : 0) + 0.8;
+  add(W - 4.6, openTop, cooler);
+  add(W - 3.6, openTop, printer);
+  add(W - 1.4, openTop + 0.4, bigPlant);
+  const rightBottom = H - (lounge && !loungeLeft ? 4.8 : 5);
+  const aud = has('auditorium');
+  const gym = has('gym');
+  let ry = openTop + 3.2;
+  if (aud && ry + 6 < rightBottom) {
+    add(W - 5.0, ry, stage, 2);
+    ry += 6.4;
+  }
+  if (gym && ry + 3 < rightBottom) {
+    add(W - 4.6, ry, treadmill, 1);
+    add(W - 3.4, ry, treadmill, 1);
+    add(W - 2.0, ry + 0.4, weights, 1);
+    ry += 3.4;
+  }
+  for (; ry + 1 < rightBottom; ry += 3.2) {
+    add(W - 4, ry, cafeTable);
+    add(W - 1.4, ry, cafeTable);
+  }
+  if (loungeLeft && lounge) {
+    add(2.6, lounge.y0 + 0.9, lounge2, 1);
+    add(5.0, lounge.y0 + 0.6, beanbag);
+    add(5.4, lounge.y0 + 2.9, beanbag);
+    add(6.6, H - 0.6, bigPlant);
+  } else if (lounge) {
+    add(lounge.x0 + 1.2, lounge.y0 + 0.6, lounge2, 1);
+    add(lounge.x1 - 1.0, lounge.y0 + 1.0, beanbag);
+    add(lounge.x1 - 0.8, lounge.y1 - 0.6, beanbag);
+  }
+  if (!lounge || loungeLeft) {
+    add(W - 0.6, H - 1.2, bigPlant);
+    add(W - 4.4, H - 1.2, plant);
+  }
+  if (has('pingpong')) add(W / 2 - 3.1, H - 3.8, pingpong, 1.4);
+  if (kitchen) {
+    add(kitchen.x0 - 2, kitchen.y0 - 0.1, vending, 0.5);
+    add(kitchen.x0 + 0.4, kitchen.y0 + 0.1, kitchen2, 1.5);
+    add(kitchen.x0 + 1.0, kitchen.y0 + 2.1, diningTable, 1);
+  }
   // 건물 밖(앞쪽 두 면)
-  { x: 2, y: FH + 4.2, draw: tree },
-  { x: 9, y: FH + 4.2, draw: tree },
-  { x: 16, y: FH + 4.2, draw: tree },
-  { x: 23, y: FH + 4.2, draw: tree },
-  { x: FW + 4.2, y: 3, draw: tree },
-  { x: FW + 4.2, y: 10, draw: tree },
-  { x: FW + 4.2, y: 17, draw: tree },
-  { x: 5, y: FH + 1.3, draw: bench },
-  { x: 12.5, y: FH + 1.3, draw: bench },
-  { x: 19.5, y: FH + 1.3, draw: bench },
-  { x: 0.5, y: FH + 1.6, draw: lamp },
-  { x: 8, y: FH + 1.6, draw: lamp },
-  { x: 15.5, y: FH + 1.6, draw: lamp },
-  { x: FW + 1.6, y: 6, draw: lamp },
-  { x: FW + 1.6, y: 13.5, draw: lamp },
-];
+  for (let x = 2; x < W; x += 7) add(x, H + 4.2, tree);
+  for (let y = 3; y < H; y += 7) add(W + 4.2, y, tree);
+  for (let x = 5; x < W - 2; x += 7.5) add(x, H + 1.3, bench);
+  for (let x = 0.5; x < W; x += 7.5) add(x, H + 1.6, lamp);
+  for (let y = 6; y < H; y += 7.5) add(W + 1.6, y, lamp);
+  const zones = t.zones.map((z) => ({ dept: z.dept as DeptId, x: z.x, y: z.y, cols: z.cols, rows: z.rows }));
+  return { id: tierId, W, H, zones, exec, meeting, lounge, loungeLeft, kitchen, doorY, board, winX, winY, decor, glass };
+}
+
+// 이름이 같은 그리기 함수(회의실·라운지·탕비실)를 배치에서 쓰기 위한 별칭
+const meeting2 = meeting;
+const lounge2 = lounge;
+const kitchen2 = kitchen;

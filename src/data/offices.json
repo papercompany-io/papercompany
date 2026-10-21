@@ -1,41 +1,407 @@
 {
   "_note": "OF-07 사무실 이전(DEC-020) 단계와 OF-01/02 배치. 좌석 한 벌 2×2칸, 부서 구역은 cols×rows 좌석. deposit 보증금, rent 월세, comfort 쾌적도(만족도 목표 가산). 수치 [예시값], 배치는 화면 전용",
   "tiers": [
-    { "id": 1, "name": "창업 사무실", "desc": "역 근처 작은 사무실. 책상 6개.", "deposit": 0, "rent": 1500000, "comfort": 0,
-      "size": { "w": 16, "h": 12 }, "ceo": { "x": 12, "y": 1 }, "exec": { "x": 14, "y": 1 },
-      "zones": [ { "dept": "dev", "x": 2, "y": 2, "cols": 2, "rows": 1 }, { "dept": "design", "x": 7, "y": 2, "cols": 1, "rows": 1 },
-                 { "dept": "sales", "x": 2, "y": 7, "cols": 1, "rows": 1 }, { "dept": "marketing", "x": 6, "y": 7, "cols": 1, "rows": 1 } ],
-      "rooms": ["lounge_small"] },
-    { "id": 2, "name": "강남 중형 사무실", "desc": "한 층 절반. 팀이 생기는 회사에 맞습니다.", "deposit": 50000000, "rent": 8000000, "comfort": 4,
-      "size": { "w": 24, "h": 18 }, "ceo": { "x": 19, "y": 1 }, "exec": { "x": 21.8, "y": 1 },
-      "zones": [ { "dept": "dev", "x": 2, "y": 2, "cols": 3, "rows": 2 }, { "dept": "design", "x": 9, "y": 2, "cols": 2, "rows": 1 },
-                 { "dept": "sales", "x": 2, "y": 8, "cols": 2, "rows": 1 }, { "dept": "marketing", "x": 8, "y": 8, "cols": 2, "rows": 1 },
-                 { "dept": "hr", "x": 14, "y": 8, "cols": 1, "rows": 1 }, { "dept": "cs", "x": 14, "y": 12, "cols": 2, "rows": 1 } ],
-      "rooms": ["meeting", "lounge", "kitchen"] },
-    { "id": 3, "name": "판교 오피스 한 층", "desc": "넓은 한 층 전체. 부서가 늘어나는 조직에 맞습니다.", "deposit": 300000000, "rent": 35000000, "comfort": 8,
-      "size": { "w": 34, "h": 24 }, "ceo": { "x": 28, "y": 1 }, "exec": { "x": 30.8, "y": 1 },
-      "zones": [ { "dept": "dev", "x": 2, "y": 2, "cols": 4, "rows": 3 }, { "dept": "design", "x": 11, "y": 2, "cols": 3, "rows": 2 },
-                 { "dept": "sales", "x": 2, "y": 10, "cols": 3, "rows": 2 }, { "dept": "marketing", "x": 9, "y": 10, "cols": 3, "rows": 1 },
-                 { "dept": "hr", "x": 9, "y": 14, "cols": 2, "rows": 1 }, { "dept": "cs", "x": 2, "y": 16, "cols": 3, "rows": 2 },
-                 { "dept": "infra", "x": 18, "y": 2, "cols": 2, "rows": 2 }, { "dept": "finlegal", "x": 16, "y": 10, "cols": 2, "rows": 1 },
-                 { "dept": "ai", "x": 16, "y": 14, "cols": 2, "rows": 2 } ],
-      "rooms": ["meeting", "meeting2", "lounge", "kitchen", "pingpong"] },
-    { "id": 4, "name": "테헤란로 빌딩 세 개 층", "desc": "세 개 층을 씁니다. 대규모 조직과 해외 지사 관리에 맞습니다.", "deposit": 1500000000, "rent": 150000000, "comfort": 12,
-      "size": { "w": 44, "h": 30 }, "ceo": { "x": 38, "y": 1 }, "exec": { "x": 40.8, "y": 1 },
-      "zones": [ { "dept": "dev", "x": 2, "y": 2, "cols": 6, "rows": 4 }, { "dept": "design", "x": 15, "y": 2, "cols": 4, "rows": 2 },
-                 { "dept": "sales", "x": 2, "y": 13, "cols": 5, "rows": 2 }, { "dept": "marketing", "x": 13, "y": 13, "cols": 4, "rows": 2 },
-                 { "dept": "hr", "x": 22, "y": 13, "cols": 3, "rows": 1 }, { "dept": "cs", "x": 2, "y": 20, "cols": 5, "rows": 3 },
-                 { "dept": "infra", "x": 24, "y": 2, "cols": 3, "rows": 2 }, { "dept": "finlegal", "x": 22, "y": 17, "cols": 3, "rows": 1 },
-                 { "dept": "ai", "x": 13, "y": 20, "cols": 4, "rows": 2 } ],
-      "rooms": ["meeting", "meeting2", "lounge", "kitchen", "pingpong", "gym"] },
-    { "id": 5, "name": "사옥", "desc": "회사 이름을 단 건물. 최고의 쾌적도와 상징성.", "deposit": 8000000000, "rent": 500000000, "comfort": 18,
-      "size": { "w": 54, "h": 36 }, "ceo": { "x": 48, "y": 1 }, "exec": { "x": 50.8, "y": 1 },
-      "zones": [ { "dept": "dev", "x": 2, "y": 2, "cols": 8, "rows": 5 }, { "dept": "design", "x": 19, "y": 2, "cols": 5, "rows": 3 },
-                 { "dept": "sales", "x": 2, "y": 15, "cols": 6, "rows": 3 }, { "dept": "marketing", "x": 16, "y": 15, "cols": 5, "rows": 2 },
-                 { "dept": "hr", "x": 27, "y": 15, "cols": 4, "rows": 1 }, { "dept": "cs", "x": 2, "y": 24, "cols": 6, "rows": 4 },
-                 { "dept": "infra", "x": 30, "y": 2, "cols": 4, "rows": 3 }, { "dept": "finlegal", "x": 27, "y": 20, "cols": 4, "rows": 2 },
-                 { "dept": "ai", "x": 16, "y": 21, "cols": 5, "rows": 3 } ],
-      "rooms": ["meeting", "meeting2", "lounge", "kitchen", "pingpong", "gym", "auditorium"] }
+    {
+      "id": 1,
+      "name": "창업 사무실",
+      "desc": "역 근처 작은 사무실. 책상 6개.",
+      "deposit": 0,
+      "rent": 1500000,
+      "comfort": 0,
+      "size": {
+        "w": 16,
+        "h": 12
+      },
+      "ceo": {
+        "x": 12,
+        "y": 1
+      },
+      "exec": {
+        "x": 14,
+        "y": 1
+      },
+      "zones": [
+        {
+          "dept": "dev",
+          "x": 2,
+          "y": 2,
+          "cols": 3,
+          "rows": 1
+        },
+        {
+          "dept": "design",
+          "x": 2,
+          "y": 6,
+          "cols": 1,
+          "rows": 1
+        },
+        {
+          "dept": "sales",
+          "x": 5,
+          "y": 6,
+          "cols": 1,
+          "rows": 1
+        },
+        {
+          "dept": "marketing",
+          "x": 8,
+          "y": 6,
+          "cols": 1,
+          "rows": 1
+        }
+      ],
+      "rooms": [
+        "lounge_small"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "강남 중형 사무실",
+      "desc": "한 층 절반. 팀이 생기는 회사에 맞습니다.",
+      "deposit": 50000000,
+      "rent": 8000000,
+      "comfort": 4,
+      "size": {
+        "w": 24,
+        "h": 18
+      },
+      "ceo": {
+        "x": 19,
+        "y": 1
+      },
+      "exec": {
+        "x": 21.8,
+        "y": 1
+      },
+      "zones": [
+        {
+          "dept": "dev",
+          "x": 2,
+          "y": 2,
+          "cols": 3,
+          "rows": 2
+        },
+        {
+          "dept": "design",
+          "x": 9,
+          "y": 2,
+          "cols": 2,
+          "rows": 1
+        },
+        {
+          "dept": "sales",
+          "x": 2,
+          "y": 8,
+          "cols": 2,
+          "rows": 1
+        },
+        {
+          "dept": "marketing",
+          "x": 8,
+          "y": 8,
+          "cols": 2,
+          "rows": 1
+        },
+        {
+          "dept": "hr",
+          "x": 14,
+          "y": 8,
+          "cols": 1,
+          "rows": 1
+        },
+        {
+          "dept": "cs",
+          "x": 8,
+          "y": 11,
+          "cols": 2,
+          "rows": 1
+        }
+      ],
+      "rooms": [
+        "meeting",
+        "lounge",
+        "kitchen"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "판교 오피스 한 층",
+      "desc": "넓은 한 층 전체. 부서가 늘어나는 조직에 맞습니다.",
+      "deposit": 300000000,
+      "rent": 35000000,
+      "comfort": 8,
+      "size": {
+        "w": 34,
+        "h": 24
+      },
+      "ceo": {
+        "x": 28,
+        "y": 1
+      },
+      "exec": {
+        "x": 30.8,
+        "y": 1
+      },
+      "zones": [
+        {
+          "dept": "dev",
+          "x": 2,
+          "y": 2,
+          "cols": 4,
+          "rows": 3
+        },
+        {
+          "dept": "design",
+          "x": 11,
+          "y": 2,
+          "cols": 3,
+          "rows": 2
+        },
+        {
+          "dept": "infra",
+          "x": 18,
+          "y": 2,
+          "cols": 2,
+          "rows": 2
+        },
+        {
+          "dept": "sales",
+          "x": 2,
+          "y": 10,
+          "cols": 3,
+          "rows": 2
+        },
+        {
+          "dept": "marketing",
+          "x": 9,
+          "y": 10,
+          "cols": 3,
+          "rows": 1
+        },
+        {
+          "dept": "finlegal",
+          "x": 16,
+          "y": 10,
+          "cols": 2,
+          "rows": 1
+        },
+        {
+          "dept": "cs",
+          "x": 21,
+          "y": 8,
+          "cols": 3,
+          "rows": 2
+        },
+        {
+          "dept": "hr",
+          "x": 9,
+          "y": 14,
+          "cols": 2,
+          "rows": 1
+        },
+        {
+          "dept": "ai",
+          "x": 16,
+          "y": 14,
+          "cols": 2,
+          "rows": 2
+        }
+      ],
+      "rooms": [
+        "meeting",
+        "meeting2",
+        "lounge",
+        "kitchen",
+        "pingpong"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "테헤란로 빌딩 세 개 층",
+      "desc": "세 개 층을 씁니다. 대규모 조직과 해외 지사 관리에 맞습니다.",
+      "deposit": 1500000000,
+      "rent": 150000000,
+      "comfort": 12,
+      "size": {
+        "w": 44,
+        "h": 30
+      },
+      "ceo": {
+        "x": 38,
+        "y": 1
+      },
+      "exec": {
+        "x": 40.8,
+        "y": 1
+      },
+      "zones": [
+        {
+          "dept": "dev",
+          "x": 2,
+          "y": 2,
+          "cols": 6,
+          "rows": 4
+        },
+        {
+          "dept": "design",
+          "x": 15,
+          "y": 2,
+          "cols": 4,
+          "rows": 2
+        },
+        {
+          "dept": "infra",
+          "x": 24,
+          "y": 2,
+          "cols": 3,
+          "rows": 2
+        },
+        {
+          "dept": "sales",
+          "x": 2,
+          "y": 13,
+          "cols": 5,
+          "rows": 2
+        },
+        {
+          "dept": "marketing",
+          "x": 13,
+          "y": 13,
+          "cols": 4,
+          "rows": 2
+        },
+        {
+          "dept": "hr",
+          "x": 22,
+          "y": 13,
+          "cols": 3,
+          "rows": 1
+        },
+        {
+          "dept": "cs",
+          "x": 2,
+          "y": 19,
+          "cols": 5,
+          "rows": 3
+        },
+        {
+          "dept": "ai",
+          "x": 13,
+          "y": 20,
+          "cols": 4,
+          "rows": 2
+        },
+        {
+          "dept": "finlegal",
+          "x": 22,
+          "y": 17,
+          "cols": 3,
+          "rows": 1
+        }
+      ],
+      "rooms": [
+        "meeting",
+        "meeting2",
+        "lounge",
+        "kitchen",
+        "pingpong",
+        "gym"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "사옥",
+      "desc": "회사 이름을 단 건물. 최고의 쾌적도와 상징성.",
+      "deposit": 8000000000,
+      "rent": 500000000,
+      "comfort": 18,
+      "size": {
+        "w": 54,
+        "h": 36
+      },
+      "ceo": {
+        "x": 48,
+        "y": 1
+      },
+      "exec": {
+        "x": 50.8,
+        "y": 1
+      },
+      "zones": [
+        {
+          "dept": "dev",
+          "x": 2,
+          "y": 2,
+          "cols": 8,
+          "rows": 5
+        },
+        {
+          "dept": "design",
+          "x": 19,
+          "y": 2,
+          "cols": 5,
+          "rows": 3
+        },
+        {
+          "dept": "infra",
+          "x": 30,
+          "y": 2,
+          "cols": 4,
+          "rows": 3
+        },
+        {
+          "dept": "sales",
+          "x": 2,
+          "y": 15,
+          "cols": 6,
+          "rows": 3
+        },
+        {
+          "dept": "marketing",
+          "x": 16,
+          "y": 15,
+          "cols": 5,
+          "rows": 2
+        },
+        {
+          "dept": "hr",
+          "x": 27,
+          "y": 15,
+          "cols": 4,
+          "rows": 1
+        },
+        {
+          "dept": "cs",
+          "x": 2,
+          "y": 23,
+          "cols": 6,
+          "rows": 4
+        },
+        {
+          "dept": "ai",
+          "x": 16,
+          "y": 21,
+          "cols": 5,
+          "rows": 3
+        },
+        {
+          "dept": "finlegal",
+          "x": 27,
+          "y": 20,
+          "cols": 4,
+          "rows": 2
+        }
+      ],
+      "rooms": [
+        "meeting",
+        "meeting2",
+        "lounge",
+        "kitchen",
+        "pingpong",
+        "gym",
+        "auditorium"
+      ]
+    }
   ],
   "moveDays": 3,
   "crowdingSat": -8

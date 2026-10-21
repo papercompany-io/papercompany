@@ -1,10 +1,13 @@
-// F02 창업 셋업 마법사: FS-01 스펙 구매 → TM-01·TM-02·EQ-01 팀 → CO-01 이름 → CO-02 첫 행보
+// F02 창업 셋업 마법사: (새 커리어) 창업자·도전 → 산업 → FS-01 스펙 → TM-01·TM-02·EQ-01 팀 → CO-01 이름(·개인 출자) → CO-02 첫 행보
 import { useMemo, useState } from 'react';
-import { DATA, specEffects } from '../core/data';
-import { defaultPicks, newGame, specTotal, validateCompanyName } from '../core/state';
+import { DATA, INDUSTRIES, specEffects } from '../core/data';
+import { defaultPicks, specBudget, specTotal, validateCompanyName, type SetupChoices } from '../core/state';
+import { legacyUnlocked } from '../core/career';
 import { makeSeed } from '../core/rng';
-import { pct } from '../core/format';
-import type { GameState } from '../core/types';
+import { pct, wonShort } from '../core/format';
+import type { IndustryId } from '../core/types';
+import { useProfile } from './meta';
+import { play } from './sound';
 import { PixelAvatar } from './office/Avatar';
 import './setup.css';
 
@@ -37,8 +40,23 @@ function initialSeed(): number {
   return q && /^\d+$/.test(q) ? Number(q) : makeSeed();
 }
 
-export function Setup({ onDone }: { onDone: (s: GameState) => void }) {
-  const [step, setStep] = useState(0);
+interface Props {
+  mode: 'new' | 'next';
+  wealth?: number; // 다음 회사: 개인 자산
+  legacy?: Record<string, number>;
+  challenge?: string | null;
+  onDone: (c: SetupChoices) => void;
+  onCancel?: () => void;
+}
+
+export function Setup({ mode, wealth = 0, legacy, challenge: careerChallenge = null, onDone, onCancel }: Props) {
+  const profile = useProfile();
+  const lg = legacy ?? profile.legacy;
+  const [step, setStep] = useState(mode === 'new' ? 0 : 1);
+  const [founderName, setFounderName] = useState('');
+  const [challenge, setChallenge] = useState<string | null>(null);
+  const [industry, setIndustry] = useState<IndustryId>('saas');
+  const [invest, setInvest] = useState(0);
   const [picks, setPicks] = useState<Record<string, string>>(defaultPicks());
   const [cofounderId, setCofounderId] = useState<string | null>(null);
   const [equity, setEquity] = useState(0.2);
@@ -47,14 +65,16 @@ export function Setup({ onDone }: { onDone: (s: GameState) => void }) {
   const [seed, setSeed] = useState<number>(initialSeed);
   const [teamMsg, setTeamMsg] = useState<string | null>(null);
 
-  const budget = DATA.specs.budget;
+  const budget = specBudget(lg);
+  const solo = (mode === 'new' ? challenge : careerChallenge) === 'solo';
+  const maxInvest = Math.floor((wealth * DATA.career.maxInvestShare) / 1e6) * 1e6;
   const spent = specTotal(picks);
   const left = budget - spent;
   const fx = useMemo(() => specEffects(picks), [picks]);
   const nameErr = validateCompanyName(name);
   const cof = DATA.candidates.cofounders.find((c) => c.id === cofounderId);
 
-  const steps = ['창업자 스펙', '창업 팀', '회사 이름', '첫 행보'];
+  const steps = ['창업자', '산업', '창업자 스펙', '창업 팀', '회사 이름', '첫 행보'];
 
   const confirmTeam = () => {
     if (cof && equity < cof.minEquity) {
@@ -63,11 +83,12 @@ export function Setup({ onDone }: { onDone: (s: GameState) => void }) {
       return;
     }
     setTeamMsg(null);
-    setStep(2);
+    setStep(4);
   };
 
   const finish = (wantsAngel: boolean) => {
-    onDone(newGame({ picks, cofounderId, cofounderEquity: cofounderId ? equity : 0, engineerId, companyName: name, wantsAngel, seed }));
+    play('success');
+    onDone({ picks, cofounderId: solo ? null : cofounderId, cofounderEquity: cofounderId ? equity : 0, engineerId: solo ? null : engineerId, companyName: name, wantsAngel, seed, industry, founderName, challenge, invest });
   };
 
   return (
@@ -85,6 +106,78 @@ export function Setup({ onDone }: { onDone: (s: GameState) => void }) {
         </div>
 
         {step === 0 && (
+          <div className="setup-body narrow">
+            <div className="section-title">창업자 이름</div>
+            <input className="name-input" data-testid="founder-name" placeholder="예: 김대표" value={founderName} maxLength={12} onChange={(e) => setFounderName(e.target.value)} />
+            <div className="tiny muted">2027년, 30세. 65세에 은퇴할 때까지 여러 회사를 세우며 커리어를 쌓습니다. 회사가 끝나면(매각·상장·파산) 다음 회사를 세울 수 있습니다.</div>
+            <div className="section-title">도전 모드(선택)</div>
+            <div className="cands">
+              <button className={`cand ${challenge === null ? 'sel' : ''}`} data-testid="challenge-none" onClick={() => setChallenge(null)}>
+                <div className="cand-name">일반</div>
+                <div className="tiny muted">기본 커리어</div>
+              </button>
+              {DATA.career.challenges.map((c) => (
+                <button key={c.id} className={`cand ${challenge === c.id ? 'sel' : ''}`} data-testid={`challenge-${c.id}`} onClick={() => setChallenge(c.id)}>
+                  <div className="cand-name">{c.name}</div>
+                  <div className="tiny muted">{c.desc}</div>
+                  <div className="tiny">레거시 점수 ×{c.legacyMult}</div>
+                </button>
+              ))}
+            </div>
+            <div className="row" style={{ justifyContent: 'space-between' }}>
+              {onCancel ? (
+                <button className="btn ghost" onClick={onCancel}>
+                  처음으로
+                </button>
+              ) : (
+                <span />
+              )}
+              <button className="btn big" data-testid="founder-confirm" disabled={founderName.trim().length < 2} onClick={() => setStep(1)}>
+                다음
+              </button>
+            </div>
+          </div>
+        )}
+
+        {step === 1 && (
+          <div className="setup-body">
+            <div className="section-title">어떤 사업을 할까요?</div>
+            <div className="industries">
+              {INDUSTRIES.map((ind) => {
+                const locked = ind.locked && !legacyUnlocked(lg, ind.id);
+                return (
+                  <button key={ind.id} disabled={locked} className={`industry ${industry === ind.id ? 'sel' : ''}`} data-testid={`industry-${ind.id}`} onClick={() => setIndustry(ind.id)}>
+                    <div className="cand-name">
+                      {ind.name} {locked && <span className="chip">🔒 레거시로 해금</span>}
+                    </div>
+                    <div className="tiny muted">{ind.desc}</div>
+                    <div className="tiny">
+                      고객 단위: {ind.unit} · 기본 월 이탈 {pct(ind.churnM, 1)} · 매출 배수 {ind.valMult}배
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="row" style={{ justifyContent: 'space-between' }}>
+              {mode === 'new' ? (
+                <button className="btn ghost" onClick={() => setStep(0)}>
+                  이전
+                </button>
+              ) : onCancel ? (
+                <button className="btn ghost" onClick={onCancel}>
+                  커리어 화면으로
+                </button>
+              ) : (
+                <span />
+              )}
+              <button className="btn big" data-testid="industry-confirm" onClick={() => setStep(2)}>
+                다음
+              </button>
+            </div>
+          </div>
+        )}
+
+        {step === 2 && (
           <div className="setup-body two">
             <div className="col grow">
               <div className="muted">시작 예산 {budget.toLocaleString()} 크레딧으로 창업자의 출발 조건을 고르세요. 범주마다 하나씩 고르고, 모든 범주의 최고 항목을 다 살 수는 없습니다.</div>
@@ -137,15 +230,16 @@ export function Setup({ onDone }: { onDone: (s: GameState) => void }) {
               <div className="tiny muted" style={{ marginTop: 8 }}>
                 남은 크레딧은 회사 자금으로 넘어가지 않습니다.
               </div>
-              <button className="btn big" data-testid="spec-confirm" style={{ marginTop: 14 }} onClick={() => setStep(1)}>
+              <button className="btn big" data-testid="spec-confirm" style={{ marginTop: 14 }} onClick={() => setStep(3)}>
                 확정
               </button>
             </div>
           </div>
         )}
 
-        {step === 1 && (
+        {step === 3 && (
           <div className="setup-body">
+            {solo && <div className="warn">1인 창업 도전 중입니다. 코파운더·파운딩 엔지니어 없이 시작합니다.</div>}
             <div className="section-title">코파운더 (주식을 받습니다)</div>
             <div className="cands">
               <button className={`cand ${cofounderId === null ? 'sel' : ''}`} data-testid="cof-none" onClick={() => { setCofounderId(null); setTeamMsg(null); }}>
@@ -153,7 +247,7 @@ export function Setup({ onDone }: { onDone: (s: GameState) => void }) {
                 <div className="tiny muted">혼자 지분 100%로 시작</div>
               </button>
               {DATA.candidates.cofounders.map((c) => (
-                <button key={c.id} className={`cand ${cofounderId === c.id ? 'sel' : ''}`} data-testid={`cof-${c.id}`} onClick={() => { setCofounderId(c.id); setTeamMsg(null); }}>
+                <button key={c.id} disabled={solo} className={`cand ${cofounderId === c.id ? 'sel' : ''}`} data-testid={`cof-${c.id}`} onClick={() => { setCofounderId(c.id); setTeamMsg(null); }}>
                   <div className="cand-name">{c.name}</div>
                   <div className="tiny">
                     {DATA.depts.departments.find((d) => d.id === c.dept)!.name} · 능력 {c.grade} · 월급 {(c.salary / 1e4).toLocaleString()}만원
@@ -188,7 +282,7 @@ export function Setup({ onDone }: { onDone: (s: GameState) => void }) {
                 <div className="cand-name">영입하지 않음</div>
               </button>
               {DATA.candidates.engineers.map((c) => (
-                <button key={c.id} className={`cand ${engineerId === c.id ? 'sel' : ''}`} data-testid={`eng-${c.id}`} onClick={() => setEngineerId(c.id)}>
+                <button key={c.id} disabled={solo} className={`cand ${engineerId === c.id ? 'sel' : ''}`} data-testid={`eng-${c.id}`} onClick={() => setEngineerId(c.id)}>
                   <div className="cand-name">{c.name}</div>
                   <div className="tiny">
                     개발 · 능력 {c.grade} · 월급 {(c.salary / 1e4).toLocaleString()}만원
@@ -199,7 +293,7 @@ export function Setup({ onDone }: { onDone: (s: GameState) => void }) {
             </div>
             {teamMsg && <div className="err">{teamMsg}</div>}
             <div className="row" style={{ justifyContent: 'space-between' }}>
-              <button className="btn ghost" onClick={() => setStep(0)}>
+              <button className="btn ghost" onClick={() => setStep(2)}>
                 이전
               </button>
               <button className="btn big" data-testid="team-confirm" onClick={confirmTeam}>
@@ -209,24 +303,37 @@ export function Setup({ onDone }: { onDone: (s: GameState) => void }) {
           </div>
         )}
 
-        {step === 2 && (
+        {step === 4 && (
           <div className="setup-body narrow">
             <div className="section-title">회사 이름</div>
             <input className="name-input" data-testid="company-name" placeholder="예: 페이퍼랩스" value={name} maxLength={20} onChange={(e) => setName(e.target.value)} />
             <div className="tiny muted">2~20자. 메신저 워크스페이스와 결과 화면에 쓰입니다.</div>
             {name.length > 0 && nameErr && <div className="warn">{nameErr}</div>}
+            {mode === 'next' && maxInvest > 0 && (
+              <div className="card col">
+                <b>개인 자산 출자</b>
+                <div className="tiny muted">개인 자산의 최대 {DATA.career.maxInvestShare * 100}%까지 새 회사 자본금으로 넣을 수 있습니다. 지분은 줄지 않지만, 회사가 망하면 잃습니다.</div>
+                <input type="range" data-testid="invest-slider" min={0} max={maxInvest} step={Math.max(1e6, Math.round(maxInvest / 100 / 1e6) * 1e6)} value={invest} onChange={(e) => setInvest(Number(e.target.value))} />
+                <div className="row">
+                  <span>
+                    출자 <b>{wonShort(invest)}</b>
+                  </span>
+                  <span className="muted tiny">개인 자산 {wonShort(wealth)}</span>
+                </div>
+              </div>
+            )}
             <div className="row" style={{ justifyContent: 'space-between' }}>
-              <button className="btn ghost" onClick={() => setStep(1)}>
+              <button className="btn ghost" onClick={() => setStep(3)}>
                 이전
               </button>
-              <button className="btn big" data-testid="name-confirm" disabled={!!nameErr} onClick={() => setStep(3)}>
+              <button className="btn big" data-testid="name-confirm" disabled={!!nameErr} onClick={() => setStep(5)}>
                 다음
               </button>
             </div>
           </div>
         )}
 
-        {step === 3 && (
+        {step === 5 && (
           <div className="setup-body narrow">
             <div className="section-title">시작하자마자 투자를 알아볼까요?</div>
             <div className="choices">
@@ -237,7 +344,7 @@ export function Setup({ onDone }: { onDone: (s: GameState) => void }) {
               </button>
               <button className="choice" data-testid="start-bootstrap" onClick={() => finish(false)}>
                 <b>투자 없이 시작한다</b>
-                <span className="tiny muted">자본금 {(DATA.finance.startCash / 1e4).toLocaleString()}만원으로 제품과 매출부터 만듭니다. 투자는 나중에 언제든 열 수 있습니다.</span>
+                <span className="tiny muted">자본금으로 제품과 매출부터 만듭니다. 투자는 나중에 언제든 열 수 있습니다.</span>
               </button>
             </div>
             <div className="row tiny muted">
@@ -245,7 +352,7 @@ export function Setup({ onDone }: { onDone: (s: GameState) => void }) {
               <input data-testid="seed" className="seed" value={seed} onChange={(e) => /^\d*$/.test(e.target.value) && setSeed(Number(e.target.value || 0))} />
               <span>같은 시드면 같은 결과가 나옵니다.</span>
             </div>
-            <button className="btn ghost" style={{ alignSelf: 'flex-start' }} onClick={() => setStep(2)}>
+            <button className="btn ghost" style={{ alignSelf: 'flex-start' }} onClick={() => setStep(4)}>
               이전
             </button>
           </div>
