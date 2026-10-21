@@ -142,6 +142,9 @@ export function exitDayEnd(s: GameState) {
 // EX-05 인수 제안(매달 판정)
 export function inboundOfferMonth(s: GameState) {
   if (s.public || s.ended || s.company.stage < 2 || exitBlocked(s)) return;
+  // 거절했거나 기한을 넘긴 들어온 제안 뒤 180일은 새 제안이 오지 않습니다(A-77).
+  const last = s.exitAttempt;
+  if (last && last.inbound && last.status === 'declined' && s.day - last.startedDay < 180) return;
   const p = 0.02 + 0.015 * s.company.stage + (s.economy.phase === 'boom' ? 0.03 : 0);
   if (rand(s) >= p) return;
   const cv = computeValuation(s);

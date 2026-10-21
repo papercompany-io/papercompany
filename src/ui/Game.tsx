@@ -58,6 +58,12 @@ export function Game({ continued, notice, clearNotice, onEnded }: Props) {
   const fid = useRef(0);
 
   // 게임 루프: 실시간 진행(DEC-018). 데스크탑을 보는 동안에도 시간이 흐릅니다.
+  // 설정 "긴급 알림 때 자동 일시정지"를 끄면 인수 제안·투자 제안서 도착도 멈추지 않습니다(알림·배지는 그대로, 기한 안에 답하면 됨). 파산 경고는 항상 멈춤.
+  useEffect(() => {
+    if (!s || settings.autoPauseUrgent) return;
+    if (s.pauseReason === '인수 제안이 들어왔습니다' || s.pauseReason === '투자 제안서가 도착했습니다') act((g) => (g.pauseReason = null));
+  }, [s?.pauseReason, settings.autoPauseUrgent]);
+
   useEffect(() => {
     let raf = 0;
     let last = performance.now();
