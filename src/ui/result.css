@@ -1,7 +1,12 @@
-.result { height: 100%; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle at 50% 30%, #2b3756 0%, #141a27 75%); padding: 24px; }
-.result-card { width: 640px; background: #fff; border-radius: 16px; padding: 26px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 12px; align-items: stretch; }
-.result-kind { align-self: center; background: var(--bar); color: #fff; border-radius: 999px; padding: 4px 14px; font-weight: 800; }
+.result { height: 100%; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle at 50% 30%, #2f3a58 0%, #151a2b 75%); padding: 24px; }
+.result-card { width: 680px; background: #fff; border-radius: 8px; padding: 0 0 22px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 12px; align-items: stretch; overflow: hidden; }
+.result-card > :not(.result-band) { margin: 0 24px; }
+.result-band { background: var(--hud); color: #fff; padding: 18px 24px 16px; display: flex; flex-direction: column; align-items: center; gap: 6px; border-top: 4px solid var(--green); }
+.result-band.bankrupt { border-top-color: var(--red); }
+.result-kind { font-family: var(--pixel); font-size: 15px; background: var(--green); color: #fff; border-radius: 4px; padding: 3px 12px; }
+.result-band.bankrupt .result-kind { background: var(--red); }
 .result-company { text-align: center; font-size: 22px; font-weight: 900; }
-.result-amount { text-align: center; font-size: 40px; font-weight: 900; color: var(--green); font-variant-numeric: tabular-nums; }
-.result-formula { text-align: center; color: var(--ink-2); font-size: 14px; }
+.result-label { text-align: center; color: var(--ink-3); font-size: 12px; font-weight: 800; margin-top: 6px; }
+.result-amount { text-align: center; font-size: 42px; font-weight: 900; color: var(--money); font-variant-numeric: tabular-nums; line-height: 1.1; }
 .result-amount.zero { color: var(--ink-3); }
+.result-formula { text-align: center; color: var(--ink-2); font-size: 13px; background: var(--panel-2); border-radius: 6px; padding: 8px 12px; }

@@ -5,6 +5,7 @@ import { defaultPicks, newGame, specTotal, validateCompanyName } from '../core/s
 import { makeSeed } from '../core/rng';
 import { pct } from '../core/format';
 import type { GameState } from '../core/types';
+import { PixelAvatar } from './office/Avatar';
 import './setup.css';
 
 const EFFECT_LABEL: Record<string, string> = {
@@ -114,7 +115,9 @@ export function Setup({ onDone }: { onDone: (s: GameState) => void }) {
               ))}
             </div>
             <div className="profile card">
-              <div className="avatar" />
+              <div className="avatar">
+                <PixelAvatar id="ceo-founder" color="#2c3a5c" suit size={72} />
+              </div>
               <div className="profile-name">창업자 프로필</div>
               <div className="credit">
                 남은 크레딧 <b data-testid="credits-left">{left.toLocaleString()}</b> / {budget.toLocaleString()}

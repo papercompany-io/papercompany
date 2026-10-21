@@ -28,9 +28,9 @@ export function FinanceApp() {
           <div className="stat-value">{rw === null ? '흑자' : `${rw.toFixed(1)}개월`}</div>
         </div>
         <div className="stat">
-          <div className="stat-label">기업가치({formatDate(s.valuation.storedDay)} 산정)</div>
+          <div className="stat-label">기업가치(지금 산정, 투자·Exit 기준)</div>
           <div className="stat-value">
-            <Money v={s.valuation.stored} full />
+            <Money v={computeValuation(s).value} full />
           </div>
         </div>
         <div className="stat">

@@ -18,8 +18,11 @@ export function Result({ onNewCompany }: { onNewCompany: () => void }) {
   return (
     <div className="result" data-testid="result">
       <div className="result-card">
-        <div className="result-kind">{r.kind === 'exit' ? (r.method === 'ipo' ? 'IPO 성공' : '매각 성공') : '파산'}</div>
-        <div className="result-company">{s.company.name}</div>
+        <div className={`result-band ${bankrupt ? 'bankrupt' : ''}`}>
+          <div className="result-kind">{r.kind === 'exit' ? (r.method === 'ipo' ? 'IPO 성공' : '매각 성공') : '파산'}</div>
+          <div className="result-company">{s.company.name}</div>
+        </div>
+        <div className="result-label">결과 금액(창업자가 받는 돈)</div>
         <div className={`result-amount ${bankrupt ? 'zero' : ''}`} data-testid="result-amount">
           {won(r.amount)}
         </div>

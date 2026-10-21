@@ -1,37 +1,82 @@
-.game { height: 100%; display: flex; flex-direction: column; }
-.hud { height: 64px; flex: none; background: var(--bar); color: #fff; display: flex; align-items: center; justify-content: space-between; padding: 0 18px; border-bottom: 3px solid #161c2a; z-index: 30; }
-.hud-company { display: flex; align-items: center; gap: 10px; min-width: 260px; }
-.hud-logo { width: 34px; height: 34px; border-radius: 8px; background: conic-gradient(#2f8fff 0 25%, #2fbf71 0 50%, #f2a33a 0 75%, #e5484d 0); }
-.hud-name { font-weight: 900; font-size: 16px; }
-.hud-stage { font-size: 12px; color: #8d99b6; }
-.hud-clock { display: flex; align-items: center; gap: 14px; }
-.hud-date { font-size: 18px; font-weight: 800; font-variant-numeric: tabular-nums; }
-.hud-date span { color: #8d99b6; font-size: 14px; margin-left: 4px; }
-.speed { display: flex; background: #161c2a; border-radius: 8px; padding: 3px; gap: 2px; }
-.speed button { border: none; background: transparent; color: #c7d0e4; padding: 5px 10px; border-radius: 6px; font-weight: 800; font-size: 13px; }
-.speed button.on { background: var(--blue); color: #fff; }
-.hud-stats { display: flex; gap: 18px; min-width: 260px; justify-content: flex-end; }
-.hud-stats > div { display: flex; flex-direction: column; align-items: flex-end; }
-.hud-stats span { font-size: 11px; color: #8d99b6; font-weight: 700; }
-.hud-stats .money { font-size: 16px; color: #57d391; }
-.hud-stats .money.neg { color: #ff7b7f; }
-.stage { position: relative; flex: 1; min-height: 0; overflow: hidden; background: #2a3247; }
-.hintbar { flex: none; background: #fffbea; color: var(--ink); border-bottom: 1px solid #e9dfb5; padding: 7px 18px; font-size: 14px; z-index: 29; }
-.hint-tag { display: inline-block; background: var(--blue); color: #fff; font-weight: 800; font-size: 12px; border-radius: 6px; padding: 2px 8px; margin-right: 6px; }
-.pause-banner { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); background: #fff7e6; border: 2px solid var(--amber); border-radius: 10px; padding: 8px 14px; display: flex; gap: 12px; align-items: center; z-index: 40; box-shadow: var(--shadow); }
-.notice { position: absolute; top: 14px; right: 14px; background: #fff; border-radius: 10px; padding: 10px 14px; z-index: 40; box-shadow: var(--shadow); font-size: 14px; }
-.modal-bg { position: fixed; inset: 0; background: rgba(10, 14, 24, 0.55); display: flex; align-items: center; justify-content: center; z-index: 60; }
-.modal { background: #fff; border-radius: 14px; padding: 16px; width: 420px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 12px; }
-.emp-head { display: flex; gap: 12px; align-items: center; color: #fff; border-radius: 10px; padding: 12px; }
-.emp-avatar { width: 48px; height: 48px; border-radius: 10px; background: linear-gradient(#ffd9b3 0 50%, rgba(255, 255, 255, 0.35) 50% 100%); }
+.game { height: 100%; position: relative; }
+.stage { position: absolute; inset: 0; overflow: hidden; }
+
+/* 가운데 위 HUD(Startup Company 상단 바) */
+.hud {
+  position: absolute; top: 0; left: calc((100% - 300px) / 2); transform: translateX(-50%); z-index: 30;
+  width: 560px; background: var(--hud); color: #fff; border-radius: 0 0 12px 12px; overflow: hidden;
+  box-shadow: 0 6px 18px rgba(8, 12, 28, 0.4); user-select: none;
+}
+.hud-progress { height: 4px; background: #23263a; }
+.hud-progress div { height: 100%; background: var(--violet); transition: width 120ms linear; }
+.hud-row { display: flex; align-items: center; justify-content: space-between; padding: 6px 16px 0; font-size: 13px; color: var(--hud-ink); }
+.hud-date { font-weight: 700; color: #e8eaf4; font-variant-numeric: tabular-nums; }
+.hud-payday b { color: var(--violet); font-weight: 800; }
+.hud-row.main { padding: 4px 10px 8px; gap: 10px; }
+.hud-speed { display: flex; gap: 2px; }
+.hud-speed .sp { background: transparent; border: none; color: #fff; height: 30px; min-width: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; opacity: 0.85; }
+.hud-speed .sp:hover { background: var(--hud-2); opacity: 1; }
+.hud-speed .sp0.on { color: var(--orange); opacity: 1; background: #3a2f3a; }
+.hud-speed .sp.on:not(.sp0) { color: var(--orange); opacity: 1; background: var(--hud-2); }
+.hud-item { display: flex; align-items: center; gap: 6px; font-weight: 800; font-size: 15px; color: #fff; font-variant-numeric: tabular-nums; }
+.hud-item svg { color: var(--hud-ink); }
+.hud-cash { display: flex; align-items: center; gap: 5px; font-size: 16px; }
+.hud-cash .money { color: #fff; }
+.hud-cash .money.neg { color: #ff8a80; }
+.hud-cash .up { color: #4cdb6a; font-size: 11px; }
+.hud-cash .down { color: #ff6b5e; font-size: 11px; }
+
+/* 다음 할 일 */
+.hint {
+  position: absolute; top: 74px; left: calc((100% - 300px) / 2); transform: translateX(-50%); z-index: 29;
+  max-width: min(760px, calc(100% - 340px)); background: #fff; color: var(--ink); border-radius: 6px; padding: 6px 12px 6px 6px;
+  font-size: 13px; font-weight: 600; display: flex; gap: 8px; align-items: center; box-shadow: 0 4px 14px rgba(8, 12, 28, 0.3);
+}
+.hint-tag { flex: none; background: var(--blue); color: #fff; font-weight: 800; font-size: 11px; border-radius: 4px; padding: 3px 7px; }
+.hint.urgent { background: #fff1ef; color: var(--red-d); }
+.hint.urgent .hint-tag { background: var(--red); }
+
+.pause-banner {
+  position: absolute; top: 118px; left: calc((100% - 300px) / 2); transform: translateX(-50%); z-index: 41;
+  background: #fff7e8; border: 2px solid var(--amber); border-radius: 6px; padding: 7px 10px 7px 14px; display: flex; gap: 12px; align-items: center;
+  box-shadow: var(--shadow); font-size: 13px; white-space: nowrap;
+}
+
+/* 오른쪽 위 회사 카드(Startup Company의 제품 카드) */
+.company-card {
+  position: absolute; top: 14px; right: 14px; width: 272px; z-index: 30; background: #fff; border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(8, 12, 28, 0.35); padding: 12px; display: flex; flex-direction: column; gap: 10px;
+}
+.cc-head { display: flex; gap: 10px; align-items: center; }
+.cc-logo { width: 34px; height: 34px; border-radius: 7px; flex: none; image-rendering: pixelated; background: conic-gradient(#2d8fd5 0 25%, #36b44a 0 50%, #f0a020 0 75%, #d9453b 0); box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.45); }
+.cc-name { font-weight: 900; font-size: 16px; color: var(--ink); line-height: 1.2; }
+.cc-stage { font-size: 12px; color: var(--violet); font-weight: 700; }
+.cc-tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.cc-tile { background: var(--panel-2); border-radius: 5px; padding: 6px 7px; min-width: 0; }
+.cc-tile.wide { grid-column: span 2; }
+.cc-tile.wide .cc-value { font-size: 15px; }
+.cc-label { font-size: 10px; font-weight: 800; color: var(--ink-3); }
+.cc-value { font-size: 13px; font-weight: 800; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+.cc-value small { color: #a96a00; font-size: 11px; }
+.cc-forecast { display: flex; justify-content: space-between; gap: 8px; background: #eef7ff; border-radius: 5px; padding: 6px 8px; font-size: 11px; color: var(--ink-2); font-weight: 700; }
+.cc-forecast > div { display: flex; flex-direction: column; gap: 1px; }
+.cc-forecast .money { font-size: 15px; }
+.cc-forecast.bad { background: #fff0ec; }
+.cc-runway { text-align: right; align-items: flex-end; }
+.cc-runway b { font-size: 15px; color: var(--ink); }
+.cc-runway.bad b { color: var(--red); }
+
+.notice { position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%); background: #fff; border-radius: 6px; padding: 8px 10px 8px 14px; z-index: 45; box-shadow: var(--shadow); font-size: 14px; display: flex; gap: 10px; align-items: center; }
+
+/* OF-06 직원 정보 모달 */
+.modal.emp-modal { width: 460px; padding: 0; overflow: hidden; gap: 0; }
+.emp-head { display: flex; gap: 12px; align-items: center; color: #fff; padding: 14px 16px; position: relative; }
+.emp-head .x { position: absolute; right: 10px; top: 8px; background: transparent; border: none; color: #fff; font-size: 20px; opacity: 0.85; }
+.emp-avatar { width: 56px; height: 56px; border-radius: 6px; background: rgba(255, 255, 255, 0.22); image-rendering: pixelated; flex: none; }
 .emp-name { font-size: 20px; font-weight: 900; }
-.dev-panel { position: fixed; right: 12px; top: 76px; bottom: 12px; width: 520px; overflow: auto; background: rgba(13, 18, 28, 0.96); color: #dfe6f5; border: 1px solid #3a4562; border-radius: 10px; padding: 12px; z-index: 80; font-size: 12px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+.emp-body { padding: 12px 16px 16px; display: flex; flex-direction: column; gap: 12px; }
+
+/* 개발용 상태 패널 */
+.dev-panel { position: fixed; right: 12px; top: 12px; bottom: 12px; width: 520px; overflow: auto; background: rgba(13, 18, 28, 0.96); color: #dfe6f5; border: 1px solid #3a4562; border-radius: 8px; padding: 12px; z-index: 80; font-size: 12px; font-family: ui-monospace, Menlo, Consolas, monospace; }
 .dev-panel table.t td, .dev-panel table.t th { color: #dfe6f5; border-color: #2c3650; padding: 3px 6px; }
 .dev-block { border-top: 1px solid #2c3650; padding: 6px 0; display: flex; flex-direction: column; gap: 2px; }
-/* M1 임시 평면 사무실 */
-.office-flat { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; padding: 18px; }
-.zone { background: #3a4562; border-radius: 12px; padding: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; align-content: start; }
-.zone-name { grid-column: 1 / -1; font-weight: 900; color: #fff; }
-.desk { height: 56px; border-radius: 8px; border: none; background: #fff; font-weight: 800; }
-.desk.empty { background: #2c3650; color: #8d99b6; display: flex; align-items: center; justify-content: center; font-size: 12px; }
-.desk.ceo { background: var(--blue); color: #fff; }

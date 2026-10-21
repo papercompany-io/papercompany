@@ -47,7 +47,7 @@ export function InvestApp({ initialStage }: { initialStage?: string }) {
         value={tab}
         onChange={setTab}
       />
-      {tab === 'round' && <RoundTab initialStage={initialStage} goInvestors={() => setTab('investors')} />}
+      {tab === 'round' && <RoundTab key={`${s.fundingStage}-${s.rounds.length}`} initialStage={initialStage} goInvestors={() => setTab('investors')} />}
       {tab === 'investors' && <InvestorsTab />}
       {tab === 'cap' && <CapTab />}
     </div>
@@ -73,7 +73,11 @@ function RoundTab({ initialStage, goInvestors }: { initialStage?: string; goInve
   const s = useGame();
   const r = activeRound(s);
   const options = selectableStages(s);
-  const [stageId, setStageId] = useState<StageId>(options.includes(initialStage as StageId) ? (initialStage as StageId) : options[options.length > 1 && !s.fundingStage ? 2 : options.length - 1] ?? options[0]);
+  // 기본은 지금 펀딩 단계의 다음 단계. 처음 연 경로(CO-02 엔젤)가 정한 단계는 아직 그 단계를 지나지 않았을 때만 씁니다(P1-22).
+  const cur = stageIndex(s.fundingStage);
+  const next = options.find((id) => stageIndex(id) === cur + 1) ?? options[options.length - 1];
+  const fromArg = options.includes(initialStage as StageId) && stageIndex(initialStage as StageId) > cur ? (initialStage as StageId) : null;
+  const [stageId, setStageId] = useState<StageId>(fromArg ?? next);
   const st = stage(stageId);
   const [room, setRoom] = useState(0.1);
   const [err, setErr] = useState<string | null>(null);

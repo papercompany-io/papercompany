@@ -35,12 +35,14 @@ export function Boot({ onNew, onContinue }: Props) {
           <span />
         </div>
         <div className="boot-name">PaperOS</div>
-        <div className="boot-sub">페이퍼컴퍼니 · CEO 업무용 컴퓨터</div>
+        <div className="boot-sub">페이퍼컴퍼니 · 대표 업무용 컴퓨터</div>
       </div>
       {!done && (
         <>
           <div className="boot-bar">
-            <div style={{ width: `${progress}%` }} />
+            {Array.from({ length: 20 }, (_, i) => (
+              <i key={i} className={progress >= (i + 1) * 5 ? 'on' : ''} />
+            ))}
           </div>
           <div className="boot-skip">클릭하면 건너뜁니다</div>
         </>

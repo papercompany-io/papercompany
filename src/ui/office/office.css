@@ -1,0 +1,45 @@
+.office { position: absolute; inset: 0; overflow: hidden; background: #1a2034; }
+.office-canvas { position: absolute; left: 0; top: 0; image-rendering: pixelated; image-rendering: crisp-edges; }
+
+/* 부서 구역 좌석 범례(OF-02) */
+.zone-legend {
+  position: absolute; left: 14px; bottom: 14px; z-index: 6; background: rgba(23, 27, 44, 0.86); border-radius: 6px; padding: 8px 10px;
+  display: flex; gap: 12px; align-items: center; color: #e8eaf4; font-size: 12px; font-weight: 700; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+.zl-title { font-family: var(--pixel); font-weight: 400; color: #b9c0d8; font-size: 11px; }
+.zl-item { display: flex; align-items: center; gap: 5px; cursor: default; }
+.zl-item b { font-weight: 800; color: #fff; font-variant-numeric: tabular-nums; }
+.zone-dot { width: 9px; height: 9px; border-radius: 2px; background: var(--dc); }
+
+/* 클릭 영역(투명) */
+.actor-hit { position: absolute; background: transparent; border: none; padding: 0; cursor: pointer; z-index: 3; }
+
+/* Startup Company식 이름표 */
+.nametag {
+  position: absolute; transform: translate(-50%, -100%); z-index: 4; cursor: pointer;
+  background: #fff; border-radius: 4px; padding: 3px 7px 3px; min-width: 64px; text-align: center;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.18), 0 4px 10px rgba(10, 14, 30, 0.25); white-space: nowrap; user-select: none;
+}
+.nametag::after {
+  content: ''; position: absolute; left: 50%; bottom: -4px; transform: translateX(-50%);
+  border: 4px solid transparent; border-bottom: 0; border-top-color: #fff;
+}
+.tag-name { font-size: 11px; font-weight: 800; color: #2d3142; display: flex; align-items: center; justify-content: center; gap: 4px; line-height: 1.3; }
+.tag-dept { width: 8px; height: 8px; border-radius: 2px; background: var(--dc); flex: none; }
+.tag-badge { font-size: 9px; font-weight: 800; color: #8a5b00; background: #ffe7b0; border-radius: 3px; padding: 0 3px; }
+.tag-sub { font-size: 10px; font-weight: 700; color: #2b8a4b; letter-spacing: -0.01em; line-height: 1.25; }
+.tag-sub.idle { color: #d9453b; }
+.nametag.pending { background: #fff6e3; cursor: default; }
+.nametag.pending::after { border-top-color: #fff6e3; }
+.nametag.pending .tag-sub { color: #a96a00; }
+.nametag.ceo { background: #2d8fd5; }
+.nametag.ceo::after { border-top-color: #2d8fd5; }
+.nametag.ceo .tag-name { color: #fff; }
+.nametag.ceo .tag-sub { color: #d8ecff; }
+.nametag.pulse { animation: tagpulse 1.1s ease-in-out infinite; }
+.tag-arrow {
+  position: absolute; left: 50%; top: -24px; transform: translateX(-50%); background: #ffcf3f; color: #3b2a00;
+  font-size: 11px; font-weight: 900; border-radius: 4px; padding: 1px 6px; animation: tagbounce 0.9s ease-in-out infinite;
+}
+@keyframes tagpulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(45, 143, 213, 0.9); } 50% { box-shadow: 0 0 0 6px rgba(45, 143, 213, 0); } }
+@keyframes tagbounce { 0%, 100% { transform: translate(-50%, 0); } 50% { transform: translate(-50%, -4px); } }
