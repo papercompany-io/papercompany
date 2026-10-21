@@ -67,7 +67,7 @@ export function Setup({ mode, wealth = 0, legacy, challenge: careerChallenge = n
 
   const budget = specBudget(lg);
   const solo = (mode === 'new' ? challenge : careerChallenge) === 'solo';
-  const maxInvest = Math.floor((wealth * DATA.career.maxInvestShare) / 1e6) * 1e6;
+  const maxInvest = Math.floor(Math.min(wealth * DATA.career.maxInvestShare, DATA.career.maxInvest) / 1e6) * 1e6;
   const spent = specTotal(picks);
   const left = budget - spent;
   const fx = useMemo(() => specEffects(picks), [picks]);
@@ -312,7 +312,7 @@ export function Setup({ mode, wealth = 0, legacy, challenge: careerChallenge = n
             {mode === 'next' && maxInvest > 0 && (
               <div className="card col">
                 <b>개인 자산 출자</b>
-                <div className="tiny muted">개인 자산의 최대 {DATA.career.maxInvestShare * 100}%까지 새 회사 자본금으로 넣을 수 있습니다. 지분은 줄지 않지만, 회사가 망하면 잃습니다.</div>
+                <div className="tiny muted">개인 자산의 최대 {DATA.career.maxInvestShare * 100}%(최대 {wonShort(DATA.career.maxInvest)})까지 새 회사 자본금으로 넣을 수 있습니다. 지분은 줄지 않지만, 회사가 망하면 잃습니다.</div>
                 <input type="range" data-testid="invest-slider" min={0} max={maxInvest} step={Math.max(1e6, Math.round(maxInvest / 100 / 1e6) * 1e6)} value={invest} onChange={(e) => setInvest(Number(e.target.value))} />
                 <div className="row">
                   <span>

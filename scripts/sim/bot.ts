@@ -44,32 +44,43 @@ function planRoadmap(s: GameState) {
   }
 }
 
+// 매출과 자금 여유에 맞춘 목표 인원(유능한 플레이어 흉내)
 function targetHeadcount(s: GameState): Partial<Record<DeptId, number>> {
   const st = s.company.stage;
   const rev = lastRevenue(s);
-  const scale = Math.max(1, Math.floor(Math.max(rev / 3e7, s.cash / 3e9)));
-  if (st === 0) return { dev: 2 };
-  if (st === 1) return { dev: 3, design: 1, marketing: 1, sales: 1 };
-  if (st === 2) return { dev: 4 + Math.min(6, scale), design: 2, marketing: 2, sales: 2, hr: 1, cs: 1 + Math.floor(scale / 3) };
-  const m = Math.min(20, scale);
-  return { dev: 8 + m * 2, design: 3 + Math.floor(m / 2), marketing: 3 + Math.floor(m / 2), sales: 3 + m, hr: 2 + Math.floor(m / 4), cs: 2 + m, infra: st >= 3 ? 2 + Math.floor(m / 3) : 0, finlegal: st >= 3 ? 2 : 0, ai: st >= 3 ? 2 + Math.floor(m / 4) : 0 };
+  const burn = Math.max(1, monthlyBurn(s));
+  const cushion = s.cash / burn; // 개월
+  const total = Math.floor(3 + rev / 1.2e7 + (cushion > 18 ? Math.min(60, s.cash / (6e6 * 24)) : 0));
+  if (st === 0) return { dev: Math.min(2, total) };
+  const n = Math.max(3, total);
+  const share = (f: number) => Math.max(1, Math.round(n * f));
+  const out: Partial<Record<DeptId, number>> = { dev: share(0.4), design: share(0.1), sales: share(0.15), marketing: share(0.1) };
+  if (st >= 2) Object.assign(out, { hr: n >= 12 ? share(0.04) : 0, cs: share(0.1) });
+  if (st >= 3) Object.assign(out, { infra: share(0.05), finlegal: Math.max(1, share(0.03)), ai: share(0.05) });
+  return out;
+}
+
+function monthlyBurn(s: GameState): number {
+  const h = s.plHistory.slice(-3);
+  const net = h.length ? h.reduce((a, m) => a + m.netIncome + m.other, 0) / h.length : -projectedMonthlyPayroll(s);
+  return Math.max(0, -net);
 }
 
 function hireStep(s: GameState) {
-  const rw = runwayMonths(s);
-  const rich = rw === null || rw > 10;
-  if (!rich && s.cash < projectedMonthlyPayroll(s) * 8) return;
   const tgt = targetHeadcount(s);
+  let burn = monthlyBurn(s) + s.pendingHires.reduce((a, h) => a + h.salary * 1.2, 0);
   for (const [d, n] of Object.entries(tgt) as [DeptId, number][]) {
     const have = s.employees.filter((e) => e.dept === d).length + s.pendingHires.filter((h) => h.dept === d).length;
     if (have >= n || freeSeats(s, d).length === 0) continue;
-    if (s.company.stage < (DATA.depts.departments.find((x) => x.id === d)!.stage)) continue;
+    if (s.company.stage < DATA.depts.departments.find((x) => x.id === d)!.stage) continue;
     const open = s.postings.find((p) => p.dept === d && p.status === 'open');
     if (!open) createPosting(s, { dept: d, headcount: Math.min(4, n - have), salaryLevel: 'normal', durationDays: 14, promo: s.cash > 3e8 ? 'normal' : 'none' });
     const apps = s.applicants.filter((a) => a.status === 'waiting' && a.dept === d).sort((a, b) => 'SABC'.indexOf(a.grade) - 'SABC'.indexOf(b.grade));
     for (const a of apps.slice(0, Math.max(0, n - have))) {
       if (a.grade === 'C' && s.company.stage >= 2) continue;
-      offerJob(s, a.id, false);
+      // 신중한 채용: 이 사람까지 더해도 런웨이 12개월 이상
+      if (s.cash / (burn + a.desiredSalary * 1.2) < 12) return;
+      if (offerJob(s, a.id, false).ok) burn += a.desiredSalary * 1.2;
     }
   }
 }
@@ -103,7 +114,7 @@ function fundStep(s: GameState) {
   const rw = runwayMonths(s);
   const st = nextStage(s);
   if (!st) return;
-  const need = rw !== null && rw < 10;
+  const need = rw !== null && rw < 12;
   const growthReady = (st === 'seed' && hasMvp(s)) || (stageIndex(st) >= stageIndex('A') && lastRevenue(s) >= ((DATA.funding.stages.find((x) => x.id === st) as { needRevenue?: number }).needRevenue ?? 0));
   const early = stageIndex(st) <= stageIndex('preseed') && s.day - s.company.startDay < 400;
   if ((need || growthReady || early) && (s.lastRoundDay === null || s.day - s.lastRoundDay >= 120)) {
@@ -132,7 +143,7 @@ function opsStep(s: GameState) {
       const ind = DATA.industries.industries.find((x) => x.id === s.company.industry)!;
       const ltv = revenuePerUser(s, m).total / ind.churnM;
       const good = ltv > ind.cac * 1.5;
-      const b = rw !== null && rw < 4 ? 0 : Math.max(s.cash > 1e8 ? 3e6 : 0, rev * (good ? 0.25 : 0.1), good ? Math.min(s.cash / 30, 5e8) : 0);
+      const b = rw !== null && rw < 6 ? 0 : good ? Math.min(s.cash / 18, Math.max(3e6, rev * 0.5)) : Math.min(rev * 0.08, s.cash / 30);
       setAdBudget(s, m, m === 'kr' ? b : b * 0.5);
     }
   }

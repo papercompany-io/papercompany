@@ -1,6 +1,7 @@
 // 경쟁사(Claude 제안): 산업마다 가상 경쟁사가 매달 성장·투자 유치·가격 전쟁·폐업하고, 몇 년마다 새로 들어옵니다.
 // 4단계부터 경쟁사 인수(M&A)로 고객과 매력도를 흡수할 수 있습니다.
 import { industry, market, MARKET_IDS } from './data';
+import { yearOf } from './calendar';
 import { demand, revenuePerUser, shares } from './market';
 import { spendNow } from './finance';
 import { nextId } from './ids';
@@ -21,7 +22,7 @@ export function makeCompetitor(s: GameState, strength: number): Competitor | nul
     id: nextId(s, 'c'),
     name: pick(s, free),
     appeal: randRange(s, 14, 24) * strength,
-    awareness: randRange(s, 0.12, 0.35) * Math.min(1.5, strength),
+    awareness: Math.min(0.8, randRange(s, 0.12, 0.35) * Math.min(2.2, strength)),
     markets,
     cash: randRange(s, 5e8, 3e9) * strength,
     aggression: rand(s),
@@ -33,10 +34,15 @@ export function makeCompetitor(s: GameState, strength: number): Competitor | nul
   };
 }
 
+// 시장이 성숙할수록(늦게 창업할수록) 기존 강자가 강합니다(A-53).
+export function marketMaturity(s: GameState): number {
+  return 1 + 0.1 * Math.max(0, yearOf(s.day) - 2027);
+}
+
 export function seedCompetitors(s: GameState, extra = 0, strength = 1) {
-  const n = industry(s.company.industry).startCompetitors + extra;
+  const n = industry(s.company.industry).startCompetitors + extra + Math.min(2, Math.floor((yearOf(s.day) - 2027) / 8));
   for (let i = 0; i < n; i++) {
-    const c = makeCompetitor(s, strength * randRange(s, 0.8, 1.15));
+    const c = makeCompetitor(s, strength * marketMaturity(s) * randRange(s, 0.8, 1.15));
     if (c) s.competitors.push(c);
   }
 }
@@ -98,7 +104,7 @@ export function competitorsMonth(s: GameState) {
     const q = 0.8 + c.aggression * 0.3;
     const g = randRange(s, 0.002, 0.014) + c.aggression * 0.003;
     c.appeal *= 1 + g;
-    if (mine * q > c.appeal) c.appeal += (mine * q - c.appeal) * 0.06;
+    if (mine * q > c.appeal) c.appeal += (mine * q - c.appeal) * 0.1;
     // 인지도: 점유율이 클수록 높아집니다.
     let sh = 0;
     for (const m of c.markets) sh = Math.max(sh, shares(s, m).comps.find((x) => x.id === c.id)?.share ?? 0);
@@ -139,7 +145,9 @@ export function competitorsMonth(s: GameState) {
   }
   // 신규 진입: 시장이 커질수록 새 경쟁사가 들어옵니다.
   const alive = s.competitors.filter((c) => c.alive).length;
-  if (alive < 7 && rand(s) < 0.035) {
+  // 시장이 크고 우리 점유율이 높을수록 새 경쟁자가 노리고 들어옵니다.
+  const lead = s.markets.kr.launched ? shares(s, 'kr').player : 0;
+  if (alive < 7 && rand(s) < 0.03 + lead * 0.12) {
     const c = makeCompetitor(s, Math.max(1, mine / 20) * randRange(s, 0.7, 1.1));
     if (c) {
       s.competitors.push(c);

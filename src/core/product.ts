@@ -204,12 +204,12 @@ export function fxTotals(s: GameState): FxTotals {
   // 수확 체감(A-45): 기능을 많이 쌓을수록 같은 효과가 덜 붙습니다.
   const soft = (x: number, k: number) => k * Math.log(1 + Math.max(0, x) / k);
   t.appeal = soft(t.appeal, 60);
-  t.arpu = soft(t.arpu, 1);
+  t.arpu = soft(t.arpu, 0.7);
   t.conv = soft(t.conv, 0.5);
   t.viral = soft(t.viral, 0.08);
   t.pay = soft(t.pay, 0.06);
-  t.gmv = soft(t.gmv, 1);
-  t.take = soft(t.take, 0.03);
+  t.gmv = soft(t.gmv, 0.6);
+  t.take = soft(t.take, 0.02);
   t.stability = soft(t.stability, 0.6);
   t.ad = soft(t.ad, 800);
   t.churn = -(1 - Math.exp(t.churn));

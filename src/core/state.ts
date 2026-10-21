@@ -134,7 +134,7 @@ export function newCareer(c: SetupChoices, profile: Profile): GameState {
 // 다음 회사: 같은 커리어에서 쉬는 기간 뒤에 시작
 export function nextCompany(s: GameState, c: SetupChoices): string | null {
   if (!s.ended) return '지금 회사가 아직 끝나지 않았습니다.';
-  const invest = Math.max(0, Math.min(c.invest ?? 0, s.career.wealth * DATA.career.maxInvestShare));
+  const invest = Math.max(0, Math.min(c.invest ?? 0, s.career.wealth * DATA.career.maxInvestShare, DATA.career.maxInvest));
   s.career.decisionsBefore += s.company.decisions;
   s.career.wealth -= invest;
   s.day += DATA.career.breakDays;

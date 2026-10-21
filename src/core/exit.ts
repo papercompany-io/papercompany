@@ -58,9 +58,11 @@ export function exitBlocked(s: GameState): string | null {
 export function startExit(s: GameState, method: 'sale' | 'ipo'): string | null {
   const err = exitBlocked(s);
   if (err) return err;
-  const v = computeValuation(s).value;
+  const cv = computeValuation(s);
+  const v = cv.value;
   if (method === 'sale') {
-    const price = Math.round(v * randRange(s, X.sale.priceMin, X.sale.priceMax));
+    // 제안가 배수는 사업가치에만 붙고, 회사 현금은 그대로 더합니다(A-52).
+    const price = Math.round(Math.max(0, cv.business) * randRange(s, X.sale.priceMin, X.sale.priceMax) + Math.max(0, s.cash));
     s.exitAttempt = { method, startedDay: s.day, readyDay: s.day, price, valuationAtStart: v, p: exitProbability(s, 'sale').p, status: 'offer', inbound: false, buyer: pick(s, BUYERS), deadline: s.day + 14 };
     s.pauseReason = '인수 제안이 들어왔습니다';
   } else {
@@ -125,7 +127,8 @@ export function exitDayEnd(s: GameState) {
     if (s.pauseReason === '인수 제안이 들어왔습니다') s.pauseReason = null;
   }
   if (a.method !== 'ipo' || a.status !== 'preparing' || s.day < a.readyDay) return;
-  a.price = Math.round(computeValuation(s).value * randRange(s, X.ipo.priceMin, X.ipo.priceMax));
+  const cv = computeValuation(s);
+  a.price = Math.round(Math.max(0, cv.business) * randRange(s, X.ipo.priceMin, X.ipo.priceMax) + Math.max(0, s.cash));
   judge(s);
 }
 
@@ -134,8 +137,9 @@ export function inboundOfferMonth(s: GameState) {
   if (s.public || s.ended || s.company.stage < 2 || exitBlocked(s)) return;
   const p = 0.02 + 0.015 * s.company.stage + (s.economy.phase === 'boom' ? 0.03 : 0);
   if (rand(s) >= p) return;
-  const v = computeValuation(s).value;
-  const price = Math.round(v * randRange(s, 0.9, 1.5));
+  const cv = computeValuation(s);
+  const v = cv.value;
+  const price = Math.round(Math.max(0, cv.business) * randRange(s, 0.9, 1.5) + Math.max(0, s.cash));
   const buyer = pick(s, BUYERS);
   s.exitAttempt = { method: 'sale', startedDay: s.day, readyDay: s.day, price, valuationAtStart: v, p: null, status: 'offer', inbound: true, buyer, deadline: s.day + 14 };
   s.pauseReason = '인수 제안이 들어왔습니다';

@@ -1,6 +1,6 @@
 // F08 투자 유치: FR-01 단계 구조, FR-02~05 단계별 투자, FR-06 협상, FR-07 판정, FR-08 수락·거절,
 // FR-09 클럽딜, FR-10 투자사 레터, FR-11 룸과 투자금, FR-13 라운드 열기와 유치 기간, EQ-02 희석
-import { DATA, investor, specEffects, stage, stageIndex } from './data';
+import { DATA, industry, investor, specEffects, stage, stageIndex } from './data';
 import { convertSafes, founderShares, founderPct, newSharesForRoom, recordEquity, safeConversion, totalShares } from './equity';
 import { book, lastRevenue } from './finance';
 import { nextId } from './ids';
@@ -39,6 +39,13 @@ export function selectableStages(s: GameState): StageId[] {
 
 export { lastRevenue };
 
+// 견인력(A-51): 매출 기준 대비 비율. 소비자 앱처럼 매출보다 사용자로 크는 회사는 사용자 가치(사용자 수 × 사용자당 가치 ÷ 40)로도 봅니다.
+export function tractionRatio(s: GameState, needRevenue: number): number {
+  const byRev = lastRevenue(s) / needRevenue;
+  const byUsers = (totalUsers(s) * industry(s.company.industry).userValue) / (needRevenue * 40);
+  return Math.max(byRev, byUsers);
+}
+
 export function seedUsersNeed(s: GameState): number {
   return (FD.seedUsers as Record<string, number>)[s.company.industry] ?? 5;
 }
@@ -52,7 +59,7 @@ export function stageConditions(s: GameState, id: StageId): { label: string; ok:
     else out.push({ label: '핵심 기능 1개 이상 완성', ok: coreFeatures(s).some((f) => featureLevel(s, f.id) >= 1) });
   }
   if (st.needCustomers !== undefined) out.push({ label: `고객 ${seedUsersNeed(s).toLocaleString('ko-KR')} 이상`, ok: Math.floor(totalUsers(s)) >= seedUsersNeed(s) });
-  if (st.needRevenue !== undefined) out.push({ label: `지난달 매출 ${(st.needRevenue / 10000).toLocaleString('ko-KR')}만원 이상`, ok: lastRevenue(s) >= st.needRevenue });
+  if (st.needRevenue !== undefined) out.push({ label: `지난달 매출 ${(st.needRevenue / 10000).toLocaleString('ko-KR')}만원 이상(또는 그만한 사용자 규모)`, ok: tractionRatio(s, st.needRevenue) >= 1 });
   if (s.lastRoundDay !== null) out.push({ label: `직전 라운드 후 ${FD.prob.recentDays}일 지남`, ok: s.day - s.lastRoundDay >= FD.prob.recentDays });
   if (st.early) out.push({ label: '창업자가 투자 유치·엑싯 경험 보유(초기 라운드)', ok: specEffects(s.founder.picks).earlyRound !== 'hard' });
   return out;
@@ -172,11 +179,17 @@ export function decisionProbability(s: GameState, r: Round, investorId: string):
   factors.push(fits(investorId, r.stage) ? { label: '투자사 선호 단계', value: P.fit } : { label: '투자사 선호 단계 아님', value: P.misfit });
   if (t) factors.push({ label: `관심도 ${t.interest}`, value: t.interest * P.perInterest });
   factors.push({ label: `IR 점수 ${s.irPoints.toFixed(1)}`, value: Math.min(P.irCap, s.irPoints * P.perIrPoint) });
+  const mults: { label: string; mult: number }[] = [];
+  const need = (st as { needRevenue?: number }).needRevenue;
   for (const c of stageConditions(s, r.stage)) {
     if (c.ok) continue;
     if (c.label.startsWith('직전 라운드')) factors.push({ label: `조건 미충족: ${c.label}`, value: -P.recentPenalty });
     else if (c.label.startsWith('창업자')) continue; // 초기 라운드 배율로 따로 반영
-    else factors.push({ label: `조건 미충족: ${c.label}`, value: -P.conditionPenalty });
+    else if (need && c.label.includes('매출')) {
+      // 매출이 기준에 모자랄수록 크게 줄어듭니다: (지난달 매출 ÷ 기준)²
+      const ratio = Math.max(0, tractionRatio(s, need));
+      mults.push({ label: `조건 미충족: ${c.label} (기준의 ${Math.round(ratio * 100)}%)`, mult: Math.max(0.02, ratio * ratio) });
+    } else mults.push({ label: `조건 미충족: ${c.label}`, mult: P.conditionMult });
   }
   if (t?.valuationAsk) {
     const ask = FD.valuationAsks.find((a) => a.id === t.valuationAsk)!;
@@ -201,6 +214,11 @@ export function decisionProbability(s: GameState, r: Round, investorId: string):
     const mult = (P.earlyRound as Record<string, number>)[kind];
     if (mult !== 1) factors.push({ label: kind === 'hard' ? '초기 라운드: 창업자 투자 유치 경험 없음' : '초기 라운드: 엑싯 경험 창업자', value: 0, mult });
     p *= mult;
+  }
+  // 이 단계의 핵심 조건(제품·고객·매출)을 못 맞추면 확률이 크게 줄어듭니다(A-50).
+  for (const m of mults) {
+    factors.push({ label: m.label, value: 0, mult: m.mult });
+    p *= m.mult;
   }
   p = Math.max(P.min, Math.min(P.max, p));
   return { p, factors };

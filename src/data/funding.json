@@ -140,7 +140,6 @@
     "perInterest": 0.004,
     "perIrPoint": 0.005,
     "irCap": 0.2,
-    "conditionPenalty": 0.35,
     "recentDays": 180,
     "recentPenalty": 0.25,
     "club": 0.15,
@@ -155,7 +154,8 @@
     "growthGood": 0.1,
     "growthBad": -0.12,
     "perRep": 0.002,
-    "repCap": 0.12
+    "repCap": 0.12,
+    "conditionMult": 0.25
   },
   "networkInterestPer10": 1,
   "networkInterestCap": 15,

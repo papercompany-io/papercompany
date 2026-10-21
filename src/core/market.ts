@@ -108,7 +108,7 @@ export function marketDay(s: GameState, push: DayPush) {
   const csFocus = s.company.orders.cs === 'cs_support' ? 1 : 0.6;
   const userCount = totalUsers(s);
   // 고객지원이 모자라면 사용자가 많을수록 이탈이 늘어납니다.
-  const csFx = userCount < 50 ? 0 : -0.3 * csCov * csFocus + 0.25 * (1 - csCov) * Math.min(1, userCount / 2000);
+  const csFx = userCount < 50 ? 0 : -0.3 * csCov * csFocus + 0.8 * (1 - csCov) * Math.min(1, userCount / 2000);
   const mktEff = 1 + 0.25 * Math.pow(push.mktOutput, 0.75);
   for (const m of MARKET_IDS) {
     const ms = s.markets[m];
@@ -124,7 +124,7 @@ export function marketDay(s: GameState, push: DayPush) {
         ms.awareness += gain;
       }
     }
-    const word = ind.viral * (1 + fx.viral * 10) * Math.min(1, ms.users / Math.max(1, D)) * 0.05;
+    const word = ind.viral * (1 + fx.viral * 10) * Math.sqrt(Math.min(1, ms.users / Math.max(1, D))) * 0.02;
     ms.awareness += (push.contentAwareness / Math.sqrt(md.tamMult) + word) * (1 - ms.awareness);
     ms.awareness -= ms.awareness * M.awarenessDecayPerDay;
     ms.awareness = Math.max(0, Math.min(1, ms.awareness + 0));
@@ -140,8 +140,8 @@ export function marketDay(s: GameState, push: DayPush) {
       const viral = ((ms.users * ind.viral * (1 + fx.viral * 10)) / 30) * Math.min(1, gap / Math.max(1, D)) * foreign;
       const sales = push.salesPush * ind.salesPer * (m === 'kr' ? 1 : 0.6) * Math.min(2, Math.max(0.3, appeal(s) / 25));
       const cac = ind.cac * md.arpu * (1 + 3 * sh) / Math.min(2.5, mktEff);
-      // 광고로 사는 고객은 하루 수요의 0.3%에서 포화(돈을 더 써도 덜 늘어남)
-      const cap = D * 0.003;
+      // 광고로 사는 고객은 하루 수요의 0.1%에서 포화(돈을 더 써도 덜 늘어남)
+      const cap = D * 0.001;
       const paid = daily > 0 && s.cash > daily ? cap * (1 - Math.exp(-daily / cac / Math.max(1, cap))) : 0;
       ms.users += Math.min(gap * 0.05, (inbound + viral + sales + paid) * acqM);
     }

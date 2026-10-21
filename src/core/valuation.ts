@@ -60,7 +60,7 @@ export function revenueGrowth(s: GameState): number | null {
 export function revenueMultiple(s: GameState): { multiple: number; detail: string } {
   const base = industry(s.company.industry).valMult;
   const g = revenueGrowth(s);
-  const gm = g === null ? 1.3 : g >= 0.15 ? 2.0 : g >= 0.08 ? 1.6 : g >= 0.03 ? 1.25 : g >= 0 ? 1.0 : 0.7;
+  const gm = g === null ? 1.2 : g >= 0.15 ? 1.6 : g >= 0.08 ? 1.35 : g >= 0.03 ? 1.15 : g >= 0 ? 1.0 : 0.7;
   const e = econ(s, 'valuation');
   const m = base * gm * e * (1 + mod(s, 'valuation'));
   return { multiple: m, detail: `매출 배수 ${m.toFixed(1)}배 = 산업 기준 ${base} × 성장(${g === null ? '첫 매출' : (g * 100).toFixed(1) + '%/월'}) ${gm} × 경기 ${e.toFixed(2)}` };
