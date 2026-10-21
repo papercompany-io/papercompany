@@ -1,20 +1,15 @@
-.boot {
-  height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 30px; position: relative;
-  background: radial-gradient(circle at 50% 40%, #2f3a58 0%, #151a2b 72%); color: #fff; user-select: none;
-}
-.boot::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.12) 0 1px, transparent 1px 3px); }
-.boot-logo { display: flex; flex-direction: column; align-items: center; gap: 10px; }
-.boot-mark { display: grid; grid-template-columns: 28px 28px; gap: 6px; transform: rotate(45deg); margin-bottom: 22px; }
-.boot-mark span { width: 28px; height: 28px; box-shadow: inset -4px -4px 0 rgba(0, 0, 0, 0.18), inset 4px 4px 0 rgba(255, 255, 255, 0.25); }
-.boot-mark span:nth-child(1) { background: #2d8fd5; }
-.boot-mark span:nth-child(2) { background: #36b44a; }
-.boot-mark span:nth-child(3) { background: #f0a020; }
-.boot-mark span:nth-child(4) { background: #d9453b; }
-.boot-name { font-family: var(--pixel); font-size: 44px; letter-spacing: 0.02em; text-shadow: 0 4px 0 rgba(0, 0, 0, 0.35); }
-.boot-sub { color: #a8aec8; font-size: 14px; }
-.boot-bar { width: 340px; height: 18px; padding: 3px; background: #0f1322; border: 2px solid #4a5070; display: grid; grid-template-columns: repeat(20, 1fr); gap: 2px; }
+/* 시작 화면 */
+.boot { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 36px; position: relative; background: var(--bg); color: var(--tx); user-select: none; }
+.boot-logo { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.boot-mark { width: 44px; height: 44px; border-radius: 10px; border: 1px solid var(--bd2); background: var(--s2); display: grid; grid-template-columns: 1fr 1fr; gap: 3px; padding: 9px; margin-bottom: 14px; }
+.boot-mark span { border-radius: 2px; background: var(--tx2); }
+.boot-mark span:nth-child(1) { background: var(--acc); }
+.boot-name { font-size: 34px; font-weight: 750; letter-spacing: -0.03em; }
+.boot-sub { color: var(--tx3); font-size: 13px; }
+.boot-bar { width: 260px; height: 3px; background: var(--s3); border-radius: 2px; display: grid; grid-template-columns: repeat(20, 1fr); overflow: hidden; }
 .boot-bar i { background: transparent; }
-.boot-bar i.on { background: var(--violet); }
-.boot-skip { color: #7d84a3; font-size: 12px; font-family: var(--pixel); }
-.boot-choices { display: flex; flex-direction: column; gap: 12px; min-width: 340px; z-index: 1; }
-.boot-meta { display: block; font-size: 12px; font-weight: 600; opacity: 0.8; margin-top: 2px; }
+.boot-bar i.on { background: var(--acc); }
+.boot-skip { color: var(--tx3); font-size: 12px; }
+.boot-choices { display: flex; flex-direction: column; gap: 8px; min-width: 340px; z-index: 1; }
+.boot-choices .btn { height: auto; min-height: 44px; padding: 10px 16px; justify-content: center; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; }
+.boot-meta { display: block; font-size: 11px; font-weight: 500; opacity: 0.75; }

@@ -1,5 +1,5 @@
 // 커리어 메뉴: 미션(튜토리얼·마일스톤), 회사 단계와 해금, 업적, 커리어 기록
-import { PxIcon } from '../icons';
+import { Circle, CircleCheck } from 'lucide-react';
 import { useState } from 'react';
 import { DATA } from '../../core/data';
 import { careerStats, endingFor, founderAge } from '../../core/career';
@@ -35,7 +35,7 @@ export function CareerApp() {
               return (
                 <tr key={m.id} style={{ opacity: done ? 0.55 : 1 }}>
                   <td style={{ width: 24 }}>
-                    <PxIcon id={done ? 'check' : 'empty'} size={16} />
+                    {done ? <CircleCheck size={16} color="var(--pos-tx)" /> : <Circle size={16} color="var(--tx3)" />}
                   </td>
                   <td>
                     <b>{m.name}</b>

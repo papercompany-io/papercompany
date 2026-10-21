@@ -13,7 +13,7 @@ import { play } from '../sound';
 import type { DeptId, MarketId, MarketState } from '../../core/types';
 import './apps.css';
 
-const SHARE_COLORS = ['#e5484d', '#f0a020', '#8b63e8', '#11a3a6', '#7a8597', '#c46be0', '#b5651d', '#5c6bc0'];
+const SHARE_COLORS = ['#b8575a', '#b88a3e', '#7d68b8', '#3d8f91', '#6b7380', '#9a62a8', '#9a6a3d', '#5568a8'];
 
 export function MarketApp() {
   const s = useGame();

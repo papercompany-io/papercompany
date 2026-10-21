@@ -1,6 +1,6 @@
 // F06 메신저: MG-01 채널 구성(#전체·팀 채널·그룹·DM·외부 연락처), MG-03 부서 지시(맡은 일 선택지), DC-01 메시지 속 결정 버튼
+import { MessageSquare, OctagonAlert } from 'lucide-react';
 import { Help } from '../common';
-import { PxIcon } from '../icons';
 import { useEffect, useRef, useState } from 'react';
 import { dept, ordersFor } from '../../core/data';
 import { formatDate } from '../../core/calendar';
@@ -39,13 +39,13 @@ export function MessengerApp({ initial, openInvest }: { initial?: string; openIn
       <aside className="msg-side">
         <div className="ws-name">{s.company.name}</div>
         {pending.length > 0 && (
-          <div className="side-title" style={{ color: '#ffb3ad' }}>
+          <div className="side-title" style={{ color: 'var(--neg-tx)' }}>
             답을 기다리는 결정 {pending.length}
           </div>
         )}
         {pending.map((d) => (
           <button key={d.id} className={`side-item ${d.channelId === sel ? 'on' : ''}`} onClick={() => setSel(d.channelId)}>
-            <PxIcon id={d.urgent ? 'siren' : 'talk'} size={14} /> {d.from}
+            {d.urgent ? <OctagonAlert size={14} color="var(--neg-tx)" /> : <MessageSquare size={14} />} {d.from}
           </button>
         ))}
         {groups.map((g) => (

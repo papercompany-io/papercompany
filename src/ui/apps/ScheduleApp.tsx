@@ -10,7 +10,8 @@ import { Money, Help } from '../common';
 import type { ActionId } from '../../core/types';
 import './apps.css';
 
-const COLORS: Record<ActionId, string> = { dev: '#4f8df5', contract: '#2bb3a8', sales: '#f2a33a', ir: '#e5484d', network: '#3fbf7f', enterprise: '#b5651d', approve: '#6b5bd6' };
+// 일정 칸 색(채도 낮춘 데이터 색, A-85)
+const COLORS: Record<ActionId, string> = { dev: '#3b5f9f', contract: '#2e756d', sales: '#93672a', ir: '#934040', network: '#2f7656', enterprise: '#7a5334', approve: '#594c93' };
 
 export function ScheduleApp() {
   const s = useGame();
@@ -42,7 +43,7 @@ export function ScheduleApp() {
         <div className="section-title">오늘 일정 (09:00~18:00)</div>
         <div className="timeline">
           {sched.map((slot, i) => (
-            <div key={i} className={`slot ${i < s.slotsDone ? 'done' : ''} ${i === s.slotsDone ? 'now' : ''}`} data-testid={`slot-${i}`} style={{ background: slot.action ? COLORS[slot.action] : '#d5dbe7' }}>
+            <div key={i} className={`slot ${i < s.slotsDone ? 'done' : ''} ${i === s.slotsDone ? 'now' : ''}`} data-testid={`slot-${i}`} style={{ background: slot.action ? COLORS[slot.action] : 'var(--s3)' }}>
               <span className="slot-hour">{String(9 + i).padStart(2, '0')}시</span>
               <span>{slot.action ? actionDef(slot.action).name : '비어 있음'}</span>
               {slot.locked && <span className="slot-lock">라운드</span>}
@@ -56,7 +57,7 @@ export function ScheduleApp() {
           const def = actionDef(a);
           const eff = efficiency(s, a);
           return (
-            <div key={a} className="card alloc" style={{ borderTop: `4px solid ${COLORS[a]}` }}>
+            <div key={a} className="card alloc" style={{ boxShadow: `inset 0 2px 0 ${COLORS[a]}` }}>
               <div className="row">
                 <b>{def.name}</b>
                 <div className="grow" />
@@ -127,7 +128,7 @@ function ContractsCard() {
       </div>
       <Help text="대표 &quot;외주&quot; 칸이나 개발팀 &quot;외주 작업&quot; 지시로 작업량을 채우면 대금이 들어옵니다. 그만큼 제품 개발은 늦어집니다. 마감을 넘기면 대금이 깎이고, 많이 넘기면 취소됩니다." />
       {a && a.deadline !== null && (
-        <div className="card col" style={{ borderTop: `4px solid ${COLORS.contract}` }}>
+        <div className="card col">
           <div className="row">
             <b className="grow">
               {a.title} · {a.client}

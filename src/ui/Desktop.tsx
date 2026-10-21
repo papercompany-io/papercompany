@@ -17,7 +17,9 @@ import { StockApp } from './apps/StockApp';
 import { NewsApp } from './apps/NewsApp';
 import { CareerApp } from './apps/CareerApp';
 import { SettingsApp } from './apps/SettingsApp';
-import { AppIcon, APP_COLORS } from './icons';
+import { APP_COLORS } from './icons';
+import { UiIcon } from './uiIcons';
+import { X } from 'lucide-react';
 import type { GameState } from '../core/types';
 import './desktop.css';
 
@@ -87,12 +89,10 @@ export function Sidebar({ app, onOpen }: { app: AppId | null; onOpen: (id: AppId
             }}
             style={{ ['--ac' as string]: APP_COLORS[a.id] }}
           >
-            <span className="sb-icon">
-              <AppIcon id={a.id} />
-            </span>
+            <UiIcon id={a.id} size={20} />
             <span className="sb-name">{a.name}</span>
             {b > 0 && <span className="sb-badge">{b > 99 ? '99+' : b}</span>}
-            {on && !seen.includes(a.id) && a.stage > 0 && <span className="sb-new">NEW</span>}
+            {on && !seen.includes(a.id) && a.stage > 0 && b === 0 && <span className="sb-new" title="새로 열림" />}
           </button>
         );
       })}
@@ -118,12 +118,12 @@ export function AppPanel({ app, arg, setApp, onClose }: { app: AppId; arg?: stri
     <div key={cur.id} className="app-panel" data-testid={`window-${cur.id}`} style={{ ['--ac' as string]: APP_COLORS[cur.id] }} onPointerDown={(e) => e.stopPropagation()}>
       <div className="app-head">
         <span className="app-head-icon">
-          <AppIcon id={cur.id} />
+          <UiIcon id={cur.id} />
         </span>
         <div className="app-head-name">{cur.name}</div>
         <div className="grow" />
         <button className="app-x" data-testid="app-close" onClick={onClose} title="닫기 (Esc)">
-          ✕
+          <X size={18} strokeWidth={1.75} />
         </button>
       </div>
       <div className={`app-body ${app === 'messenger' ? 'flush' : ''}`}>

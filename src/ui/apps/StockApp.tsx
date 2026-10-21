@@ -21,7 +21,7 @@ export function Spark({ points, w = 600, h = 120 }: { points: number[]; w?: numb
   return (
     <svg className="spark" width="100%" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" style={{ height: h }}>
       <path d={`${d} L${w},${h} L0,${h} Z`} fill={up ? 'rgba(54,180,74,0.12)' : 'rgba(217,69,59,0.12)'} />
-      <path d={d} fill="none" stroke={up ? '#36b44a' : '#d9453b'} strokeWidth="2" vectorEffect="non-scaling-stroke" />
+      <path d={d} fill="none" stroke={up ? '#3fbf86' : '#e5605d'} strokeWidth="2" vectorEffect="non-scaling-stroke" />
     </svg>
   );
 }
