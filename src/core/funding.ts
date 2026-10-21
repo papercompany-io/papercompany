@@ -222,6 +222,9 @@ export function decisionProbability(s: GameState, r: Round, investorId: string):
     if (h.length >= 4 && h[0].usersEnd > 0 && h[3].usersEnd < h[0].usersEnd * 0.95) mults.push({ label: '최근 3개월 고객 감소', mult: 0.6 });
     if (s.fundingStage === r.stage) mults.push({ label: '같은 단계 재유치(브릿지)', mult: 0.6 });
   }
+  // 투자 업계는 좁습니다(A-65): 이번 라운드에서 거절한 곳이 있으면 다른 곳도 그 소식을 듣습니다.
+  const declines = Object.values(r.letters).filter((x) => x.decision === 'declined' && x.investorId !== investorId).length;
+  if (declines > 0) mults.push({ label: `이번 라운드 거절 ${declines}곳(소문)`, mult: Math.pow(0.8, declines) });
   // 이 단계의 핵심 조건(제품·고객·매출)을 못 맞추면 확률이 크게 줄어듭니다(A-50).
   for (const m of mults) {
     factors.push({ label: m.label, value: 0, mult: m.mult });

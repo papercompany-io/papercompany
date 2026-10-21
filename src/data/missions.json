@@ -12,7 +12,7 @@
     { "id": "m_mrr_10m", "name": "월 매출 1천만원", "metric": "mrr", "gte": 10000000, "reward": { "rep": 2, "legacy": 1 }, "guide": "가격 정책·수익화 기능으로 객단가를 올리고, 이탈을 줄이세요." },
     { "id": "m_office2", "name": "사무실 이전", "metric": "officeTier", "gte": 2, "reward": { "rep": 2 }, "guide": "부동산 앱에서 더 큰 사무실로 옮기면 좌석·쾌적도가 늘고 새 부서 구역이 생깁니다." },
     { "id": "m_welfare", "name": "복지 제도 도입", "metric": "welfare", "gte": 2, "reward": { "rep": 1 }, "guide": "조직 앱의 복지 탭에서 식대·헬스비 등을 켜면 만족도와 지원자 수가 오릅니다." },
-    { "id": "m_series_a", "name": "시리즈 A", "metric": "fundingIndex", "gte": 3, "reward": { "rep": 4, "legacy": 1 }, "guide": "월 매출 2천만원 이상이면 시리즈 A 투자사가 관심을 보입니다." },
+    { "id": "m_series_a", "name": "시리즈 A", "metric": "fundingIndex", "gte": 3, "reward": { "rep": 4, "legacy": 1 }, "guide": "지난달 매출 5천만원(또는 그만한 사용자 규모)에 가까울수록 시리즈 A 확률이 오릅니다. 투자 앱에서 조건을 확인하세요." },
     { "id": "m_users_1k", "name": "고객 1,000", "metric": "users", "gte": 1000, "reward": { "rep": 2 }, "guide": "경쟁사보다 매력도가 높아야 시장을 더 차지합니다. 시장 앱에서 점유율을 확인하세요." },
     { "id": "m_hr_team", "name": "인사팀 만들기", "metric": "deptHr", "gte": 1, "reward": { "rep": 1 }, "guide": "인사팀이 있으면 채용을 맡길 수 있고(위임 채용), 조직 문화를 관리할 수 있습니다." },
     { "id": "m_ai", "name": "AI 도구 도입", "metric": "aiAdoption", "gte": 0.3, "reward": { "rep": 1 }, "guide": "AI 도입 앱에서 공급사와 모델을 고르고 부서별 적용률을 정하세요. 부작용(슬롭)도 조심하세요." },

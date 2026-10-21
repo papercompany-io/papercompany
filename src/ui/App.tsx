@@ -9,7 +9,7 @@ import { getGame, setGame, touch } from './store';
 import { saveNow } from './autosave';
 import { getProfile, setProfile, updateProfile } from './meta';
 import { loadProfile, onAppClosing } from '../platform/save';
-import { newCareer, nextCompany } from '../core/state';
+import { newCareer, nextCompany, ownedSpecs } from '../core/state';
 import { recordCareerInProfile, recordCompanyInProfile, retire } from '../core/career';
 import { formatDate } from '../core/calendar';
 import type { GameState } from '../core/types';
@@ -86,6 +86,7 @@ export function App() {
         wealth={g.career.wealth}
         legacy={{ ...getProfile().legacy }}
         challenge={g.career.challenge}
+        owned={ownedSpecs(g)}
         onCancel={() => setScreen('career')}
         onDone={(c) => {
           g.career.legacy = { ...getProfile().legacy };

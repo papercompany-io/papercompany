@@ -3,7 +3,7 @@
 import fs from 'fs';
 import { DATA, featuresOf, stageIndex } from '../../src/core/data';
 import { runDay } from '../../src/core/sim';
-import { newCareer, nextCompany, defaultPicks, type SetupChoices } from '../../src/core/state';
+import { newCareer, nextCompany, defaultPicks, ownedSpecs, type SetupChoices } from '../../src/core/state';
 import { addToRoadmap, availableFeatures, hasMvp, appeal, fxTotals } from '../../src/core/product';
 import { createPosting, offerJob } from '../../src/core/hiring';
 import { runwayMonths, lastRevenue, projectedMonthlyPayroll } from '../../src/core/finance';
@@ -312,7 +312,7 @@ for (let r = 0; r < runs; r++) {
       retire(s);
       break;
     }
-    nextCompany(s, { ...base, companyName: `봇컴퍼니${k + 1}`, industry: INDS[(r + k) % INDS.length], invest: s.career.wealth * 0.2 });
+    nextCompany(s, { ...base, picks: ownedSpecs(s) ?? picks, companyName: `봇컴퍼니${k + 1}`, industry: INDS[(r + k) % INDS.length], invest: s.career.wealth * 0.2 });
   }
   const years = yearFrac(s.day) - s.career.startYear;
   log(`[판 ${r + 1}] 은퇴 나이 ${founderAge(s).toFixed(1)} 회사 ${s.career.companies.length} 자산 ${(s.career.wealth / 1e8).toFixed(1)}억 명성 ${s.career.rep.toFixed(0)} 엔딩 ${endingFor(s).name} 업적 ${s.career.achievements.length} 결정 ${decisions} 게임 ${years.toFixed(1)}년 = 1배속 ${((years * 365 * DATA.time.dayMs) / 3600000).toFixed(1)}시간`);

@@ -41,6 +41,30 @@ export function specTotal(picks: Record<string, string>): number {
   return sum;
 }
 
+// 두 번째 회사부터는 같은 창업자입니다(A-64): 지난 회사의 스펙을 그대로 가지고, 창업 경험은 실제 기록(엑싯·투자 유치·실패)으로 채워집니다.
+// 가진 스펙은 무료, 더 좋은 항목으로 올릴 때는 차액만 냅니다.
+export function ownedSpecs(s: GameState | null): Record<string, string> | null {
+  if (!s || !s.founder || s.career.companies.length === 0) return null;
+  const owned = { ...s.founder.picks };
+  const cs = s.career.companies;
+  const earned = cs.some((c) => c.kind === 'sale' || c.kind === 'ipo_exit') ? 'fnd_exit' : cs.some((c) => c.funded) ? 'fnd_raised' : 'fnd_failed';
+  const cat = DATA.specs.categories.find((c) => c.id === 'founding');
+  const price = (id: string) => cat?.items.find((i) => i.id === id)?.price ?? 0;
+  if (price(earned) > price(owned.founding)) owned.founding = earned;
+  return owned;
+}
+
+export function specCost(picks: Record<string, string>, owned: Record<string, string> | null): number {
+  if (!owned) return specTotal(picks);
+  let sum = 0;
+  for (const c of DATA.specs.categories) {
+    const p = c.items.find((i) => i.id === picks[c.id])?.price ?? 0;
+    const o = c.items.find((i) => i.id === owned[c.id])?.price ?? 0;
+    sum += Math.max(0, p - o);
+  }
+  return sum;
+}
+
 export function defaultPicks(): Record<string, string> {
   return Object.fromEntries(DATA.specs.categories.map((c) => [c.id, c.items[0].id]));
 }
@@ -135,6 +159,7 @@ export function newCareer(c: SetupChoices, profile: Profile): GameState {
 export function nextCompany(s: GameState, c: SetupChoices): string | null {
   if (!s.ended) return '지금 회사가 아직 끝나지 않았습니다.';
   const invest = Math.max(0, Math.min(c.invest ?? 0, s.career.wealth * DATA.career.maxInvestShare, DATA.career.maxInvest));
+  const owned = ownedSpecs(s);
   s.career.decisionsBefore += s.company.decisions;
   s.career.wealth -= invest;
   s.day += DATA.career.breakDays;
@@ -142,14 +167,14 @@ export function nextCompany(s: GameState, c: SetupChoices): string | null {
   s.result = null;
   s.speed = 1;
   s.pauseReason = null;
-  setupCompany(s, { ...c, invest });
+  setupCompany(s, { ...c, invest }, owned);
   return null;
 }
 
-function setupCompany(s: GameState, c: SetupChoices) {
+function setupCompany(s: GameState, c: SetupChoices, owned: Record<string, string> | null = null) {
   const ind = industry(c.industry);
   const legacy = s.career.legacy;
-  const specLeft = specBudget(legacy) - specTotal(c.picks);
+  const specLeft = specBudget(legacy) - specCost(c.picks, owned);
   const solo = s.career.challenge === 'solo';
   Object.assign(s, {
     msInDay: 0,

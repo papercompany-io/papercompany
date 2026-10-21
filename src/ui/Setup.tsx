@@ -1,7 +1,7 @@
 // F02 창업 셋업 마법사: (새 커리어) 창업자·도전 → 산업 → FS-01 스펙 → TM-01·TM-02·EQ-01 팀 → CO-01 이름(·개인 출자) → CO-02 첫 행보
 import { useMemo, useState } from 'react';
 import { DATA, INDUSTRIES, specEffects } from '../core/data';
-import { defaultPicks, specBudget, specTotal, validateCompanyName, type SetupChoices } from '../core/state';
+import { defaultPicks, specBudget, specCost, validateCompanyName, type SetupChoices } from '../core/state';
 import { legacyUnlocked } from '../core/career';
 import { makeSeed } from '../core/rng';
 import { pct, wonShort } from '../core/format';
@@ -45,11 +45,12 @@ interface Props {
   wealth?: number; // 다음 회사: 개인 자산
   legacy?: Record<string, number>;
   challenge?: string | null;
+  owned?: Record<string, string> | null; // 다음 회사: 이미 가진 창업자 스펙
   onDone: (c: SetupChoices) => void;
   onCancel?: () => void;
 }
 
-export function Setup({ mode, wealth = 0, legacy, challenge: careerChallenge = null, onDone, onCancel }: Props) {
+export function Setup({ mode, wealth = 0, legacy, challenge: careerChallenge = null, owned = null, onDone, onCancel }: Props) {
   const profile = useProfile();
   const lg = legacy ?? profile.legacy;
   const [step, setStep] = useState(mode === 'new' ? 0 : 1);
@@ -57,7 +58,7 @@ export function Setup({ mode, wealth = 0, legacy, challenge: careerChallenge = n
   const [challenge, setChallenge] = useState<string | null>(null);
   const [industry, setIndustry] = useState<IndustryId>('saas');
   const [invest, setInvest] = useState(0);
-  const [picks, setPicks] = useState<Record<string, string>>(defaultPicks());
+  const [picks, setPicks] = useState<Record<string, string>>(owned ? { ...owned } : defaultPicks());
   const [cofounderId, setCofounderId] = useState<string | null>(null);
   const [equity, setEquity] = useState(0.2);
   const [engineerId, setEngineerId] = useState<string | null>(null);
@@ -68,7 +69,7 @@ export function Setup({ mode, wealth = 0, legacy, challenge: careerChallenge = n
   const budget = specBudget(lg);
   const solo = (mode === 'new' ? challenge : careerChallenge) === 'solo';
   const maxInvest = Math.floor(Math.min(wealth * DATA.career.maxInvestShare, DATA.career.maxInvest) / 1e6) * 1e6;
-  const spent = specTotal(picks);
+  const spent = specCost(picks, owned);
   const left = budget - spent;
   const fx = useMemo(() => specEffects(picks), [picks]);
   const nameErr = validateCompanyName(name);
@@ -180,15 +181,22 @@ export function Setup({ mode, wealth = 0, legacy, challenge: careerChallenge = n
         {step === 2 && (
           <div className="setup-body two">
             <div className="col grow">
-              <div className="muted">시작 예산 {budget.toLocaleString()} 크레딧으로 창업자의 출발 조건을 고르세요. 범주마다 하나씩 고르고, 모든 범주의 최고 항목을 다 살 수는 없습니다.</div>
+              <div className="muted">
+                {owned
+                  ? `같은 창업자입니다. 지난 회사까지의 스펙을 그대로 가지고 있고(창업 경험은 실제 기록으로 채워짐), ${budget.toLocaleString()} 크레딧으로 더 좋은 항목을 차액만 내고 올릴 수 있습니다.`
+                  : `시작 예산 ${budget.toLocaleString()} 크레딧으로 창업자의 출발 조건을 고르세요. 범주마다 하나씩 고르고, 모든 범주의 최고 항목을 다 살 수는 없습니다.`}
+              </div>
               {DATA.specs.categories.map((c) => (
                 <div key={c.id} className="spec-cat">
                   <div className="section-title">{c.name}</div>
                   <div className="spec-items">
                     {c.items.map((it) => {
                       const selected = picks[c.id] === it.id;
-                      const curPrice = c.items.find((x) => x.id === picks[c.id])!.price;
-                      const affordable = it.price - curPrice <= left;
+                      const ownPrice = owned ? c.items.find((x) => x.id === owned[c.id])?.price ?? 0 : 0;
+                      const costOf = (price: number) => Math.max(0, price - ownPrice);
+                      const curPrice = costOf(c.items.find((x) => x.id === picks[c.id])!.price);
+                      const affordable = costOf(it.price) - curPrice <= left;
+                      const isOwned = owned?.[c.id] === it.id;
                       return (
                         <button
                           key={it.id}
@@ -198,7 +206,7 @@ export function Setup({ mode, wealth = 0, legacy, challenge: careerChallenge = n
                           onClick={() => setPicks({ ...picks, [c.id]: it.id })}
                         >
                           <div className="spec-name">{it.name}</div>
-                          <div className="spec-price">{it.price} 크레딧</div>
+                          <div className="spec-price">{isOwned ? '보유(무료)' : owned && it.price <= ownPrice ? '무료' : `${costOf(it.price)} 크레딧${owned && ownPrice > 0 ? '(차액)' : ''}`}</div>
                           <div className="spec-fx">{effectText(it.effects)}</div>
                         </button>
                       );

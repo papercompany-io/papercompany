@@ -6,7 +6,8 @@ import { dept, market } from './data';
 import { yearOf } from './calendar';
 import { avgAdoption } from './aiadopt';
 import { book, lastRevenue, runwayMonths } from './finance';
-import { investorPct } from './equity';
+import { investorPct, recordEquity, totalShares } from './equity';
+import { computeValuation } from './valuation';
 import { nextId } from './ids';
 import { addMod, clearFlag, hasFlag, setFlag } from './mods';
 import { ensureNamedExternal, post } from './messenger';
@@ -58,6 +59,7 @@ export function eventDef(id: string) {
 
 interface Ctx {
   target: Employee | null;
+  from?: string;
   competitorId: string | null;
   market: MarketId;
 }
@@ -332,7 +334,7 @@ export function resolveDecision(s: GameState, id: string, idx: number, auto = fa
     orig.outcomes.map((o) => o.w),
   );
   const text = fill(s, oc.text, ctx);
-  applyFx(s, oc.fx ?? {}, ctx);
+  applyFx(s, oc.fx ?? {}, { ...ctx, from: d.from });
   d.resolved = { choice: idx, text, auto };
   s.company.decisions += 1;
   post(s, d.channelId, '나(대표)', `${auto ? '(답이 없어 기본 선택) ' : ''}→ ${ch.label}`, 'player');
@@ -346,14 +348,26 @@ export function resolveDecision(s: GameState, id: string, idx: number, auto = fa
 export function applyFx(s: GameState, fx: Record<string, unknown>, ctx: Ctx) {
   const t = ctx.target;
   const num = (k: string) => (typeof fx[k] === 'number' ? (fx[k] as number) : 0);
+  let inflow = 0;
+  const label = fx.equity ? `이벤트 투자금(${ctx.from ?? '투자자'})` : '이벤트 수입';
   if (num('cash')) {
-    book(s, num('cash') > 0 ? '이벤트 수입' : '이벤트 지출', num('cash'));
+    book(s, num('cash') > 0 ? label : '이벤트 지출', num('cash'));
     if (num('cash') < 0) s.accrual.other += -num('cash');
+    else inflow += num('cash');
   }
   if (num('cashRev')) {
     const v = Math.round(num('cashRev') * revBase(s));
-    book(s, v > 0 ? '이벤트 수입' : '이벤트 지출', v);
+    book(s, v > 0 ? label : '이벤트 지출', v);
     if (v < 0) s.accrual.other += -v;
+    else inflow += v;
+  }
+  // 투자 이벤트(A-67): 들어온 돈만큼 신주를 발행합니다. equity 값은 지금 기업가치에 곱하는 배율(다운라운드면 1보다 작음).
+  if (fx.equity && inflow > 0 && !s.public) {
+    const mult = typeof fx.equity === 'number' ? (fx.equity as number) : 1;
+    const pre = Math.max(5e8, computeValuation(s).value * mult);
+    const shares = Math.round((totalShares(s.capTable) * inflow) / pre);
+    s.capTable.push({ holderId: nextId(s, 'evinv'), name: ctx.from ?? '이벤트 투자자', kind: 'investor', shares, round: '이벤트' });
+    recordEquity(s, `${ctx.from ?? '투자자'} 투자(기업가치 ${Math.round(pre / 1e8)}억)`);
   }
   if (num('sat')) for (const e of s.employees) e.sat = clamp(e.sat + num('sat'));
   if (num('satDept') && t) for (const e of s.employees) if (e.dept === t.dept) e.sat = clamp(e.sat + num('satDept'));
