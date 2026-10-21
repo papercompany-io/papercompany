@@ -136,7 +136,7 @@ export function Desktop({ app, arg, setApp, onClose }: Props) {
           </div>
         )}
         {cur && (
-          <div className="app-window" data-testid={`window-${cur.id}`} style={{ ['--ac' as string]: APP_COLORS[cur.id] }}>
+          <div key={cur.id} className="app-window" data-testid={`window-${cur.id}`} style={{ ['--ac' as string]: APP_COLORS[cur.id] }}>
             <div className="app-head">
               <button className="app-back" data-testid="app-close" onClick={() => setApp(null)} title="바탕화면으로 (Esc)">
                 ← 바탕화면

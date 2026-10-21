@@ -17,7 +17,7 @@ import { Desktop, type AppId } from './Desktop';
 import { Office } from './office/Office';
 import { EmployeeModal } from './EmployeeModal';
 import { DevPanel } from './DevPanel';
-import { Money } from './common';
+import { Money, useTween } from './common';
 import { nextHint } from './hints';
 import { requestAutosave } from './autosave';
 import { pct } from '../core/format';
@@ -238,6 +238,7 @@ function Hud({ s }: { s: GameState }) {
   const frac = Math.min(1, s.msInDay / DATA.time.dayMs);
   const fc = paydayForecast(s);
   const net = currentPL(s).netIncome;
+  const cashShown = useTween(s.cash);
   return (
     <header className="hud" data-testid="hud">
       <div className="hud-progress">
@@ -279,7 +280,7 @@ function Hud({ s }: { s: GameState }) {
         </span>
         <span className="hud-pill cash" title={`회사 자금 · 이번 달 손익 ${net >= 0 ? '흑자' : '적자'}`}>
           <PxIcon id="coin" />
-          <Money v={s.cash} testId="hud-cash" />
+          <Money v={Math.round(cashShown)} testId="hud-cash" />
           <span className={net >= 0 ? 'up' : 'down'}>{net >= 0 ? '▲' : '▼'}</span>
         </span>
       </div>

@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { won, wonShort } from '../core/format';
 
 export function Money({ v, full, testId }: { v: number; full?: boolean; testId?: string }) {
@@ -33,4 +33,27 @@ export function Stat({ label, children }: { label: string; children: ReactNode }
 export function chanceLabel(p: number): string {
   const level = p >= 0.65 ? '높음' : p >= 0.35 ? '보통' : '낮음';
   return `${level} (약 ${Math.round(p * 100)}%)`;
+}
+
+// HUD용: 값이 바뀌면 0.4초 동안 부드럽게 따라가며 셉니다(돈이 들어오고 나가는 느낌).
+export function useTween(target: number, ms = 400): number {
+  const [v, setV] = useState(target);
+  const from = useRef(target);
+  useEffect(() => {
+    const start = performance.now();
+    const a = from.current;
+    if (a === target) return;
+    let raf = 0;
+    const step = (now: number) => {
+      const k = Math.min(1, (now - start) / ms);
+      const e = 1 - Math.pow(1 - k, 3);
+      const cur = a + (target - a) * e;
+      from.current = cur;
+      setV(cur);
+      if (k < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [target, ms]);
+  return v;
 }

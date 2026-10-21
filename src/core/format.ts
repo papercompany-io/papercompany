@@ -17,7 +17,7 @@ export function wonShort(n: number): string {
   const parts: string[] = [];
   if (jo) parts.push(`${jo.toLocaleString('ko-KR')}조`);
   if (eok) parts.push(`${eok.toLocaleString('ko-KR')}억`);
-  if (man && !jo) parts.push(`${man.toLocaleString('ko-KR')}만`); // 조 단위면 만 단위는 생략(카드에 다 들어가게)
+  if (man && !jo && eok < 1000) parts.push(`${man.toLocaleString('ko-KR')}만`); // 1,000억 이상이면 만 단위는 생략(카드·HUD에 다 들어가게, 정확한 값은 툴팁)
   return `${sign}${parts.join(' ')}원`;
 }
 
