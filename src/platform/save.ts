@@ -5,6 +5,8 @@ interface PcSave {
   read: (slot: 'main' | 'backup') => Promise<string | null>;
   write: (data: string) => Promise<boolean>;
   clear: () => Promise<boolean>;
+  onBeforeClose?: (cb: () => void) => void;
+  closeReady?: () => void;
 }
 
 declare global {
@@ -82,6 +84,21 @@ export async function saveGame(s: GameState): Promise<boolean> {
 
 export async function clearSave(): Promise<void> {
   await api().clear();
+}
+
+// DT-07 종료 직전 저장. Electron은 창 닫힘 신호를 받아 저장한 뒤 닫고, 웹은 페이지를 떠날 때 저장합니다
+// (localStorage 쓰기는 동기라 beforeunload 안에서 끝납니다).
+export function onAppClosing(save: () => Promise<unknown>) {
+  const p = window.pcSave;
+  if (p?.onBeforeClose) {
+    p.onBeforeClose(() => {
+      save().finally(() => p.closeReady?.());
+    });
+  } else {
+    window.addEventListener('beforeunload', () => {
+      void save();
+    });
+  }
 }
 
 export function isElectron(): boolean {

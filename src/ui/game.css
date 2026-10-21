@@ -53,7 +53,6 @@
 .cc-label { font-size: 10px; font-weight: 800; color: var(--ink-3); }
 .cc-value { font-size: 13px; font-weight: 800; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
 .cc-value small { color: #a96a00; font-size: 11px; }
-.cc-value small.cc-sub { color: var(--ink-3); }
 .cc-forecast { display: flex; justify-content: space-between; gap: 8px; background: #eef7ff; border-radius: 5px; padding: 6px 8px; font-size: 11px; color: var(--ink-2); font-weight: 700; }
 .cc-forecast > div { display: flex; flex-direction: column; gap: 1px; }
 .cc-forecast .money { font-size: 15px; }

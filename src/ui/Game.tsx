@@ -15,11 +15,13 @@ import { EmployeeModal } from './EmployeeModal';
 import { DevPanel } from './DevPanel';
 import { Money } from './common';
 import { nextHint } from './hints';
+import { requestAutosave } from './autosave';
 import { pct } from '../core/format';
 import type { GameState } from '../core/types';
 import './game.css';
 
 interface Props {
+  continued: boolean;
   notice: string | null;
   clearNotice: () => void;
   onEnded: () => void;
@@ -27,10 +29,11 @@ interface Props {
 
 const WEEK = ['일', '월', '화', '수', '목', '금', '토'];
 
-export function Game({ notice, clearNotice, onEnded }: Props) {
+export function Game({ continued, notice, clearNotice, onEnded }: Props) {
   const s = useGame();
   const [desktop, setDesktop] = useState<{ open: boolean; app: AppId | null; arg?: string }>({ open: false, app: null });
-  const [openedOnce, setOpenedOnce] = useState(false);
+  // 이어하기한 판은 이미 컴퓨터를 써 본 판이라 첫 안내(대표 클릭)를 건너뜁니다(P3-02).
+  const [openedOnce, setOpenedOnce] = useState(continued);
   const [empModal, setEmpModal] = useState<string | null>(null);
   const [dev, setDev] = useState(false);
   const lastTouch = useRef(0);
@@ -64,6 +67,8 @@ export function Game({ notice, clearNotice, onEnded }: Props) {
     const evs = s.events.splice(0);
     for (const e of evs) {
       if (e.type === 'offerReady') setDesktop({ open: true, app: 'invest' });
+      if (e.type === 'autosave') requestAutosave(e.reason);
+      if (e.type === 'exitResult' || e.type === 'bankrupt') requestAutosave('판 종료');
     }
   });
 
@@ -105,7 +110,7 @@ export function Game({ notice, clearNotice, onEnded }: Props) {
   return (
     <div className="game">
       <main className="stage">
-        <Office onCeo={() => openDesktop()} onEmployee={(id) => setEmpModal(id)} pulseCeo={!openedOnce} />
+        <Office onCeo={() => openDesktop()} onEmployee={(id) => setEmpModal(id)} pulseCeo={!openedOnce} keysEnabled={!desktop.open && !empModal} />
         {desktop.open && <Desktop app={desktop.app} arg={desktop.arg} setApp={(app, arg) => setDesktop({ open: true, app, arg })} onClose={() => setDesktop({ open: false, app: null })} />}
 
         <Hud s={s} />
@@ -205,9 +210,8 @@ function CompanyCard({ s }: { s: GameState }) {
         <Tile label="내 지분" testId="hud-equity">
           {pct(founderPct(s))}
         </Tile>
-        <Tile label="제품" wide>
-          {hasMvp(s) ? ps.name : `${ps.name} · ${Math.floor(s.productPoints)}점`}
-          {!hasMvp(s) && <small className="cc-sub"> / MVP 100점</small>}
+        <Tile label={hasMvp(s) ? '제품' : '제품(MVP까지)'} wide>
+          {hasMvp(s) ? ps.name : `${ps.name} · ${Math.floor(s.productPoints)}/100점`}
         </Tile>
         <Tile label="직원">
           {s.employees.length}명{s.pendingHires.length > 0 && <small> +{s.pendingHires.length}</small>}

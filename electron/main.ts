@@ -39,8 +39,17 @@ ipcMain.handle('save:clear', () => {
   return true;
 });
 
+let win: BrowserWindow | null = null;
+let allowClose = false;
+
+// DT-07 종료 직전 저장: 창을 닫으려 하면 렌더러에 알려 저장하게 하고, 저장이 끝나면(최대 2초) 닫습니다.
+ipcMain.on('app:close-ready', () => {
+  allowClose = true;
+  win?.close();
+});
+
 function createWindow() {
-  const win = new BrowserWindow({
+  win = new BrowserWindow({
     width: 1440,
     height: 900,
     minWidth: 1100,
@@ -57,6 +66,16 @@ function createWindow() {
   // 플레이테스트에서 난수 시드를 고정할 수 있게 PC_SEED를 쿼리로 넘깁니다.
   const query: Record<string, string> = process.env.PC_SEED ? { seed: process.env.PC_SEED } : {};
   win.loadFile(path.join(__dirname, '..', 'dist', 'index.html'), { query });
+  win.on('close', (e) => {
+    if (allowClose || !win) return;
+    e.preventDefault();
+    win.webContents.send('app:before-close');
+    setTimeout(() => {
+      allowClose = true;
+      win?.close();
+    }, 2000);
+  });
+  win.on('closed', () => (win = null));
 }
 
 app.whenReady().then(createWindow);

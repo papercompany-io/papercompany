@@ -53,7 +53,7 @@ export function Boot({ onNew, onContinue }: Props) {
           {checked.save ? (
             <>
               <button className="btn big" data-testid="continue" onClick={() => onContinue(checked.save!, checked.recovered ? '저장 파일이 손상되어 직전 자동 저장으로 복구했습니다.' : null)}>
-                이어하기 · {checked.save.company.name}
+                {checked.save.ended ? '지난 판 결과 보기' : '이어하기'} · {checked.save.company.name}
               </button>
               <button className="btn big ghost" data-testid="new-company" onClick={onNew}>
                 새 회사
