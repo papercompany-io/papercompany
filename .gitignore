@@ -7,3 +7,4 @@ playtest/shots
 playtest/userdata*
 *.log
 .sim/
+playtest/dumps*
