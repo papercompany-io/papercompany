@@ -98,9 +98,9 @@ export function Setup({ mode, wealth = 0, legacy, challenge: careerChallenge = n
         <div className="setup-head">
           <div className="setup-title">창업 신청서</div>
           <div className="setup-steps">
-            {steps.map((t, i) => (
+            {steps.map((t, i) => ({ t, i })).filter((x) => x.i !== 3).map(({ t, i }, n) => (
               <span key={t} className={i === step ? 'on' : i < step ? 'done' : ''}>
-                {i + 1}. {t}
+                {n + 1}. {t}
               </span>
             ))}
           </div>
@@ -110,7 +110,7 @@ export function Setup({ mode, wealth = 0, legacy, challenge: careerChallenge = n
           <div className="setup-body narrow">
             <div className="section-title">창업자 이름</div>
             <input className="name-input" data-testid="founder-name" placeholder="예: 김대표" value={founderName} maxLength={12} onChange={(e) => setFounderName(e.target.value)} />
-            <div className="tiny muted">2027년, 30세. 65세에 은퇴할 때까지 여러 회사를 세우며 커리어를 쌓습니다. 회사가 끝나면(매각·상장·파산) 다음 회사를 세울 수 있습니다.</div>
+            <div className="tiny muted">2027년, 30세. 빈 원룸에서 책상 하나, 혼자 시작합니다. 제품을 만들고 사람을 뽑고 가구를 들이며 회사를 키우세요. 65세에 은퇴할 때까지 여러 회사를 세우며 커리어를 쌓습니다. 회사가 끝나면(매각·상장·파산) 다음 회사를 세울 수 있습니다.</div>
             <div className="section-title">도전 모드(선택)</div>
             <div className="cands">
               <button className={`cand ${challenge === null ? 'sel' : ''}`} data-testid="challenge-none" onClick={() => setChallenge(null)}>
@@ -238,7 +238,7 @@ export function Setup({ mode, wealth = 0, legacy, challenge: careerChallenge = n
               <div className="tiny muted" style={{ marginTop: 8 }}>
                 남은 크레딧은 회사 자금으로 넘어가지 않습니다.
               </div>
-              <button className="btn big" data-testid="spec-confirm" style={{ marginTop: 14 }} onClick={() => setStep(3)}>
+              <button className="btn big" data-testid="spec-confirm" style={{ marginTop: 14 }} onClick={() => setStep(4)}>
                 확정
               </button>
             </div>
@@ -331,7 +331,7 @@ export function Setup({ mode, wealth = 0, legacy, challenge: careerChallenge = n
               </div>
             )}
             <div className="row" style={{ justifyContent: 'space-between' }}>
-              <button className="btn ghost" onClick={() => setStep(3)}>
+              <button className="btn ghost" onClick={() => setStep(2)}>
                 이전
               </button>
               <button className="btn big" data-testid="name-confirm" disabled={!!nameErr} onClick={() => setStep(5)}>

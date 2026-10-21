@@ -16,6 +16,7 @@ import markets from '../data/markets.json';
 import featuresData from '../data/features.json';
 import orders from '../data/orders.json';
 import offices from '../data/offices.json';
+import furniture from '../data/furniture.json';
 import welfare from '../data/welfare.json';
 import traits from '../data/traits.json';
 import ai from '../data/ai.json';
@@ -43,6 +44,7 @@ export const DATA = {
   markets,
   orders,
   offices,
+  furniture,
   welfare,
   traits,
   ai,
@@ -260,6 +262,7 @@ export interface OfficeTier {
   exec: { x: number; y: number };
   zones: { dept: string; x: number; y: number; cols: number; rows: number }[];
   rooms: string[];
+  home?: boolean; // 원룸 작업실(유리 대표실·라운지 없음)
 }
 
 export const OFFICE_TIERS = offices.tiers as OfficeTier[];

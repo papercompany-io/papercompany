@@ -100,3 +100,8 @@ table.pl td.b { font-weight: 800; }
 .growth { display: flex; flex-direction: column; gap: 4px; background: var(--panel-2); border-radius: 6px; padding: 8px 10px; }
 .growth .good { color: var(--green); font-weight: 800; }
 .growth .bad { color: var(--red); font-weight: 700; }
+.furn-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.furn { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; }
+.furn.own { background: #f3fbf6; border-color: #bfe8cf; }
+.furn.nofit:not(.own) { opacity: 0.7; }
+.furn .btn { align-self: flex-start; }

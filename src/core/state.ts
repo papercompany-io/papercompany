@@ -1,6 +1,6 @@
 // F02 창업 셋업(FS-01, TM-01, TM-02, CO-01, CO-02, EQ-01)으로 새 커리어·새 회사를 만듭니다.
 // 커리어의 두 번째 회사부터는 같은 상태에서 회사 부분만 새로 만들고, 날짜·명성·자산·업적은 이어집니다.
-import { DATA, dept, industry } from './data';
+import { DATA, dept, industry, officeTier } from './data';
 import { dayOfYear } from './calendar';
 import { seedCompetitors } from './competitors';
 import { startPhase } from './economy';
@@ -88,7 +88,8 @@ function newCompanyRecord(name: string, ind: IndustryId, day: number): Company {
     industry: ind,
     startDay: day,
     stage: 0,
-    officeTier: 1,
+    officeTier: 0,
+    furniture: [],
     movingUntil: null,
     workPolicy: 'normal',
     welfare: [],
@@ -205,7 +206,7 @@ function setupCompany(s: GameState, c: SetupChoices, owned: Record<string, strin
     equityHistory: [],
     employees: [],
     pendingHires: [],
-    seats: buildSeats(DATA.offices.tiers[0]),
+    seats: buildSeats(officeTier(0)),
     postings: [],
     applicants: [],
     channels: [],

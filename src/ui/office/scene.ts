@@ -2,7 +2,7 @@
 // Startup Company처럼 사무실이 화면을 채우는 탑뷰입니다. 카메라(가운데 오는 월드 좌표)와 정수 배율로 화면을 정하고,
 // 타일 1칸 = 가로 24 × 세로 12 아트 픽셀(2:1 아이소메트릭)을 정수배로 키워 그립니다.
 import { DATA, dept, officeTier } from '../../core/data';
-import { seatGrid } from '../../core/office';
+import { ownsFurniture, seatGrid } from '../../core/office';
 import type { DeptId, Employee, GameState, Seat } from '../../core/types';
 import { Pix, hex, mix, shade, type Col, type Pt } from './pixel';
 import { SPRITES, SPRITE_H, SPRITE_W, hashStr, lookFor } from './sprites';
@@ -243,10 +243,11 @@ export function drawOffice(g: Pix, v: View, s: GameState, t: number, hover: stri
   drawWalls(ctx);
   const items: { key: number; draw: () => void }[] = [];
   for (const seat of s.seats) {
+    if (seat.bought === false && seat.occupant === null) continue; // 아직 책상을 사지 않은 자리는 빈 바닥
     const p = seatPos(seat);
     items.push({ key: p.gx + p.gy + 1, draw: () => drawSeat(ctx, seat, p.gx, p.gy) });
   }
-  for (const d of L.decor) items.push({ key: d.x + d.y + (d.k ?? 0), draw: () => d.draw(ctx, d.x, d.y) });
+  for (const d of L.decor) if (!d.item || ownsFurniture(s, d.item)) items.push({ key: d.x + d.y + (d.k ?? 0), draw: () => d.draw(ctx, d.x, d.y) });
   for (const w of L.glass) {
     // 긴 유리벽은 1칸씩 잘라 앞뒤 순서를 맞춥니다.
     const len = Math.hypot(w[2] - w[0], w[3] - w[1]);
@@ -552,6 +553,8 @@ interface Decor {
   x: number;
   y: number;
   k?: number;
+  item?: string; // 산 가구일 때만 그림(A-78). 없으면 건물 밖 나무·벤치처럼 항상
+
   draw: (ctx: DrawCtx, x: number, y: number) => void;
 }
 
@@ -742,7 +745,25 @@ function buildLayout(tierId: number): Layout {
   ];
   if (meeting) glass.push([meeting.x0, 0, meeting.x0, meeting.y1], [meeting.x0, meeting.y1, meeting.x0 + 1.8, meeting.y1], [meeting.x0 + 3.0, meeting.y1, meeting.x1, meeting.y1], [meeting.x1, exec.y1, meeting.x1, meeting.y1]);
   const decor: Decor[] = [];
-  const add = (x: number, y: number, draw: Decor['draw'], k?: number) => decor.push({ x, y, k, draw });
+  // 소품 그림 → 가구 id(살 수 있는 것). 나무·벤치·가로등은 건물 밖이라 항상 있음.
+  const ITEM = new Map<Decor['draw'], string>([
+    [plant, 'plant'], [bigPlant, 'plant'], [cooler, 'cooler'], [printer, 'printer'], [meeting2, 'meeting'], [lounge2, 'lounge'], [beanbag, 'lounge'],
+    [cafeTable, 'cafe'], [pingpong, 'pingpong'], [kitchen2, 'kitchen'], [diningTable, 'kitchen'], [vending, 'vending'], [treadmill, 'gym'], [weights, 'gym'], [stage, 'stage'],
+  ]);
+  const add = (x: number, y: number, draw: Decor['draw'], k?: number) => decor.push({ x, y, k, draw, item: ITEM.get(draw) });
+  if (t.home) {
+    // 원룸 작업실: 유리 대표실·라운지 없이 빈 방(살 수 있는 화분·정수기·복합기 자리만)
+    add(0.5, 0.5, plant);
+    add(W - 0.6, H - 1.2, bigPlant);
+    add(0.6, doorY + 1.6, cooler);
+    add(W - 2.2, 0.6, printer);
+    for (let x = 2; x < W; x += 7) add(x, H + 4.2, tree);
+    for (let y = 3; y < H; y += 7) add(W + 4.2, y, tree);
+    for (let x = 0.5; x < W; x += 7.5) add(x, H + 1.6, lamp);
+    const zonesH = t.zones.map((z) => ({ dept: z.dept as DeptId, x: z.x, y: z.y, cols: z.cols, rows: z.rows }));
+    const none: Rect = { x0: W, y0: 0, x1: W, y1: 0 };
+    return { id: tierId, W, H, zones: zonesH, exec: none, meeting: null, lounge: null, loungeLeft: false, kitchen: null, doorY, board, winX, winY, decor, glass: [] };
+  }
   if (meeting) {
     add(meeting.x0 + 1.6, 2.4, meeting2, 1.2);
     add(meeting.x0 + 0.6, 5.6, plant);

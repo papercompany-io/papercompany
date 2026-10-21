@@ -34,7 +34,7 @@ export const APPS: { id: AppId; name: string; unit: string; desc: string; stage:
   { id: 'hiring', name: '채용', unit: 'F04 채용', desc: '공고·지원자·위임', stage: 0 },
   { id: 'employees', name: '직원 관리', unit: 'F05 직원·조직', desc: '직원·팀장·복지', stage: 0 },
   { id: 'ai', name: 'AI 도입', unit: 'F07 AI 도입', desc: '모델·적용률', stage: 1 },
-  { id: 'office', name: '부동산', unit: 'OF-07 사무실', desc: '사무실 이전', stage: 0 },
+  { id: 'office', name: '사무실', unit: 'OF-07 사무실', desc: '가구·이전', stage: 0 },
   { id: 'invest', name: '투자', unit: 'F08 투자 유치', desc: '라운드·지분·ESOP', stage: 0 },
   { id: 'finance', name: '재무', unit: 'F10 재무·기업가치', desc: '손익·자금·가치', stage: 0 },
   { id: 'exit', name: 'Exit', unit: 'F12 Exit', desc: '매각·IPO', stage: 1 },

@@ -348,7 +348,7 @@ function CompanyCard({ s, onOpen }: { s: GameState; onOpen: (a: AppId) => void }
           <Money v={computeValuation(s).value} />
         </Tile>
         <Tile label="내 지분" testId="hud-equity">
-          {pct(founderPct(s))}
+          {founderPct(s) >= 0.9995 ? "100%" : pct(founderPct(s))}
         </Tile>
         <Tile label={hasMvp(s) ? '제품 품질' : '제품(MVP까지)'} wide onClick={() => onOpen('product')}>
           {hasMvp(s) ? `${quality(s)}점 · 기능 ${Object.keys(s.product.features).length}개` : `핵심 기능 ${coreDone}/${cores.length}${inProg ? '' : ' · 로드맵 비어 있음'}`}

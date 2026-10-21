@@ -46,11 +46,12 @@ export function nextHint(s: GameState, desktopOpenedOnce: boolean): string {
     const hasMkt = s.employees.some((e) => e.dept === 'marketing');
     return `고객이 점유율 상한(약 ${Math.round(kr.flow.target).toLocaleString('ko-KR')})에 막혀 있습니다. 인지도 ${(kr.awareness * 100).toFixed(1)}% — ${hasMkt ? '광고 예산을 늘리거나 디자인팀에 "브랜드 디자인"을 맡기세요' : '마케터를 뽑아 "콘텐츠·PR"을 맡기거나 광고 예산을 쓰세요'}. 시장 앱 "성장 분석"에서 원인을 볼 수 있습니다.`;
   }
-  if (isFull(s) && s.company.officeTier < 5) return '좌석이 꽉 찼습니다. 부동산 앱에서 더 큰 사무실로 옮기면 좌석과 새 부서 구역이 생깁니다.';
+  if (isFull(s) && s.company.officeTier < 5) return '좌석이 꽉 찼습니다. 사무실 앱에서 더 큰 사무실로 옮기면 자리와 새 부서 구역이 생깁니다.';
   for (const d of DATA.depts.departments.map((x) => x.id as DeptId)) {
     const li = leadInfo(s, d);
     if (li.needed > li.have) return `${DATA.depts.departments.find((x) => x.id === d)!.name}팀이 커져서 팀장이 필요합니다. 직원 관리 앱에서 팀장을 세우세요.`;
   }
+  if (s.employees.length >= 2 && (s.company.furniture?.length ?? 1) === 0) return '사무실이 휑합니다. 사무실 앱에서 화분·정수기 같은 가구를 들이면 쾌적도가 올라 직원 만족·건강이 좋아집니다.';
   if (s.employees.length >= 5 && avgSat(s) < 50) return `직원 만족도가 낮습니다(평균 ${Math.round(avgSat(s))}). 월급·복지·근무 방침을 살펴보세요. 낮으면 퇴사가 늘어납니다.`;
   if (!s.fundingStage && !s.safes.length && s.career.challenge !== 'bootstrap') return '고객이 생기면 기업가치가 올라갑니다. 투자 앱에서 시드(또는 SAFE)로 성장 자금을 받을 수 있습니다. 투자 없이 매출로 키우는 길도 있습니다.';
   // 중후반 전략 안내(A-75): 지금 회사에서 아직 안 쓴 큰 성장 수단을 하나 짚어 줍니다.

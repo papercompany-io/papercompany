@@ -2,6 +2,58 @@
   "_note": "OF-07 사무실 이전(DEC-020) 단계와 OF-01/02 배치. 좌석 한 벌 2×2칸, 부서 구역은 cols×rows 좌석. deposit 보증금, rent 월세, comfort 쾌적도(만족도 목표 가산). 수치 [예시값], 배치는 화면 전용",
   "tiers": [
     {
+      "id": 0,
+      "name": "원룸 작업실",
+      "desc": "집 근처 원룸. 책상 하나로 혼자 시작합니다. 책상 5개까지 놓을 수 있습니다.",
+      "deposit": 0,
+      "rent": 300000,
+      "comfort": 0,
+      "home": true,
+      "size": {
+        "w": 12,
+        "h": 9
+      },
+      "ceo": {
+        "x": 8,
+        "y": 2
+      },
+      "exec": {
+        "x": 10,
+        "y": 2
+      },
+      "zones": [
+        {
+          "dept": "dev",
+          "x": 1,
+          "y": 2,
+          "cols": 2,
+          "rows": 1
+        },
+        {
+          "dept": "design",
+          "x": 1,
+          "y": 5,
+          "cols": 1,
+          "rows": 1
+        },
+        {
+          "dept": "sales",
+          "x": 4,
+          "y": 5,
+          "cols": 1,
+          "rows": 1
+        },
+        {
+          "dept": "marketing",
+          "x": 7,
+          "y": 5,
+          "cols": 1,
+          "rows": 1
+        }
+      ],
+      "rooms": []
+    },
+    {
       "id": 1,
       "name": "창업 사무실",
       "desc": "역 근처 작은 사무실. 책상 6개.",

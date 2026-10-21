@@ -25,7 +25,7 @@ export interface PostingInput {
 export function postingWarnings(s: GameState, d: DeptId, headcount: number): string[] {
   const free = seatsAvailable(s, d);
   const out: string[] = [];
-  if (free === 0) out.push(`${dept(d).name} 구역 좌석이 모두 찼습니다. 더 큰 사무실로 옮기거나(부동산 앱) 다른 부서로 공고하세요.`);
+  if (free === 0) out.push(`${dept(d).name} 구역 좌석이 모두 찼습니다. 더 큰 사무실로 옮기거나(사무실 앱) 다른 부서로 공고하세요.`);
   else if (free < headcount) out.push(`${dept(d).name} 구역 빈자리가 ${free}석뿐입니다. ${free}명까지만 뽑을 수 있습니다.`);
   return out;
 }

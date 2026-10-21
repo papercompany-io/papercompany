@@ -8,7 +8,7 @@ import { book } from './finance';
 import { mod, addMod } from './mods';
 import { notify, float } from './notify';
 import { post, teamChannelId, onEmployeeLeft } from './messenger';
-import { currentTier } from './office';
+import { officeComfort } from './office';
 import { rand, randInt } from './rng';
 import { aiMultiplier } from './aiadopt';
 import { approveMultiplier } from './ceo';
@@ -113,7 +113,7 @@ export function satTarget(s: GameState, e: Employee): { value: number; parts: { 
   if (founding) parts.push({ label: '창업 멤버(주인 의식)', v: 12 });
   const wf = welfareSum(s, 'sat');
   if (wf) parts.push({ label: '복지', v: wf });
-  const comfort = currentTier(s).comfort;
+  const comfort = officeComfort(s);
   if (comfort) parts.push({ label: '사무실 쾌적도', v: comfort });
   const pol = workPolicy(s.company.workPolicy);
   let pv = pol.sat;
@@ -153,7 +153,7 @@ export function satTarget(s: GameState, e: Employee): { value: number; parts: { 
 }
 
 export function healthTarget(s: GameState, e: Employee): number {
-  return Math.max(5, Math.min(100, 78 + welfareSum(s, 'health') + workPolicy(s.company.workPolicy).health + traitFx(e, 'health') + currentTier(s).comfort / 2));
+  return Math.max(5, Math.min(100, 78 + welfareSum(s, 'health') + workPolicy(s.company.workPolicy).health + traitFx(e, 'health') + officeComfort(s) / 2));
 }
 
 // 하루 처리: 만족도·건강·숙련이 목표를 따라가고, 병가가 생기고, 퇴사 예정자가 떠납니다.

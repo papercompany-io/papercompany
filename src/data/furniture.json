@@ -1,0 +1,91 @@
+{
+  "_note": "가구(A-78): 책상은 사람을 뽑을 때 자동으로 사고, 나머지는 사무실 앱에서 사서 놓습니다. room = 지금 사무실에 그 공간이 있어야 놓을 수 있음. comfort = 사무실 쾌적도(만족·건강)",
+  "deskPrice": 1500000,
+  "items": [
+    {
+      "id": "plant",
+      "name": "화분",
+      "desc": "사무실 곳곳에 초록을 둡니다.",
+      "price": 300000,
+      "comfort": 1
+    },
+    {
+      "id": "cooler",
+      "name": "정수기",
+      "desc": "시원한 물 한 잔.",
+      "price": 500000,
+      "comfort": 1
+    },
+    {
+      "id": "printer",
+      "name": "복합기",
+      "desc": "서류 출력·스캔.",
+      "price": 1200000,
+      "comfort": 1
+    },
+    {
+      "id": "cafe",
+      "name": "카페 테이블",
+      "desc": "열린 공간에 앉아 이야기할 자리.",
+      "price": 3000000,
+      "comfort": 2,
+      "minTier": 1
+    },
+    {
+      "id": "lounge",
+      "name": "라운지 소파",
+      "desc": "쉬는 공간의 소파와 빈백.",
+      "price": 4000000,
+      "comfort": 3,
+      "room": "lounge"
+    },
+    {
+      "id": "meeting",
+      "name": "회의실 가구",
+      "desc": "큰 회의 테이블과 화면.",
+      "price": 6000000,
+      "comfort": 2,
+      "room": "meeting"
+    },
+    {
+      "id": "pingpong",
+      "name": "탁구대",
+      "desc": "점심시간의 승부.",
+      "price": 3000000,
+      "comfort": 3,
+      "room": "pingpong"
+    },
+    {
+      "id": "kitchen",
+      "name": "탕비실",
+      "desc": "커피 머신·냉장고·식탁.",
+      "price": 10000000,
+      "comfort": 4,
+      "room": "kitchen"
+    },
+    {
+      "id": "vending",
+      "name": "자판기",
+      "desc": "간식과 음료.",
+      "price": 2000000,
+      "comfort": 1,
+      "room": "kitchen"
+    },
+    {
+      "id": "gym",
+      "name": "사내 헬스장",
+      "desc": "러닝머신과 덤벨.",
+      "price": 30000000,
+      "comfort": 5,
+      "room": "gym"
+    },
+    {
+      "id": "stage",
+      "name": "강당 무대",
+      "desc": "전사 행사와 발표.",
+      "price": 80000000,
+      "comfort": 4,
+      "room": "auditorium"
+    }
+  ]
+}

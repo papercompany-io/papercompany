@@ -38,6 +38,7 @@ export interface Seat {
   id: string;
   zone: DeptId | 'exec' | 'ceo';
   occupant: string | null; // 직원 id, 'ceo', 'pending:지원자id', 'moving:직원id'
+  bought?: boolean; // 책상·PC를 샀는지(없으면 예전 저장 = 산 것으로 봄)
 }
 
 export interface Posting {
@@ -407,6 +408,7 @@ export interface Company {
   missionsDone: string[];
   raiseRate: number; // 매년 1월 연봉 인상률
   culture: number; // 0~12 조직 문화(인사팀)
+  furniture?: string[]; // 산 가구 id(A-78). 없으면 예전 저장 = 사무실 기본 가구를 다 가진 것으로 봄
 }
 
 export interface CareerCompany {

@@ -10,7 +10,7 @@ import { runwayMonths, lastRevenue, projectedMonthlyPayroll } from '../../src/co
 import { startRound, sendLetter, requestDecision, closeForOffer, acceptOffer, activeRound, fits, decisionProbability, selectableStages } from '../../src/core/funding';
 import { setOrder } from '../../src/core/orders';
 import { setAdBudget, launchMarket, launchBlock, totalUsers, shares, demand, revenuePerUser } from '../../src/core/market';
-import { moveOffice, moveBlock, freeSeats } from '../../src/core/office';
+import { moveOffice, moveBlock, freeSeats, furnitureItems, buyFurniture, buyFurnitureBlock } from '../../src/core/office';
 import { chooseModel, latestModels, setAdoption } from '../../src/core/aiadopt';
 import { promoteLead, leadInfo, avgSat } from '../../src/core/staff';
 import { resolveDecision } from '../../src/core/events';
@@ -158,6 +158,8 @@ function opsStep(s: GameState) {
     const dep = DATA.offices.tiers.find((x) => x.id === t)!.deposit;
     if (!moveBlock(s, t) && s.cash > dep * 3 + 2e8) moveOffice(s, t);
   }
+  // 가구: 자금의 5% 안쪽이면 놓을 수 있는 가구를 삽니다
+  for (const it of furnitureItems()) if (!buyFurnitureBlock(s, it.id) && it.price * 20 < s.cash) buyFurniture(s, it.id);
   // 복지
   const wf: [number, string][] = [[4, 'meal'], [8, 'gym'], [14, 'medical'], [20, 'flex'], [30, 'gear'], [60, 'edu']];
   for (const [n, id] of wf) if (s.employees.length >= n && !s.company.welfare.includes(id) && (runwayMonths(s) ?? 99) > 8) s.company.welfare.push(id);
@@ -297,7 +299,7 @@ for (let r = 0; r < runs; r++) {
   const picks = defaultPicks();
   picks.career = 'car_startup';
   picks.edu = 'edu_univ';
-  const base: SetupChoices = { picks, cofounderId: 'cf_jiwoo', cofounderEquity: 0.2, engineerId: 'fe_hana', companyName: '봇컴퍼니', wantsAngel: false, seed, industry: INDS[r % INDS.length] };
+  const base: SetupChoices = { picks, cofounderId: null, cofounderEquity: 0, engineerId: null, companyName: '봇컴퍼니', wantsAngel: false, seed, industry: INDS[r % INDS.length] };
   const s = newCareer(base, profile);
   const log = (m: string) => out.push(m);
   let k = 0;
