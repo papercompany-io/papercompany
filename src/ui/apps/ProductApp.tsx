@@ -1,4 +1,4 @@
-// F09 제품 앱(PD-01~04): 로드맵·기능 트리·품질(버그)·기술 부채·UX 완성도·가격 정책
+// F09 제품 메뉴(PD-01~04): 로드맵·기능 트리·품질(버그)·기술 부채·UX 완성도·가격 정책
 import { useMemo, useState } from 'react';
 import { DATA, featuresOf, featureWork, priceTierDef, type FeatureDef, type FeatureFx } from '../../core/data';
 import { addToRoadmap, appeal, coreFeatures, featureLevel, featureLock, hasMvp, itemNeed, moveRoadmap, quality, removeFromRoadmap, ROADMAP_MAX, fxTotals } from '../../core/product';

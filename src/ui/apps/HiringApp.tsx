@@ -1,4 +1,4 @@
-// F04 채용 앱: HR-04 공고 등록, HR-05 지원자 목록과 프로필(EM-03 특성), HR-06 채용 확정과 입사 처리, HR-07 인사팀 위임 채용
+// F04 채용 메뉴: HR-04 공고 등록, HR-05 지원자 목록과 프로필(EM-03 특성), HR-06 채용 확정과 입사 처리, HR-07 인사팀 위임 채용
 import { useState } from 'react';
 import { DATA, DEPT_IDS, dept } from '../../core/data';
 import { formatDate } from '../../core/calendar';

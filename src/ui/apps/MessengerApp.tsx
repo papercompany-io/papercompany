@@ -96,9 +96,9 @@ export function MessengerApp({ initial, openInvest }: { initial?: string; openIn
           {(ch.kind === 'dm' || ch.kind === 'group') && <div className="tiny muted">지시는 팀 채널에서 부서 단위로 내립니다(개인 지시 없음). 직원의 고민·제안은 DM으로 옵니다.</div>}
           {ch.kind === 'external' && (
             <div className="row tiny muted">
-              투자사에 보내는 레터는 투자 앱에서 선택지로 고릅니다. 다른 외부 연락은 메시지 속 버튼으로 답합니다.
+              투자사에 보내는 레터는 투자 메뉴에서 선택지로 고릅니다. 다른 외부 연락은 메시지 속 버튼으로 답합니다.
               <button className="btn small" onClick={openInvest}>
-                투자 앱 열기
+                투자 메뉴 열기
               </button>
             </div>
           )}

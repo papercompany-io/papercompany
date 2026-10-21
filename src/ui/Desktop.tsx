@@ -1,7 +1,5 @@
-// DT-02 바탕화면과 앱(DT-03): CEO를 누르면 사무실 위에 창으로 뜹니다(DT-09, DEC-018). 앱은 한 번에 하나.
-// 회사 단계가 오르면 새 앱이 열리고(NEW 표시), 앱 아이콘에 알림 배지(DT-04)가 붙습니다.
-import { useState } from 'react';
-import { clockOf, formatDate } from '../core/calendar';
+// DT-02/03 앱: Startup Company처럼 왼쪽 메뉴에서 바로 열고, 사무실 위에 창으로 뜹니다(A-83). 앱은 한 번에 하나.
+// 회사 단계가 오르면 새 앱이 열리고(NEW 표시), 메뉴 버튼에 알림 배지(DT-04)가 붙습니다.
 import { unreadTotal } from '../core/messenger';
 import { useGame } from './store';
 import { ScheduleApp } from './apps/ScheduleApp';
@@ -20,7 +18,6 @@ import { NewsApp } from './apps/NewsApp';
 import { CareerApp } from './apps/CareerApp';
 import { SettingsApp } from './apps/SettingsApp';
 import { AppIcon, APP_COLORS } from './icons';
-import { saveNow } from './autosave';
 import type { GameState } from '../core/types';
 import './desktop.css';
 
@@ -50,7 +47,7 @@ export function appOpen(s: GameState, id: AppId): boolean {
   return s.company.stage >= a.stage;
 }
 
-function badge(s: GameState, id: AppId): number {
+export function badge(s: GameState, id: AppId): number {
   switch (id) {
     case 'messenger':
       return unreadTotal(s);
@@ -67,126 +64,84 @@ function badge(s: GameState, id: AppId): number {
   }
 }
 
-interface Props {
-  app: AppId | null;
-  arg?: string;
-  setApp: (a: AppId | null, arg?: string) => void;
-  onClose: () => void;
+// 왼쪽 메뉴(Startup Company식): 앱 버튼이 세로로 늘 떠 있고, 누르면 사무실 위에 창이 뜹니다.
+export function Sidebar({ app, onOpen }: { app: AppId | null; onOpen: (id: AppId) => void }) {
+  const s = useGame();
+  const seen = seenApps(s);
+  return (
+    <nav className="sidebar" data-testid="sidebar" onPointerDown={(e) => e.stopPropagation()}>
+      {APPS.map((a) => {
+        const on = appOpen(s, a.id);
+        if (a.publicOnly && !on) return null;
+        const b = on ? badge(s, a.id) : 0;
+        return (
+          <button
+            key={a.id}
+            className={`sb-item ${app === a.id ? 'on' : ''} ${on ? '' : 'locked'}`}
+            data-testid={`app-${a.id}`}
+            disabled={!on}
+            title={on ? `${a.name} · ${a.desc}` : `${a.name} · 단계 ${a.stage}에 열림`}
+            onClick={() => {
+              markSeen(s, a.id);
+              onOpen(a.id);
+            }}
+            style={{ ['--ac' as string]: APP_COLORS[a.id] }}
+          >
+            <span className="sb-icon">
+              <AppIcon id={a.id} />
+            </span>
+            <span className="sb-name">{a.name}</span>
+            {b > 0 && <span className="sb-badge">{b > 99 ? '99+' : b}</span>}
+            {on && !seen.includes(a.id) && a.stage > 0 && <span className="sb-new">NEW</span>}
+          </button>
+        );
+      })}
+    </nav>
+  );
 }
 
-export function Desktop({ app, arg, setApp, onClose }: Props) {
-  const s = useGame();
-  const [saved, setSaved] = useState<string | null>(null);
-  const cur = APPS.find((a) => a.id === app);
-  const seenKey = `seen-apps`;
-  const seen: string[] = (s.flags.find((f) => f.startsWith(seenKey)) ?? `${seenKey}:`).slice(seenKey.length + 1).split(',').filter(Boolean);
+const SEEN = 'seen-apps';
+function seenApps(s: GameState): string[] {
+  return (s.flags.find((f) => f.startsWith(SEEN)) ?? `${SEEN}:`).slice(SEEN.length + 1).split(',').filter(Boolean);
+}
+function markSeen(s: GameState, id: AppId) {
+  const seen = seenApps(s);
+  if (seen.includes(id)) return;
+  s.flags = s.flags.filter((f) => !f.startsWith(SEEN));
+  s.flags.push(`${SEEN}:${[...seen, id].join(',')}`);
+}
 
-  const doSave = async () => {
-    const ok = await saveNow('수동 저장');
-    setSaved(ok ? '저장했습니다' : '저장하지 못했습니다');
-    setTimeout(() => setSaved(null), 2000);
-  };
-
-  const open = (id: AppId) => {
-    if (!seen.includes(id)) {
-      const next = [...seen, id].join(',');
-      s.flags = s.flags.filter((f) => !f.startsWith(seenKey));
-      s.flags.push(`${seenKey}:${next}`);
-    }
-    setApp(id);
-  };
-
+// 앱 창: 사무실 위 가운데에 뜨는 패널. 닫으면 사무실로 돌아갑니다.
+export function AppPanel({ app, arg, setApp, onClose }: { app: AppId; arg?: string; setApp: (a: AppId, arg?: string) => void; onClose: () => void }) {
+  const cur = APPS.find((a) => a.id === app)!;
   return (
-    <div className="desk-window" data-testid="desktop">
-      <div className="dw-title">
-        <span className="dw-monitor" />
-        <b>대표 컴퓨터</b>
-        <span className="dw-os">PaperOS</span>
+    <div key={cur.id} className="app-panel" data-testid={`window-${cur.id}`} style={{ ['--ac' as string]: APP_COLORS[cur.id] }} onPointerDown={(e) => e.stopPropagation()}>
+      <div className="app-head">
+        <span className="app-head-icon">
+          <AppIcon id={cur.id} />
+        </span>
+        <div className="app-head-name">{cur.name}</div>
         <div className="grow" />
-        <button className="dw-x" data-testid="desktop-x" onClick={onClose} title="컴퓨터 닫고 사무실 보기 (Esc)">
+        <button className="app-x" data-testid="app-close" onClick={onClose} title="닫기 (Esc)">
           ✕
         </button>
       </div>
-
-      <div className="dw-screen">
-        {!cur && (
-          <div className="wallpaper">
-            <div className="icons">
-              {APPS.map((a) => {
-                const on = appOpen(s, a.id);
-                if (a.publicOnly && !on) return null;
-                const b = on ? badge(s, a.id) : 0;
-                return (
-                  <button key={a.id} className={`icon ${on ? '' : 'locked'}`} data-testid={`app-${a.id}`} disabled={!on} title={on ? a.desc : `단계 ${a.stage}에 열림`} onClick={() => open(a.id)} style={{ ['--ac' as string]: APP_COLORS[a.id] }}>
-                    <span className="icon-tile">
-                      <AppIcon id={a.id} />
-                      {b > 0 && <span className="icon-badge">{b > 99 ? '99+' : b}</span>}
-                      {on && !seen.includes(a.id) && a.stage > 0 && <span className="icon-new">NEW</span>}
-                    </span>
-                    <span className="icon-name">{a.name}</span>
-                    {!on && <span className="icon-desc locked-desc">단계 {a.stage}</span>}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-        {cur && (
-          <div key={cur.id} className="app-window" data-testid={`window-${cur.id}`} style={{ ['--ac' as string]: APP_COLORS[cur.id] }}>
-            <div className="app-head">
-              <button className="app-back" data-testid="app-close" onClick={() => setApp(null)} title="바탕화면으로 (Esc)">
-                ← 바탕화면
-              </button>
-              <span className="app-head-icon">
-                <AppIcon id={cur.id} />
-              </span>
-              <div>
-                <div className="app-head-name">{cur.name}</div>
-                <div className="app-head-desc">{cur.desc}</div>
-              </div>
-              <div className="app-tabs">
-                {APPS.filter((a) => appOpen(s, a.id)).map((a) => (
-                  <button key={a.id} className={`app-tab ${a.id === app ? 'on' : ''}`} title={a.name} onClick={() => open(a.id)}>
-                    <AppIcon id={a.id} small />
-                    {badge(s, a.id) > 0 && <i />}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className={`app-body ${app === 'messenger' ? 'flush' : ''}`}>
-              {app === 'schedule' && <ScheduleApp />}
-              {app === 'hiring' && <HiringApp />}
-              {app === 'employees' && <EmployeesApp openDm={(id) => setApp('messenger', `dm-${id}`)} />}
-              {app === 'messenger' && <MessengerApp initial={arg} openInvest={() => setApp('invest')} />}
-              {app === 'invest' && <InvestApp initialStage={arg} />}
-              {app === 'finance' && <FinanceApp />}
-              {app === 'exit' && <ExitApp />}
-              {app === 'product' && <ProductApp />}
-              {app === 'market' && <MarketApp />}
-              {app === 'ai' && <AiApp />}
-              {app === 'office' && <OfficeApp />}
-              {app === 'stock' && <StockApp />}
-              {app === 'news' && <NewsApp />}
-              {app === 'career' && <CareerApp />}
-              {app === 'settings' && <SettingsApp />}
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div className="taskbar">
-        <button className="tb-start" data-testid="desktop-close" onClick={onClose} title="컴퓨터 닫고 사무실 보기">
-          ⬑ 사무실로
-        </button>
-        <button className="tb-btn" data-testid="save-button" onClick={doSave}>
-          저장
-        </button>
-        {saved && <span className="tb-saved">{saved}</span>}
-        <div className="grow" />
-        <div className="tb-clock" data-testid="taskbar-clock">
-          <div>{clockOf(s.msInDay)}</div>
-          <div>{formatDate(s.day)}</div>
-        </div>
+      <div className={`app-body ${app === 'messenger' ? 'flush' : ''}`}>
+        {app === 'schedule' && <ScheduleApp />}
+        {app === 'hiring' && <HiringApp />}
+        {app === 'employees' && <EmployeesApp openDm={(id) => setApp('messenger', `dm-${id}`)} />}
+        {app === 'messenger' && <MessengerApp initial={arg} openInvest={() => setApp('invest')} />}
+        {app === 'invest' && <InvestApp initialStage={arg} />}
+        {app === 'finance' && <FinanceApp />}
+        {app === 'exit' && <ExitApp />}
+        {app === 'product' && <ProductApp />}
+        {app === 'market' && <MarketApp />}
+        {app === 'ai' && <AiApp />}
+        {app === 'office' && <OfficeApp />}
+        {app === 'stock' && <StockApp />}
+        {app === 'news' && <NewsApp />}
+        {app === 'career' && <CareerApp />}
+        {app === 'settings' && <SettingsApp />}
       </div>
     </div>
   );

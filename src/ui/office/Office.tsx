@@ -17,9 +17,9 @@ import { PxIcon, bubbleIcon } from '../icons';
 import type { FloatFx } from '../Game';
 import './office.css';
 
-// HUD(위)와 회사 카드(오른쪽)가 가리는 영역
-const RESERVE_TOP = 110;
-const RESERVE_RIGHT = 300;
+// 위 막대·왼쪽 메뉴·오른쪽 목표가 가리는 영역(카메라 가운데를 그만큼 옮김)
+const RESERVE_TOP = 70;
+const RESERVE_RIGHT = 180;
 
 interface Props {
   onCeo: () => void;
@@ -230,7 +230,7 @@ export function Office({ onCeo, onEmployee, pulseCeo, keysEnabled, floats = [] }
             key={`hit-${a.id}`}
             className="actor-hit"
             data-testid={a.kind === 'ceo' ? 'ceo' : `emp-${a.id}`}
-            title={a.kind === 'ceo' ? '내 컴퓨터 열기' : '직원 정보'}
+            title={a.kind === 'ceo' ? '대표 일정' : '직원 정보'}
             style={{ left: a.box[0] * sc, top: a.box[1] * sc, width: a.box[2] * sc, height: a.box[3] * sc }}
             onClick={() => click(a)}
             onMouseEnter={() => (hover.current = a.id)}
@@ -316,7 +316,7 @@ function NameTag({ a, s, sc, pulse, onClick }: { a: Actor; s: GameState; sc: num
       <div className={`nametag ceo ${pulse ? 'pulse' : ''}`} style={style} onClick={onClick} data-testid="ceo-tag">
         {pulse && <div className="tag-arrow">클릭!</div>}
         <div className="tag-name">나 · 대표</div>
-        <div className="tag-sub">내 컴퓨터 열기</div>
+        <div className="tag-sub">내 일정</div>
       </div>
     );
   }

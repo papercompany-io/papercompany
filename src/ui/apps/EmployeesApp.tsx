@@ -189,7 +189,7 @@ export function EmployeesApp({ openDm }: { openDm: (id: string) => void }) {
       />
       {tab === 'people' &&
         (s.employees.length === 0 ? (
-          <div className="warn">아직 직원이 없습니다. 채용 앱에서 공고를 올려 직원을 뽑으세요.</div>
+          <div className="warn">아직 직원이 없습니다. 채용 메뉴에서 공고를 올려 직원을 뽑으세요.</div>
         ) : (
           <>
             <div className="row tiny">

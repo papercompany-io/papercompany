@@ -43,7 +43,7 @@ export function goPublic(s: GameState, ipoValue: number) {
   s.company.stage = 5;
   recordEquity(s, 'IPO 공모');
   news(s, `[상장] ${s.company.name}, 코스닥 상장… 공모가 기준 시가총액 ${Math.round((price * (existing + newShares)) / 1e8).toLocaleString('ko-KR')}억원`, 'public');
-  notify(s, `상장 성공! 공모로 ${Math.round(raised / 1e8).toLocaleString('ko-KR')}억원을 조달했습니다. ${P.lockupDays}일 락업 뒤 주식 앱에서 지분을 팔 수 있습니다.`, 'mission', 'stock');
+  notify(s, `상장 성공! 공모로 ${Math.round(raised / 1e8).toLocaleString('ko-KR')}억원을 조달했습니다. ${P.lockupDays}일 락업 뒤 주식 메뉴에서 지분을 팔 수 있습니다.`, 'mission', 'stock');
   s.events.push({ type: 'confetti' });
   s.events.push({ type: 'autosave', reason: '상장' });
 }
@@ -70,10 +70,10 @@ export function publicDay(s: GameState) {
     p.history.push({ day: s.day, price: p.price });
     if (p.history.length > P.historyCap) p.history.splice(0, p.history.length - P.historyCap);
   }
-  if (s.day === p.lockupUntil) notify(s, '락업이 풀렸습니다. 이제 주식 앱에서 내 지분을 팔 수 있습니다.', 'good', 'stock');
+  if (s.day === p.lockupUntil) notify(s, '락업이 풀렸습니다. 이제 주식 메뉴에서 내 지분을 팔 수 있습니다.', 'good', 'stock');
 }
 
-// 분기 시작일: 지난 분기 실적 발표(가이던스 대비) → 주가 반응, 새 가이던스는 보통으로 자동(주식 앱에서 바꿀 수 있음)
+// 분기 시작일: 지난 분기 실적 발표(가이던스 대비) → 주가 반응, 새 가이던스는 보통으로 자동(주식 메뉴에서 바꿀 수 있음)
 export function publicQuarter(s: GameState) {
   const p = s.public;
   if (!p) return;

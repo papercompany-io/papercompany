@@ -70,7 +70,7 @@ export function acceptContract(s: GameState, id: string): string | null {
   o.deadline = s.day + o.days;
   c.active = o;
   c.offers = c.offers.filter((x) => x.id !== id);
-  notify(s, `외주 "${o.title}"(${o.client})를 받았습니다. 일정 앱에서 대표 "외주" 칸을 넣거나 개발팀에 "외주 작업"을 맡기세요.`, 'info', 'schedule');
+  notify(s, `외주 "${o.title}"(${o.client})를 받았습니다. 일정 메뉴에서 대표 "외주" 칸을 넣거나 개발팀에 "외주 작업"을 맡기세요.`, 'info', 'schedule');
   return null;
 }
 

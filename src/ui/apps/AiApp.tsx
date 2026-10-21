@@ -1,4 +1,4 @@
-// F07 AI 도입 앱: AT-01 공급사·모델 선택(효과 평균·분산·부작용), AT-04 부서별 적용률, AT-05 생산성 배율, AT-06 비용, AT-03 부작용(슬롭), AT-07 새 모델
+// F07 AI 도입 메뉴: AT-01 공급사·모델 선택(효과 평균·분산·부작용), AT-04 부서별 적용률, AT-05 생산성 배율, AT-06 비용, AT-03 부작용(슬롭), AT-07 새 모델
 import { DATA, aiModel, aiVendor, dept } from '../../core/data';
 import { aiMonthlyCost, avgAdoption, chooseModel, releasedModels, setAdoption } from '../../core/aiadopt';
 import { formatDate, dayOfMonthKey } from '../../core/calendar';

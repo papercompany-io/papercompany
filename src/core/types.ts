@@ -284,7 +284,7 @@ export interface MarketState {
   awareness: number; // 0~1
   adBudget: number; // 월 광고 예산(원)
   peakShare: number;
-  // 성장 분석(시장 앱): 최근 약 2주 평균 하루 획득·이탈과 점유율 상한(저장에 없을 수 있음)
+  // 성장 분석(시장 메뉴): 최근 약 2주 평균 하루 획득·이탈과 점유율 상한(저장에 없을 수 있음)
   flow?: { target: number; inbound: number; viral: number; sales: number; paid: number; lost: number };
 }
 

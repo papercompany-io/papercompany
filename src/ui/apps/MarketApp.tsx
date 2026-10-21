@@ -1,4 +1,4 @@
-// 시장 앱(RV-01·PD-02 확장): 시장별 수요·점유율·인지도·광고 예산, 해외 진출, 경쟁사와 인수(M&A), 대기업 계약, 수익 구조(LTV·CAC)
+// 시장 메뉴(RV-01·PD-02 확장): 시장별 수요·점유율·인지도·광고 예산, 해외 진출, 경쟁사와 인수(M&A), 대기업 계약, 수익 구조(LTV·CAC)
 import { useState } from 'react';
 import { DATA, industry, market, MARKET_IDS } from '../../core/data';
 import { demand, infraPerUser, launchBlock, launchMarket, revenuePerUser, setAdBudget, shares, totalUsers, deptCoverage } from '../../core/market';
@@ -233,7 +233,7 @@ export function MarketApp() {
             <div className="tiny muted">
               {fxTotals(s).enterprise
                 ? '파이프라인이 다 차면 대기업 계약이 하나 성사됩니다. 대표의 "대기업 영업"(경영 모드)과 세일즈팀 "대기업 영업" 지시가 채웁니다.'
-                : '대기업용 기능(SSO·보안 등)이 없어서 계약이 성사되지 않습니다. 제품 앱에서 대기업 기능을 만드세요.'}
+                : '대기업용 기능(SSO·보안 등)이 없어서 계약이 성사되지 않습니다. 제품 메뉴에서 대기업 기능을 만드세요.'}
               {industry(s.company.industry).entBase <= 0 ? ' 이 산업은 대기업 계약이 거의 없습니다.' : ''}
             </div>
           </div>

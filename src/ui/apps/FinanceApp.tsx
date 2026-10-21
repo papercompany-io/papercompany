@@ -1,4 +1,4 @@
-// F10 재무 앱: FN-01 보유 자금·장부, FN-02 비용, FN-03 손익(DEC-030 순서), VL-01 기업가치
+// F10 재무 메뉴: FN-01 보유 자금·장부, FN-02 비용, FN-03 손익(DEC-030 순서), VL-01 기업가치
 import { paydayForecast } from '../../core/forecast';
 import { useState } from 'react';
 import { formatDate, formatMonth } from '../../core/calendar';

@@ -30,7 +30,7 @@ export function EmployeeModal({ id, onClose }: { id: string; onClose: () => void
         <div className="emp-body">
           <EmployeeDetail e={e} compact />
           <div className="row" style={{ justifyContent: 'flex-end' }}>
-            <span className="tiny muted grow">자세한 관리(팀장·연봉·해고)는 직원 관리 앱에서 합니다.</span>
+            <span className="tiny muted grow">자세한 관리(팀장·연봉·해고)는 직원 관리 메뉴에서 합니다.</span>
             <button className="btn" data-testid="employee-modal-close" onClick={onClose}>
               닫기
             </button>

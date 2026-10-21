@@ -1,4 +1,4 @@
-// F08 투자 앱: FR-01 단계 사다리, FR-13 라운드 열기, FR-11 룸·투자금, FR-10 투자사 레터, FR-06·07 협상·판정,
+// F08 투자 메뉴: FR-01 단계 사다리, FR-13 라운드 열기, FR-11 룸·투자금, FR-10 투자사 레터, FR-06·07 협상·판정,
 // FR-09 클럽딜, FR-08 제안서 수락·거절, EQ-02 희석, EQ-03 지분 구조
 import { PxIcon } from '../icons';
 import { useState } from 'react';
@@ -98,7 +98,7 @@ function RoundTab({ initialStage, goInvestors }: { initialStage?: string; goInve
   if (r?.status === 'offer') return <OfferView r={r} />;
   if (r?.status === 'open') return <OpenRound r={r} goInvestors={goInvestors} />;
   if (s.career.challenge === 'bootstrap') return <div className="warn">무투자 도전 중입니다. 투자를 받을 수 없습니다. 매출로 키우세요!</div>;
-  if (s.public) return <div className="card ok">상장사입니다. 투자 라운드 대신 주식 앱에서 주가·지분을 관리합니다.</div>;
+  if (s.public) return <div className="card ok">상장사입니다. 투자 라운드 대신 주식 메뉴에서 주가·지분을 관리합니다.</div>;
 
   return (
     <div className="col">
@@ -575,7 +575,7 @@ function EsopCard() {
       <div className="section-title">ESOP 풀(임직원 스톡옵션)</div>
       {pool ? (
         <div className="tiny">
-          풀 {pool.shares.toLocaleString('ko-KR')}주 · 지급 {granted.toLocaleString('ko-KR')}주 · 남음 {esopFree(s).toLocaleString('ko-KR')}주. 직원 관리 앱에서 직원에게 옵션을 줄 수 있습니다(베스팅 2년 20% → 3년 40% → 4년 80% → 5년 100%).
+          풀 {pool.shares.toLocaleString('ko-KR')}주 · 지급 {granted.toLocaleString('ko-KR')}주 · 남음 {esopFree(s).toLocaleString('ko-KR')}주. 직원 관리 메뉴에서 직원에게 옵션을 줄 수 있습니다(베스팅 2년 20% → 3년 40% → 4년 80% → 5년 100%).
         </div>
       ) : (
         <div className="tiny muted">ESOP 풀을 만들면 모든 주주가 같은 비율로 희석되지만, 핵심 인재에게 옵션을 줘 만족도를 올리고 이직을 막을 수 있습니다.</div>

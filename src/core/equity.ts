@@ -80,7 +80,7 @@ export function unvestedOptions(s: GameState, e: Employee): number {
 }
 
 export function grantOptions(s: GameState, e: Employee, shares: number): string | null {
-  if (!esopEntry(s)) return '먼저 ESOP 풀을 만들어야 합니다(투자 앱 → 지분).';
+  if (!esopEntry(s)) return '먼저 ESOP 풀을 만들어야 합니다(투자 메뉴 → 지분).';
   if (shares <= 0) return '줄 주식 수를 정하세요.';
   if (shares > esopFree(s)) return 'ESOP 풀에 남은 주식이 부족합니다.';
   if (e.options > 0 && e.optionDay !== null) {

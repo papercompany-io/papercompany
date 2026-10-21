@@ -1,4 +1,4 @@
-// OF-07 사무실 앱: 가구(A-78) + 이전(DEC-020, 단계별 넓이·보증금·월세). 책상은 사무실 화면에서 직접 놓습니다(A-80).
+// OF-07 사무실 메뉴: 가구(A-78) + 이전(DEC-020, 단계별 넓이·보증금·월세). 책상은 사무실 화면에서 직접 놓습니다(A-80).
 import { useState } from 'react';
 import { DATA, OFFICE_TIERS } from '../../core/data';
 import { buyFurniture, buyFurnitureBlock, currentTier, deskCapacity, desks, furnitureFits, furnitureItems, moveBlock, moveOffice, officeComfort, ownsFurniture, seatsAvailable } from '../../core/office';

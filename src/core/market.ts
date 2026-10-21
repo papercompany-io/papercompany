@@ -179,11 +179,11 @@ export function marketDay(s: GameState, push: DayPush) {
   s.company.peakUsers = Math.max(s.company.peakUsers, u);
 }
 
-// 해외 진출(시장 앱): 현지화 기능 + 진출 비용
+// 해외 진출(시장 메뉴): 현지화 기능 + 진출 비용
 export function launchBlock(s: GameState, m: MarketId): string | null {
   if (s.markets[m].launched) return '이미 진출했습니다.';
   if (!hasMvp(s)) return 'MVP가 먼저 필요합니다.';
-  if (!fxTotals(s).markets.includes(m)) return '이 시장용 현지화 기능을 먼저 만들어야 합니다(제품 앱).';
+  if (!fxTotals(s).markets.includes(m)) return '이 시장용 현지화 기능을 먼저 만들어야 합니다(제품 메뉴).';
   if (s.cash < market(m).entry) return '진출 비용이 부족합니다.';
   return null;
 }

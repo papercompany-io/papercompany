@@ -347,7 +347,7 @@ export function Setup({ mode, wealth = 0, legacy, challenge: careerChallenge = n
             <div className="choices">
               <button className="choice" data-testid="start-angel" onClick={() => finish(true)}>
                 <b>엔젤 투자를 알아본다</b>
-                <span className="tiny muted">사무실에 들어가면 투자 앱이 열리고 엔젤 라운드를 준비합니다.</span>
+                <span className="tiny muted">사무실에 들어가면 투자 메뉴이 열리고 엔젤 라운드를 준비합니다.</span>
                 {fx.earlyRound === 'hard' && <span className="tiny warn">투자 유치·엑싯 경험이 없는 창업자는 엔젤·프리시드를 받기 어렵습니다.</span>}
               </button>
               <button className="choice" data-testid="start-bootstrap" onClick={() => finish(false)}>

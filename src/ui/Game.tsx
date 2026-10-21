@@ -1,5 +1,5 @@
-// 게임 화면: DT-09 사무실 메인 화면 + HUD(DT-05 시계·배속) + CEO 클릭 시 데스크탑(DT-02) + 알림(DT-04)·미션·긴급 결정 창.
-// 배치는 Startup Company를 참고했습니다: 가운데 위 HUD, 오른쪽 위 회사 카드, 왼쪽 위 목표, 화면 전체에 아이소메트릭 사무실.
+// 게임 화면: DT-09 사무실 메인 화면 + 위 막대(DT-05 회사·자금·시계·배속) + 왼쪽 메뉴·앱 창(DT-02/03) + 알림(DT-04)·목표·긴급 결정 창.
+// 배치는 Startup Company를 따릅니다(A-83): 화면 전체 사무실, 위 가로 막대, 왼쪽 세로 메뉴, 메뉴를 누르면 가운데 창, 왼쪽 아래 배치 도구.
 import { paydayForecast } from '../core/forecast';
 import { useEffect, useRef, useState } from 'react';
 import { advance, isRunning, setSpeed } from '../core/sim';
@@ -13,7 +13,8 @@ import { totalUsers } from '../core/market';
 import { activeMissions, missionProgress, STAGE_NAMES } from '../core/progress';
 import { founderAge } from '../core/career';
 import { act, getGame, touch, useGame } from './store';
-import { Desktop, type AppId } from './Desktop';
+import { AppPanel, Sidebar, type AppId } from './Desktop';
+import { saveNow } from './autosave';
 import { Office } from './office/Office';
 import { EmployeeModal } from './EmployeeModal';
 import { DevPanel } from './DevPanel';
@@ -48,7 +49,7 @@ export interface FloatFx {
 export function Game({ continued, notice, clearNotice, onEnded }: Props) {
   const s = useGame();
   const settings = useSettings();
-  const [desktop, setDesktop] = useState<{ open: boolean; app: AppId | null; arg?: string }>({ open: false, app: null });
+  const [panel, setPanel] = useState<{ app: AppId; arg?: string } | null>(null);
   const [openedOnce, setOpenedOnce] = useState(continued);
   const [empModal, setEmpModal] = useState<string | null>(null);
   const [dev, setDev] = useState(false);
@@ -93,7 +94,7 @@ export function Game({ continued, notice, clearNotice, onEnded }: Props) {
     const evs = s.events.splice(0);
     const sounds = new Set<string>();
     for (const e of evs) {
-      if (e.type === 'offerReady') setDesktop({ open: true, app: 'invest' });
+      if (e.type === 'offerReady') setPanel({ app: 'invest' });
       if (e.type === 'autosave') requestAutosave(e.reason);
       if (e.type === 'exitResult' || e.type === 'bankrupt' || e.type === 'companyEnded') requestAutosave('판 종료');
       if (e.type === 'sfx') sounds.add(e.sound);
@@ -124,16 +125,16 @@ export function Game({ continued, notice, clearNotice, onEnded }: Props) {
     }
   }, [s?.ended, onEnded]);
 
-  // CO-02: 엔젤 투자를 고른 경우 처음 들어올 때 투자 앱을 엽니다.
+  // CO-02: 엔젤 투자를 고른 경우 처음 들어올 때 투자 메뉴을 엽니다.
   useEffect(() => {
     if (s?.wantsAngelOnStart) {
       act((g) => (g.wantsAngelOnStart = false));
-      setDesktop({ open: true, app: 'invest', arg: 'angel' });
+      setPanel({ app: 'invest', arg: 'angel' });
       setOpenedOnce(true);
     }
   }, [s?.wantsAngelOnStart]);
 
-  // 단축키: 스페이스 일시정지, 1~3 배속, Esc 창 닫기, Tab 컴퓨터, ` 또는 F9 개발 패널
+  // 단축키: 스페이스 일시정지, 1~3 배속, Esc 창 닫기, ` 또는 F9 개발 패널
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement)?.tagName;
@@ -148,11 +149,7 @@ export function Game({ continued, notice, clearNotice, onEnded }: Props) {
         act((g) => setSpeed(g, [1, 2, 4][Number(e.key) - 1]));
       } else if (e.key === 'Escape') {
         setEmpModal(null);
-        setDesktop((d) => (d.app ? { open: true, app: null } : { open: false, app: null }));
-      } else if (e.key === 'Tab') {
-        e.preventDefault();
-        setDesktop((d) => ({ open: !d.open, app: d.app }));
-        setOpenedOnce(true);
+        setPanel(null);
       }
     };
     window.addEventListener('keydown', onKey);
@@ -161,10 +158,16 @@ export function Game({ continued, notice, clearNotice, onEnded }: Props) {
 
   if (!s) return null;
 
-  const openDesktop = (app: AppId | null = null, arg?: string) => {
-    setDesktop({ open: true, app, arg });
+  const openDesktop = (app: AppId, arg?: string) => {
+    setPanel({ app, arg });
     setOpenedOnce(true);
     play('open');
+  };
+  const toggleApp = (app: AppId) => {
+    if (panel?.app === app) {
+      setPanel(null);
+      play('close');
+    } else openDesktop(app);
   };
 
   const urgent = urgentId ? s.decisions.find((d) => d.id === urgentId && !d.resolved) : undefined;
@@ -172,23 +175,23 @@ export function Game({ continued, notice, clearNotice, onEnded }: Props) {
   return (
     <div className="game">
       <main className="stage">
-        <Office onCeo={() => openDesktop()} onEmployee={(id) => setEmpModal(id)} pulseCeo={!openedOnce} keysEnabled={!desktop.open && !empModal} floats={floats} />
-        {desktop.open && (
-          <Desktop
-            app={desktop.app}
-            arg={desktop.arg}
+        <Office onCeo={() => openDesktop('schedule')} onEmployee={(id) => setEmpModal(id)} pulseCeo={!openedOnce} keysEnabled={!panel && !empModal} floats={floats} />
+        <TopBar s={s} />
+        <Sidebar app={panel?.app ?? null} onOpen={toggleApp} />
+        {panel && (
+          <AppPanel
+            app={panel.app}
+            arg={panel.arg}
             setApp={(app, arg) => {
-              setDesktop({ open: true, app, arg });
-              play(app ? 'open' : 'close');
+              setPanel({ app, arg });
+              play('open');
             }}
             onClose={() => {
-              setDesktop({ open: false, app: null });
+              setPanel(null);
               play('close');
             }}
           />
         )}
-
-        <Hud s={s} />
         <div className={`hint ${s.pauseReason || paydayForecast(s).cashAfter <= 0 ? 'urgent' : ''}`} data-testid="hint">
           <span className="hint-tag">{s.pauseReason && !s.ended ? '일시정지' : '다음 할 일'}</span>
           <span>{nextHint(s, openedOnce)}</span>
@@ -198,8 +201,7 @@ export function Game({ continued, notice, clearNotice, onEnded }: Props) {
             </button>
           )}
         </div>
-        <Missions s={s} onOpen={(a) => openDesktop(a)} />
-        <CompanyCard s={s} onOpen={(a) => openDesktop(a)} />
+        {!panel && <Missions s={s} onOpen={(a) => openDesktop(a)} />}
         <Toasts s={s} enabled={settings.toasts} onOpen={(app, arg) => openDesktop(app as AppId, arg)} />
         {notice && (
           <div className="notice">
@@ -232,63 +234,113 @@ function settingsSpeed() {
   return getSettings().defaultSpeed || 1;
 }
 
-// 가운데 위 HUD: 날짜·하루 진행·배속·시각·고객·자금(DT-05)
-function Hud({ s }: { s: GameState }) {
+// 위 가로 막대(Startup Company식): 왼쪽 회사, 가운데 자금·지표, 오른쪽 날짜·시각·배속·저장(DT-05)
+function TopBar({ s }: { s: GameState }) {
   const d = dateOf(s.day);
   const frac = Math.min(1, s.msInDay / DATA.time.dayMs);
   const fc = paydayForecast(s);
+  const rw = runwayMonths(s);
   const net = currentPL(s).netIncome;
   const cashShown = useTween(s.cash);
+  const [saved, setSaved] = useState<string | null>(null);
+  const cores = coreFeatures(s);
+  const coreDone = cores.filter((f) => featureLevel(s, f.id) >= 1).length;
   return (
-    <header className="hud" data-testid="hud">
-      <div className="hud-progress">
-        <div style={{ width: `${frac * 100}%` }} />
-      </div>
-      <div className="hud-row">
-        <span className="hud-date" data-testid="hud-date">
-          {formatDate(s.day)} ({WEEK[d.getUTCDay()]}) · 대표 {Math.floor(founderAge(s))}세
-        </span>
-        <span className={`hud-econ ${s.economy.phase}`} title="경기">
-          {s.economy.phase === 'boom' ? '호황' : s.economy.phase === 'recession' ? '불황' : '보통'}
-        </span>
-        <span className="hud-payday">
-          월급일 <b>D-{fc.daysLeft}</b>
-        </span>
-      </div>
-      <div className="hud-row main">
-        <div className="hud-speed">
-          {[0, 1, 2, 4].map((sp) => (
-            <button
-              key={sp}
-              data-testid={`speed-${sp}`}
-              title={sp === 0 ? '일시정지 (스페이스)' : `${sp}배속 (${sp === 4 ? 3 : sp})`}
-              className={`sp sp${sp} ${s.speed === sp && (sp === 0 || !s.pauseReason) ? 'on' : ''}`}
-              onClick={() => {
-                act((g) => setSpeed(g, sp));
-                play('click');
-              }}
-            >
-              {sp === 0 ? <PauseIcon /> : <PlayIcon n={sp === 1 ? 1 : sp === 2 ? 2 : 3} />}
-            </button>
-          ))}
+    <header className="topbar" data-testid="hud" onPointerDown={(e) => e.stopPropagation()}>
+      <div className="tb-co">
+        <div className="cc-logo">{[...s.company.name][0]}</div>
+        <div>
+          <div className="tb-name">{s.company.name}</div>
+          <div className="tb-sub">
+            단계 {s.company.stage} {STAGE_NAMES[s.company.stage]} · {industry(s.company.industry).name}
+          </div>
         </div>
-        <span className="hud-pill" title="게임 시각">
-          <PxIcon id="clock" /> {clockOf(s.msInDay)}
-        </span>
-        <span className="hud-pill" title={`${industry(s.company.industry).unit} 수`} data-testid="hud-users">
-          <PxIcon id="users" /> {Math.floor(totalUsers(s)).toLocaleString('ko-KR')}
-        </span>
-        <span className="hud-pill cash" title={`회사 자금 · 이번 달 손익 ${net >= 0 ? '흑자' : '적자'}`}>
-          <PxIcon id="coin" />
-          <Money v={Math.round(cashShown)} testId="hud-cash" />
-          <span className={net >= 0 ? 'up' : 'down'}>{net >= 0 ? '▲' : '▼'}</span>
-        </span>
+      </div>
+      <div className="tb-stats">
+        <div className="tb-stat cash" title={`회사 자금 · 이번 달 손익 ${net >= 0 ? '흑자' : '적자'}`}>
+          <PxIcon id="coin" size={20} />
+          <div>
+            <Money v={Math.round(cashShown)} testId="hud-cash" />
+            <span className={net >= 0 ? 'up' : 'down'}>{net >= 0 ? '▲' : '▼'}</span>
+            <small className={fc.cashAfter <= 0 || (rw !== null && rw < 3) ? 'bad' : ''}>런웨이 {rw === null ? '흑자' : rw > 120 ? '10년+' : `${rw.toFixed(1)}개월`}</small>
+          </div>
+        </div>
+        <div className="tb-stat" title={s.public ? '시가총액' : '기업가치'}>
+          <PxIcon id="chart" size={20} />
+          <div>
+            <span data-testid="hud-valuation">
+              <Money v={computeValuation(s).value} />
+            </span>
+            <small data-testid="hud-equity">내 지분 {founderPct(s) >= 0.9995 ? '100%' : pct(founderPct(s))}</small>
+          </div>
+        </div>
+        <div className="tb-stat" title={`${industry(s.company.industry).unit} 수`}>
+          <PxIcon id="users" size={20} />
+          <div>
+            <span data-testid="hud-users">{Math.floor(totalUsers(s)).toLocaleString('ko-KR')}</span>
+            <small>{hasMvp(s) ? `품질 ${quality(s)}점` : `핵심 기능 ${coreDone}/${cores.length}`}</small>
+          </div>
+        </div>
+        <div className="tb-stat" title="직원">
+          <PxIcon id="case" size={20} />
+          <div>
+            <span>
+              {s.employees.length}명{s.pendingHires.length > 0 && <small> +{s.pendingHires.length}</small>}
+            </span>
+            <small>월급일 D-{fc.daysLeft}</small>
+          </div>
+        </div>
+      </div>
+      <div className="tb-time">
+        <div className="tb-date" data-testid="hud-date">
+          <span>
+            {formatDate(s.day)} ({WEEK[d.getUTCDay()]})
+          </span>
+          <span className="tb-clock">{clockOf(s.msInDay)}</span>
+          <span className={`hud-econ ${s.economy.phase}`} title="경기">
+            {s.economy.phase === 'boom' ? '호황' : s.economy.phase === 'recession' ? '불황' : '보통'}
+          </span>
+          <span className="tb-age">대표 {Math.floor(founderAge(s))}세</span>
+        </div>
+        <div className="tb-controls">
+          <div className="hud-speed">
+            {[0, 1, 2, 4].map((sp) => (
+              <button
+                key={sp}
+                data-testid={`speed-${sp}`}
+                title={sp === 0 ? '일시정지 (스페이스)' : `${sp}배속 (${sp === 4 ? 3 : sp})`}
+                className={`sp sp${sp} ${s.speed === sp && (sp === 0 || !s.pauseReason) ? 'on' : ''}`}
+                onClick={() => {
+                  act((g) => setSpeed(g, sp));
+                  play('click');
+                }}
+              >
+                {sp === 0 ? <PauseIcon /> : <PlayIcon n={sp === 1 ? 1 : sp === 2 ? 2 : 3} />}
+              </button>
+            ))}
+          </div>
+          <button
+            className="tb-save"
+            data-testid="save-button"
+            title={saved ?? '저장'}
+            onClick={async () => {
+              const ok = await saveNow('수동 저장');
+              setSaved(ok ? '저장함' : '실패');
+              setTimeout(() => setSaved(null), 1500);
+            }}
+          >
+            {saved ?? '저장'}
+          </button>
+        </div>
+      </div>
+      <div className="tb-progress">
+        <div style={{ width: `${frac * 100}%` }} />
       </div>
     </header>
   );
 }
 
-// 왼쪽 위: 지금 단계와 미션(튜토리얼·마일스톤)
+// 오른쪽 위: 지금 단계의 목표(튜토리얼·마일스톤)
 function Missions({ s, onOpen }: { s: GameState; onOpen: (a: AppId) => void }) {
   const ms = activeMissions(s);
   const [open, setOpen] = useState(true);
@@ -322,63 +374,6 @@ function Missions({ s, onOpen }: { s: GameState; onOpen: (a: AppId) => void }) {
         </div>
       )}
     </aside>
-  );
-}
-
-// 오른쪽 위 회사 카드: CEO가 볼 핵심 상태
-function CompanyCard({ s, onOpen }: { s: GameState; onOpen: (a: AppId) => void }) {
-  const rw = runwayMonths(s);
-  const fc = paydayForecast(s);
-  const cores = coreFeatures(s);
-  const coreDone = cores.filter((f) => featureLevel(s, f.id) >= 1).length;
-  const inProg = s.product.roadmap[0];
-  return (
-    <aside className="company-card" data-testid="company-card">
-      <div className="cc-head">
-        <div className="cc-logo">{[...s.company.name][0]}</div>
-        <div className="cc-title">
-          <div className="cc-name">{s.company.name}</div>
-          <div className="cc-stage">
-            {industry(s.company.industry).name} · {s.public ? '상장사' : s.fundingStage ? `${DATA.funding.stages.find((x) => x.id === s.fundingStage)!.name} 투자 유치` : '투자 받기 전'}
-          </div>
-        </div>
-      </div>
-      <div className="cc-tiles">
-        <Tile label={s.public ? '시가총액' : '기업가치'} testId="hud-valuation" wide>
-          <Money v={computeValuation(s).value} />
-        </Tile>
-        <Tile label="내 지분" testId="hud-equity">
-          {founderPct(s) >= 0.9995 ? "100%" : pct(founderPct(s))}
-        </Tile>
-        <Tile label={hasMvp(s) ? '제품 품질' : '제품(MVP까지)'} wide onClick={() => onOpen('product')}>
-          {hasMvp(s) ? `${quality(s)}점 · 기능 ${Object.keys(s.product.features).length}개` : `핵심 기능 ${coreDone}/${cores.length}${inProg ? '' : ' · 로드맵 비어 있음'}`}
-        </Tile>
-        <Tile label="직원" onClick={() => onOpen('employees')}>
-          {s.employees.length}명{s.pendingHires.length > 0 && <small> +{s.pendingHires.length}</small>}
-        </Tile>
-      </div>
-      <div className={`cc-forecast ${fc.cashAfter <= 0 ? 'bad' : ''}`} onClick={() => onOpen('finance')}>
-        <div>
-          <span>다음 월급일({formatDate(s.day + fc.daysLeft).slice(5)}) 예상 자금</span>
-          <Money v={Math.round(fc.cashAfter)} />
-        </div>
-        <div className={`cc-runway ${rw !== null && rw < 3 ? 'bad' : ''}`}>
-          <span>런웨이</span>
-          <b>{rw === null ? '흑자' : rw > 120 ? '10년 이상' : `${rw.toFixed(1)}개월`}</b>
-        </div>
-      </div>
-    </aside>
-  );
-}
-
-function Tile({ label, children, testId, wide, onClick }: { label: string; children: React.ReactNode; testId?: string; wide?: boolean; onClick?: () => void }) {
-  return (
-    <div className={`cc-tile ${wide ? 'wide' : ''} ${onClick ? 'link' : ''}`} onClick={onClick}>
-      <div className="cc-label">{label}</div>
-      <div className="cc-value" data-testid={testId}>
-        {children}
-      </div>
-    </div>
   );
 }
 

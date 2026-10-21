@@ -1,4 +1,4 @@
-// 커리어 앱: 미션(튜토리얼·마일스톤), 회사 단계와 해금, 업적, 커리어 기록
+// 커리어 메뉴: 미션(튜토리얼·마일스톤), 회사 단계와 해금, 업적, 커리어 기록
 import { PxIcon } from '../icons';
 import { useState } from 'react';
 import { DATA } from '../../core/data';

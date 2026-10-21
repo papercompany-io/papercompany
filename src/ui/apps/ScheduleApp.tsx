@@ -1,4 +1,4 @@
-// F14 일정 앱: CA-01 하루 행동 칸 배분, CA-02 스펙 효율, CA-03 조직이 생긴 뒤 대표 행동(경영 모드)
+// F14 일정 메뉴: CA-01 하루 행동 칸 배분, CA-02 스펙 효율, CA-03 조직이 생긴 뒤 대표 행동(경영 모드)
 import { DATA } from '../../core/data';
 import { actionDef, allocTotal, approveMultiplier, approveNeed, daySchedule, efficiency, executiveBlock, modeActions, setAlloc, setCeoMode } from '../../core/ceo';
 import { acceptContract, contractsOpen, dropContract } from '../../core/contracts';
@@ -76,7 +76,7 @@ export function ScheduleApp() {
               </div>
               <div className="tiny">오늘 실행 {s.todayLog[a]}칸</div>
               {a === 'sales' && !hasMvp(s) && <div className="tiny warn">MVP 전에는 팔 제품이 없어 효과가 없습니다.</div>}
-              {a === 'enterprise' && !fxTotals(s).enterprise && <div className="tiny warn">대기업용 기능이 없어 계약이 성사되지 않습니다(제품 앱).</div>}
+              {a === 'enterprise' && !fxTotals(s).enterprise && <div className="tiny warn">대기업용 기능이 없어 계약이 성사되지 않습니다(제품 메뉴).</div>}
             </div>
           );
         })}

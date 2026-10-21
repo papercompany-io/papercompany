@@ -32,7 +32,7 @@ export function StockApp() {
   const [msg, setMsg] = useState<string | null>(null);
   const [confirm, setConfirm] = useState(false);
   const p = s.public;
-  if (!p) return <div className="muted">상장사가 아닙니다. Exit 앱에서 IPO를 시도하세요.</div>;
+  if (!p) return <div className="muted">상장사가 아닙니다. Exit 메뉴에서 IPO를 시도하세요.</div>;
   const locked = s.day < p.lockupUntil;
   const pv = sellPreview(s, frac);
   const rv = resignPreview(s);

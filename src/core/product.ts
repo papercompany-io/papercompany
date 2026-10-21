@@ -170,7 +170,7 @@ function ship(s: GameState, it: RoadmapItem) {
   sfx(s, result === 'fail' ? 'warn' : 'coin');
   if (!hasMvp(s) && coreFeatures(s).every((c) => featureLevel(s, c.id) >= 1)) launchMvp(s);
   else notify(s, `기능 출시: ${name} (${label})`, result === 'fail' ? 'bad' : 'good', 'product');
-  if (f.fx.market) notify(s, `${DATA.markets.markets.find((m) => m.id === f.fx.market)!.name} 진출 준비가 됐습니다. 시장 앱에서 진출할 수 있습니다.`, 'good', 'market');
+  if (f.fx.market) notify(s, `${DATA.markets.markets.find((m) => m.id === f.fx.market)!.name} 진출 준비가 됐습니다. 시장 메뉴에서 진출할 수 있습니다.`, 'good', 'market');
 }
 
 function launchMvp(s: GameState) {
@@ -181,7 +181,7 @@ function launchMvp(s: GameState) {
   kr.awareness = Math.max(kr.awareness, 0.02);
   notify(s, `MVP 출시! ${s.company.name}이(가) 국내 시장에 나왔습니다. 이제 고객이 들어옵니다.`, 'mission', 'market');
   news(s, `[스타트업] ${s.company.name}, 첫 서비스 출시`, 'company');
-  post(s, 'all', '시스템', 'MVP를 출시했습니다. 국내 시장에서 고객을 받기 시작합니다. 시장 앱에서 인지도·점유율을, 재무 앱에서 매출을 확인하세요.', 'system');
+  post(s, 'all', '시스템', 'MVP를 출시했습니다. 국내 시장에서 고객을 받기 시작합니다. 시장 메뉴에서 인지도·점유율을, 재무 메뉴에서 매출을 확인하세요.', 'system');
   s.events.push({ type: 'confetti' });
 }
 

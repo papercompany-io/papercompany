@@ -49,7 +49,7 @@ export function exitProbability(s: GameState, method: 'sale' | 'ipo'): { p: numb
 
 export function exitBlocked(s: GameState): string | null {
   if (s.ended) return '회사가 끝났습니다.';
-  if (s.public) return '이미 상장사입니다. 주식 앱에서 지분을 팔거나 대표에서 물러날 수 있습니다.';
+  if (s.public) return '이미 상장사입니다. 주식 메뉴에서 지분을 팔거나 대표에서 물러날 수 있습니다.';
   if (s.exitAttempt && (s.exitAttempt.status === 'preparing' || s.exitAttempt.status === 'offer')) return '이미 Exit을 진행 중입니다.';
   if (s.exitCooldownUntil !== null && s.day < s.exitCooldownUntil) return `Exit 실패 여파로 ${s.exitCooldownUntil - s.day}일 뒤에 다시 시도할 수 있습니다.`;
   return null;
@@ -154,7 +154,7 @@ export function inboundOfferMonth(s: GameState) {
   const buyer = pick(s, BUYERS);
   s.exitAttempt = { method: 'sale', startedDay: s.day, readyDay: s.day, price, valuationAtStart: v, p: null, status: 'offer', inbound: true, buyer, deadline: s.day + 14 };
   s.pauseReason = '인수 제안이 들어왔습니다';
-  notify(s, `${buyer}이(가) ${s.company.name} 인수를 제안했습니다: ${Math.round(price / 1e8).toLocaleString('ko-KR')}억원. 내 몫 약 ${Math.round((price * founderPct(s)) / 1e8).toLocaleString('ko-KR')}억원. 14일 안에 답하세요(Exit 앱).${dm < 1 ? ' 자금난을 아는 인수자라 값을 깎아 불렀습니다.' : ''}`, 'urgent', 'exit');
+  notify(s, `${buyer}이(가) ${s.company.name} 인수를 제안했습니다: ${Math.round(price / 1e8).toLocaleString('ko-KR')}억원. 내 몫 약 ${Math.round((price * founderPct(s)) / 1e8).toLocaleString('ko-KR')}억원. 14일 안에 답하세요(Exit 메뉴).${dm < 1 ? ' 자금난을 아는 인수자라 값을 깎아 불렀습니다.' : ''}`, 'urgent', 'exit');
 }
 
 // FL-01 월급일 정산 뒤 자금이 0 이하이면 파산(DEC-021)

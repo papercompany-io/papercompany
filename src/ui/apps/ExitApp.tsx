@@ -1,4 +1,4 @@
-// F12 Exit 앱: EX-03 원하는 시점에 시도, EX-01 IPO, EX-02 매각, EX-04 성공·실패(DEC-021)
+// F12 Exit 메뉴: EX-03 원하는 시점에 시도, EX-01 IPO, EX-02 매각, EX-04 성공·실패(DEC-021)
 import { useState } from 'react';
 import { DATA } from '../../core/data';
 import { formatDate } from '../../core/calendar';
@@ -19,7 +19,7 @@ export function ExitApp() {
   const fp = founderPct(s);
   const a = s.exitAttempt;
   const blocked = exitBlocked(s);
-  if (s.public) return <div className="card ok">상장사입니다. 주식 앱에서 지분을 팔거나 대표에서 물러날 수 있습니다(그때 이 회사가 끝납니다).</div>;
+  if (s.public) return <div className="card ok">상장사입니다. 주식 메뉴에서 지분을 팔거나 대표에서 물러날 수 있습니다(그때 이 회사가 끝납니다).</div>;
 
   return (
     <div className="col">
