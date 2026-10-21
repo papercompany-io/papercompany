@@ -21,7 +21,7 @@
       "churnM": 0.025,
       "infra": 18000,
       "viral": 0.004,
-      "baseAcq": 0.0012,
+      "baseAcq": 0.002,
       "salesAcq": 0.0012,
       "valMult": 9,
       "entBase": 25000000,
@@ -39,7 +39,7 @@
       ],
       "adCost": 60000,
       "cac": 6000000,
-      "salesPer": 0.06,
+      "salesPer": 0.12,
       "userValue": 10000000
     },
     {
@@ -185,7 +185,7 @@
       "churnM": 0.04,
       "infra": 240000,
       "viral": 0.006,
-      "baseAcq": 0.0012,
+      "baseAcq": 0.002,
       "salesAcq": 0.0012,
       "valMult": 12,
       "entBase": 60000000,
@@ -202,7 +202,7 @@
       ],
       "adCost": 80000,
       "cac": 9000000,
-      "salesPer": 0.04,
+      "salesPer": 0.08,
       "userValue": 15000000
     }
   ],

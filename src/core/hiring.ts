@@ -130,7 +130,11 @@ export function hiringDayEnd(s: GameState) {
       p.status = 'closed';
       continue;
     }
-    addApplicants(s, p, poisson(s, arrivalRate(s, p)));
+    const n = poisson(s, arrivalRate(s, p));
+    if (n > 0) {
+      addApplicants(s, p, n);
+      notify(s, `채용: ${dept(p.dept).name} 공고에 지원자 ${n}명이 들어왔습니다(${H.applicantStayDays}일 동안 기다림).`, 'info', 'hiring');
+    }
   }
   s.postings = s.postings.filter((p) => p.status === 'open' || s.day - p.endDay < 60);
   autoHireDay(s);

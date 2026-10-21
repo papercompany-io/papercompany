@@ -27,7 +27,7 @@ export const STAGE_UNLOCKS: string[][] = [
 export function computeStage(s: GameState): number {
   let st = 0;
   if (hasMvp(s)) st = 1;
-  if (st >= 1 && s.employees.length >= 1) st = 2;
+  if (st >= 1 && s.employees.some((e) => e.kind === 'staff')) st = 2;
   if (st >= 2 && (stageIndex(s.fundingStage) >= stageIndex('B') || s.employees.length >= 20)) st = 3;
   if (st >= 3 && (stageIndex(s.fundingStage) >= stageIndex('C') || lastRevenue(s) * 12 >= 1e10)) st = 4;
   if (s.public) st = 5;
@@ -55,8 +55,9 @@ export function metric(s: GameState, m: string): number {
     case 'valuation':
       return computeValuation(s).value;
     case 'employees':
-    case 'staff':
       return s.employees.length;
+    case 'staff':
+      return s.employees.filter((e) => e.kind === 'staff').length;
     case 'cash':
       return s.cash;
     case 'featuresDone':

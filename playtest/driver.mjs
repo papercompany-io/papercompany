@@ -93,7 +93,7 @@ async function exec(c) {
       return { ok: true };
   }
   if (c.wait) await page.waitForTimeout(c.wait);
-  out.file = await shot(c.label || c.action);
+  if (!c.noshot) out.file = await shot(c.label || c.action);
   return out;
 }
 

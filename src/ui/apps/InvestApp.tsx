@@ -22,6 +22,7 @@ import {
   stageConditions,
   startRound,
   canSafe,
+  cancelRound,
 } from '../../core/funding';
 import { externalChannelId } from '../../core/messenger';
 import { computeValuation } from '../../core/valuation';
@@ -246,6 +247,11 @@ function OpenRound({ r, goInvestors }: { r: Round; goInvestors: () => void }) {
         >
           라운드 마감하고 제안서 받기
         </button>
+        {!r.leadId && (
+          <button className="btn ghost" data-testid="round-cancel" onClick={() => setErr(act((g) => cancelRound(g, r.id)) ?? null)}>
+            라운드 접기
+          </button>
+        )}
       </div>
     </div>
   );
