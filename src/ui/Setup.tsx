@@ -20,6 +20,7 @@ const EFFECT_LABEL: Record<string, string> = {
 export function effectText(effects: Record<string, unknown>): string {
   const parts: string[] = [];
   for (const [k, v] of Object.entries(effects)) {
+    if (v === 0) continue;
     if (k === 'earlyRound') {
       if (v === 'hard') parts.push('엔젤·프리시드는 거의 받기 어려움');
       if (v === 'ok') parts.push('엔젤·프리시드를 받을 수 있음');
@@ -144,12 +145,12 @@ export function Setup({ onDone }: { onDone: (s: GameState) => void }) {
           <div className="setup-body">
             <div className="section-title">코파운더 (주식을 받습니다)</div>
             <div className="cands">
-              <button className={`cand ${cofounderId === null ? 'sel' : ''}`} data-testid="cof-none" onClick={() => setCofounderId(null)}>
+              <button className={`cand ${cofounderId === null ? 'sel' : ''}`} data-testid="cof-none" onClick={() => { setCofounderId(null); setTeamMsg(null); }}>
                 <div className="cand-name">영입하지 않음</div>
                 <div className="tiny muted">혼자 지분 100%로 시작</div>
               </button>
               {DATA.candidates.cofounders.map((c) => (
-                <button key={c.id} className={`cand ${cofounderId === c.id ? 'sel' : ''}`} data-testid={`cof-${c.id}`} onClick={() => setCofounderId(c.id)}>
+                <button key={c.id} className={`cand ${cofounderId === c.id ? 'sel' : ''}`} data-testid={`cof-${c.id}`} onClick={() => { setCofounderId(c.id); setTeamMsg(null); }}>
                   <div className="cand-name">{c.name}</div>
                   <div className="tiny">
                     {DATA.depts.departments.find((d) => d.id === c.dept)!.name} · 능력 {c.grade} · 월급 {(c.salary / 1e4).toLocaleString()}만원
@@ -165,7 +166,7 @@ export function Setup({ onDone }: { onDone: (s: GameState) => void }) {
                   <b>지분 분배</b>
                   <span className="muted tiny">창업자와 코파운더가 회사 주식을 나눕니다.</span>
                 </div>
-                <input data-testid="equity-slider" type="range" min={0.05} max={0.5} step={0.01} value={equity} onChange={(e) => setEquity(Number(e.target.value))} />
+                <input data-testid="equity-slider" type="range" min={0.05} max={0.5} step={0.01} value={equity} onChange={(e) => { setEquity(Number(e.target.value)); setTeamMsg(null); }} />
                 <div className="row">
                   <span>
                     창업자(나) <b data-testid="equity-founder">{pct(1 - equity, 0)}</b>

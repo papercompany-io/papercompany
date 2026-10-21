@@ -19,6 +19,10 @@ export function HiringApp() {
   const waiting = s.applicants.filter((a) => a.status === 'waiting');
   const warnings = postingWarnings(s, form.dept, form.headcount);
   const promoCost = H.promos.find((p) => p.id === form.promo)!.cost;
+  const full = (postingId: string) => {
+    const p = s.postings.find((x) => x.id === postingId)!;
+    return p.hired >= p.headcount;
+  };
 
   return (
     <div className="col">
@@ -57,7 +61,7 @@ export function HiringApp() {
                 </select>
               </label>
               <label>
-                연봉 수준
+                월급 수준
                 <select data-testid="post-salary" value={form.salaryLevel} onChange={(e) => setForm({ ...form, salaryLevel: e.target.value })}>
                   {H.salaryLevels.map((l) => (
                     <option key={l.id} value={l.id}>
@@ -113,9 +117,11 @@ export function HiringApp() {
               <tr>
                 <th>부서</th>
                 <th>인원</th>
-                <th>연봉</th>
+                <th>월급 수준</th>
                 <th>홍보</th>
                 <th>기간</th>
+                <th>지원</th>
+                <th>대기</th>
                 <th>상태</th>
               </tr>
             </thead>
@@ -134,6 +140,8 @@ export function HiringApp() {
                     <td>
                       {formatDate(p.startDay)} ~ {formatDate(p.endDay)}
                     </td>
+                    <td>{s.applicants.filter((a) => a.postingId === p.id).length}명</td>
+                    <td>{s.applicants.filter((a) => a.postingId === p.id && a.status === 'waiting').length}명</td>
                     <td>{p.status === 'open' ? <span className="chip green">모집 중</span> : <span className="chip">마감</span>}</td>
                   </tr>
                 ))}
@@ -154,12 +162,18 @@ export function HiringApp() {
                   <span className={`chip ${a.grade === 'S' || a.grade === 'A' ? 'green' : a.grade === 'C' ? 'red' : ''}`}>능력 {a.grade}</span>
                 </div>
                 <div className="tiny">
-                  경력 {a.years}년 · 희망 연봉 월 {(a.desiredSalary / 1e4).toLocaleString()}만원
+                  경력 {a.years}년 · 희망 월급 {(a.desiredSalary / 1e4).toLocaleString()}만원
                 </div>
                 <div className="tiny muted">{formatDate(a.leaveDay)}까지 기다립니다</div>
-                <button className="btn small" data-testid={`hire-${a.id}`} onClick={() => setOfferFor(a.id)}>
-                  채용 제안
-                </button>
+                {full(a.postingId) ? (
+                  <button className="btn small" disabled>
+                    공고 모집 인원이 다 찼습니다
+                  </button>
+                ) : (
+                  <button className="btn small" data-testid={`hire-${a.id}`} onClick={() => setOfferFor(a.id)}>
+                    채용 제안
+                  </button>
+                )}
               </div>
             ))}
           </div>
@@ -189,12 +203,12 @@ function OfferDialog({ applicantId, onClose, onResult }: { applicantId: string; 
       <div className="modal" data-testid="offer-dialog" onClick={(e) => e.stopPropagation()}>
         <b>{a.name}님에게 채용 제안</b>
         <div className="tiny">
-          {dept(a.dept).name} · 능력 {a.grade} · 경력 {a.years}년 · 희망 연봉 월 {(a.desiredSalary / 1e4).toLocaleString()}만원
+          {dept(a.dept).name} · 능력 {a.grade} · 경력 {a.years}년 · 희망 월급 {(a.desiredSalary / 1e4).toLocaleString()}만원
         </div>
         <div className="tiny muted">월급 외에 4대보험(9.4%)과 퇴직연금(8.3%) 회사 부담분이 함께 나갑니다. 입사는 다음 날입니다.</div>
         {warn && <div className="warn">{warn}</div>}
         <button className="btn" data-testid="offer-full" onClick={() => onResult(act((g) => offerJob(g, a.id, false))!)}>
-          희망 연봉 그대로 제안 (월 {(a.desiredSalary / 1e4).toLocaleString()}만원)
+          희망 월급 그대로 제안 (월 {(a.desiredSalary / 1e4).toLocaleString()}만원)
         </button>
         <button className="btn ghost" data-testid="offer-low" onClick={() => onResult(act((g) => offerJob(g, a.id, true))!)}>
           10% 낮게 제안 (월 {(low / 1e4).toLocaleString()}만원, 거절될 수 있음)

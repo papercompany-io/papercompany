@@ -301,6 +301,7 @@ export function acceptOffer(s: GameState, roundId: string): string | null {
   s.irPoints = 0;
   r.status = 'accepted';
   r.closedDay = s.day;
+  s.pauseReason = null;
   recordEquity(s, `${stName} 투자 (룸 ${(r.room * 100).toFixed(1)}%)`);
   updateStoredValuation(s);
   for (const sh of o.shares) post(s, ensureExternal(s, sh.investorId), investor(sh.investorId).name, `계약을 마쳤습니다. 투자금 ${(sh.amount / 1e4).toLocaleString('ko-KR')}만원을 보냈습니다.`, 'npc');
@@ -314,6 +315,7 @@ export function rejectOffer(s: GameState, roundId: string): string | null {
   r.status = 'rejected';
   r.closedDay = s.day;
   s.irPoints = 0;
+  s.pauseReason = null;
   return null;
 }
 

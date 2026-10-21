@@ -56,7 +56,7 @@ export function ExitApp() {
               </tr>
               <tr>
                 <th>창업자 지분율</th>
-                <td className="r">{pct(fp, 4)}</td>
+                <td className="r">{pct(fp, 6)}</td>
               </tr>
               <tr className="total">
                 <th>받을 결과 금액 = 제안가 × 지분율</th>

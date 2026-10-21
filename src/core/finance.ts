@@ -1,9 +1,11 @@
 // FN-01 보유 자금, FN-02 비용, FN-03 손익, HR-02 인건비 지출
 import { DATA } from './data';
-import { daysInMonthOf, monthKey } from './calendar';
+import { dateOf, daysInMonthOf, monthKey } from './calendar';
 import type { GameState, MonthAccrual, MonthPL } from './types';
 
 const F = DATA.finance;
+
+const dateDay = (day: number) => dateOf(day).getUTCDate();
 
 export function newAccrual(day: number, cash: number): MonthAccrual {
   return { month: monthKey(day), customerDays: 0, salaryUnits: 0, entertainment: 0, recruiting: 0, ads: 0, investment: 0, cashStart: cash };
@@ -94,15 +96,37 @@ export function lastPL(s: GameState): MonthPL | null {
   return s.plHistory.length ? s.plHistory[s.plHistory.length - 1] : null;
 }
 
-// 다음 월급일에 낼 고정비 예상(인건비)
+export function pendingSalary(s: GameState): number {
+  return s.pendingHires.reduce((sum, h) => sum + h.salary, 0);
+}
+
+// 한 달 인건비 예상(입사 대기자 포함)
 export function projectedMonthlyPayroll(s: GameState, extraSalary = 0): number {
-  return payrollWithBenefits(monthlySalary(s) + extraSalary).total;
+  return payrollWithBenefits(monthlySalary(s) + pendingSalary(s) + extraSalary).total;
+}
+
+// FN-01 다음 월급일(다음 달 1일) 정산 뒤 예상 자금. 이번 달 남은 날은 지금 상태가 그대로 간다고 봅니다.
+export function nextPaydayForecast(s: GameState) {
+  const dim = daysInMonthOf(s.day);
+  const d = s.day;
+  const left = dim - (dateDay(d) - 1);
+  const a = s.accrual;
+  const daily = monthlySalary(s) + pendingSalary(s);
+  const salary = Math.round((a.salaryUnits + daily * left) / dim);
+  const pay = payrollWithBenefits(salary);
+  const revenue = Math.round(((a.customerDays + Math.floor(s.customers) * left) * F.pricePerCustomer) / dim);
+  const vat = Math.round(revenue * F.vatRate);
+  const ent = a.entertainment;
+  const op = revenue - vat - (pay.total + ent + a.recruiting + a.ads);
+  const tax = op > 0 ? Math.round(op * F.corpTaxRate) : 0;
+  const cashAfter = s.cash + revenue - vat - pay.total - ent - tax;
+  return { cashAfter, salaryOut: pay.total, revenue, daysLeft: left };
 }
 
 // FN-01 런웨이(개월): 최근 월 소진액 기준 [Claude 제안]
 export function runwayMonths(s: GameState): number | null {
   const last = lastPL(s);
-  const burn = last ? -(last.netIncome) : projectedMonthlyPayroll(s);
+  const burn = Math.max(last ? -last.netIncome : 0, projectedMonthlyPayroll(s) - (last ? last.revenue - last.vat : 0));
   if (burn <= 0) return null;
   return s.cash / burn;
 }

@@ -111,7 +111,8 @@ export function hiringDayEnd(s: GameState) {
 // HR-06 예외: 다음 달 월급을 낼 자금이 없을 것으로 보이면 확정 전에 경고(FN-01)
 export function hireWarning(s: GameState, salary: number): string | null {
   const need = projectedMonthlyPayroll(s, salary);
-  if (s.cash < need) return `이 사람을 뽑으면 다음 월급일 인건비가 약 ${(need / 1e4).toLocaleString('ko-KR')}만원인데, 지금 자금은 ${(s.cash / 1e4).toLocaleString('ko-KR')}만원입니다. 자금이 0 이하로 월급일을 넘기면 파산합니다.`;
+  if (s.cash < need)
+    return `이 사람까지 뽑으면 한 달 인건비(입사 대기자 포함)가 약 ${Math.round(need / 1e4).toLocaleString('ko-KR')}만원인데, 지금 자금은 ${Math.round(s.cash / 1e4).toLocaleString('ko-KR')}만원입니다. 자금이 0 이하로 월급일을 넘기면 파산합니다.`;
   return null;
 }
 
@@ -125,7 +126,7 @@ export function offerJob(s: GameState, applicantId: string, lowball: boolean): {
   const salary = lowball ? Math.round((a.desiredSalary * H.lowballRate) / 10000) * 10000 : a.desiredSalary;
   if (lowball && rand(s) < H.lowballRejectChance) {
     a.status = 'rejected';
-    return { ok: false, message: `${a.name}님이 연봉 ${(salary / 1e4).toLocaleString('ko-KR')}만원 제안을 거절했습니다.` };
+    return { ok: false, message: `${a.name}님이 월급 ${(salary / 1e4).toLocaleString('ko-KR')}만원 제안을 거절했습니다.` };
   }
   a.status = 'hired';
   p.hired += 1;
@@ -134,7 +135,7 @@ export function offerJob(s: GameState, applicantId: string, lowball: boolean): {
   seat.occupant = `pending:${a.id}`;
   s.pendingHires.push({ applicantId: a.id, name: a.name, dept: a.dept, grade: a.grade, years: a.years, salary, startDay: s.day + 1 });
   s.events.push({ type: 'autosave', reason: '채용 확정' });
-  return { ok: true, message: `${a.name}님이 연봉 ${(salary / 1e4).toLocaleString('ko-KR')}만원에 입사를 수락했습니다. 내일 출근합니다.` };
+  return { ok: true, message: `${a.name}님이 월급 ${(salary / 1e4).toLocaleString('ko-KR')}만원에 입사를 수락했습니다. 내일 출근합니다.` };
 }
 
 // HR-06 입사일: 직원 목록·부서·좌석·인건비·메신저에 반영

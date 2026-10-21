@@ -1,7 +1,7 @@
 // F10 재무 앱: FN-01 보유 자금·장부, FN-02 비용, FN-03 손익(DEC-030 순서), VL-01 기업가치
 import { useState } from 'react';
 import { formatDate, formatMonth } from '../../core/calendar';
-import { currentPL, runwayMonths } from '../../core/finance';
+import { currentPL, nextPaydayForecast, runwayMonths } from '../../core/finance';
 import { won } from '../../core/format';
 import { computeValuation } from '../../core/valuation';
 import { useGame } from '../store';
@@ -13,6 +13,7 @@ export function FinanceApp() {
   const s = useGame();
   const [tab, setTab] = useState<'pl' | 'cash' | 'value'>('pl');
   const rw = runwayMonths(s);
+  const fc = nextPaydayForecast(s);
   return (
     <div className="col">
       <div className="stats">
@@ -33,8 +34,11 @@ export function FinanceApp() {
           </div>
         </div>
         <div className="stat">
-          <div className="stat-label">다음 월급일</div>
-          <div className="stat-value tiny">매월 1일 · 자금 0 이하로 넘기면 파산</div>
+          <div className="stat-label">다음 월급일(매월 1일) 정산 뒤 예상 자금</div>
+          <div className="stat-value">
+            <Money v={fc.cashAfter} full testId="fin-forecast" />
+          </div>
+          <div className="tiny muted">자금 0 이하로 월급일을 넘기면 파산합니다</div>
         </div>
       </div>
       <Tabs
@@ -120,7 +124,7 @@ function PLTable() {
               <td className={cls === 'strong' || cls === 'total' ? 'b' : cls === 'sub' ? 'muted' : ''}>{label}</td>
               {months.map((m) => (
                 <td key={m.month} className="r num">
-                  {f(m).toLocaleString('ko-KR')}
+                  {(f(m) || 0).toLocaleString('ko-KR')}
                 </td>
               ))}
             </tr>

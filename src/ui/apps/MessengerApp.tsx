@@ -3,7 +3,8 @@ import { useEffect, useRef, useState } from 'react';
 import { dept } from '../../core/data';
 import { formatDate } from '../../core/calendar';
 import { cannotInstruct, optionsFor, runningInstruction, successProbability } from '../../core/instructions';
-import { issueInstruction } from '../../core/instructions';
+import { issueInstruction, setRepeat } from '../../core/instructions';
+import { useState as useLocalState } from 'react';
 import { createGroup } from '../../core/messenger';
 import { deptMembers } from '../../core/employees';
 import { act, useGame } from '../store';
@@ -129,16 +130,31 @@ function TeamOrders({ deptId, onErr }: { deptId: Parameters<typeof optionsFor>[0
   const s = useGame();
   const running = runningInstruction(s, deptId);
   const members = deptMembers(s, deptId);
+  const [repeat, setRepeatLocal] = useLocalState(true);
   if (running) {
     return (
-      <div className="ok" data-testid="order-running">
-        {dept(deptId).name}팀이 지시를 수행 중입니다 · {formatDate(running.endDay)} 완료 예정 · 성공 가능성 {chanceLabel(running.p)}
+      <div className="ok row" data-testid="order-running">
+        <span className="grow">
+          {dept(deptId).name}팀이 지시를 수행 중입니다 · {formatDate(running.endDay)} 완료 예정 · 성공 가능성 {chanceLabel(running.p)}
+        </span>
+        <label className="row tiny">
+          <input type="checkbox" data-testid="repeat-running" checked={running.repeat} onChange={(e) => act((g) => setRepeat(g, deptId, e.target.checked))} />
+          끝나면 반복
+        </label>
       </div>
     );
   }
   return (
     <div className="col">
-      <div className="tiny muted">{dept(deptId).name}팀 전체({members.length}명)에게 지시합니다. 결과는 끝나는 날 알고리즘으로 판정됩니다(완전 수행·부분 수행·실패).</div>
+      <div className="row tiny muted">
+        <span className="grow">
+          {dept(deptId).name}팀 전체({members.length}명)에게 지시합니다. 결과는 끝나는 날 알고리즘으로 판정됩니다(완전 수행·부분 수행·실패).
+        </span>
+        <label className="row">
+          <input type="checkbox" data-testid="repeat-new" checked={repeat} onChange={(e) => setRepeatLocal(e.target.checked)} />
+          끝나면 같은 지시 반복
+        </label>
+      </div>
       <div className="orders">
         {optionsFor(deptId).map((o) => {
           const why = cannotInstruct(s, deptId, o.id);
@@ -151,7 +167,7 @@ function TeamOrders({ deptId, onErr }: { deptId: Parameters<typeof optionsFor>[0
               disabled={!!why}
               title={why ?? ''}
               onClick={() => {
-                const e = act((g) => issueInstruction(g, deptId, o.id));
+                const e = act((g) => issueInstruction(g, deptId, o.id, repeat));
                 onErr(e ?? null);
               }}
             >

@@ -37,18 +37,18 @@ export function cannotInstruct(s: GameState, d: DeptId, optionId: string): strin
   return null;
 }
 
-export function issueInstruction(s: GameState, d: DeptId, optionId: string): string | null {
+export function issueInstruction(s: GameState, d: DeptId, optionId: string, repeat = false): string | null {
   const err = cannotInstruct(s, d, optionId);
   if (err) return err;
   const o = instructionOption(optionId);
   const members = deptMembers(s, d);
   const id = nextId(s, 'i');
   const p = successProbability(members, o.baseP);
-  s.instructions.push({ id, dept: d, optionId, startDay: s.day, endDay: s.day + o.days, assigneeIds: members.map((m) => m.id), status: 'running', p, result: null, effectValue: null });
+  s.instructions.push({ id, dept: d, optionId, startDay: s.day, endDay: s.day + o.days, assigneeIds: members.map((m) => m.id), status: 'running', p, repeat, result: null, effectValue: null });
   for (const m of members) m.instructionId = id;
   const cost = (o as { cost?: number }).cost ?? 0;
   if (cost > 0) spendNow(s, `광고비(${o.name})`, cost, 'ads');
-  post(s, teamChannelId(d), '나(대표)', `[지시] ${o.name} — ${o.desc}`, 'player');
+  post(s, teamChannelId(d), '나(대표)', `[지시] ${o.name} — ${o.desc}${repeat ? ' (끝나면 반복)' : ''}`, 'player');
   post(s, teamChannelId(d), '시스템', `지시 접수: 담당 ${members.map((m) => m.name).join(', ')} · ${o.days}일 뒤(${formatDate(s.day + o.days)}) 완료 예정`, 'system');
   return null;
 }
@@ -97,5 +97,14 @@ export function completeInstructions(s: GameState) {
       m.lastResult = text;
     }
     post(s, teamChannelId(ins.dept), members[0]?.name ?? `${dept(ins.dept).name}팀`, text, 'npc');
+    if (ins.repeat) {
+      const err = issueInstruction(s, ins.dept, ins.optionId, true);
+      if (err) post(s, teamChannelId(ins.dept), '시스템', `반복 지시를 이어가지 못했습니다: ${err}`, 'system');
+    }
   }
+}
+
+export function setRepeat(s: GameState, d: DeptId, on: boolean) {
+  const r = runningInstruction(s, d);
+  if (r) r.repeat = on;
 }

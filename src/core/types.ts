@@ -73,6 +73,7 @@ export interface Instruction {
   assigneeIds: string[];
   status: 'running' | 'done';
   p: number; // MG-04 성공 확률
+  repeat: boolean; // 끝나면 같은 지시를 다시 내림(A-32)
   result: 'full' | 'partial' | 'fail' | null;
   effectValue: number | null;
 }

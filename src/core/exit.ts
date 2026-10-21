@@ -13,6 +13,7 @@ export function exitProbability(s: GameState, method: 'sale' | 'ipo'): { p: numb
   const f: ProbFactor[] = [];
   f.push({ label: method === 'sale' ? '매각 기본 확률' : 'IPO 기본 확률', value: method === 'sale' ? X.sale.base : X.ipo.base });
   const c = Math.floor(s.customers);
+  if (c >= 30) f.push({ label: '고객 30곳 이상', value: X.bonus.customers30 });
   if (c >= 100) f.push({ label: '고객 100곳 이상', value: X.bonus.customers100 });
   if (c >= 300) f.push({ label: '고객 300곳 이상', value: X.bonus.customers300 });
   const last = lastPL(s);

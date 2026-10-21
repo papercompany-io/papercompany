@@ -4,3 +4,4 @@
 .result-company { text-align: center; font-size: 22px; font-weight: 900; }
 .result-amount { text-align: center; font-size: 40px; font-weight: 900; color: var(--green); font-variant-numeric: tabular-nums; }
 .result-formula { text-align: center; color: var(--ink-2); font-size: 14px; }
+.result-amount.zero { color: var(--ink-3); }

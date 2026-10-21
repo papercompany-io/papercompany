@@ -48,8 +48,8 @@
       "arrivalMult": 2.5
     }
   ],
-  "baseArrivalPerDay": 0.35,
-  "applicantStayDays": 7,
+  "baseArrivalPerDay": 0.6,
+  "applicantStayDays": 14,
   "maxHeadcountPerPosting": 4,
   "grades": [
     "C",

@@ -132,6 +132,9 @@ export function Game({ notice, clearNotice, onEnded }: Props) {
         </div>
       </header>
 
+      <div className="hintbar" data-testid="hint">
+        <span className="hint-tag">다음 할 일</span> {nextHint(s, openedOnce)}
+      </div>
       <main className="stage">
         <Office onCeo={() => openDesktop()} onEmployee={(id) => setEmpModal(id)} />
         {desktop.open && <Desktop app={desktop.app} arg={desktop.arg} setApp={(app, arg) => setDesktop({ open: true, app, arg })} onClose={() => setDesktop({ open: false, app: null })} />}
@@ -152,9 +155,6 @@ export function Game({ notice, clearNotice, onEnded }: Props) {
             </button>
           </div>
         )}
-        <div className="hint" data-testid="hint">
-          <span className="hint-tag">다음 할 일</span> {nextHint(s, openedOnce)}
-        </div>
       </main>
 
       {empModal && <EmployeeModal id={empModal} onClose={() => setEmpModal(null)} onMessage={(id) => {

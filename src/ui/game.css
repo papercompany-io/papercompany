@@ -16,7 +16,7 @@
 .hud-stats .money { font-size: 16px; color: #57d391; }
 .hud-stats .money.neg { color: #ff7b7f; }
 .stage { position: relative; flex: 1; min-height: 0; overflow: hidden; background: #2a3247; }
-.hint { position: absolute; left: 16px; bottom: 16px; max-width: 760px; background: rgba(255, 255, 255, 0.96); border-radius: 10px; padding: 10px 14px; font-size: 14px; box-shadow: var(--shadow); z-index: 10; }
+.hintbar { flex: none; background: #fffbea; color: var(--ink); border-bottom: 1px solid #e9dfb5; padding: 7px 18px; font-size: 14px; z-index: 29; }
 .hint-tag { display: inline-block; background: var(--blue); color: #fff; font-weight: 800; font-size: 12px; border-radius: 6px; padding: 2px 8px; margin-right: 6px; }
 .pause-banner { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); background: #fff7e6; border: 2px solid var(--amber); border-radius: 10px; padding: 8px 14px; display: flex; gap: 12px; align-items: center; z-index: 40; box-shadow: var(--shadow); }
 .notice { position: absolute; top: 14px; right: 14px; background: #fff; border-radius: 10px; padding: 10px 14px; z-index: 40; box-shadow: var(--shadow); font-size: 14px; }
@@ -29,7 +29,7 @@
 .dev-panel table.t td, .dev-panel table.t th { color: #dfe6f5; border-color: #2c3650; padding: 3px 6px; }
 .dev-block { border-top: 1px solid #2c3650; padding: 6px 0; display: flex; flex-direction: column; gap: 2px; }
 /* M1 임시 평면 사무실 */
-.office-flat { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; padding: 18px 18px 90px; }
+.office-flat { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; padding: 18px; }
 .zone { background: #3a4562; border-radius: 12px; padding: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; align-content: start; }
 .zone-name { grid-column: 1 / -1; font-weight: 900; color: #fff; }
 .desk { height: 56px; border-radius: 8px; border: none; background: #fff; font-weight: 800; }

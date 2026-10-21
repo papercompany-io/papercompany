@@ -17,7 +17,7 @@ tr.clickable { cursor: pointer; }
 tr.clickable:hover td { background: #f3f7ff; }
 tr.sel td { background: #e3efff; }
 .emp-detail { width: 300px; display: flex; flex-direction: column; gap: 8px; }
-.messenger { display: flex; height: 100%; min-height: 520px; margin: -14px; }
+.messenger { display: flex; height: calc(100% + 28px); min-height: 520px; margin: -14px; }
 .msg-side { width: 220px; background: #2b2f45; color: #cfd6ea; padding: 10px 8px; overflow: auto; flex: none; }
 .ws-name { color: #fff; font-weight: 900; font-size: 16px; padding: 4px 8px 10px; border-bottom: 1px solid #3c4260; margin-bottom: 6px; }
 .side-title { font-size: 11px; font-weight: 800; color: #8d94b4; margin: 10px 8px 4px; display: flex; justify-content: space-between; }
