@@ -1,4 +1,4 @@
-.office { position: absolute; inset: 0; overflow: hidden; background: #5d6473; cursor: grab; touch-action: none; user-select: none; }
+.office { position: absolute; inset: 0; overflow: clip; background: #5d6473; cursor: grab; touch-action: none; user-select: none; }
 .office.dragging { cursor: grabbing; }
 .office-canvas { position: absolute; left: 0; top: 0; image-rendering: pixelated; image-rendering: crisp-edges; }
 

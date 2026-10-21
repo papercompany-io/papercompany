@@ -1,5 +1,5 @@
 .game { height: 100%; position: relative; }
-.stage { position: absolute; inset: 0; overflow: hidden; }
+.stage { position: absolute; inset: 0; overflow: clip; }
 
 /* 가운데 위 HUD(Startup Company 상단 바) */
 .hud {

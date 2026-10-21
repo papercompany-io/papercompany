@@ -9,7 +9,7 @@ const title = (src.match(/<title>[\s\S]*?<\/title>/) ?? ['<title>페이퍼컴퍼
 const styles = pick(/<style[\s\S]*?<\/style>/g);
 const scripts = pick(/<script[\s\S]*?<\/script>/g);
 const fit = `<style>:root{color-scheme:dark}html,body{height:100%;background:#1a2034}</style>
-<script>(function(){var W=1280,H=800;function fit(){var r=document.getElementById('root');if(!r)return;var w=innerWidth,h=innerHeight;if(w>=1200&&h>=720){r.removeAttribute('style');return}var s=Math.min(w/W,h/H);r.setAttribute('style','position:absolute;left:0;top:0;width:'+W+'px;height:'+H+'px;transform-origin:0 0;transform:translate('+((w-W*s)/2)+'px,'+((h-H*s)/2)+'px) scale('+s+')')}addEventListener('resize',fit);addEventListener('DOMContentLoaded',fit);fit()})();</script>`;
+<script>(function(){var W=1280,H=800;function fit(){var r=document.getElementById('root');if(!r)return;var w=innerWidth,h=innerHeight;if(w>=1000&&h>=640){r.removeAttribute('style');return}var s=Math.min(w/W,h/H);r.setAttribute('style','position:absolute;left:0;top:0;width:'+W+'px;height:'+H+'px;transform-origin:0 0;transform:translate('+((w-W*s)/2)+'px,'+((h-H*s)/2)+'px) scale('+s+')')}addEventListener('resize',fit);addEventListener('DOMContentLoaded',fit);fit()})();</script>`;
 const out = [title, ...styles, fit, '<div id="root"></div>', ...scripts].join('\n');
 fs.writeFileSync('dist-web/artifact.html', out);
 console.log('dist-web/artifact.html', (out.length / 1024 / 1024).toFixed(2), 'MB');
