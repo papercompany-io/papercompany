@@ -1,0 +1,13 @@
+{
+  "_note": "OF-01/02 사무실 배치(A-05). 그리드 좌표(아이소메트릭 타일)",
+  "size": { "w": 16, "h": 12 },
+  "ceoSeat": { "x": 13, "y": 2 },
+  "execSeat": { "x": 13, "y": 5 },
+  "zones": [
+    { "dept": "dev", "x": 2, "y": 2 },
+    { "dept": "design", "x": 7, "y": 2 },
+    { "dept": "sales", "x": 2, "y": 7 },
+    { "dept": "marketing", "x": 7, "y": 7 },
+    { "dept": "hr", "x": 12, "y": 8 }
+  ]
+}

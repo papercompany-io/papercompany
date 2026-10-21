@@ -1,0 +1,10 @@
+{
+  "_note": "V-17 제품 단계 경계(A-13) [예시값]",
+  "stages": [
+    { "id": "prep", "name": "준비 중", "min": 0 },
+    { "id": "plan", "name": "기획", "min": 30 },
+    { "id": "mvp", "name": "MVP", "min": 100 },
+    { "id": "scale", "name": "스케일업", "min": 300 }
+  ],
+  "scaleSalesMult": 1.5
+}

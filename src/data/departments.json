@@ -1,0 +1,10 @@
+{
+  "_note": "EM-02 부서(A-06). 월급은 B등급 기준 월 원 [예시값]. seats = 부서 구역 좌석 수(A-05)",
+  "departments": [
+    { "id": "dev", "name": "개발", "role": "개발자", "color": "#4f8df5", "baseSalary": 4500000, "seats": 4 },
+    { "id": "design", "name": "디자인", "role": "디자이너", "color": "#c46be0", "baseSalary": 3800000, "seats": 4 },
+    { "id": "sales", "name": "세일즈", "role": "세일즈 매니저", "color": "#f2a33a", "baseSalary": 3500000, "seats": 4 },
+    { "id": "marketing", "name": "마케팅", "role": "마케터", "color": "#3fbf7f", "baseSalary": 3800000, "seats": 4 },
+    { "id": "hr", "name": "인사", "role": "인사 담당자", "color": "#e85d75", "baseSalary": 3500000, "seats": 4 }
+  ]
+}

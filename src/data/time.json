@@ -1,0 +1,9 @@
+{
+  "_note": "DT-05 [예시값](A-09). dayMs = 1x 배속에서 하루의 실제 길이",
+  "dayMs": 6000,
+  "workStartHour": 9,
+  "workEndHour": 18,
+  "slotsPerDay": 8,
+  "startDate": "2027-01-01",
+  "speeds": [0, 1, 2, 4]
+}

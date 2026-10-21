@@ -1,0 +1,30 @@
+{
+  "_note": "FS-02 카탈로그(DEC-037). 가격·효과 모두 [예시값]. 효과 키: investorMeeting/applicantQuality/sales/dev/enterpriseSales/networking/allActions(%), earlyRound(hard|ok|big), teamScore(기업가치 팀 점수 가산)",
+  "budget": 1000,
+  "categories": [
+    { "id": "edu", "name": "학력", "items": [
+      { "id": "edu_hs", "name": "고졸(기본)", "price": 0, "effects": {} },
+      { "id": "edu_univ", "name": "대졸", "price": 100, "effects": { "investorMeeting": 5 } },
+      { "id": "edu_elite", "name": "명문대 졸업", "price": 250, "effects": { "investorMeeting": 10, "applicantQuality": 5 } },
+      { "id": "edu_overseas", "name": "해외 명문대·대학원", "price": 400, "effects": { "investorMeeting": 15, "applicantQuality": 10 } }
+    ]},
+    { "id": "career", "name": "경력", "items": [
+      { "id": "car_none", "name": "없음(기본)", "price": 0, "effects": {} },
+      { "id": "car_startup", "name": "스타트업 경력", "price": 150, "effects": { "sales": 10, "dev": 5 } },
+      { "id": "car_corp", "name": "대기업 경력", "price": 250, "effects": { "enterpriseSales": 15, "sales": 5 } },
+      { "id": "car_bigtech", "name": "빅테크 경력", "price": 350, "effects": { "dev": 20, "applicantQuality": 10 } }
+    ]},
+    { "id": "founding", "name": "창업 경험", "items": [
+      { "id": "fnd_none", "name": "없음(기본)", "price": 0, "effects": { "earlyRound": "hard" } },
+      { "id": "fnd_failed", "name": "창업 실패 경험", "price": 150, "effects": { "allActions": 5, "earlyRound": "hard" } },
+      { "id": "fnd_raised", "name": "투자 유치 경험", "price": 400, "effects": { "earlyRound": "ok", "investorMeeting": 20 } },
+      { "id": "fnd_exit", "name": "엑싯 경험", "price": 600, "effects": { "earlyRound": "big", "investorMeeting": 30, "teamScore": 0.3 } }
+    ]},
+    { "id": "award", "name": "수상·특기", "items": [
+      { "id": "awd_none", "name": "없음(기본)", "price": 0, "effects": {} },
+      { "id": "awd_contest", "name": "공모전 수상", "price": 100, "effects": { "networking": 10 } },
+      { "id": "awd_gold", "name": "국제 대회 금메달", "price": 200, "effects": { "networking": 15, "applicantQuality": 5 } },
+      { "id": "awd_network", "name": "업계 인맥", "price": 200, "effects": { "networking": 20, "enterpriseSales": 10 } }
+    ]}
+  ]
+}

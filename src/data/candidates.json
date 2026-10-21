@@ -1,0 +1,12 @@
+{
+  "_note": "TM-01 코파운더 후보, TM-02 파운딩 엔지니어 후보. 능력·월급·최소 지분은 [예시값](A-03)",
+  "cofounders": [
+    { "id": "cf_jiwoo", "name": "한지우", "dept": "dev", "grade": "A", "salary": 4000000, "minEquity": 0.15, "desc": "백엔드 개발 8년, 전 핀테크 CTO" },
+    { "id": "cf_seoyeon", "name": "오서연", "dept": "sales", "grade": "A", "salary": 3500000, "minEquity": 0.12, "desc": "B2B 영업 7년, 대형 고객사 인맥" },
+    { "id": "cf_minjun", "name": "배민준", "dept": "design", "grade": "B", "salary": 3200000, "minEquity": 0.10, "desc": "프로덕트 디자이너 5년" }
+  ],
+  "engineers": [
+    { "id": "fe_taeyang", "name": "윤태양", "dept": "dev", "grade": "A", "salary": 4500000, "desc": "풀스택 6년, 빠른 프로토타이핑" },
+    { "id": "fe_hana", "name": "류하나", "dept": "dev", "grade": "B", "salary": 3800000, "desc": "프론트엔드 4년" }
+  ]
+}

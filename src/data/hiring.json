@@ -1,0 +1,112 @@
+{
+  "_note": "HR-04~06 수치 [예시값](A-25)",
+  "salaryLevels": [
+    {
+      "id": "low",
+      "name": "낮음",
+      "salaryMult": 0.9,
+      "arrivalMult": 0.7,
+      "qualityShift": -1
+    },
+    {
+      "id": "normal",
+      "name": "보통",
+      "salaryMult": 1.0,
+      "arrivalMult": 1.0,
+      "qualityShift": 0
+    },
+    {
+      "id": "high",
+      "name": "높음",
+      "salaryMult": 1.15,
+      "arrivalMult": 1.4,
+      "qualityShift": 1
+    }
+  ],
+  "durations": [
+    7,
+    14,
+    30
+  ],
+  "promos": [
+    {
+      "id": "none",
+      "name": "없음",
+      "cost": 0,
+      "arrivalMult": 1.0
+    },
+    {
+      "id": "normal",
+      "name": "보통",
+      "cost": 1000000,
+      "arrivalMult": 1.6
+    },
+    {
+      "id": "high",
+      "name": "높음",
+      "cost": 3000000,
+      "arrivalMult": 2.5
+    }
+  ],
+  "baseArrivalPerDay": 0.35,
+  "applicantStayDays": 7,
+  "maxHeadcountPerPosting": 4,
+  "grades": [
+    "C",
+    "B",
+    "A",
+    "S"
+  ],
+  "gradeWeights": [
+    30,
+    45,
+    20,
+    5
+  ],
+  "gradeOutput": {
+    "S": 1.5,
+    "A": 1.2,
+    "B": 1.0,
+    "C": 0.8
+  },
+  "gradeSalary": {
+    "S": 1.3,
+    "A": 1.15,
+    "B": 1.0,
+    "C": 0.9
+  },
+  "gradeYears": {
+    "S": [
+      8,
+      12
+    ],
+    "A": [
+      5,
+      8
+    ],
+    "B": [
+      2,
+      5
+    ],
+    "C": [
+      0,
+      2
+    ]
+  },
+  "lowballRate": 0.9,
+  "lowballRejectChance": 0.4,
+  "stageArrivalMult": {
+    "none": 0.8,
+    "angel": 0.9,
+    "preseed": 0.9,
+    "seed": 1.0,
+    "A": 1.3,
+    "B": 1.5,
+    "C": 1.7,
+    "D": 1.9,
+    "E": 2.0,
+    "F": 2.0,
+    "G": 2.0
+  },
+  "networkArrivalBonusPer100": 0.3
+}

@@ -1,0 +1,49 @@
+{
+  "_note": "FR-01~11, FR-13 수치 [예시값](A-15~A-19)",
+  "stages": [
+    { "id": "angel", "name": "엔젤", "early": true, "base": 0.25, "typicalRoom": "10~20%" },
+    { "id": "preseed", "name": "프리시드", "early": true, "base": 0.25, "typicalRoom": "10~15%", "needProduct": 30 },
+    { "id": "seed", "name": "시드", "early": false, "base": 0.30, "typicalRoom": "8~10%", "needProduct": 100, "needCustomers": 5 },
+    { "id": "A", "name": "시리즈 A", "early": false, "base": 0.25, "typicalRoom": "15~20%", "needRevenue": 20000000 },
+    { "id": "B", "name": "시리즈 B", "early": false, "base": 0.22, "typicalRoom": "10~15%", "needRevenue": 80000000 },
+    { "id": "C", "name": "시리즈 C", "early": false, "base": 0.2, "typicalRoom": "10~15%", "needRevenue": 300000000 },
+    { "id": "D", "name": "시리즈 D", "early": false, "base": 0.18, "typicalRoom": "5~10%", "needRevenue": 1000000000 },
+    { "id": "E", "name": "시리즈 E", "early": false, "base": 0.15, "typicalRoom": "5~10%", "needRevenue": 3000000000 },
+    { "id": "F", "name": "시리즈 F", "early": false, "base": 0.15, "typicalRoom": "5~10%", "needRevenue": 6000000000 },
+    { "id": "G", "name": "시리즈 G", "early": false, "base": 0.15, "typicalRoom": "5~10%", "needRevenue": 10000000000 }
+  ],
+  "roomMin": 0.01,
+  "roomMax": 0.4,
+  "roundDays": 30,
+  "lockedSlots": 4,
+  "replyDelayDays": 1,
+  "letters": [
+    { "id": "intro", "name": "회사 소개", "desc": "회사와 창업자를 소개합니다.", "interest": 15 },
+    { "id": "proposal", "name": "투자 제안", "desc": "이번 라운드 룸과 희망 기업가치를 제안합니다.", "interest": 20 },
+    { "id": "material", "name": "추가 자료 보내기", "desc": "제품과 지표 자료를 보냅니다(MVP가 있으면 효과가 큼).", "interest": 10, "mvpBonus": 10 },
+    { "id": "club", "name": "공동 투자 의향 밝히기", "desc": "다른 투자사와 함께하는 클럽딜을 만들겠다고 알립니다.", "interest": 10 }
+  ],
+  "valuationAsks": [
+    { "id": "as_is", "name": "산정값 그대로", "mult": 1.0, "pAdj": 0 },
+    { "id": "high", "name": "20% 높게", "mult": 1.2, "pAdj": -0.12 },
+    { "id": "low", "name": "10% 낮게", "mult": 0.9, "pAdj": 0.08 }
+  ],
+  "prob": {
+    "fit": 0.1,
+    "misfit": -0.25,
+    "perInterest": 0.004,
+    "perIrPoint": 0.005,
+    "irCap": 0.2,
+    "conditionPenalty": 0.15,
+    "recentDays": 90,
+    "recentPenalty": 0.2,
+    "club": 0.15,
+    "clubSoloAverse": 0.25,
+    "earlyRound": { "hard": 0.25, "ok": 1.0, "big": 1.2 },
+    "min": 0.02,
+    "max": 0.95
+  },
+  "networkInterestPer10": 1,
+  "networkInterestCap": 15,
+  "coInvest": { "base": 0.5, "perInterest": 0.005, "soloAverse": 0.2, "leadShare": 0.6 }
+}

@@ -1,0 +1,51 @@
+{
+  "name": "papercompany",
+  "productName": "PaperCompany",
+  "version": "0.1.0",
+  "private": true,
+  "description": "페이퍼컴퍼니 - 스타트업 CEO 경영 시뮬레이션 MVP",
+  "main": "dist-electron/main.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -p tsconfig.electron.json && tsc -p tsconfig.json --noEmit && vite build",
+    "build:web": "vite build --mode web",
+    "start": "electron .",
+    "package": "npm run build && electron-builder --linux dir"
+  },
+  "build": {
+    "appId": "us.sigmoid.papercompany",
+    "productName": "PaperCompany",
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "package.json"
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "mac": {
+      "target": "dmg",
+      "category": "public.app-category.simulation-games"
+    },
+    "linux": {
+      "target": "dir"
+    }
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "electron": "^33.2.1",
+    "playwright": "^1.56.1",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.11",
+    "vite-plugin-singlefile": "^2.0.3"
+  }
+}

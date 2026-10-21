@@ -1,0 +1,20 @@
+{
+  "_note": "VL-01(DEC-035) 계수 [예시값](A-14)",
+  "baseValue": 1000000000,
+  "weights": { "team": 0.30, "market": 0.25, "product": 0.25, "sales": 0.10, "other": 0.10 },
+  "factorMin": 0.5,
+  "factorMax": 1.5,
+  "team": { "base": 0.7, "perSpecCredit": 0.0004, "cofounder": 0.15, "engineer": 0.1, "perEmployee": 0.02, "employeeCap": 0.2 },
+  "market": { "base": 0.5, "perCustomer": 0.02 },
+  "product": { "base": 0.5, "perPoint": 0.005 },
+  "salesFactor": { "base": 0.5, "perNetworkPoint": 0.01 },
+  "growthTiers": [
+    { "minGrowth": 0.30, "multiple": 12 },
+    { "minGrowth": 0.15, "multiple": 8 },
+    { "minGrowth": 0.05, "multiple": 5 },
+    { "minGrowth": -999, "multiple": 3 }
+  ],
+  "firstRevenueMultiple": 12,
+  "profitStreakMonths": 3,
+  "profitMultiple": 15
+}
