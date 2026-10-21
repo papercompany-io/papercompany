@@ -45,6 +45,21 @@ function devBugMult(s: GameState): number {
   return m;
 }
 
+// 품질 경고: 품질 점수가 60·40·20 아래로 떨어지면 한 번씩 알립니다(10점 회복하면 다시 알림 가능).
+function qualityWarn(s: GameState) {
+  if (!hasMvp(s)) return;
+  const q = 100 - s.product.bugs;
+  for (const th of [60, 40, 20]) {
+    const key = `qwarn${th}`;
+    const has = s.flags.includes(key);
+    if (!has && q < th) {
+      s.flags.push(key);
+      const stab = orderOf(s, 'dev') === 'dev_stabilize';
+      notify(s, `제품 품질이 ${Math.round(q)}점으로 떨어졌습니다. 버그는 이탈·장애를 부릅니다.${stab ? '' : ' 개발팀 채널에서 "안정화·버그 수정"을 맡기세요.'}`, th <= 40 ? 'urgent' : 'bad', 'messenger', teamChannelId('dev'));
+    } else if (has && q >= th + 10) s.flags = s.flags.filter((f) => f !== key);
+  }
+}
+
 // 하루 부서 출력 반영. 시장 처리에 넘길 값(DayPush)을 돌려줍니다.
 export function ordersDay(s: GameState): DayPush & { outputs: Record<DeptId, number> } {
   const out = allDeptOutputs(s);
@@ -60,6 +75,7 @@ export function ordersDay(s: GameState): DayPush & { outputs: Record<DeptId, num
     } else if (o === 'dev_stabilize') fixBugs(s, out.dev, 'stabilize');
     else if (o === 'dev_debt') fixBugs(s, out.dev, 'debt');
   }
+  qualityWarn(s);
   // 디자인
   if (out.design > 0) {
     const o = orderOf(s, 'design');
@@ -76,6 +92,8 @@ export function ordersDay(s: GameState): DayPush & { outputs: Record<DeptId, num
     else if (o === 'sales_enterprise') s.entPipeline += out.sales * 0.12 * (fxTotals(s).enterprise ? 1 : 0.3);
     else if (o === 'sales_partner') s.networkPoints += out.sales * 0.3;
   }
+  // 영업 콜·미팅도 회사를 알립니다(아웃바운드 인지도, A-59). 세일즈만으로 점유율 상한에 막히지 않게 합니다.
+  if (push.salesPush > 0) push.contentAwareness += 0.00008 * Math.pow(push.salesPush, 0.8);
   // 마케팅
   if (out.marketing > 0) {
     const o = orderOf(s, 'marketing');

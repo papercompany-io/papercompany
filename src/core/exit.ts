@@ -2,7 +2,7 @@
 // IPO에 성공하면 회사는 끝나지 않고 상장사로 이어집니다(public.ts). 창업자 돈은 지분 매각·사임 때 실현됩니다.
 import { DATA, stage, stageIndex } from './data';
 import { founderPct, investorPct, vestAllOnExit } from './equity';
-import { lastPL } from './finance';
+import { lastPL, runwayMonths } from './finance';
 import { finishCompany } from './career';
 import { econ } from './economy';
 import { goPublic } from './public';
@@ -55,6 +55,13 @@ export function exitBlocked(s: GameState): string | null {
   return null;
 }
 
+// 자금난 할인(A-63): 런웨이가 짧으면 인수자가 사정을 알고 사업가치를 깎습니다(망하기 직전 매각이 공짜 탈출구가 되지 않게).
+export function distressMult(s: GameState): number {
+  const rw = runwayMonths(s);
+  if (rw === null) return 1;
+  return rw < 2 ? 0.3 : rw < 4 ? 0.5 : 1;
+}
+
 export function startExit(s: GameState, method: 'sale' | 'ipo'): string | null {
   const err = exitBlocked(s);
   if (err) return err;
@@ -62,7 +69,7 @@ export function startExit(s: GameState, method: 'sale' | 'ipo'): string | null {
   const v = cv.value;
   if (method === 'sale') {
     // 제안가 배수는 사업가치에만 붙고, 회사 현금은 그대로 더합니다(A-52).
-    const price = Math.round(Math.max(0, cv.business) * randRange(s, X.sale.priceMin, X.sale.priceMax) + Math.max(0, s.cash));
+    const price = Math.round(Math.max(0, cv.business) * randRange(s, X.sale.priceMin, X.sale.priceMax) * distressMult(s) + Math.max(0, s.cash));
     s.exitAttempt = { method, startedDay: s.day, readyDay: s.day, price, valuationAtStart: v, p: exitProbability(s, 'sale').p, status: 'offer', inbound: false, buyer: pick(s, BUYERS), deadline: s.day + 14 };
     s.pauseReason = '인수 제안이 들어왔습니다';
   } else {
@@ -139,11 +146,12 @@ export function inboundOfferMonth(s: GameState) {
   if (rand(s) >= p) return;
   const cv = computeValuation(s);
   const v = cv.value;
-  const price = Math.round(Math.max(0, cv.business) * randRange(s, 0.9, 1.5) + Math.max(0, s.cash));
+  const dm = distressMult(s);
+  const price = Math.round(Math.max(0, cv.business) * randRange(s, 0.9, 1.5) * dm + Math.max(0, s.cash));
   const buyer = pick(s, BUYERS);
   s.exitAttempt = { method: 'sale', startedDay: s.day, readyDay: s.day, price, valuationAtStart: v, p: null, status: 'offer', inbound: true, buyer, deadline: s.day + 14 };
   s.pauseReason = '인수 제안이 들어왔습니다';
-  notify(s, `${buyer}이(가) ${s.company.name} 인수를 제안했습니다: ${Math.round(price / 1e8).toLocaleString('ko-KR')}억원. 내 몫 약 ${Math.round((price * founderPct(s)) / 1e8).toLocaleString('ko-KR')}억원. 14일 안에 답하세요(Exit 앱).`, 'urgent', 'exit');
+  notify(s, `${buyer}이(가) ${s.company.name} 인수를 제안했습니다: ${Math.round(price / 1e8).toLocaleString('ko-KR')}억원. 내 몫 약 ${Math.round((price * founderPct(s)) / 1e8).toLocaleString('ko-KR')}억원. 14일 안에 답하세요(Exit 앱).${dm < 1 ? ' 자금난을 아는 인수자라 값을 깎아 불렀습니다.' : ''}`, 'urgent', 'exit');
 }
 
 // FL-01 월급일 정산 뒤 자금이 0 이하이면 파산(DEC-021)

@@ -215,6 +215,13 @@ export function decisionProbability(s: GameState, r: Round, investorId: string):
     if (mult !== 1) factors.push({ label: kind === 'hard' ? '초기 라운드: 창업자 투자 유치 경험 없음' : '초기 라운드: 엑싯 경험 창업자', value: 0, mult });
     p *= mult;
   }
+  // 실사(A-61): 시드부터는 품질이 무너졌거나 고객이 줄거나, 같은 단계를 다시 받는(브릿지) 회사를 깎아 봅니다.
+  if (!st.early) {
+    if (hasMvp(s) && s.product.bugs > 50) mults.push({ label: `제품 품질 ${Math.round(100 - s.product.bugs)}점(버그 많음)`, mult: s.product.bugs > 75 ? 0.45 : 0.7 });
+    const h = s.plHistory.slice(-4);
+    if (h.length >= 4 && h[0].usersEnd > 0 && h[3].usersEnd < h[0].usersEnd * 0.95) mults.push({ label: '최근 3개월 고객 감소', mult: 0.6 });
+    if (s.fundingStage === r.stage) mults.push({ label: '같은 단계 재유치(브릿지)', mult: 0.6 });
+  }
   // 이 단계의 핵심 조건(제품·고객·매출)을 못 맞추면 확률이 크게 줄어듭니다(A-50).
   for (const m of mults) {
     factors.push({ label: m.label, value: 0, mult: m.mult });
@@ -377,6 +384,17 @@ export function acceptOffer(s: GameState, roundId: string): string | null {
   return null;
 }
 
+// 라운드 접기: 가망이 없으면 일찍 끝내 대표 시간을 돌려받습니다(재시도 간격은 그대로 적용).
+export function cancelRound(s: GameState, roundId: string): string | null {
+  const r = getRound(s, roundId);
+  if (!r || r.status !== 'open') return '열린 라운드가 없습니다.';
+  if (r.leadId) return '리드 투자사가 정해진 라운드는 마감해 제안서를 받으세요.';
+  r.status = 'failed';
+  r.closedDay = s.day;
+  s.irPoints = 0;
+  return null;
+}
+
 export function rejectOffer(s: GameState, roundId: string): string | null {
   const r = getRound(s, roundId);
   if (!r || r.status !== 'offer') return '받을 제안서가 없습니다.';
@@ -395,6 +413,12 @@ export function roundDayEnd(s: GameState) {
     const due = t.pendingReplies.filter((x) => x.day <= s.day);
     t.pendingReplies = t.pendingReplies.filter((x) => x.day > s.day);
     for (const d of due) post(s, ensureExternal(s, t.investorId), investor(t.investorId).name, d.text, 'npc');
+  }
+  // 마감 경고: 리드가 없으면 10일·3일 전에 알립니다(레터만 보내고 결정 요청을 잊는 일이 잦음).
+  const left = r.endDay - s.day;
+  if (!r.leadId && (left === 10 || left === 3)) {
+    const asked = Object.values(r.letters).some((t) => t.decision);
+    notify(s, `${stage(r.stage).name} 라운드 마감 ${left}일 전: 리드 투자사가 없습니다. ${asked ? '다른 투자사에도' : '레터를 보낸 투자사에'} "투자 결정 요청"을 하세요.`, 'urgent', 'invest');
   }
   if (s.day >= r.endDay) {
     if (r.leadId) {

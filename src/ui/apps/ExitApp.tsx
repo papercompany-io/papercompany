@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { DATA } from '../../core/data';
 import { formatDate } from '../../core/calendar';
 import { founderPct } from '../../core/equity';
-import { acceptSale, annualRevenue, declineSale, exitBlocked, exitProbability, saleProbability, startExit } from '../../core/exit';
+import { acceptSale, annualRevenue, declineSale, distressMult, exitBlocked, exitProbability, saleProbability, startExit } from '../../core/exit';
 import { wonShort } from '../../core/format';
 import { pct, won } from '../../core/format';
 import { computeValuation } from '../../core/valuation';
@@ -69,6 +69,7 @@ export function ExitApp() {
               </tr>
             </tbody>
           </table>
+          {distressMult(s) < 1 && <div className="tiny" style={{ color: 'var(--red)' }}>자금난 할인: 런웨이가 짧아 인수자가 사업가치를 {Math.round((1 - distressMult(s)) * 100)}% 깎아 불렀습니다. 자금을 확보하면 제값을 받을 수 있습니다.</div>}
           <div className="tiny">거래 성사 가능성 {chanceLabel(saleProbability(s))} · 무산되면 {DATA.exit.cooldownDays}일 동안 기업가치가 {Math.round((1 - DATA.exit.failPenaltyFactor) * 100)}% 낮아지고 다시 시도할 수 없습니다. 회사는 계속 운영됩니다.</div>
           {err && <div className="err">{err}</div>}
           <div className="row">

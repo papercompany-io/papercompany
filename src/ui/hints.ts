@@ -21,6 +21,9 @@ export function nextHint(s: GameState, desktopOpenedOnce: boolean): string {
   if (fc.cashAfter <= 0) return `⚠ 이대로면 다음 월급일(${formatDate(s.day + fc.daysLeft)})에 자금이 약 ${Math.round(fc.cashAfter / 1e4).toLocaleString('ko-KR')}만원이 되어 파산합니다. 투자를 받거나 광고비·인원을 줄이세요.`;
   const rw = runwayMonths(s);
   if (rw !== null && rw < 3 && !r && !s.public) return `자금이 약 ${rw.toFixed(1)}개월분 남았습니다. 투자 앱에서 라운드를 열거나(SAFE도 가능) 비용을 줄이세요.`;
+  if (hasMvp(s) && s.product.bugs > 60 && s.company.orders.dev !== 'dev_stabilize') return `⚠ 제품 품질 ${Math.round(100 - s.product.bugs)}점: 버그 때문에 고객이 떠나고 있습니다. 메신저 #개발팀에서 "안정화·버그 수정"을 맡기세요.`;
+  const or0 = openRound(s);
+  if (or0 && !or0.leadId && or0.endDay - s.day <= 10) return `라운드 마감 ${or0.endDay - s.day}일 전: 리드 투자사가 없으면 라운드가 실패합니다. 투자 앱에서 "투자 결정 요청"을 하세요.`;
   if (open.length) return `답을 기다리는 결정이 ${open.length}건 있습니다(메신저). 기한이 지나면 기본 선택이 적용됩니다.`;
   const or = openRound(s);
   if (or) {
