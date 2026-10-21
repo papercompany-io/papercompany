@@ -230,7 +230,7 @@ export interface GameState {
   networkPoints: number;
   ceoAlloc: Record<ActionId, number>;
   todayLog: Record<ActionId, number>; // 오늘 실행한 행동 칸
-  valuation: { stored: number; storedDay: number; penaltyUntil: number | null };
+  valuation: { stored: number; storedDay: number; penaltyUntil: number | null; revenueStage: boolean };
   fundingStage: StageId | null;
   lastRoundDay: number | null;
   rounds: Round[];

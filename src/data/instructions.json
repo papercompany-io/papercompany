@@ -10,7 +10,7 @@
       "baseP": 0.75,
       "effect": {
         "type": "product",
-        "perMemberDay": 3
+        "perMemberDay": 2
       }
     },
     {
@@ -22,7 +22,7 @@
       "baseP": 0.85,
       "effect": {
         "type": "product",
-        "perMemberDay": 2
+        "perMemberDay": 1.5
       }
     },
     {
@@ -34,7 +34,7 @@
       "baseP": 0.8,
       "effect": {
         "type": "product",
-        "perMemberDay": 2
+        "perMemberDay": 1.5
       }
     },
     {

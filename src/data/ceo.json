@@ -1,10 +1,39 @@
 {
   "_note": "CA-01 행동 1칸당 효과 [예시값](A-28)",
   "actions": [
-    { "id": "dev", "name": "개발", "desc": "제품 점수 +0.6/칸", "perSlot": 0.6, "specKey": "dev" },
-    { "id": "sales", "name": "영업", "desc": "MVP 이후 고객 +0.08/칸, 접대비 2만원/칸", "perSlot": 0.08, "specKey": "sales" },
-    { "id": "ir", "name": "투자자 미팅", "desc": "IR 점수 +0.5/칸(투자 성공 확률)", "perSlot": 0.5, "specKey": "investorMeeting" },
-    { "id": "network", "name": "네트워킹", "desc": "네트워크 점수 +0.5/칸, 업무추진비 2만원/칸", "perSlot": 0.5, "specKey": "networking" }
+    {
+      "id": "dev",
+      "name": "개발",
+      "desc": "제품 점수 +0.4/칸",
+      "perSlot": 0.4,
+      "specKey": "dev"
+    },
+    {
+      "id": "sales",
+      "name": "영업",
+      "desc": "MVP 이후 고객 +0.08/칸, 접대비 2만원/칸",
+      "perSlot": 0.08,
+      "specKey": "sales"
+    },
+    {
+      "id": "ir",
+      "name": "투자자 미팅",
+      "desc": "IR 점수 +0.5/칸(투자 성공 확률)",
+      "perSlot": 0.5,
+      "specKey": "investorMeeting"
+    },
+    {
+      "id": "network",
+      "name": "네트워킹",
+      "desc": "네트워크 점수 +0.5/칸, 업무추진비 2만원/칸",
+      "perSlot": 0.5,
+      "specKey": "networking"
+    }
   ],
-  "defaultAlloc": { "dev": 4, "sales": 0, "ir": 2, "network": 2 }
+  "defaultAlloc": {
+    "dev": 4,
+    "sales": 0,
+    "ir": 2,
+    "network": 2
+  }
 }
