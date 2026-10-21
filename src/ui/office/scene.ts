@@ -1,9 +1,10 @@
-// OF-01 2.5D 아이소메트릭 픽셀 사무실 장면, OF-02 부서별 좌석(빈 책상·입사 대기 상자·직원).
+// OF-01 2.5D 아이소메트릭 픽셀 사무실 장면, OF-02 책상(빈 책상·입사 대기 상자·직원). 책상은 플레이어가 놓습니다(A-80).
 // Startup Company처럼 사무실이 화면을 채우는 탑뷰입니다. 카메라(가운데 오는 월드 좌표)와 정수 배율로 화면을 정하고,
 // 타일 1칸 = 가로 24 × 세로 12 아트 픽셀(2:1 아이소메트릭)을 정수배로 키워 그립니다.
 import { DATA, dept, officeTier } from '../../core/data';
-import { ownsFurniture, seatGrid } from '../../core/office';
-import type { DeptId, Employee, GameState, Seat } from '../../core/types';
+import { deskFits, ownsFurniture, seatGrid } from '../../core/office';
+import { floorPlan, type DecorKind, type Rect } from '../../core/officeLayout';
+import type { Employee, GameState, Seat } from '../../core/types';
 import { Pix, hex, mix, shade, type Col, type Pt } from './pixel';
 import { SPRITES, SPRITE_H, SPRITE_W, hashStr, lookFor } from './sprites';
 
@@ -15,18 +16,10 @@ let FH = 18;
 let TIER = 2;
 const WALL_H = 44;
 
-interface Rect {
-  x0: number;
-  y0: number;
-  x1: number;
-  y1: number;
-}
-
 interface Layout {
   id: number;
   W: number;
   H: number;
-  zones: { dept: DeptId; x: number; y: number; cols: number; rows: number }[];
   exec: Rect;
   meeting: Rect | null;
   lounge: Rect | null;
@@ -158,7 +151,7 @@ function outline(g: Pix, v: View, x0: number, y0: number, x1: number, y1: number
 
 // ── 색 ──
 const C = {
-  asphalt: hex('#3e4160'),
+  asphalt: hex('#4a4c50'),
   grass: hex('#7db35f'),
   grassDark: hex('#6a9e50'),
   walk: hex('#d8d4ca'),
@@ -226,26 +219,40 @@ export function actors(s: GameState, v: View): Actor[] {
 }
 
 // ── 장면 그리기 ──
+// 책상 배치 모드(A-80): 놓기·옮기기·치우기. tile은 마우스가 가리키는 책상 왼쪽 위 칸, pick은 옮기려고 집은 책상.
+export interface EditState {
+  mode: 'place' | 'move' | 'remove';
+  tile: { gx: number; gy: number } | null;
+  pick: string | null;
+}
+
 interface DrawCtx {
   g: Pix;
   v: View;
   t: number; // ms
   s: GameState;
   hover: string | null;
-  hoverZone: DeptId | null;
+  edit: EditState | null;
 }
 
-export function drawOffice(g: Pix, v: View, s: GameState, t: number, hover: string | null, hoverZone: DeptId | null = null) {
+export function drawOffice(g: Pix, v: View, s: GameState, t: number, hover: string | null, edit: EditState | null = null) {
   setLayout(s.company.officeTier);
-  const ctx: DrawCtx = { g, v, t, s, hover, hoverZone };
+  const ctx: DrawCtx = { g, v, t, s, hover, edit };
   drawGround(ctx);
   drawFloor(ctx);
+  if (edit) drawEditFloor(ctx, edit);
   drawWalls(ctx);
   const items: { key: number; draw: () => void }[] = [];
   for (const seat of s.seats) {
-    if (seat.bought === false && seat.occupant === null) continue; // 아직 책상을 사지 않은 자리는 빈 바닥
+    if (seat.bought === false && seat.occupant === null) continue; // 임원 자리처럼 아직 책상이 없는 자리는 빈 바닥
+    if (edit?.mode === 'move' && edit.pick === seat.id && edit.tile) continue; // 집어 든 책상은 마우스 자리에 그림
     const p = seatPos(seat);
     items.push({ key: p.gx + p.gy + 1, draw: () => drawSeat(ctx, seat, p.gx, p.gy) });
+  }
+  if (edit && edit.tile && (edit.mode === 'place' || (edit.mode === 'move' && edit.pick))) {
+    const { gx, gy } = edit.tile;
+    const ghost: Seat = edit.mode === 'move' ? { ...s.seats.find((x) => x.id === edit.pick)!, gx, gy } : { id: 'ghost', zone: 'desk', occupant: null, gx, gy };
+    items.push({ key: gx + gy + 1, draw: () => drawSeat(ctx, ghost, gx, gy) });
   }
   for (const d of L.decor) if (!d.item || ownsFurniture(s, d.item)) items.push({ key: d.x + d.y + (d.k ?? 0), draw: () => d.draw(ctx, d.x, d.y) });
   for (const w of L.glass) {
@@ -285,7 +292,7 @@ function drawGround({ g, v }: DrawCtx) {
   g.poly([P(v, 0.4, FH, -7), P(v, FW + 0.6, FH, -7), P(v, FW + 0.6, FH + 0.9, -7), P(v, 0.4, FH + 0.9, -7)], hex('#000000', 40));
 }
 
-function drawFloor({ g, v, hoverZone, t }: DrawCtx) {
+function drawFloor({ g, v }: DrawCtx) {
   box(g, v, 0, 0, -7, FW, FH, 7, { top: C.wood1, left: C.slabL, right: C.slabR, hi: shade(C.slabL, 1.15) });
   // 나무 마루: 반 칸 폭 널빤지 줄무늬 + 이음매
   for (let k = 0; k < FH * 2; k++) {
@@ -294,11 +301,13 @@ function drawFloor({ g, v, hoverZone, t }: DrawCtx) {
     rect(g, v, 0, y0, FW, y1, k % 2 ? C.wood1 : C.wood2);
     for (let jx = ((k * 7) % 5) * 0.6 + 0.8; jx < FW; jx += 3) g.line(P(v, jx, y0), P(v, jx, y1), C.seam);
   }
-  // 대표실 카펫·러그
+  // 대표실 카펫·러그(원룸에는 없음)
   const ex = L.exec;
-  rect(g, v, ex.x0, 0, FW, ex.y1, hex('#5b4b5f'));
-  rect(g, v, ex.x0 + 0.3, 0.5, FW - 0.2, ex.y1 - 0.9, hex('#7b2f3b'));
-  outline(g, v, ex.x0 + 0.5, 0.7, FW - 0.4, ex.y1 - 1.1, hex('#d6a84a'));
+  if (ex.x1 > ex.x0) {
+    rect(g, v, ex.x0, 0, FW, ex.y1, hex('#5b4b5f'));
+    rect(g, v, ex.x0 + 0.3, 0.5, FW - 0.2, ex.y1 - 0.9, hex('#7b2f3b'));
+    outline(g, v, ex.x0 + 0.5, 0.7, FW - 0.4, ex.y1 - 1.1, hex('#d6a84a'));
+  }
   // 회의실 카펫
   const mt = L.meeting;
   if (mt) {
@@ -314,24 +323,29 @@ function drawFloor({ g, v, hoverZone, t }: DrawCtx) {
   // 탕비실 타일
   const kt = L.kitchen;
   if (kt) for (let i = 0; i < 10; i++) for (let j = 0; j < 9; j++) rect(g, v, kt.x0 + i * 0.5, kt.y0 + j * 0.5, kt.x0 + 0.5 + i * 0.5, kt.y0 + 0.5 + j * 0.5, (i + j) % 2 ? hex('#eef0f3') : hex('#d6dae1'));
-  // 부서 구역 카펫(OF-02 부서별 좌석 구역)
-  for (const z of L.zones) {
-    const dc = hex(dept(z.dept as DeptId).color);
-    const base = mix(hex('#6a7184'), dc, 0.3);
-    const x0 = Math.max(0, z.x - 0.25);
-    const y0 = Math.max(0, z.y - 0.25);
-    const x1 = Math.min(FW, z.x + z.cols * 2 + 0.25);
-    const y1 = Math.min(FH, z.y + z.rows * 2 - 0.15);
-    for (let i = Math.floor(x0 * 2); i < Math.ceil(x1 * 2); i++) {
-      for (let j = Math.floor(y0 * 2); j < Math.ceil(y1 * 2); j++) {
-        rect(g, v, Math.max(x0, i / 2), Math.max(y0, j / 2), Math.min(x1, (i + 1) / 2), Math.min(y1, (j + 1) / 2), (i + j) % 2 ? base : shade(base, 0.93));
-      }
-    }
-    const lit = hoverZone === z.dept && Math.floor(t / 300) % 2 === 0;
-    outline(g, v, x0, y0, x1, y1, lit ? hex('#ffffff') : shade(dc, 0.85));
-  }
   // 출입문 앞 매트
   rect(g, v, 0.05, L.doorY - 0.1, 0.9, L.doorY + 1.1, hex('#4a3b33'));
+}
+
+// 배치 모드: 바닥 격자, 놓을 수 없는 곳은 어둡게, 마우스 자리에 초록(놓을 수 있음)·빨강(안 됨) 테두리
+function drawEditFloor({ g, v, s, t }: DrawCtx, edit: EditState) {
+  const line = hex('#ffffff', 60);
+  for (let i = 0; i <= FW; i++) g.line(P(v, i, 0), P(v, i, FH), line);
+  for (let j = 0; j <= FH; j++) g.line(P(v, 0, j), P(v, FW, j), line);
+  for (const b of floorPlan(TIER).blocked) {
+    const x0 = Math.max(0, b.x0), y0 = Math.max(0, b.y0), x1 = Math.min(FW, b.x1), y1 = Math.min(FH, b.y1);
+    if (x1 > x0 && y1 > y0) rect(g, v, x0, y0, x1, y1, hex('#1b1f2e', 70));
+  }
+  if (!edit.tile) return;
+  const { gx, gy } = edit.tile;
+  let ok = true;
+  if (edit.mode === 'place') ok = !deskFits(s, gx, gy);
+  else if (edit.mode === 'move' && edit.pick) ok = !deskFits(s, gx, gy, edit.pick);
+  else return;
+  const c = ok ? hex('#57d391', 120) : hex('#e5484d', 120);
+  rect(g, v, gx, gy, gx + 2, gy + 2, c);
+  const blink = Math.floor(t / 250) % 2 === 0;
+  outline(g, v, gx, gy, gx + 2, gy + 2, blink ? hex('#ffffff') : ok ? hex('#2fbf71') : hex('#e5484d'));
 }
 
 function drawWalls({ g, v, s, t }: DrawCtx) {
@@ -721,108 +735,21 @@ function stage(ctx: DrawCtx, x: number, y: number) {
   for (let r = 0; r < 3; r++) for (let c = 0; c < 5; c++) box(g, v, x + 0.2 + c * 0.85, y + 2 + r * 1.2, 0, 0.45, 0.4, 6, cols('#7b2f3b'));
 }
 
+// 평면(core/officeLayout)의 가구 자리를 그리기 함수로 바꿉니다. 살 수 있는 가구는 산 것만 그립니다(A-78).
+const DRAW: Record<DecorKind, Decor['draw']> = {
+  plant, bigPlant, cooler, printer, meeting: (c, x, y) => meeting2(c, x, y), lounge: (c, x, y) => lounge2(c, x, y), beanbag, cafeTable, pingpong,
+  kitchen: (c, x, y) => kitchen2(c, x, y), diningTable, vending, treadmill, weights, stage, tree, bench, lamp,
+};
+const ITEM: Partial<Record<DecorKind, string>> = {
+  plant: 'plant', bigPlant: 'plant', cooler: 'cooler', printer: 'printer', meeting: 'meeting', lounge: 'lounge', beanbag: 'lounge',
+  cafeTable: 'cafe', pingpong: 'pingpong', kitchen: 'kitchen', diningTable: 'kitchen', vending: 'vending', treadmill: 'gym', weights: 'gym', stage: 'stage',
+};
+
 function buildLayout(tierId: number): Layout {
-  const t = officeTier(tierId);
-  const W = t.size.w;
-  const H = t.size.h;
-  const has = (r: string) => t.rooms.includes(r);
-  const exec: Rect = { x0: W - 5.4, y0: 0, x1: W, y1: 4.8 };
-  const meeting: Rect | null = has('meeting') ? { x0: W - 10.6, y0: 0, x1: W - 5.4, y1: 6.2 } : null;
-  const loungeLeft = has('lounge');
-  const lounge: Rect | null = loungeLeft ? { x0: 1, y0: H - 4.6, x1: 6.8, y1: H - 0.6 } : has('lounge_small') ? { x0: W - 5.6, y0: H - 4, x1: W - 0.6, y1: H - 0.4 } : null;
-  const kitchen: Rect | null = has('kitchen') ? { x0: W - 10, y0: H - 4.5, x1: W - 5, y1: H } : null;
-  const doorY = Math.round(H * 0.6);
-  const board: [number, number] | null = doorY - 3.6 >= 4 ? [doorY - 3.6, doorY - 0.8] : null;
-  const winY: [number, number][] = [];
-  for (let a = 0.6; a + 2.8 <= W - 0.5; a += 3.4) winY.push([a, a + 2.8]);
-  const winX: [number, number][] = [];
-  const winEnd = board ? board[0] - 0.4 : doorY - 0.6;
-  for (let a = 0.6; a + 2.8 <= winEnd; a += 3.4) winX.push([a, a + 2.8]);
-  const glass: [number, number, number, number][] = [
-    [exec.x0, 0, exec.x0, exec.y1],
-    [exec.x0, exec.y1, exec.x0 + 1.7, exec.y1],
-    [exec.x0 + 2.9, exec.y1, W, exec.y1],
-  ];
-  if (meeting) glass.push([meeting.x0, 0, meeting.x0, meeting.y1], [meeting.x0, meeting.y1, meeting.x0 + 1.8, meeting.y1], [meeting.x0 + 3.0, meeting.y1, meeting.x1, meeting.y1], [meeting.x1, exec.y1, meeting.x1, meeting.y1]);
-  const decor: Decor[] = [];
-  // 소품 그림 → 가구 id(살 수 있는 것). 나무·벤치·가로등은 건물 밖이라 항상 있음.
-  const ITEM = new Map<Decor['draw'], string>([
-    [plant, 'plant'], [bigPlant, 'plant'], [cooler, 'cooler'], [printer, 'printer'], [meeting2, 'meeting'], [lounge2, 'lounge'], [beanbag, 'lounge'],
-    [cafeTable, 'cafe'], [pingpong, 'pingpong'], [kitchen2, 'kitchen'], [diningTable, 'kitchen'], [vending, 'vending'], [treadmill, 'gym'], [weights, 'gym'], [stage, 'stage'],
-  ]);
-  const add = (x: number, y: number, draw: Decor['draw'], k?: number) => decor.push({ x, y, k, draw, item: ITEM.get(draw) });
-  if (t.home) {
-    // 원룸 작업실: 유리 대표실·라운지 없이 빈 방(살 수 있는 화분·정수기·복합기 자리만)
-    add(0.5, 0.5, plant);
-    add(W - 0.6, H - 1.2, bigPlant);
-    add(0.6, doorY + 1.6, cooler);
-    add(W - 2.2, 0.6, printer);
-    for (let x = 2; x < W; x += 7) add(x, H + 4.2, tree);
-    for (let y = 3; y < H; y += 7) add(W + 4.2, y, tree);
-    for (let x = 0.5; x < W; x += 7.5) add(x, H + 1.6, lamp);
-    const zonesH = t.zones.map((z) => ({ dept: z.dept as DeptId, x: z.x, y: z.y, cols: z.cols, rows: z.rows }));
-    const none: Rect = { x0: W, y0: 0, x1: W, y1: 0 };
-    return { id: tierId, W, H, zones: zonesH, exec: none, meeting: null, lounge: null, loungeLeft: false, kitchen: null, doorY, board, winX, winY, decor, glass: [] };
-  }
-  if (meeting) {
-    add(meeting.x0 + 1.6, 2.4, meeting2, 1.2);
-    add(meeting.x0 + 0.6, 5.6, plant);
-  }
-  add(W - 0.6, 4.2, plant);
-  add(0.5, 0.5, plant);
-  add(0.7, doorY + 1.8, plant);
-  if (board) add(0.2, board[0] - 0.5, cooler);
-  // 오른쪽 열린 공간
-  const openTop = Math.max(exec.y1, meeting ? 0 : 0) + 0.8;
-  add(W - 4.6, openTop, cooler);
-  add(W - 3.6, openTop, printer);
-  add(W - 1.4, openTop + 0.4, bigPlant);
-  const rightBottom = H - (lounge && !loungeLeft ? 4.8 : 5);
-  const aud = has('auditorium');
-  const gym = has('gym');
-  let ry = openTop + 3.2;
-  if (aud && ry + 6 < rightBottom) {
-    add(W - 5.0, ry, stage, 2);
-    ry += 6.4;
-  }
-  if (gym && ry + 3 < rightBottom) {
-    add(W - 4.6, ry, treadmill, 1);
-    add(W - 3.4, ry, treadmill, 1);
-    add(W - 2.0, ry + 0.4, weights, 1);
-    ry += 3.4;
-  }
-  for (; ry + 1 < rightBottom; ry += 3.2) {
-    add(W - 4, ry, cafeTable);
-    add(W - 1.4, ry, cafeTable);
-  }
-  if (loungeLeft && lounge) {
-    add(2.6, lounge.y0 + 0.9, lounge2, 1);
-    add(5.0, lounge.y0 + 0.6, beanbag);
-    add(5.4, lounge.y0 + 2.9, beanbag);
-    add(6.6, H - 0.6, bigPlant);
-  } else if (lounge) {
-    add(lounge.x0 + 1.2, lounge.y0 + 0.6, lounge2, 1);
-    add(lounge.x1 - 1.0, lounge.y0 + 1.0, beanbag);
-    add(lounge.x1 - 0.8, lounge.y1 - 0.6, beanbag);
-  }
-  if (!lounge || loungeLeft) {
-    add(W - 0.6, H - 1.2, bigPlant);
-    add(W - 4.4, H - 1.2, plant);
-  }
-  if (has('pingpong')) add(W / 2 - 3.1, H - 3.8, pingpong, 1.4);
-  if (kitchen) {
-    add(kitchen.x0 - 2, kitchen.y0 - 0.1, vending, 0.5);
-    add(kitchen.x0 + 0.4, kitchen.y0 + 0.1, kitchen2, 1.5);
-    add(kitchen.x0 + 1.0, kitchen.y0 + 2.1, diningTable, 1);
-  }
-  // 건물 밖(앞쪽 두 면)
-  for (let x = 2; x < W; x += 7) add(x, H + 4.2, tree);
-  for (let y = 3; y < H; y += 7) add(W + 4.2, y, tree);
-  for (let x = 5; x < W - 2; x += 7.5) add(x, H + 1.3, bench);
-  for (let x = 0.5; x < W; x += 7.5) add(x, H + 1.6, lamp);
-  for (let y = 6; y < H; y += 7.5) add(W + 1.6, y, lamp);
-  const zones = t.zones.map((z) => ({ dept: z.dept as DeptId, x: z.x, y: z.y, cols: z.cols, rows: z.rows }));
-  return { id: tierId, W, H, zones, exec, meeting, lounge, loungeLeft, kitchen, doorY, board, winX, winY, decor, glass };
+  const f = floorPlan(tierId);
+  const none: Rect = { x0: f.W, y0: 0, x1: f.W, y1: 0 };
+  const decor: Decor[] = f.decor.map((d) => ({ x: d.x, y: d.y, k: d.k, item: ITEM[d.kind], draw: DRAW[d.kind] }));
+  return { id: tierId, W: f.W, H: f.H, exec: f.exec ?? none, meeting: f.meeting, lounge: f.lounge, loungeLeft: f.loungeLeft, kitchen: f.kitchen, doorY: f.doorY, board: f.board, winX: f.winX, winY: f.winY, decor, glass: f.glass };
 }
 
 // 이름이 같은 그리기 함수(회의실·라운지·탕비실)를 배치에서 쓰기 위한 별칭

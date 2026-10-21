@@ -97,7 +97,7 @@ function slop(s: GameState, d: DeptId) {
     s.modifiers.push({ key: 'output', value: -0.03, until: s.day + 14, label: 'AI 실수 수습' });
     notify(s, `AI 슬롭: ${name}팀이 AI 실수를 수습하느라 2주간 일이 느려집니다.`, 'bad', 'ai');
   }
-  post(s, teamChannelId(d), '시스템', '⚠ AI 부작용(슬롭)이 발생했습니다. AI 도입 앱에서 적용률을 조정하거나 AI연구팀의 "사내 AI 도구 고도화"로 줄일 수 있습니다.', 'system');
+  post(s, teamChannelId(d), '시스템', 'AI 부작용(슬롭)이 발생했습니다. AI 도입 앱에서 적용률을 조정하거나 AI연구팀의 "사내 AI 도구 고도화"로 줄일 수 있습니다.', 'system');
   float(s, 'AI 슬롭', 'bad');
 }
 

@@ -8,7 +8,7 @@ import { book } from './finance';
 import { mod, addMod } from './mods';
 import { notify, float } from './notify';
 import { post, teamChannelId, onEmployeeLeft } from './messenger';
-import { officeComfort } from './office';
+import { deskCapacity, desks, officeComfort } from './office';
 import { rand, randInt } from './rng';
 import { aiMultiplier } from './aiadopt';
 import { approveMultiplier } from './ceo';
@@ -145,8 +145,8 @@ export function satTarget(s: GameState, e: Employee): { value: number; parts: { 
   if (m) parts.push({ label: '최근 일', v: m });
   if (s.company.movingUntil === null && s.employees.length > 0) {
     // 좌석 꽉 참: 붐빔
-    const zone = s.seats.filter((x) => x.zone === e.dept);
-    if (zone.length > 0 && zone.every((x) => x.occupant !== null) && zone.length >= 4) parts.push({ label: '자리가 비좁음', v: -3 });
+    const cap = deskCapacity(s.company.officeTier);
+    if (s.employees.length >= 4 && desks(s).length >= cap * 0.9) parts.push({ label: '자리가 비좁음', v: -3 });
   }
   const value = Math.max(0, Math.min(100, parts.reduce((a, p) => a + p.v, 0)));
   return { value, parts };
@@ -174,11 +174,11 @@ export function staffDay(s: GameState) {
     if (e.sickUntil === null && e.health < 35 && rand(s) < (35 - e.health) / 600) {
       const fast = s.company.welfare.includes('medical');
       e.sickUntil = s.day + randInt(s, fast ? 2 : 4, fast ? 5 : 10);
-      e.bubble = { text: '🤒', until: e.sickUntil };
+      e.bubble = { text: 'sick', until: e.sickUntil };
       notify(s, `${e.name}님이 건강이 나빠져 병가를 냈습니다.`, 'bad', 'employees');
     }
     if (e.bubble && e.bubble.until <= s.day) e.bubble = null;
-    if (!e.bubble && e.sat < 30 && rand(s) < 0.02) e.bubble = { text: '😠', until: s.day + 3 };
+    if (!e.bubble && e.sat < 30 && rand(s) < 0.02) e.bubble = { text: 'angry', until: s.day + 3 };
   }
 }
 
@@ -194,7 +194,7 @@ export function staffMonth(s: GameState, january: boolean) {
     if (hasTrait(e, 'ambitious') && !e.lead && s.day - e.joinedDay > 540) p += 0.02;
     if (rand(s) < p) {
       e.leaving = s.day + 14;
-      e.bubble = { text: '📦', until: e.leaving };
+      e.bubble = { text: 'box', until: e.leaving };
       notify(s, `${e.name}님이 퇴사 의사를 밝혔습니다(2주 뒤). 만족도 ${Math.round(e.sat)}.`, 'bad', 'employees');
       post(s, teamChannelId(e.dept), e.name, '대표님, 고민 끝에 회사를 떠나기로 했습니다. 2주 동안 인수인계하겠습니다.', 'npc');
     }
@@ -238,7 +238,7 @@ export function promoteLead(s: GameState, empId: string): string | null {
   e.lead = true;
   e.salary = Math.round((e.salary * 1.15) / 10000) * 10000;
   e.sat = Math.min(100, e.sat + 12);
-  e.bubble = { text: '⭐', until: s.day + 5 };
+  e.bubble = { text: 'star', until: s.day + 5 };
   post(s, teamChannelId(e.dept), '시스템', `${e.name}님이 ${dept(e.dept).name}팀 팀장이 되었습니다(월급 15% 인상).`, 'system');
   return null;
 }
@@ -258,7 +258,7 @@ export function giveRaise(s: GameState, empId: string, rate: number): string | n
   e.salary = Math.round((e.salary * (1 + rate)) / 10000) * 10000;
   e.lastRaiseDay = s.day;
   e.sat = Math.min(100, e.sat + rate * 60);
-  e.bubble = { text: '💰', until: s.day + 3 };
+  e.bubble = { text: 'coin', until: s.day + 3 };
   return null;
 }
 

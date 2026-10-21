@@ -1,6 +1,6 @@
 // F04 채용: HR-01 고용, HR-04 채용 공고, HR-05 지원자(EM-03 특성 포함), HR-06 채용 확정과 입사, HR-07 인사팀 위임 채용
 import { DATA, dept, specEffects, trait } from './data';
-import { seatsAvailable, freeSeats } from './office';
+import { seatsAvailable, takeDesk } from './office';
 import { projectedMonthlyPayroll, spendNow } from './finance';
 import { nextId } from './ids';
 import { onEmployeeJoined } from './messenger';
@@ -23,17 +23,18 @@ export interface PostingInput {
 }
 
 export function postingWarnings(s: GameState, d: DeptId, headcount: number): string[] {
-  const free = seatsAvailable(s, d);
+  void d;
+  const free = seatsAvailable(s);
   const out: string[] = [];
-  if (free === 0) out.push(`${dept(d).name} 구역 좌석이 모두 찼습니다. 더 큰 사무실로 옮기거나(사무실 앱) 다른 부서로 공고하세요.`);
-  else if (free < headcount) out.push(`${dept(d).name} 구역 빈자리가 ${free}석뿐입니다. ${free}명까지만 뽑을 수 있습니다.`);
+  if (free === 0) out.push('사무실에 책상을 더 놓을 자리가 없습니다. 책상 배치를 바꾸거나 더 큰 사무실로 옮기세요.');
+  else if (free < headcount) out.push(`책상을 ${free}개 더 놓을 수 있습니다. ${free}명까지만 뽑을 수 있습니다.`);
   return out;
 }
 
 export function createPosting(s: GameState, input: PostingInput): string | null {
   if (s.ended) return '회사가 끝났습니다.';
   if (!deptUnlocked(s, input.dept)) return `${dept(input.dept).name} 부서는 회사 단계 ${dept(input.dept).stage}부터 둘 수 있습니다.`;
-  if (seatsAvailable(s, input.dept) === 0) return `${dept(input.dept).name} 구역 좌석이 모두 찼습니다.`;
+  if (seatsAvailable(s) === 0) return '사무실에 책상을 더 놓을 자리가 없습니다.';
   if (input.headcount < 1 || input.headcount > H.maxHeadcountPerPosting) return `인원은 1~${H.maxHeadcountPerPosting}명입니다.`;
   const promo = H.promos.find((p) => p.id === input.promo);
   if (!promo) return '홍보 수준을 고르세요.';
@@ -154,7 +155,7 @@ export function offerJob(s: GameState, applicantId: string, lowball: boolean): {
   if (!a || a.status !== 'waiting') return { ok: false, message: '지원자를 찾을 수 없습니다.' };
   const p = s.postings.find((x) => x.id === a.postingId);
   if (p && p.hired >= p.headcount) return { ok: false, message: '이 공고의 모집 인원을 모두 채웠습니다.' };
-  if (freeSeats(s, a.dept).length === 0) return { ok: false, message: `${dept(a.dept).name} 구역에 빈자리가 없습니다.` };
+  if (seatsAvailable(s) === 0) return { ok: false, message: '사무실에 책상을 더 놓을 자리가 없습니다.' };
   const salary = lowball ? Math.round((a.desiredSalary * H.lowballRate) / 10000) * 10000 : a.desiredSalary;
   if (lowball && rand(s) < H.lowballRejectChance) {
     a.status = 'rejected';
@@ -170,7 +171,7 @@ export function offerJob(s: GameState, applicantId: string, lowball: boolean): {
 }
 
 function reserve(s: GameState, a: Applicant, salary: number) {
-  const seat = freeSeats(s, a.dept)[0];
+  const seat = takeDesk(s)!;
   seat.occupant = `pending:${a.id}`;
   s.pendingHires.push({ applicantId: a.id, name: a.name, dept: a.dept, grade: a.grade, years: a.years, salary, traits: a.traits, startDay: s.day + 1 });
   s.events.push({ type: 'autosave', reason: '채용 확정' });
@@ -206,7 +207,7 @@ export function startPendingHires(s: GameState) {
       sickUntil: null,
       leaving: null,
       lastRaiseDay: s.day,
-      bubble: { text: '📦', until: s.day + 2 },
+      bubble: { text: 'box', until: s.day + 2 },
     };
     if (seat) seat.occupant = e.id;
     s.employees.push(e);
@@ -232,7 +233,7 @@ function autoHireDay(s: GameState) {
   for (const [d, target] of Object.entries(s.company.autoHire) as [DeptId, number][]) {
     if (!target) continue;
     const have = s.employees.filter((e) => e.dept === d && e.leaving === null).length + s.pendingHires.filter((h) => h.dept === d).length;
-    if (have >= target || freeSeats(s, d).length === 0) continue;
+    if (have >= target || seatsAvailable(s) === 0) continue;
     if (rand(s) >= Math.min(0.9, speed)) continue;
     const a = rollApplicant(s, d, s.company.autoHireLevel, 'auto');
     // 인사팀은 C등급을 한 번 걸러 냅니다.

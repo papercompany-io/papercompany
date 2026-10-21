@@ -8,7 +8,7 @@ import { INITIAL_SHARES, recordEquity } from './equity';
 import { book, newAccrual } from './finance';
 import { createWorkspace, onEmployeeJoined } from './messenger';
 import { legacyFx } from './career';
-import { buildSeats } from './office';
+import { buildSeats, takeDesk } from './office';
 import { rollTraits } from './hiring';
 import { startSkill } from './staff';
 import { updateStoredValuation } from './valuation';
@@ -245,7 +245,7 @@ function setupCompany(s: GameState, c: SetupChoices, owned: Record<string, strin
   }
   if (c.engineerId && !solo) {
     const cand = DATA.candidates.engineers.find((x) => x.id === c.engineerId)!;
-    const seat = s.seats.find((x) => x.zone === 'dev' && x.occupant === null)!;
+    const seat = takeDesk(s)!;
     makeEmployee(s, cand.name, 'dev', cand.grade as Grade, cand.salary, 'engineer', seat.id, 5);
   }
   s.company.peakEmployees = s.employees.length;

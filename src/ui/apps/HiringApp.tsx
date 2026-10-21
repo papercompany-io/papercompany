@@ -50,7 +50,7 @@ export function HiringApp() {
                 <select data-testid="post-dept" value={form.dept} onChange={(e) => setForm({ ...form, dept: e.target.value as DeptId })}>
                   {DEPT_IDS.map((d) => (
                     <option key={d} value={d} disabled={!deptUnlocked(s, d)}>
-                      {dept(d).name} · {deptUnlocked(s, d) ? `빈자리 ${seatsAvailable(s, d)}석` : `단계 ${dept(d).stage}에 열림`}
+                      {dept(d).name}{deptUnlocked(s, d) ? '' : ` · 단계 ${dept(d).stage}에 열림`}
                     </option>
                   ))}
                 </select>
@@ -107,7 +107,7 @@ export function HiringApp() {
               <button
                 className="btn"
                 data-testid="post-create"
-                disabled={seatsAvailable(s, form.dept) === 0}
+                disabled={seatsAvailable(s) === 0}
                 onClick={() => {
                   const e = act((g) => createPosting(g, form));
                   setMsg(e ? { ok: false, text: e } : { ok: true, text: `${dept(form.dept).name} 공고를 올렸습니다. 지원자는 하루 단위로 들어옵니다.` });
@@ -274,7 +274,6 @@ function AutoHire() {
           <tr>
             <th>부서</th>
             <th className="r">지금</th>
-            <th className="r">빈 좌석</th>
             <th>목표 인원</th>
           </tr>
         </thead>
@@ -286,7 +285,6 @@ function AutoHire() {
               <tr key={d}>
                 <td>{dept(d).name}</td>
                 <td className="r">{have}</td>
-                <td className="r">{seatsAvailable(s, d)}</td>
                 <td>
                   <div className="row">
                     <button className="btn small ghost" disabled={t <= 0} onClick={() => setMsg(act((g) => setAutoHire(g, d, t - 1)) ?? null)}>

@@ -4,7 +4,7 @@
     {
       "id": "kr",
       "name": "국내",
-      "flag": "🇰🇷",
+      "flag": "KR",
       "tamMult": 1,
       "arpu": 1,
       "entry": 0,
@@ -15,7 +15,7 @@
     {
       "id": "jp",
       "name": "일본",
-      "flag": "🇯🇵",
+      "flag": "JP",
       "tamMult": 2.2,
       "arpu": 1.1,
       "entry": 300000000,
@@ -26,7 +26,7 @@
     {
       "id": "sea",
       "name": "동남아",
-      "flag": "🌏",
+      "flag": "SEA",
       "tamMult": 4.0,
       "arpu": 0.35,
       "entry": 200000000,
@@ -37,7 +37,7 @@
     {
       "id": "us",
       "name": "미국",
-      "flag": "🇺🇸",
+      "flag": "US",
       "tamMult": 9.0,
       "arpu": 1.7,
       "entry": 2000000000,
@@ -48,7 +48,7 @@
     {
       "id": "eu",
       "name": "유럽",
-      "flag": "🇪🇺",
+      "flag": "EU",
       "tamMult": 7.0,
       "arpu": 1.4,
       "entry": 1500000000,

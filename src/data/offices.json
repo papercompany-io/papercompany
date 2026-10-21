@@ -1,10 +1,10 @@
 {
-  "_note": "OF-07 사무실 이전(DEC-020) 단계와 OF-01/02 배치. 좌석 한 벌 2×2칸, 부서 구역은 cols×rows 좌석. deposit 보증금, rent 월세, comfort 쾌적도(만족도 목표 가산). 수치 [예시값], 배치는 화면 전용",
+  "_note": "OF-07 사무실 이전(DEC-020) 단계와 OF-01 평면. size 바닥 넓이(타일), 책상은 플레이어가 빈 바닥에 놓음(A-80), maxDesks 수용 인원(책상 최대 개수). deposit 보증금, rent 월세, comfort 예전 저장용 쾌적도. 수치 [예시값], 배치는 화면 전용",
   "tiers": [
     {
       "id": 0,
       "name": "원룸 작업실",
-      "desc": "집 근처 원룸. 책상 하나로 혼자 시작합니다. 책상 5개까지 놓을 수 있습니다.",
+      "desc": "집 근처 원룸. 대표 책상 하나로 혼자 시작합니다. 책상을 5개까지 들일 수 있습니다.",
       "deposit": 0,
       "rent": 300000,
       "comfort": 0,
@@ -21,42 +21,13 @@
         "x": 10,
         "y": 2
       },
-      "zones": [
-        {
-          "dept": "dev",
-          "x": 1,
-          "y": 2,
-          "cols": 2,
-          "rows": 1
-        },
-        {
-          "dept": "design",
-          "x": 1,
-          "y": 5,
-          "cols": 1,
-          "rows": 1
-        },
-        {
-          "dept": "sales",
-          "x": 4,
-          "y": 5,
-          "cols": 1,
-          "rows": 1
-        },
-        {
-          "dept": "marketing",
-          "x": 7,
-          "y": 5,
-          "cols": 1,
-          "rows": 1
-        }
-      ],
-      "rooms": []
+      "rooms": [],
+      "maxDesks": 5
     },
     {
       "id": 1,
       "name": "창업 사무실",
-      "desc": "역 근처 작은 사무실. 책상 6개.",
+      "desc": "역 근처 작은 사무실. 첫 팀이 앉기 좋습니다.",
       "deposit": 0,
       "rent": 1500000,
       "comfort": 0,
@@ -72,44 +43,15 @@
         "x": 14,
         "y": 1
       },
-      "zones": [
-        {
-          "dept": "dev",
-          "x": 2,
-          "y": 2,
-          "cols": 3,
-          "rows": 1
-        },
-        {
-          "dept": "design",
-          "x": 2,
-          "y": 6,
-          "cols": 1,
-          "rows": 1
-        },
-        {
-          "dept": "sales",
-          "x": 5,
-          "y": 6,
-          "cols": 1,
-          "rows": 1
-        },
-        {
-          "dept": "marketing",
-          "x": 8,
-          "y": 6,
-          "cols": 1,
-          "rows": 1
-        }
-      ],
       "rooms": [
         "lounge_small"
-      ]
+      ],
+      "maxDesks": 8
     },
     {
       "id": 2,
       "name": "강남 중형 사무실",
-      "desc": "한 층 절반. 팀이 생기는 회사에 맞습니다.",
+      "desc": "한 층 절반. 팀이 여럿 생기는 회사에 맞습니다.",
       "deposit": 50000000,
       "rent": 8000000,
       "comfort": 4,
@@ -125,55 +67,12 @@
         "x": 21.8,
         "y": 1
       },
-      "zones": [
-        {
-          "dept": "dev",
-          "x": 2,
-          "y": 2,
-          "cols": 3,
-          "rows": 2
-        },
-        {
-          "dept": "design",
-          "x": 9,
-          "y": 2,
-          "cols": 2,
-          "rows": 1
-        },
-        {
-          "dept": "sales",
-          "x": 2,
-          "y": 8,
-          "cols": 2,
-          "rows": 1
-        },
-        {
-          "dept": "marketing",
-          "x": 8,
-          "y": 8,
-          "cols": 2,
-          "rows": 1
-        },
-        {
-          "dept": "hr",
-          "x": 14,
-          "y": 8,
-          "cols": 1,
-          "rows": 1
-        },
-        {
-          "dept": "cs",
-          "x": 8,
-          "y": 11,
-          "cols": 2,
-          "rows": 1
-        }
-      ],
       "rooms": [
         "meeting",
         "lounge",
         "kitchen"
-      ]
+      ],
+      "maxDesks": 18
     },
     {
       "id": 3,
@@ -194,78 +93,14 @@
         "x": 30.8,
         "y": 1
       },
-      "zones": [
-        {
-          "dept": "dev",
-          "x": 2,
-          "y": 2,
-          "cols": 4,
-          "rows": 3
-        },
-        {
-          "dept": "design",
-          "x": 11,
-          "y": 2,
-          "cols": 3,
-          "rows": 2
-        },
-        {
-          "dept": "infra",
-          "x": 18,
-          "y": 2,
-          "cols": 2,
-          "rows": 2
-        },
-        {
-          "dept": "sales",
-          "x": 2,
-          "y": 10,
-          "cols": 3,
-          "rows": 2
-        },
-        {
-          "dept": "marketing",
-          "x": 9,
-          "y": 10,
-          "cols": 3,
-          "rows": 1
-        },
-        {
-          "dept": "finlegal",
-          "x": 16,
-          "y": 10,
-          "cols": 2,
-          "rows": 1
-        },
-        {
-          "dept": "cs",
-          "x": 21,
-          "y": 8,
-          "cols": 3,
-          "rows": 2
-        },
-        {
-          "dept": "hr",
-          "x": 9,
-          "y": 14,
-          "cols": 2,
-          "rows": 1
-        },
-        {
-          "dept": "ai",
-          "x": 16,
-          "y": 14,
-          "cols": 2,
-          "rows": 2
-        }
-      ],
       "rooms": [
         "meeting",
         "meeting2",
         "lounge",
         "kitchen",
         "pingpong"
-      ]
+      ],
+      "maxDesks": 50
     },
     {
       "id": 4,
@@ -286,71 +121,6 @@
         "x": 40.8,
         "y": 1
       },
-      "zones": [
-        {
-          "dept": "dev",
-          "x": 2,
-          "y": 2,
-          "cols": 6,
-          "rows": 4
-        },
-        {
-          "dept": "design",
-          "x": 15,
-          "y": 2,
-          "cols": 4,
-          "rows": 2
-        },
-        {
-          "dept": "infra",
-          "x": 24,
-          "y": 2,
-          "cols": 3,
-          "rows": 2
-        },
-        {
-          "dept": "sales",
-          "x": 2,
-          "y": 13,
-          "cols": 5,
-          "rows": 2
-        },
-        {
-          "dept": "marketing",
-          "x": 13,
-          "y": 13,
-          "cols": 4,
-          "rows": 2
-        },
-        {
-          "dept": "hr",
-          "x": 22,
-          "y": 13,
-          "cols": 3,
-          "rows": 1
-        },
-        {
-          "dept": "cs",
-          "x": 2,
-          "y": 19,
-          "cols": 5,
-          "rows": 3
-        },
-        {
-          "dept": "ai",
-          "x": 13,
-          "y": 20,
-          "cols": 4,
-          "rows": 2
-        },
-        {
-          "dept": "finlegal",
-          "x": 22,
-          "y": 17,
-          "cols": 3,
-          "rows": 1
-        }
-      ],
       "rooms": [
         "meeting",
         "meeting2",
@@ -358,7 +128,8 @@
         "kitchen",
         "pingpong",
         "gym"
-      ]
+      ],
+      "maxDesks": 95
     },
     {
       "id": 5,
@@ -379,71 +150,6 @@
         "x": 50.8,
         "y": 1
       },
-      "zones": [
-        {
-          "dept": "dev",
-          "x": 2,
-          "y": 2,
-          "cols": 8,
-          "rows": 5
-        },
-        {
-          "dept": "design",
-          "x": 19,
-          "y": 2,
-          "cols": 5,
-          "rows": 3
-        },
-        {
-          "dept": "infra",
-          "x": 30,
-          "y": 2,
-          "cols": 4,
-          "rows": 3
-        },
-        {
-          "dept": "sales",
-          "x": 2,
-          "y": 15,
-          "cols": 6,
-          "rows": 3
-        },
-        {
-          "dept": "marketing",
-          "x": 16,
-          "y": 15,
-          "cols": 5,
-          "rows": 2
-        },
-        {
-          "dept": "hr",
-          "x": 27,
-          "y": 15,
-          "cols": 4,
-          "rows": 1
-        },
-        {
-          "dept": "cs",
-          "x": 2,
-          "y": 23,
-          "cols": 6,
-          "rows": 4
-        },
-        {
-          "dept": "ai",
-          "x": 16,
-          "y": 21,
-          "cols": 5,
-          "rows": 3
-        },
-        {
-          "dept": "finlegal",
-          "x": 27,
-          "y": 20,
-          "cols": 4,
-          "rows": 2
-        }
-      ],
       "rooms": [
         "meeting",
         "meeting2",
@@ -452,7 +158,8 @@
         "pingpong",
         "gym",
         "auditorium"
-      ]
+      ],
+      "maxDesks": 150
     }
   ],
   "moveDays": 3,

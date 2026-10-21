@@ -1,4 +1,5 @@
 // RK-01 결과 금액 랭킹(로컬 명예의 전당) + 레거시 강화 상점 + 업적 목록
+import { PxIcon } from './icons';
 import { useState } from 'react';
 import { DATA } from '../core/data';
 import { buyLegacy, legacyCost } from '../core/career';
@@ -152,7 +153,9 @@ export function AchievementGrid({ unlocked }: { unlocked: string[] }) {
         const hidden = (a as { hidden?: boolean }).hidden && !on;
         return (
           <div key={a.id} className={`ach ${on ? 'on' : ''} ${a.tier}`}>
-            <div className="ach-medal">{on ? '🏆' : '🔒'}</div>
+            <div className="ach-medal">
+              <PxIcon id={on ? 'trophy' : 'lock'} size={28} />
+            </div>
             <div className="col" style={{ gap: 2 }}>
               <b>{hidden ? '???' : a.name}</b>
               <span className="tiny muted">{hidden ? '숨겨진 업적' : a.desc}</span>

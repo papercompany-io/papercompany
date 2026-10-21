@@ -8,6 +8,8 @@
   "market": { "base": 0.5, "perCustomer": 0.02 },
   "product": { "base": 0.5, "perPoint": 0.005 },
   "salesFactor": { "base": 0.5, "perNetworkPoint": 0.01 },
+  "_proof": "A-81 매출 전 실체 계수: 만든 것(핵심 기능·MVP·팀·사용자)만큼만 스코어카드 가치를 인정. 막 창업한 빈 회사 ≈ 자본금",
+  "proof": { "base": 0.02, "core": 0.4, "mvp": 0.2, "perStaff": 0.03, "staffCap": 0.18, "perSqrtUser": 0.006, "userCap": 0.2 },
   "growthTiers": [
     { "minGrowth": 0.30, "multiple": 12 },
     { "minGrowth": 0.15, "multiple": 8 },

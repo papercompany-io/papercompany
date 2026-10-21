@@ -172,6 +172,6 @@ export function achievementsDay(s: GameState) {
     if (s.career.achievements.includes(a.id)) continue;
     if (!meets(metric(s, a.cond.metric), a.cond as { gte?: number; lte?: number })) continue;
     s.career.achievements.push(a.id);
-    notify(s, `🏆 업적 달성: ${a.name} — ${a.desc}`, 'achievement', 'career');
+    notify(s, `업적 달성: ${a.name} — ${a.desc}`, 'achievement', 'career');
   }
 }

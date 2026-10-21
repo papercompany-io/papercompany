@@ -5,9 +5,10 @@ import { wonShort } from '../core/format';
 import type { GameState, Notice, PendingDecision } from '../core/types';
 import { act } from './store';
 import { play } from './sound';
+import { PxIcon, type PxId } from './icons';
 import './feedback.css';
 
-const ICON: Record<Notice['kind'], string> = { info: '💬', good: '✅', bad: '⚠️', urgent: '🚨', achievement: '🏆', mission: '⭐' };
+const ICON: Record<Notice['kind'], PxId> = { info: 'talk', good: 'check', bad: 'warn', urgent: 'siren', achievement: 'trophy', mission: 'star' };
 
 export function Toasts({ s, enabled, onOpen }: { s: GameState; enabled: boolean; onOpen: (app: string, arg?: string) => void }) {
   const seen = useRef<string | null>(s.notices.length ? s.notices[s.notices.length - 1].id : null);
@@ -44,7 +45,9 @@ export function Toasts({ s, enabled, onOpen }: { s: GameState; enabled: boolean;
             if (n.app) onOpen(n.app, n.arg);
           }}
         >
-          <span className="toast-ic">{ICON[n.kind]}</span>
+          <span className="toast-ic">
+            <PxIcon id={ICON[n.kind]} size={20} />
+          </span>
           <span className="toast-text">{n.text}</span>
         </button>
       ))}

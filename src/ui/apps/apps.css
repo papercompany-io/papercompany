@@ -82,7 +82,7 @@ table.pl td.b { font-weight: 800; }
 .mk-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
 .mk { background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 4px; }
 .mk.off { background: var(--panel-2); }
-.mk-flag { font-size: 20px; }
+.mk-flag { font-family: var(--pixel); font-size: 11px; background: var(--ui-2); color: #fff; border-radius: 3px; padding: 1px 5px; }
 .share-bar { display: flex; height: 16px; border-radius: 4px; overflow: hidden; background: #e6eaf2; }
 .share-bar > div { height: 100%; }
 .kpi { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }

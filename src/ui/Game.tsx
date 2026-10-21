@@ -190,7 +190,7 @@ export function Game({ continued, notice, clearNotice, onEnded }: Props) {
 
         <Hud s={s} />
         <div className={`hint ${s.pauseReason || paydayForecast(s).cashAfter <= 0 ? 'urgent' : ''}`} data-testid="hint">
-          <span className="hint-tag">{s.pauseReason && !s.ended ? '⏸ 일시정지' : '다음 할 일'}</span>
+          <span className="hint-tag">{s.pauseReason && !s.ended ? '일시정지' : '다음 할 일'}</span>
           <span>{nextHint(s, openedOnce)}</span>
           {s.pauseReason && !s.ended && (
             <button className="btn small green" data-testid="pause-resume" onClick={() => act((g) => setSpeed(g, g.speed || 1))}>
@@ -301,7 +301,7 @@ function Missions({ s, onOpen }: { s: GameState; onOpen: (a: AppId) => void }) {
       </button>
       {open && (
         <div className="ms-list">
-          {ms.map((m) => {
+          {ms.map((m, i) => {
             const p = missionProgress(s, m);
             return (
               <div key={m.id} className="ms-item" title={m.guide}>
@@ -312,12 +312,12 @@ function Missions({ s, onOpen }: { s: GameState; onOpen: (a: AppId) => void }) {
                 <div className="ms-bar">
                   <div style={{ width: `${p * 100}%` }} />
                 </div>
-                <div className="tiny muted">{m.guide}</div>
+                {i === 0 && <div className="tiny muted">{m.guide}</div>}
               </div>
             );
           })}
           <button className="btn small ghost" onClick={() => onOpen('career')}>
-            업적·커리어 보기
+            전체 목표
           </button>
         </div>
       )}
@@ -335,7 +335,7 @@ function CompanyCard({ s, onOpen }: { s: GameState; onOpen: (a: AppId) => void }
   return (
     <aside className="company-card" data-testid="company-card">
       <div className="cc-head">
-        <div className="cc-logo" />
+        <div className="cc-logo">{[...s.company.name][0]}</div>
         <div className="cc-title">
           <div className="cc-name">{s.company.name}</div>
           <div className="cc-stage">

@@ -10,7 +10,7 @@ import { runwayMonths, lastRevenue, projectedMonthlyPayroll } from '../../src/co
 import { startRound, sendLetter, requestDecision, closeForOffer, acceptOffer, activeRound, fits, decisionProbability, selectableStages } from '../../src/core/funding';
 import { setOrder } from '../../src/core/orders';
 import { setAdBudget, launchMarket, launchBlock, totalUsers, shares, demand, revenuePerUser } from '../../src/core/market';
-import { moveOffice, moveBlock, freeSeats, furnitureItems, buyFurniture, buyFurnitureBlock } from '../../src/core/office';
+import { moveOffice, moveBlock, seatsAvailable, furnitureItems, buyFurniture, buyFurnitureBlock } from '../../src/core/office';
 import { chooseModel, latestModels, setAdoption } from '../../src/core/aiadopt';
 import { promoteLead, leadInfo, avgSat } from '../../src/core/staff';
 import { resolveDecision } from '../../src/core/events';
@@ -74,7 +74,7 @@ function hireStep(s: GameState) {
   let burn = monthlyBurn(s) + s.pendingHires.reduce((a, h) => a + h.salary * 1.2, 0);
   for (const [d, n] of Object.entries(tgt) as [DeptId, number][]) {
     const have = s.employees.filter((e) => e.dept === d).length + s.pendingHires.filter((h) => h.dept === d).length;
-    if (have >= n || freeSeats(s, d).length === 0) continue;
+    if (have >= n || seatsAvailable(s) === 0) continue;
     if (s.company.stage < DATA.depts.departments.find((x) => x.id === d)!.stage) continue;
     const open = s.postings.find((p) => p.dept === d && p.status === 'open');
     if (!open) createPosting(s, { dept: d, headcount: Math.min(4, n - have), salaryLevel: 'normal', durationDays: 14, promo: s.cash > 3e8 ? 'normal' : 'none' });
@@ -153,7 +153,7 @@ function opsStep(s: GameState) {
   // 해외 진출
   for (const m of ['jp', 'sea', 'us', 'eu'] as const) if (!launchBlock(s, m) && s.cash > DATA.markets.markets.find((x) => x.id === m)!.entry * 4) launchMarket(s, m);
   // 사무실
-  const full = s.seats.filter((x) => x.zone !== 'ceo' && x.zone !== 'exec').filter((x) => x.occupant === null).length <= 1;
+  const full = seatsAvailable(s) <= 1;
   if (full && s.company.officeTier < 5) {
     const t = s.company.officeTier + 1;
     const dep = DATA.offices.tiers.find((x) => x.id === t)!.deposit;

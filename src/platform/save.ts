@@ -1,4 +1,5 @@
 // DT-07 저장 어댑터: Electron은 사용자 데이터 폴더의 파일, 웹은 localStorage(A-29).
+import { migrateSeats } from '../core/office';
 import type { GameState, Profile } from '../core/types';
 import { emptyProfile } from '../core/career';
 
@@ -64,6 +65,8 @@ function parse(text: string | null): GameState | null {
       // 예전 저장 보정: 대표 행동 "외주"(A-79)
       s.ceoAlloc.contract ??= 0;
       s.todayLog.contract ??= 0;
+      // 예전 저장 보정: 부서 구역 좌석 → 자유 배치 책상(A-80)
+      migrateSeats(s);
       return s;
     }
   } catch {

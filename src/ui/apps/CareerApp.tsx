@@ -1,4 +1,5 @@
 // 커리어 앱: 미션(튜토리얼·마일스톤), 회사 단계와 해금, 업적, 커리어 기록
+import { PxIcon } from '../icons';
 import { useState } from 'react';
 import { DATA } from '../../core/data';
 import { careerStats, endingFor, founderAge } from '../../core/career';
@@ -33,7 +34,9 @@ export function CareerApp() {
               const r = m.reward as { cash?: number; rep?: number; legacy?: number };
               return (
                 <tr key={m.id} style={{ opacity: done ? 0.55 : 1 }}>
-                  <td style={{ width: 24 }}>{done ? '✅' : '⬜'}</td>
+                  <td style={{ width: 24 }}>
+                    <PxIcon id={done ? 'check' : 'empty'} size={16} />
+                  </td>
                   <td>
                     <b>{m.name}</b>
                     <div className="tiny muted">{m.guide}</div>

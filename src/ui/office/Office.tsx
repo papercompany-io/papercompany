@@ -1,16 +1,19 @@
-// OF-01 아이소메트릭 픽셀 사무실(캔버스) + OF-02 부서별 좌석 + OF-06 직원 클릭, DT-09 CEO 클릭 → 데스크탑.
+// OF-01 아이소메트릭 픽셀 사무실(캔버스) + OF-02 책상 배치(A-80) + OF-06 직원 클릭, DT-09 CEO 클릭 → 데스크탑.
 // Startup Company처럼 사무실이 화면을 채우는 탑뷰입니다. 끌어서 이동, 휠·버튼으로 확대·축소, 방향키로도 이동합니다.
 // 그림은 캔버스에 픽셀로 그리고, 이름표와 클릭 영역은 그 위에 DOM으로 겹칩니다(글자를 또렷하게, 테스트에서 클릭 가능하게).
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { dept } from '../../core/data';
+import { DATA, dept } from '../../core/data';
 import { formatDate } from '../../core/calendar';
 import { orderLabel } from '../../core/orders';
 import { isSick } from '../../core/staff';
-import { currentTier } from '../../core/office';
-import type { DeptId, GameState } from '../../core/types';
-import { getGame, useGame } from '../store';
+import { currentTier, deskAt, desks, moveDesk, placeDesk, removeDesk, seatsAvailable } from '../../core/office';
+import type { GameState } from '../../core/types';
+import { act, getGame, useGame } from '../store';
+import { wonShort } from '../../core/format';
 import { Pix } from './pixel';
-import { ZOOM_MAX, ZOOM_MIN, actors, clampCamera, defaultCamera, defaultZoom, drawOffice, makeView, setLayout, type Actor, type Camera } from './scene';
+import { TH, TW, ZOOM_MAX, ZOOM_MIN, actors, clampCamera, defaultCamera, defaultZoom, drawOffice, makeView, setLayout, type Actor, type Camera, type EditState } from './scene';
+import { play } from '../sound';
+import { PxIcon, bubbleIcon } from '../icons';
 import type { FloatFx } from '../Game';
 import './office.css';
 
@@ -41,7 +44,9 @@ export function Office({ onCeo, onEmployee, pulseCeo, keysEnabled, floats = [] }
   const wrap = useRef<HTMLDivElement>(null);
   const cv = useRef<HTMLCanvasElement>(null);
   const hover = useRef<string | null>(null);
-  const hoverZone = useRef<DeptId | null>(null);
+  const [mode, setMode] = useState<EditState['mode'] | null>(null);
+  const edit = useRef<EditState | null>(null);
+  const [editMsg, setEditMsg] = useState<string | null>(null);
   const [size, setSize] = useState({ w: 1280, h: 800 });
   const [zoom, setZoom] = useState<number | null>(null);
   const [cam, setCam] = useState<Camera | null>(null);
@@ -86,7 +91,7 @@ export function Office({ onCeo, onEmployee, pulseCeo, keysEnabled, floats = [] }
         canvas.height = v.artH;
         pix = new Pix(v.artW, v.artH);
       }
-      drawOffice(pix, v, g, now, hover.current, hoverZone.current);
+      drawOffice(pix, v, g, now, hover.current, edit.current);
       ctx.putImageData(pix.img, 0, 0);
     };
     raf = requestAnimationFrame(loop);
@@ -122,6 +127,58 @@ export function Office({ onCeo, onEmployee, pulseCeo, keysEnabled, floats = [] }
     setCam(clampCamera({ x: wx - (fx - size.w / 2) / z, y: wy - (fy - size.h / 2) / z }));
   };
 
+  // 배치 모드 켜고 끄기(Esc로 끔)
+  const setEdit = (m: EditState['mode'] | null) => {
+    setMode(m);
+    edit.current = m ? { mode: m, tile: null, pick: null } : null;
+    setEditMsg(null);
+  };
+  useEffect(() => {
+    if (!mode) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setEdit(null);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [mode]);
+
+  // 화면 좌표 → 바닥 칸(소수). 책상은 2×2칸이라 마우스가 책상 가운데에 오도록 왼쪽 위 칸을 잡습니다.
+  const floorAt = (clientX: number, clientY: number) => {
+    const r = wrap.current!.getBoundingClientRect();
+    const wx = (clientX - r.left) / view.scale - view.ox;
+    const wy = (clientY - r.top) / view.scale - view.oy;
+    const a = (2 * wx) / TW;
+    const b = (2 * wy) / TH;
+    return { x: (a + b) / 2, y: (b - a) / 2 };
+  };
+  const onEditMove = (clientX: number, clientY: number) => {
+    const e = edit.current;
+    if (!e) return;
+    const f = floorAt(clientX, clientY);
+    e.tile = { gx: Math.round(f.x - 1), gy: Math.round(f.y - 1) };
+  };
+  const onEditClick = (clientX: number, clientY: number) => {
+    const e = edit.current;
+    if (!e) return;
+    const f = floorAt(clientX, clientY);
+    const tile = { gx: Math.round(f.x - 1), gy: Math.round(f.y - 1) };
+    let err: string | null = null;
+    if (e.mode === 'place') err = act((g) => placeDesk(g, tile.gx, tile.gy)) ?? null;
+    else if (e.mode === 'remove') {
+      const d = deskAt(getGame()!, f.x, f.y);
+      err = d ? (act((g) => removeDesk(g, d.id)) ?? null) : '치울 책상을 누르세요.';
+    } else if (!e.pick) {
+      const d = deskAt(getGame()!, f.x, f.y);
+      if (d) e.pick = d.id;
+      else err = '옮길 책상을 누르세요.';
+    } else {
+      err = act((g) => moveDesk(g, e.pick!, tile.gx, tile.gy)) ?? null;
+      if (!err) e.pick = null;
+    }
+    setEditMsg(err);
+    play(err ? 'fail' : 'click');
+  };
+
   if (!s) return null;
   const sc = view.scale;
   const list = actors(s, view).sort((a, b) => a.head[1] - b.head[1]);
@@ -135,7 +192,7 @@ export function Office({ onCeo, onEmployee, pulseCeo, keysEnabled, floats = [] }
 
   return (
     <div
-      className={`office ${drag.current?.moved ? 'dragging' : ''}`}
+      className={`office ${drag.current?.moved ? 'dragging' : ''} ${mode ? `editing edit-${mode}` : ''}`}
       ref={wrap}
       data-testid="office"
       onPointerDown={(e) => {
@@ -144,6 +201,7 @@ export function Office({ onCeo, onEmployee, pulseCeo, keysEnabled, floats = [] }
         suppressClick.current = false;
       }}
       onPointerMove={(e) => {
+        onEditMove(e.clientX, e.clientY);
         const d = drag.current;
         if (!d) return;
         const dx = e.clientX - d.x;
@@ -152,11 +210,11 @@ export function Office({ onCeo, onEmployee, pulseCeo, keysEnabled, floats = [] }
         d.moved = true;
         setCam(clampCamera({ x: d.cam.x - dx / scale, y: d.cam.y - dy / scale }));
       }}
-      onPointerUp={() => {
+      onPointerUp={(e) => {
         if (drag.current?.moved) {
           suppressClick.current = true;
           setTimeout(() => (suppressClick.current = false), 0);
-        }
+        } else if (drag.current && edit.current) onEditClick(e.clientX, e.clientY);
         drag.current = null;
       }}
       onPointerLeave={() => (drag.current = null)}
@@ -191,19 +249,7 @@ export function Office({ onCeo, onEmployee, pulseCeo, keysEnabled, floats = [] }
         );
       })}
 
-      <div className="zone-legend" data-testid="zone-legend" onPointerDown={(e) => e.stopPropagation()}>
-        <div className="zl-title">{currentTier(s).name}</div>
-        {currentTier(s).zones.map(({ dept: id }) => {
-          const d = id as DeptId;
-          return (
-            <div key={d} className="zl-item" style={{ ['--dc' as string]: dept(d).color }} onMouseEnter={() => (hoverZone.current = d)} onMouseLeave={() => (hoverZone.current = null)}>
-              <span className="zone-dot" />
-              {dept(d).name}
-              <b>{zoneCount(s, d)}</b>
-            </div>
-          );
-        })}
-      </div>
+      <DeskPanel s={s} mode={mode} msg={editMsg} onMode={(m) => setEdit(mode === m ? null : m)} />
 
       <div className="cam-tools" onPointerDown={(e) => e.stopPropagation()}>
         <button className="round-btn" data-testid="zoom-in" title="확대" onClick={() => zoomTo(scale + 1)} disabled={scale >= ZOOM_MAX}>
@@ -229,10 +275,38 @@ export function Office({ onCeo, onEmployee, pulseCeo, keysEnabled, floats = [] }
   );
 }
 
-function zoneCount(s: GameState, d: DeptId): string {
-  const seats = s.seats.filter((x) => x.zone === d);
-  const used = seats.filter((x) => x.occupant !== null).length;
-  return `${used}/${seats.length}`;
+// 왼쪽 아래: 사무실 이름·책상 수와 책상 배치 도구(놓기·옮기기·치우기)
+function DeskPanel({ s, mode, msg, onMode }: { s: GameState; mode: EditState['mode'] | null; msg: string | null; onMode: (m: EditState['mode']) => void }) {
+  const all = desks(s);
+  const used = all.filter((d) => d.occupant !== null).length;
+  const room = seatsAvailable(s) - (all.length - used);
+  const tip: Record<EditState['mode'], string> = {
+    place: `빈 바닥을 눌러 책상을 놓습니다(개당 ${wonShort(DATA.furniture.deskPrice)}).`,
+    move: '책상을 누른 다음 옮길 자리를 누르세요. 앉은 사람도 같이 옮겨 갑니다.',
+    remove: '빈 책상을 누르면 치웁니다(절반 값에 처분).',
+  };
+  return (
+    <div className="desk-panel" data-testid="desk-panel" onPointerDown={(e) => e.stopPropagation()} onPointerUp={(e) => e.stopPropagation()}>
+      <div className="dp-row">
+        <b className="dp-name">{currentTier(s).name}</b>
+        <span className="dp-count" data-testid="desk-count">
+          책상 {used}/{all.length} · 빈 바닥 {room}
+        </span>
+      </div>
+      <div className="dp-tools">
+        <button className={`dp-btn ${mode === 'place' ? 'on' : ''}`} data-testid="desk-place" onClick={() => onMode('place')}>
+          책상 놓기
+        </button>
+        <button className={`dp-btn ${mode === 'move' ? 'on' : ''}`} data-testid="desk-move" disabled={!all.length} onClick={() => onMode('move')}>
+          옮기기
+        </button>
+        <button className={`dp-btn ${mode === 'remove' ? 'on' : ''}`} data-testid="desk-remove" disabled={!all.length} onClick={() => onMode('remove')}>
+          치우기
+        </button>
+      </div>
+      {mode && <div className={`dp-tip ${msg ? 'bad' : ''}`}>{msg ?? `${tip[mode]} Esc로 끝내기`}</div>}
+    </div>
+  );
 }
 
 function NameTag({ a, s, sc, pulse, onClick }: { a: Actor; s: GameState; sc: number; pulse: boolean; onClick: () => void }) {
@@ -267,7 +341,11 @@ function NameTag({ a, s, sc, pulse, onClick }: { a: Actor; s: GameState; sc: num
         {e.name}
         {e.kind === 'cofounder' && <span className="tag-badge">코파운더</span>}
         {e.lead && <span className="tag-badge">팀장</span>}
-        {e.bubble && <span className="tag-emoji">{e.bubble.text}</span>}
+        {e.bubble && (
+          <span className="tag-emoji">
+            <PxIcon id={bubbleIcon(e.bubble.text)} size={12} />
+          </span>
+        )}
       </div>
       <div className={`tag-sub ${busy ? '' : 'idle'}`}>{status}</div>
       <div className="tag-mood" title={`만족도 ${Math.round(e.sat)} · 건강 ${Math.round(e.health)}`}>
@@ -283,7 +361,7 @@ function Bubble({ a, s, sc }: { a: Actor; s: GameState; sc: number }) {
   if (!e || !e.bubble) return null;
   return (
     <div className="mood-bubble" style={{ left: a.head[0] * sc, top: a.head[1] * sc }}>
-      {e.bubble.text}
+      <PxIcon id={bubbleIcon(e.bubble.text)} size={16} />
     </div>
   );
 }

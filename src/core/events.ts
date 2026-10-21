@@ -16,7 +16,7 @@ import { applyWork } from './product';
 import { launchedMarkets, totalUsers } from './market';
 import { pick, rand, weighted } from './rng';
 import { avgHealth, avgSat, hasTrait, removeEmployee, startSkill } from './staff';
-import { freeSeats } from './office';
+import { takeDesk } from './office';
 import { onEmployeeJoined } from './messenger';
 import { DATA } from './data';
 import type { DeptId, Employee, GameState, Grade, MarketId, PendingDecision } from './types';
@@ -303,7 +303,7 @@ export function trigger(s: GameState, forceId?: string): PendingDecision | null 
   };
   s.decisions.push(d);
   post(s, channelId, from, d.text, 'npc', id);
-  if (target) target.bubble = { text: '💬', until: s.day + 3 };
+  if (target) target.bubble = { text: 'talk', until: s.day + 3 };
   if (d.urgent) {
     s.pauseReason = `긴급 결정: ${d.text.slice(0, 28)}…`;
     notify(s, `긴급: ${d.text}`, 'urgent', 'messenger', channelId);
@@ -429,9 +429,9 @@ function clamp(v: number) {
 }
 
 function hireSpecial(s: GameState, h: { name: string; dept: DeptId; grade: Grade; salary: number; trait?: string }) {
-  const seat = freeSeats(s, h.dept)[0];
+  const seat = takeDesk(s);
   if (!seat) {
-    notify(s, `${h.name}님이 합류하려 했지만 ${dept(h.dept).name} 구역에 자리가 없어 무산됐습니다.`, 'bad', 'office');
+    notify(s, `${h.name}님이 합류하려 했지만 사무실에 책상을 놓을 자리가 없어 무산됐습니다.`, 'bad', 'office');
     return;
   }
   const e: Employee = {
@@ -454,7 +454,7 @@ function hireSpecial(s: GameState, h: { name: string; dept: DeptId; grade: Grade
     sickUntil: null,
     leaving: null,
     lastRaiseDay: s.day,
-    bubble: { text: '📦', until: s.day + 3 },
+    bubble: { text: 'box', until: s.day + 3 },
   };
   seat.occupant = e.id;
   s.employees.push(e);

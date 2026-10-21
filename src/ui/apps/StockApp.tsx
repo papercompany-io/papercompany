@@ -78,7 +78,7 @@ export function StockApp() {
           {p.lastQuarter ? (
             <div className="tiny">
               {p.lastQuarter.label}: 매출 {wonShort(p.lastQuarter.revenue)}
-              {p.lastQuarter.guidance !== null && ` (가이던스 ${wonShort(p.lastQuarter.guidance)} — ${p.lastQuarter.beat ? '상회 📈' : '하회 📉'})`}
+              {p.lastQuarter.guidance !== null && ` (가이던스 ${wonShort(p.lastQuarter.guidance)} — ${p.lastQuarter.beat ? '상회 ▲' : '하회 ▼'})`}
             </div>
           ) : (
             <div className="tiny muted">첫 분기 실적은 다음 분기 시작일에 발표됩니다.</div>

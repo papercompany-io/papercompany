@@ -99,16 +99,28 @@ export function userValue(s: GameState): number {
   return totalUsers(s) * industry(s.company.industry).userValue * gm * econ(s, 'valuation');
 }
 
+// 매출 전 실체 계수(A-81): 아이디어만 있는 회사는 가치가 거의 없고, 핵심 기능·MVP·팀·사용자가 생길수록 스코어카드 가치를 인정받습니다.
+export function proofFactor(s: GameState): number {
+  const p = V.proof;
+  const cores = coreFeatures(s);
+  const coreDone = cores.filter((f) => featureLevel(s, f.id) >= 1).length / Math.max(1, cores.length);
+  const staff = s.employees.length;
+  const v = p.base + coreDone * p.core + (hasMvp(s) ? p.mvp : 0) + Math.min(p.staffCap, staff * p.perStaff) + Math.min(p.userCap, Math.sqrt(totalUsers(s)) * p.perSqrtUser);
+  return Math.min(1, v);
+}
+
 export function scorecardValue(s: GameState): { business: number; detail: string[] } {
   const sc = scorecard(s);
   const uv = userValue(s);
-  const sv = V.baseValue * sc.score * econ(s, 'valuation');
+  const pf = proofFactor(s);
+  const sv = V.baseValue * sc.score * pf * econ(s, 'valuation');
   if (uv > sv)
     return { business: uv, detail: [`사용자 기반 평가: 사용자 ${Math.round(totalUsers(s)).toLocaleString('ko-KR')} × ${industry(s.company.industry).userValue.toLocaleString('ko-KR')}원 × 성장·경기`] };
   return {
     business: sv,
     detail: [
-      `스코어카드 점수 ${sc.score.toFixed(3)} (팀 ${sc.team.toFixed(2)}, 시장 ${sc.market.toFixed(2)}, 제품 ${sc.product.toFixed(2)}, 영업 ${sc.sales.toFixed(2)}) × 기준 ${(V.baseValue / 1e8).toFixed(0)}억원 × 경기`,
+      `스코어카드 점수 ${sc.score.toFixed(3)} (팀 ${sc.team.toFixed(2)}, 시장 ${sc.market.toFixed(2)}, 제품 ${sc.product.toFixed(2)}, 영업 ${sc.sales.toFixed(2)}) × 기준 ${(V.baseValue / 1e8).toFixed(0)}억원 × 실체 ${(pf * 100).toFixed(0)}% × 경기`,
+      '실체: 핵심 기능·MVP 출시·팀·사용자가 생길수록 오릅니다',
     ],
   };
 }

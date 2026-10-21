@@ -1,7 +1,6 @@
 // EM-01 직원 목록, EM-02 부서 배치(좌석은 다음 날 옮김), EM-04 해고(DEC-022: 1달치 월급)
 import { DATA, DEPT_IDS, dept } from './data';
 import { onDeptChanged } from './messenger';
-import { freeSeats } from './office';
 import type { DeptId, Employee, GameState, Seat } from './types';
 
 export function deptMembers(s: GameState, d: DeptId): Employee[] {
@@ -31,13 +30,7 @@ export function moveDept(s: GameState, empId: string, to: DeptId): string | null
   if (!e) return '직원을 찾을 수 없습니다.';
   if (e.dept === to) return '이미 그 부서입니다.';
   if (!deptUnlocked(s, to)) return `${dept(to).name} 부서는 회사 단계 ${dept(to).stage}부터 둘 수 있습니다.`;
-  const needSeat = e.kind !== 'cofounder';
-  let reserved: Seat | null = null;
-  if (needSeat) {
-    reserved = freeSeats(s, to)[0] ?? null;
-    if (!reserved) return `${dept(to).name} 구역에 빈자리가 없습니다.`;
-    reserved.occupant = `moving:${e.id}`;
-  }
+  // 책상은 직무와 상관없어 자리를 옮기지 않습니다(A-80).
   const from = e.dept;
   e.dept = to;
   if (e.lead) e.lead = false;

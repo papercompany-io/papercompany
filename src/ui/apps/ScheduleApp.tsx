@@ -33,7 +33,7 @@ export function ScheduleApp() {
             실무 모드
           </button>
           <button className={exec ? 'on' : ''} data-testid="mode-executive" disabled={!!execErr} title={execErr ?? ''} onClick={() => act((g) => setCeoMode(g, 'executive'))}>
-            경영 모드 {execErr ? '🔒' : ''}
+            경영 모드
           </button>
         </div>
       </div>

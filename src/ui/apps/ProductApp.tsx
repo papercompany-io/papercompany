@@ -243,7 +243,7 @@ export function ProductApp() {
               <span className="fx">{fxText(f.fx)}</span>
               <span className="tiny">
                 작업량 개발 {w.dev} · 디자인 {w.design}
-                {lock ? ` · 🔒 ${lock}` : ''}
+                {lock ? ` · 잠김: ${lock}` : ''}
               </span>
             </button>
           );

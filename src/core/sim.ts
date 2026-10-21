@@ -140,7 +140,7 @@ function bankruptcyWarning(s: GameState) {
   if (s.flags.includes(key)) return;
   s.flags = s.flags.filter((f) => !f.startsWith('bkwarn-')).concat(key);
   const gap = Math.round(-fc.cashAfter / 1e4).toLocaleString('ko-KR');
-  notify(s, `⚠ 파산 경고: 이대로면 ${fc.daysLeft}일 뒤 월급일에 자금이 약 ${gap}만원 모자랍니다. 투자를 받거나(투자 앱) 광고비·인원을 줄이세요.`, 'urgent', 'finance');
+  notify(s, `파산 경고: 이대로면 ${fc.daysLeft}일 뒤 월급일에 자금이 약 ${gap}만원 모자랍니다. 투자를 받거나(투자 앱) 광고비·인원을 줄이세요.`, 'urgent', 'finance');
   s.pauseReason = `파산 경고 — ${fc.daysLeft}일 뒤 월급일에 약 ${gap}만원 부족`;
 }
 

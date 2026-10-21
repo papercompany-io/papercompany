@@ -180,7 +180,7 @@ function outageRoll(s: GameState) {
   const hours = Math.max(1, Math.round(sev * 4));
   notify(s, `서비스 장애 ${hours}시간! 고객 일부가 떠나고 2주 동안 이탈이 늘어납니다. (버그를 줄이고 인프라·안정성 기능을 갖추세요)`, 'bad', 'product');
   if (sev > 1.3) news(s, `[장애] ${s.company.name} 서비스 ${hours}시간 먹통… 이용자 불만`, 'company');
-  post(s, s.channels.some((c) => c.id === 'team-dev') ? 'team-dev' : 'all', '시스템', `⚠ 서비스 장애 ${hours}시간 — 복구했습니다.`, 'system');
+  post(s, s.channels.some((c) => c.id === 'team-dev') ? 'team-dev' : 'all', '시스템', `서비스 장애 ${hours}시간 — 복구했습니다.`, 'system');
   float(s, '장애!', 'bad');
 }
 

@@ -36,9 +36,11 @@ export interface Employee {
 
 export interface Seat {
   id: string;
-  zone: DeptId | 'exec' | 'ceo';
+  zone: 'desk' | 'exec' | 'ceo' | DeptId; // DeptId는 예전 저장(부서 구역 좌석)에만 있고 불러올 때 책상으로 바뀝니다
   occupant: string | null; // 직원 id, 'ceo', 'pending:지원자id', 'moving:직원id'
   bought?: boolean; // 책상·PC를 샀는지(없으면 예전 저장 = 산 것으로 봄)
+  gx?: number; // 책상 위치(타일, A-80)
+  gy?: number;
 }
 
 export interface Posting {

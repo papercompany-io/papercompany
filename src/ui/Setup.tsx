@@ -149,7 +149,7 @@ export function Setup({ mode, wealth = 0, legacy, challenge: careerChallenge = n
                 return (
                   <button key={ind.id} disabled={locked} className={`industry ${industry === ind.id ? 'sel' : ''}`} data-testid={`industry-${ind.id}`} onClick={() => setIndustry(ind.id)}>
                     <div className="cand-name">
-                      {ind.name} {locked && <span className="chip">🔒 레거시로 해금</span>}
+                      {ind.name} {locked && <span className="chip">레거시로 해금</span>}
                     </div>
                     <div className="tiny muted">{ind.desc}</div>
                     <div className="tiny">

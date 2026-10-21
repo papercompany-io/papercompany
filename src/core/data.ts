@@ -260,9 +260,9 @@ export interface OfficeTier {
   size: { w: number; h: number };
   ceo: { x: number; y: number };
   exec: { x: number; y: number };
-  zones: { dept: string; x: number; y: number; cols: number; rows: number }[];
   rooms: string[];
   home?: boolean; // 원룸 작업실(유리 대표실·라운지 없음)
+  maxDesks: number; // 수용 인원: 놓을 수 있는 책상 최대 개수(A-80)
 }
 
 export const OFFICE_TIERS = offices.tiers as OfficeTier[];

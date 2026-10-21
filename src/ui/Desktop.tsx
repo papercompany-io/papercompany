@@ -111,24 +111,20 @@ export function Desktop({ app, arg, setApp, onClose }: Props) {
       <div className="dw-screen">
         {!cur && (
           <div className="wallpaper">
-            <div className="wall-hello">
-              <div className="wall-co">{s.company.name}</div>
-              <div className="wall-sub">앱을 눌러 일을 시작하세요. 컴퓨터를 보는 동안에도 시간은 흐릅니다. (Tab 열기/닫기 · 스페이스 일시정지 · 1~3 배속)</div>
-            </div>
             <div className="icons">
               {APPS.map((a) => {
                 const on = appOpen(s, a.id);
                 if (a.publicOnly && !on) return null;
                 const b = on ? badge(s, a.id) : 0;
                 return (
-                  <button key={a.id} className={`icon ${on ? '' : 'locked'}`} data-testid={`app-${a.id}`} disabled={!on} onClick={() => open(a.id)} style={{ ['--ac' as string]: APP_COLORS[a.id] }}>
+                  <button key={a.id} className={`icon ${on ? '' : 'locked'}`} data-testid={`app-${a.id}`} disabled={!on} title={on ? a.desc : `단계 ${a.stage}에 열림`} onClick={() => open(a.id)} style={{ ['--ac' as string]: APP_COLORS[a.id] }}>
                     <span className="icon-tile">
                       <AppIcon id={a.id} />
                       {b > 0 && <span className="icon-badge">{b > 99 ? '99+' : b}</span>}
                       {on && !seen.includes(a.id) && a.stage > 0 && <span className="icon-new">NEW</span>}
                     </span>
                     <span className="icon-name">{a.name}</span>
-                    <span className="icon-desc">{on ? a.desc : `단계 ${a.stage}에 열림`}</span>
+                    {!on && <span className="icon-desc locked-desc">단계 {a.stage}</span>}
                   </button>
                 );
               })}

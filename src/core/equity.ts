@@ -88,7 +88,7 @@ export function grantOptions(s: GameState, e: Employee, shares: number): string 
   } else e.optionDay = s.day;
   e.options += shares;
   e.sat = Math.min(100, e.sat + 10);
-  e.bubble = { text: '📈', until: s.day + 4 };
+  e.bubble = { text: 'chart', until: s.day + 4 };
   return null;
 }
 

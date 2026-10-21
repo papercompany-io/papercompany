@@ -46,7 +46,7 @@ export function onEmployeeJoined(s: GameState, e: Employee) {
   getChannel(s, teamChannelId(e.dept))!.memberIds.push(e.id);
   s.channels.push({ id: `dm-${e.id}`, kind: 'dm', name: e.name, memberIds: [e.id], messages: [], unread: 0 });
   post(s, 'all', '시스템', `${e.name}님이 ${dept(e.dept).name}팀에 합류했습니다.`, 'system');
-  post(s, teamChannelId(e.dept), e.name, '안녕하세요! 오늘부터 함께하게 됐습니다. 잘 부탁드립니다 🙂', 'npc');
+  post(s, teamChannelId(e.dept), e.name, '안녕하세요! 오늘부터 함께하게 됐습니다. 잘 부탁드립니다.', 'npc');
 }
 
 export function onEmployeeLeft(s: GameState, e: Employee, why: 'quit' | 'fired' | 'event') {

@@ -1,5 +1,6 @@
 // F08 투자 앱: FR-01 단계 사다리, FR-13 라운드 열기, FR-11 룸·투자금, FR-10 투자사 레터, FR-06·07 협상·판정,
 // FR-09 클럽딜, FR-08 제안서 수락·거절, EQ-02 희석, EQ-03 지분 구조
+import { PxIcon } from '../icons';
 import { useState } from 'react';
 import { DATA, investor, stage, stageIndex } from '../../core/data';
 import { formatDate } from '../../core/calendar';
@@ -163,7 +164,7 @@ function RoundTab({ initialStage, goInvestors }: { initialStage?: string; goInve
         {stageConditions(s, stageId).length === 0 && <div className="tiny muted">특별한 조건이 없습니다.</div>}
         {stageConditions(s, stageId).map((c) => (
           <div key={c.label} className="tiny">
-            {c.ok ? '✅' : '⚠️'} {c.label}
+            <PxIcon id={c.ok ? 'check' : 'warn'} size={14} /> {c.label}
           </div>
         ))}
         {err && <div className="err">{err}</div>}
