@@ -1,12 +1,18 @@
 // F08 투자 유치: FR-01 단계 구조, FR-02~05 단계별 투자, FR-06 협상, FR-07 판정, FR-08 수락·거절,
 // FR-09 클럽딜, FR-10 투자사 레터, FR-11 룸과 투자금, FR-13 라운드 열기와 유치 기간, EQ-02 희석
-import { DATA, hasMvp, investor, specEffects, stage, stageIndex } from './data';
-import { founderPct, newSharesForRoom, recordEquity, totalShares } from './equity';
-import { book } from './finance';
+import { DATA, investor, specEffects, stage, stageIndex } from './data';
+import { convertSafes, founderShares, founderPct, newSharesForRoom, recordEquity, safeConversion, totalShares } from './equity';
+import { book, lastRevenue } from './finance';
 import { nextId } from './ids';
 import { ensureExternal, post } from './messenger';
+import { econ } from './economy';
+import { addMod, mod } from './mods';
+import { news, notify } from './notify';
+import { coreFeatures, featureLevel, hasMvp } from './product';
+import { totalUsers } from './market';
+import { legacyFx } from './career';
 import { rand } from './rng';
-import { computeValuation, updateStoredValuation } from './valuation';
+import { computeValuation, revenueGrowth, updateStoredValuation } from './valuation';
 import type { GameState, LetterThread, Offer, Round, StageId } from './types';
 
 const FD = DATA.funding;
@@ -31,9 +37,10 @@ export function selectableStages(s: GameState): StageId[] {
   return FD.stages.filter((_, i) => i >= lo && i <= hi).map((x) => x.id as StageId);
 }
 
-export function lastRevenue(s: GameState): number {
-  const last = s.plHistory[s.plHistory.length - 1];
-  return last ? last.revenue : 0;
+export { lastRevenue };
+
+export function seedUsersNeed(s: GameState): number {
+  return (FD.seedUsers as Record<string, number>)[s.company.industry] ?? 5;
 }
 
 // 라운드에 맞는 시점인지(DEC-040): 맞지 않으면 실패 확률이 커집니다. 열기 자체는 막지 않습니다.
@@ -41,9 +48,10 @@ export function stageConditions(s: GameState, id: StageId): { label: string; ok:
   const st = stage(id) as { needProduct?: number; needCustomers?: number; needRevenue?: number; early: boolean };
   const out: { label: string; ok: boolean }[] = [];
   if (st.needProduct !== undefined) {
-    out.push({ label: st.needProduct >= 100 ? 'MVP 완성(제품 점수 100)' : `기획 완료(제품 점수 ${st.needProduct})`, ok: s.productPoints >= st.needProduct });
+    if (st.needProduct >= 100) out.push({ label: 'MVP 출시', ok: hasMvp(s) });
+    else out.push({ label: '핵심 기능 1개 이상 완성', ok: coreFeatures(s).some((f) => featureLevel(s, f.id) >= 1) });
   }
-  if (st.needCustomers !== undefined) out.push({ label: `고객 ${st.needCustomers}곳 이상`, ok: Math.floor(s.customers) >= st.needCustomers });
+  if (st.needCustomers !== undefined) out.push({ label: `고객 ${seedUsersNeed(s).toLocaleString('ko-KR')} 이상`, ok: Math.floor(totalUsers(s)) >= seedUsersNeed(s) });
   if (st.needRevenue !== undefined) out.push({ label: `지난달 매출 ${(st.needRevenue / 10000).toLocaleString('ko-KR')}만원 이상`, ok: lastRevenue(s) >= st.needRevenue });
   if (s.lastRoundDay !== null) out.push({ label: `직전 라운드 후 ${FD.prob.recentDays}일 지남`, ok: s.day - s.lastRoundDay >= FD.prob.recentDays });
   if (st.early) out.push({ label: '창업자가 투자 유치·엑싯 경험 보유(초기 라운드)', ok: specEffects(s.founder.picks).earlyRound !== 'hard' });
@@ -57,8 +65,15 @@ export function roundMath(preValue: number, room: number) {
 }
 
 // FR-13 라운드 열기
-export function startRound(s: GameState, id: StageId, room: number): string | null {
+export function canSafe(id: StageId): boolean {
+  return (FD.safe.stages as string[]).includes(id);
+}
+
+export function startRound(s: GameState, id: StageId, room: number, instrument: 'equity' | 'safe' = 'equity'): string | null {
   if (s.ended) return '게임이 끝났습니다.';
+  if (s.career.challenge === 'bootstrap') return '무투자 도전 중에는 투자를 받을 수 없습니다.';
+  if (s.public) return '상장사는 투자 라운드 대신 주식 시장에서 자금을 조달합니다.';
+  if (instrument === 'safe' && !canSafe(id)) return 'SAFE는 시드 라운드까지만 쓸 수 있습니다.';
   if (activeRound(s)) return '이미 진행 중인 라운드가 있습니다.';
   if (!selectableStages(s).includes(id)) return '지금 열 수 없는 단계입니다.';
   if (room < FD.roomMin || room > FD.roomMax) return `룸은 ${FD.roomMin * 100}%~${FD.roomMax * 100}% 사이로 정해야 합니다.`;
@@ -67,6 +82,7 @@ export function startRound(s: GameState, id: StageId, room: number): string | nu
     id: nextId(s, 'r'),
     stage: id,
     room,
+    instrument,
     openedDay: s.day,
     endDay: s.day + FD.roundDays,
     preValue,
@@ -81,7 +97,7 @@ export function startRound(s: GameState, id: StageId, room: number): string | nu
 
 function thread(s: GameState, r: Round, investorId: string): LetterThread {
   if (!r.letters[investorId]) {
-    const bonus = Math.min(FD.networkInterestCap, Math.floor(s.networkPoints / 10) * FD.networkInterestPer10);
+    const bonus = Math.min(FD.networkInterestCap, Math.floor(s.networkPoints / 10) * FD.networkInterestPer10) + Math.min(10, Math.floor(s.career.rep / 5));
     r.letters[investorId] = { investorId, interest: bonus, sent: [], valuationAsk: null, decision: null, decisionP: null, coInvest: null, coInvestP: null, pendingReplies: [] };
   }
   return r.letters[investorId];
@@ -167,6 +183,18 @@ export function decisionProbability(s: GameState, r: Round, investorId: string):
     if (ask.pAdj !== 0) factors.push({ label: `희망 기업가치 ${ask.name}`, value: ask.pAdj });
   }
   if (t?.sent.includes('club')) factors.push({ label: inv.soloAverse ? '클럽딜 의향(단독 투자를 꺼리는 곳)' : '클럽딜 의향', value: inv.soloAverse ? P.clubSoloAverse : P.club });
+  const ev = econ(s, 'invest');
+  if (Math.abs(ev) > 0.005) factors.push({ label: `경기(${s.economy.phase === 'boom' ? '호황' : s.economy.phase === 'recession' ? '불황' : '보통'})`, value: ev });
+  if (s.career.rep > 0) factors.push({ label: `창업자 명성 ${Math.round(s.career.rep)}`, value: Math.min(P.repCap, s.career.rep * P.perRep) });
+  const lf = legacyFx(s, 'invest');
+  if (lf) factors.push({ label: '레거시: 투자자 관계', value: lf });
+  const mi = mod(s, 'invest');
+  if (mi) factors.push({ label: '최근 일(이벤트)', value: mi });
+  if (stageIndex(r.stage) >= stageIndex('A')) {
+    const g = revenueGrowth(s);
+    if (g !== null && g >= 0.08) factors.push({ label: `매출 성장률 월 ${(g * 100).toFixed(1)}%`, value: P.growthGood });
+    else if (g !== null && g < 0) factors.push({ label: `매출 감소 월 ${(g * 100).toFixed(1)}%`, value: P.growthBad });
+  }
   let p = factors.reduce((sum, f) => sum + f.value, 0);
   if (st.early) {
     const kind = specEffects(s.founder.picks).earlyRound;
@@ -246,30 +274,37 @@ export function buildOffer(s: GameState, r: Round): Offer {
   const leadThread = r.letters[r.leadId!];
   const ask = FD.valuationAsks.find((a) => a.id === (leadThread?.valuationAsk ?? 'as_is')) ?? FD.valuationAsks[0];
   const m = roundMath(Math.round(r.preValue * ask.mult), r.room);
-  const existing = totalShares(s.capTable);
-  const newShares = newSharesForRoom(existing, r.room);
+  const before = totalShares(s.capTable);
+  const safeShares = r.instrument === 'equity' ? safeConversion(s, m.preValue, before).shares : 0;
+  const existing = before + safeShares;
+  const newShares = r.instrument === 'safe' ? 0 : newSharesForRoom(existing, r.room);
+  const unitShares = r.instrument === 'safe' ? Math.max(1, Math.round(m.amount / 1000)) : newShares;
   const ids = [r.leadId!, ...coInvestors(r)];
   const shareCounts: number[] = [];
-  if (ids.length === 1) shareCounts.push(newShares);
+  if (ids.length === 1) shareCounts.push(unitShares);
   else {
-    const leadShares = Math.round(newShares * FD.coInvest.leadShare);
-    const each = Math.floor((newShares - leadShares) / (ids.length - 1));
-    const rest = newShares - leadShares - each * (ids.length - 1);
+    const leadShares = Math.round(unitShares * FD.coInvest.leadShare);
+    const each = Math.floor((unitShares - leadShares) / (ids.length - 1));
+    const rest = unitShares - leadShares - each * (ids.length - 1);
     shareCounts.push(leadShares + rest, ...ids.slice(1).map(() => each));
   }
-  const amounts = shareCounts.map((n) => Math.round((m.amount * n) / newShares));
+  const amounts = shareCounts.map((n) => Math.round((m.amount * n) / unitShares));
   amounts[0] += m.amount - amounts.reduce((a, b) => a + b, 0);
   const total = existing + newShares;
-  const founder = s.capTable.find((c) => c.kind === 'founder')!;
+  const safe = r.instrument === 'safe';
   return {
     preValue: m.preValue,
     postValue: m.postValue,
     room: r.room,
     amount: m.amount,
     newShares,
-    shares: ids.map((id, i) => ({ investorId: id, name: investor(id).name, newShares: shareCounts[i], pct: shareCounts[i] / total, amount: amounts[i] })),
+    safeShares,
+    shares: ids.map((id, i) => ({ investorId: id, name: investor(id).name, newShares: safe ? 0 : shareCounts[i], pct: safe ? 0 : shareCounts[i] / total, amount: amounts[i] })),
     founderBefore: founderPct(s),
-    founderAfter: founder.shares / total,
+    founderAfter: founderShares(s) / total,
+    down: !safe && s.lastPostValue > 0 && m.preValue < s.lastPostValue,
+    instrument: r.instrument,
+    safeCap: safe ? Math.round(m.postValue * FD.safe.capMult) : null,
   };
 }
 
@@ -291,10 +326,23 @@ export function acceptOffer(s: GameState, roundId: string): string | null {
   if (!r || r.status !== 'offer' || !r.offer) return '받을 제안서가 없습니다.';
   const o = r.offer;
   const stName = stage(r.stage).name;
-  for (const sh of o.shares) {
-    s.capTable.push({ holderId: `${sh.investorId}@${r.id}`, name: `${sh.name}`, kind: 'investor', shares: sh.newShares, round: stName });
+  if (o.instrument === 'safe') {
+    s.safes.push({ id: nextId(s, 'safe'), holders: o.shares.map((x) => ({ investorId: x.investorId, name: x.name, amount: x.amount })), amount: o.amount, cap: o.safeCap ?? o.postValue, discount: FD.safe.discount, day: s.day, stage: r.stage });
+  } else {
+    convertSafes(s, o.preValue);
+    for (const sh of o.shares) {
+      s.capTable.push({ holderId: `${sh.investorId}@${r.id}`, name: `${sh.name}`, kind: 'investor', shares: sh.newShares, round: stName });
+    }
+    s.lastPostValue = o.postValue;
+    if (s.company.board <= 0) s.company.board = 70;
+    if (o.down) {
+      addMod(s, 'sat', FD.downRoundSat, 60, '다운라운드');
+      s.career.rep = Math.max(0, s.career.rep - 2);
+      news(s, `[투자] ${s.company.name}, 기업가치를 낮춰 ${stName} 유치(다운라운드)`, 'company');
+      notify(s, '다운라운드로 투자를 받았습니다. 직원 사기와 명성이 조금 떨어졌습니다.', 'bad', 'invest');
+    }
   }
-  book(s, `${stName} 투자금 (${o.shares.map((x) => x.name).join(', ')})`, o.amount);
+  book(s, `${stName} ${o.instrument === 'safe' ? 'SAFE ' : ''}투자금 (${o.shares.map((x) => x.name).join(', ')})`, o.amount);
   s.accrual.investment += o.amount;
   if (stageIndex(r.stage) > stageIndex(s.fundingStage)) s.fundingStage = r.stage;
   s.lastRoundDay = s.day;
@@ -302,7 +350,9 @@ export function acceptOffer(s: GameState, roundId: string): string | null {
   r.status = 'accepted';
   r.closedDay = s.day;
   s.pauseReason = null;
-  recordEquity(s, `${stName} 투자 (룸 ${(r.room * 100).toFixed(1)}%)`);
+  recordEquity(s, o.instrument === 'safe' ? `${stName} SAFE (캡 ${Math.round((o.safeCap ?? 0) / 1e8)}억)` : `${stName} 투자 (룸 ${(r.room * 100).toFixed(1)}%)`);
+  if (!o.down) news(s, `[투자] ${s.company.name}, ${stName} ${Math.round(o.amount / 1e8) >= 1 ? Math.round(o.amount / 1e8) + '억원' : Math.round(o.amount / 1e4) + '만원'} 유치`, 'company');
+  s.events.push({ type: 'confetti' });
   updateStoredValuation(s);
   for (const sh of o.shares) post(s, ensureExternal(s, sh.investorId), investor(sh.investorId).name, `계약을 마쳤습니다. 투자금 ${(sh.amount / 1e4).toLocaleString('ko-KR')}만원을 보냈습니다.`, 'npc');
   s.events.push({ type: 'autosave', reason: '투자 수락' });

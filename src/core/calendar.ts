@@ -41,3 +41,33 @@ export function clockOf(msInDay: number): string {
   const m = Math.floor((total % 60) / 10) * 10;
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
+
+export function yearOf(day: number): number {
+  return dateOf(day).getUTCFullYear();
+}
+
+// 소수 연도(2027.5 = 2027년 7월 초)
+export function yearFrac(day: number): number {
+  const d = dateOf(day);
+  return d.getUTCFullYear() + d.getUTCMonth() / 12 + (d.getUTCDate() - 1) / 365;
+}
+
+// 'YYYY-MM' 문자열이 가리키는 달의 1일
+export function dayOfMonthKey(key: string): number {
+  const [y, m] = key.split('-').map(Number);
+  return Math.round((Date.UTC(y, m - 1, 1) - start) / DAY);
+}
+
+export function dayOfYear(year: number): number {
+  return Math.round((Date.UTC(year, 0, 1) - start) / DAY);
+}
+
+export function isQuarterStart(day: number): boolean {
+  const d = dateOf(day);
+  return d.getUTCDate() === 1 && d.getUTCMonth() % 3 === 0;
+}
+
+export function quarterLabel(day: number): string {
+  const d = dateOf(day);
+  return `${d.getUTCFullYear()}년 ${Math.floor(d.getUTCMonth() / 3) + 1}분기`;
+}

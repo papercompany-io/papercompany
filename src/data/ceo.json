@@ -1,39 +1,19 @@
 {
-  "_note": "CA-01 행동 1칸당 효과 [예시값](A-28)",
+  "_note": "CA-01 하루 행동 칸(초기), CA-03 조직이 생긴 뒤 대표 행동(시리즈 B부터, DEC-027·DEC-033). 1칸당 효과 [예시값](A-28)",
   "actions": [
-    {
-      "id": "dev",
-      "name": "개발",
-      "desc": "제품 점수 +0.4/칸",
-      "perSlot": 0.4,
-      "specKey": "dev"
-    },
-    {
-      "id": "sales",
-      "name": "영업",
-      "desc": "MVP 이후 고객 +0.08/칸, 접대비 2만원/칸",
-      "perSlot": 0.08,
-      "specKey": "sales"
-    },
-    {
-      "id": "ir",
-      "name": "투자자 미팅",
-      "desc": "IR 점수 +0.5/칸(투자 성공 확률)",
-      "perSlot": 0.5,
-      "specKey": "investorMeeting"
-    },
-    {
-      "id": "network",
-      "name": "네트워킹",
-      "desc": "네트워크 점수 +0.5/칸, 업무추진비 2만원/칸",
-      "perSlot": 0.5,
-      "specKey": "networking"
-    }
+    { "id": "dev", "name": "개발", "desc": "로드맵 기능에 작업량 +0.125/칸", "perSlot": 0.125, "specKey": "dev", "mode": "founder" },
+    { "id": "sales", "name": "영업", "desc": "MVP 이후 고객 획득 속도↑, 접대비 3만원/칸", "perSlot": 1, "specKey": "sales", "mode": "founder" },
+    { "id": "ir", "name": "투자자 미팅", "desc": "IR 점수 +0.5/칸(투자 성공 확률)", "perSlot": 0.5, "specKey": "investorMeeting", "mode": "both" },
+    { "id": "network", "name": "네트워킹", "desc": "네트워크 점수 +0.5/칸(채용·투자·대기업 영업), 업무추진비 3만원/칸", "perSlot": 0.5, "specKey": "networking", "mode": "both" },
+    { "id": "enterprise", "name": "대기업 영업", "desc": "대기업 계약 파이프라인 +1/칸, 접대비 30만원/칸", "perSlot": 1, "specKey": "enterpriseSales", "mode": "executive" },
+    { "id": "approve", "name": "결재", "desc": "결재가 밀리지 않으면 전 직원 출력↑, 밀리면 출력↓", "perSlot": 1, "specKey": "allActions", "mode": "executive" }
   ],
-  "defaultAlloc": {
-    "dev": 4,
-    "sales": 0,
-    "ir": 2,
-    "network": 2
-  }
+  "defaultAlloc": { "dev": 4, "sales": 0, "ir": 2, "network": 2, "enterprise": 0, "approve": 0 },
+  "executiveAlloc": { "dev": 0, "sales": 0, "ir": 2, "network": 2, "enterprise": 2, "approve": 2 },
+  "salesEntertainment": 30000,
+  "networkEntertainment": 30000,
+  "enterpriseEntertainment": 300000,
+  "approvePerEmployees": 25,
+  "approveBonus": 0.05,
+  "approvePenalty": 0.2
 }

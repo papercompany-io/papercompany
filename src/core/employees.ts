@@ -1,31 +1,8 @@
-// EM-01 직원 목록과 상세, EM-02 부서 배치, OF-02 부서별 좌석 점유
+// EM-01 직원 목록, EM-02 부서 배치(좌석은 다음 날 옮김), EM-04 해고(DEC-022: 1달치 월급)
 import { DATA, DEPT_IDS, dept } from './data';
 import { onDeptChanged } from './messenger';
+import { freeSeats } from './office';
 import type { DeptId, Employee, GameState, Seat } from './types';
-
-export function buildSeats(): Seat[] {
-  const o = DATA.office;
-  const seats: Seat[] = [
-    { id: 'ceo', zone: 'ceo', gx: o.ceoSeat.x, gy: o.ceoSeat.y, occupant: 'ceo' },
-    { id: 'exec', zone: 'exec', gx: o.execSeat.x, gy: o.execSeat.y, occupant: null },
-  ];
-  for (const z of o.zones) {
-    const n = dept(z.dept as DeptId).seats;
-    for (let i = 0; i < n; i++) {
-      seats.push({ id: `${z.dept}-${i}`, zone: z.dept as DeptId, gx: z.x + (i % 2) * 2, gy: z.y + Math.floor(i / 2) * 2, occupant: null });
-    }
-  }
-  return seats;
-}
-
-export function freeSeats(s: GameState, d: DeptId): Seat[] {
-  return s.seats.filter((x) => x.zone === d && x.occupant === null);
-}
-
-// 입사 예정자(다음 날 입사)도 좌석을 미리 잡습니다.
-export function seatsAvailable(s: GameState, d: DeptId): number {
-  return freeSeats(s, d).length;
-}
 
 export function deptMembers(s: GameState, d: DeptId): Employee[] {
   return s.employees.filter((e) => e.dept === d);
@@ -41,12 +18,19 @@ export function employee(s: GameState, id: string): Employee | undefined {
   return s.employees.find((e) => e.id === id);
 }
 
-// EM-02 부서 이동: 새 부서 구역에 빈자리가 있어야 하고, 좌석은 다음 게임 날 옮깁니다.
+export function staffCount(s: GameState): number {
+  return s.employees.length;
+}
+
+export function deptUnlocked(s: GameState, d: DeptId): boolean {
+  return s.company.stage >= dept(d).stage;
+}
+
 export function moveDept(s: GameState, empId: string, to: DeptId): string | null {
   const e = employee(s, empId);
   if (!e) return '직원을 찾을 수 없습니다.';
   if (e.dept === to) return '이미 그 부서입니다.';
-  if (e.instructionId) return '진행 중인 지시가 끝난 뒤 옮길 수 있습니다.';
+  if (!deptUnlocked(s, to)) return `${dept(to).name} 부서는 회사 단계 ${dept(to).stage}부터 둘 수 있습니다.`;
   const needSeat = e.kind !== 'cofounder';
   let reserved: Seat | null = null;
   if (needSeat) {
@@ -56,11 +40,12 @@ export function moveDept(s: GameState, empId: string, to: DeptId): string | null
   }
   const from = e.dept;
   e.dept = to;
+  if (e.lead) e.lead = false;
+  e.skill = Math.max(10, e.skill * 0.7); // 다른 직무라 숙련이 일부 줄어듭니다.
   onDeptChanged(s, e, from);
   return null;
 }
 
-// 다음 날: 예약된 좌석으로 실제 이동
 export function applySeatMoves(s: GameState) {
   for (const seat of s.seats) {
     if (seat.occupant && seat.occupant.startsWith('moving:')) {
@@ -71,9 +56,18 @@ export function applySeatMoves(s: GameState) {
         continue;
       }
       const old = s.seats.find((x) => x.id === e.seatId);
-      if (old) old.occupant = null;
+      if (old && old !== seat) old.occupant = null;
       seat.occupant = e.id;
       e.seatId = seat.id;
     }
   }
+}
+
+export function releaseSeat(s: GameState, e: Employee) {
+  for (const seat of s.seats) if (seat.occupant === e.id || seat.occupant === `moving:${e.id}`) seat.occupant = null;
+  e.seatId = null;
+}
+
+export function severance(e: Employee): number {
+  return e.salary * DATA.finance.severanceMonths;
 }

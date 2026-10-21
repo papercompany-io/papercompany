@@ -1,31 +1,43 @@
-// 게임 상태 타입. 모든 값은 JSON으로 저장 가능해야 합니다(DT-07).
+// 게임 상태 타입 v2. 모든 값은 JSON으로 저장 가능해야 합니다(DT-07).
+// 한 저장 파일 = 창업자 한 사람의 커리어(여러 회사). 회사가 끝나면 company 부분만 새로 만듭니다.
 
-export type DeptId = 'dev' | 'design' | 'sales' | 'marketing' | 'hr';
-export type ActionId = 'dev' | 'sales' | 'ir' | 'network';
+export type DeptId = 'dev' | 'design' | 'sales' | 'marketing' | 'hr' | 'cs' | 'infra' | 'finlegal' | 'ai';
+export type MarketId = 'kr' | 'jp' | 'sea' | 'us' | 'eu';
+export type IndustryId = 'saas' | 'consumer' | 'commerce' | 'fintech' | 'ai';
+export type ActionId = 'dev' | 'sales' | 'ir' | 'network' | 'enterprise' | 'approve';
 export type Grade = 'S' | 'A' | 'B' | 'C';
 export type StageId = 'angel' | 'preseed' | 'seed' | 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G';
+export type PriceTier = 'low' | 'standard' | 'premium';
+export type EconomyPhase = 'boom' | 'normal' | 'recession';
+export type WorkPolicy = 'relaxed' | 'normal' | 'crunch';
 
 export interface Employee {
   id: string;
   name: string;
-  dept: DeptId; // EM-02 소속 부서(직군과 같게 시작)
-  roleDept: DeptId; // 직군
+  dept: DeptId;
   salary: number; // 월 원
   grade: Grade;
-  years: number;
+  years: number; // 입사 전 경력
   joinedDay: number;
   seatId: string | null;
   kind: 'cofounder' | 'engineer' | 'staff';
-  instructionId: string | null; // MG-03 맡은 지시
-  lastResult: string | null;
+  traits: string[]; // EM-03
+  skill: number; // 0~100 숙련
+  sat: number; // 0~100 만족도(DEC-022)
+  health: number; // 0~100 건강(DEC-022)
+  lead: boolean; // 팀장
+  options: number; // 받은 스톡옵션 주식 수(EQ-04)
+  optionDay: number | null; // 옵션 받은 날(베스팅 기준)
+  sickUntil: number | null; // 병가(WF-03)
+  leaving: number | null; // 퇴사 예정일
+  lastRaiseDay: number;
+  bubble: { text: string; until: number } | null; // OF-05 머리 위 말풍선
 }
 
 export interface Seat {
   id: string;
   zone: DeptId | 'exec' | 'ceo';
-  gx: number;
-  gy: number;
-  occupant: string | null; // 직원 id, 대표석은 'ceo'
+  occupant: string | null; // 직원 id, 'ceo', 'pending:지원자id', 'moving:직원id'
 }
 
 export interface Posting {
@@ -49,6 +61,7 @@ export interface Applicant {
   years: number;
   desiredSalary: number;
   grade: Grade;
+  traits: string[];
   arrivedDay: number;
   leaveDay: number;
   status: 'waiting' | 'hired' | 'rejected' | 'left';
@@ -61,21 +74,8 @@ export interface PendingHire {
   grade: Grade;
   years: number;
   salary: number;
+  traits: string[];
   startDay: number;
-}
-
-export interface Instruction {
-  id: string;
-  dept: DeptId;
-  optionId: string;
-  startDay: number;
-  endDay: number;
-  assigneeIds: string[];
-  status: 'running' | 'done';
-  p: number; // MG-04 성공 확률
-  repeat: boolean; // 끝나면 같은 지시를 다시 내림(A-32)
-  result: 'full' | 'partial' | 'fail' | null;
-  effectValue: number | null;
 }
 
 export interface Message {
@@ -84,6 +84,7 @@ export interface Message {
   from: string;
   text: string;
   kind: 'system' | 'player' | 'npc';
+  decisionId?: string; // DC-01 결정 메시지
 }
 
 export interface Channel {
@@ -91,14 +92,15 @@ export interface Channel {
   kind: 'all' | 'team' | 'group' | 'dm' | 'external';
   name: string;
   dept?: DeptId;
-  memberIds: string[]; // 직원 id (외부 연락처면 투자사 id 하나)
+  memberIds: string[];
   messages: Message[];
+  unread: number;
 }
 
 export interface LetterThread {
   investorId: string;
   interest: number;
-  sent: string[]; // 보낸 레터 선택지 id
+  sent: string[];
   valuationAsk: string | null;
   decision: 'committed' | 'declined' | null;
   decisionP: number | null;
@@ -110,10 +112,11 @@ export interface LetterThread {
 export interface Round {
   id: string;
   stage: StageId;
-  room: number; // 0~1, FR-11
+  room: number;
+  instrument: 'equity' | 'safe'; // FR-12
   openedDay: number;
   endDay: number;
-  preValue: number; // 라운드를 열 때 VL-01 산정값
+  preValue: number;
   status: 'open' | 'offer' | 'accepted' | 'rejected' | 'failed';
   leadId: string | null;
   letters: Record<string, LetterThread>;
@@ -122,21 +125,35 @@ export interface Round {
 }
 
 export interface Offer {
-  preValue: number; // 협상 반영 프리밸류
+  preValue: number;
   postValue: number;
   room: number;
-  amount: number; // 투자금 = 포스트밸류 × 룸
+  amount: number;
   shares: { investorId: string; name: string; newShares: number; pct: number; amount: number }[];
   newShares: number;
+  safeShares: number; // 이번 라운드에서 주식으로 바뀌는 SAFE 몫
   founderBefore: number;
   founderAfter: number;
+  down: boolean; // 다운라운드
+  instrument: 'equity' | 'safe';
+  safeCap: number | null;
+}
+
+export interface Safe {
+  id: string;
+  holders: { investorId: string; name: string; amount: number }[];
+  amount: number;
+  cap: number; // 밸류 캡(포스트 기준)
+  discount: number;
+  day: number;
+  stage: StageId;
 }
 
 export interface CapEntry {
-  holderId: string; // 'founder' | 'cofounder' | 투자사 id + 라운드
+  holderId: string;
   name: string;
-  kind: 'founder' | 'cofounder' | 'investor';
-  shares: number; // 주식 수(EQ-02 신주 발행으로 희석)
+  kind: 'founder' | 'cofounder' | 'investor' | 'esop' | 'employee' | 'public';
+  shares: number;
   round?: string;
 }
 
@@ -149,8 +166,12 @@ export interface EquityEvent {
 }
 
 export interface MonthPL {
-  month: string; // YYYY-MM
+  month: string;
   revenue: number;
+  revSub: number; // 구독·유료
+  revAd: number;
+  revTake: number;
+  revEnt: number; // 대기업 계약
   vat: number;
   salary: number;
   insurance: number;
@@ -158,6 +179,11 @@ export interface MonthPL {
   entertainment: number;
   recruiting: number;
   ads: number;
+  infra: number;
+  rent: number;
+  welfare: number;
+  ai: number;
+  other: number; // 이벤트·기타
   opex: number;
   operatingProfit: number;
   tax: number;
@@ -165,76 +191,289 @@ export interface MonthPL {
   cashBefore: number;
   cashAfter: number;
   investment: number;
-  customersEnd: number;
+  usersEnd: number;
 }
 
 export interface MonthAccrual {
   month: string;
-  customerDays: number; // 날마다 유료 고객 수를 더한 값(매출 = 고객일 × 단가 ÷ 그 달 일수)
-  salaryUnits: number; // 날마다 월급 합계를 더한 값(인건비 = 합 ÷ 그 달 일수)
+  revSub: number;
+  revAd: number;
+  revTake: number;
+  revEnt: number;
+  salaryUnits: number;
   entertainment: number;
   recruiting: number;
   ads: number;
+  infra: number;
+  welfare: number;
+  ai: number;
+  other: number;
   investment: number;
   cashStart: number;
+  days: number;
 }
 
 export interface LedgerEntry {
   day: number;
   item: string;
-  amount: number; // +유입 / -유출
+  amount: number;
   balance: number;
 }
 
 export interface ExitAttempt {
   method: 'sale' | 'ipo';
   startedDay: number;
-  readyDay: number; // IPO 준비 끝나는 날(매각은 시작일)
-  price: number | null; // 매각 제안가 또는 공모 가치
+  readyDay: number;
+  price: number | null;
   valuationAtStart: number;
   p: number | null;
   status: 'preparing' | 'offer' | 'success' | 'failed' | 'declined';
+  inbound: boolean; // EX-05 들어온 오퍼
+  buyer: string | null;
+  deadline: number | null;
 }
 
-export interface GameResult {
-  kind: 'exit' | 'bankrupt';
-  method?: 'sale' | 'ipo';
+export type CompanyEndKind = 'sale' | 'ipo_exit' | 'bankrupt' | 'fired' | 'retired_ceo';
+
+export interface CompanyResult {
+  kind: CompanyEndKind;
+  companyName: string;
+  industry: IndustryId;
   exitValue: number;
   valuation: number;
   founderPct: number;
-  amount: number; // SC-01 결과 금액
+  amount: number; // 창업자에게 돌아온 돈(SC-01 + 상장 후 매각 대금)
   day: number;
+  startDay: number;
   reason?: string;
+  path: string; // ED-01 투자형·자력형·혼합형
+  funded: boolean;
+  maxValuation: number;
+  peakUsers: number;
+  peakEmployees: number;
+  rounds: number;
+}
+
+// 제품(PD)
+export interface RoadmapItem {
+  id: string; // 기능 id
+  level: number; // 만드는 레벨(1부터)
+  devDone: number;
+  designDone: number;
+}
+
+export interface Product {
+  features: Record<string, number>; // 기능 id → 완성 레벨
+  roadmap: RoadmapItem[];
+  bugs: number; // 0~100
+  debt: number; // 기술 부채 0~1(버그 발생 배율)
+  polish: number; // 0~0.4 UX 완성도
+  appealBonus: number; // 이벤트 영구 매력도
+  priceTier: PriceTier;
+  launchedDay: number | null; // MVP 출시일
+  shipped: { id: string; level: number; day: number; result: 'full' | 'partial' | 'fail' }[];
+}
+
+export interface MarketState {
+  launched: boolean;
+  launchedDay: number | null;
+  users: number;
+  awareness: number; // 0~1
+  adBudget: number; // 월 광고 예산(원)
+  peakShare: number;
+}
+
+export interface Competitor {
+  id: string;
+  name: string;
+  appeal: number;
+  awareness: number;
+  markets: MarketId[];
+  cash: number;
+  aggression: number; // 0~1
+  alive: boolean;
+  priceTier: PriceTier;
+  bornDay: number;
+  boostUntil: number | null; // 가격 전쟁 등
+  acquiredDay: number | null;
+}
+
+export interface EnterpriseDeal {
+  id: string;
+  name: string;
+  monthly: number;
+  startDay: number;
+  endDay: number;
+  market: MarketId;
+}
+
+export interface Modifier {
+  key: string;
+  value: number;
+  until: number;
+  label: string;
+}
+
+export interface DecisionChoice {
+  label: string;
+  hint: string;
+  cost: number;
+  enabled: boolean;
+  why?: string; // 못 고르는 이유
+  isNew?: boolean; // DC-05 새로 열린 선택지
+}
+
+export interface PendingDecision {
+  id: string;
+  eventId: string;
+  day: number;
+  deadline: number;
+  from: string;
+  text: string;
+  urgent: boolean;
+  targetId: string | null;
+  competitorId: string | null;
+  choices: DecisionChoice[];
+  channelId: string;
+  resolved: { choice: number; text: string; auto: boolean } | null;
+}
+
+export interface NewsItem {
+  day: number;
+  text: string;
+  kind: 'economy' | 'competitor' | 'ai' | 'company' | 'market' | 'public';
+}
+
+export interface Notice {
+  id: string;
+  day: number;
+  text: string;
+  kind: 'info' | 'good' | 'bad' | 'urgent' | 'achievement' | 'mission';
+  app?: string;
+  arg?: string;
+  read: boolean;
+}
+
+export interface AiState {
+  modelId: string | null;
+  adoption: Partial<Record<DeptId, number>>; // 0~1
+  adaptation: number; // 0~1
+  realized: number; // 이 회사에서 실제로 나는 효과(평균 ± 분산)
+  switchedDay: number | null;
+  incidents: number;
+}
+
+export interface PublicState {
+  ipoDay: number;
+  price: number;
+  fair: number;
+  sentiment: number; // 배수(0.6~1.6)
+  lockupUntil: number;
+  history: { day: number; price: number }[];
+  guidance: number | null; // 이번 분기 매출 가이던스
+  quarterStartRev: number;
+  lastQuarter: { label: string; revenue: number; guidance: number | null; beat: boolean | null } | null;
+  founderSold: number; // 팔아서 받은 돈
+  founderSoldShares: number;
+  buybacks: number;
+}
+
+export interface Company {
+  name: string;
+  industry: IndustryId;
+  startDay: number;
+  stage: number; // 0~5, 지금까지 도달한 최대 단계
+  officeTier: number;
+  movingUntil: number | null;
+  workPolicy: WorkPolicy;
+  welfare: string[];
+  orders: Partial<Record<DeptId, string>>;
+  autoHire: Partial<Record<DeptId, number>>; // HR-07 위임 채용 목표 인원
+  autoHireLevel: string;
+  ceoMode: 'founder' | 'executive'; // CA-03
+  cofounderName: string | null;
+  peakUsers: number;
+  peakEmployees: number;
+  maxValuation: number;
+  profitStreak: number;
+  enterpriseCount: number;
+  acquisitions: number;
+  decisions: number;
+  ipoReady: number; // 0~100 상장 준비도
+  board: number; // 0~100 이사회 신뢰
+  approveBalance: number; // CA-03 결재 밀림
+  missionsDone: string[];
+  raiseRate: number; // 매년 1월 연봉 인상률
+  culture: number; // 0~12 조직 문화(인사팀)
+}
+
+export interface CareerCompany {
+  result: CompanyResult;
+}
+
+export interface Career {
+  founderName: string;
+  startYear: number;
+  startAge: number;
+  wealth: number;
+  rep: number;
+  legacyEarned: number;
+  companies: CompanyResult[];
+  challenge: string | null;
+  retired: boolean;
+  endingId: string | null;
+  investedInCompany: number;
+  legacy: Record<string, number>; // 레거시 강화 레벨(프로필에서 복사)
+  achievements: string[];
+  missionsTotal: number;
+  decisionsBefore: number;
+}
+
+// 커리어 바깥에 남는 메타 진행(기기 안 저장, RK-01 로컬 명예의 전당)
+export interface Profile {
+  version: 1;
+  legacyPoints: number;
+  legacy: Record<string, number>;
+  achievements: string[];
+  hall: { name: string; ending: string; wealth: number; companies: number; best: string; date: string; challenge: string | null }[];
+  companyHall: { company: string; founder: string; kind: string; amount: number; date: string }[];
+  careers: number;
 }
 
 export interface GameState {
-  version: 1;
+  version: 2;
   seed: number;
-  rng: number; // PRNG 내부 상태
+  rng: number;
   idSeq: number;
-  day: number; // 시작일(0)부터 지난 날 수
-  msInDay: number; // 오늘 진행한 시간(1x 기준 ms)
-  slotsDone: number; // 오늘 실행한 행동 칸 수
-  speed: number; // 0 = 일시정지
+  day: number; // 2027-01-01부터 지난 날 수(커리어 전체)
+  msInDay: number;
+  slotsDone: number;
+  speed: number;
   pauseReason: string | null;
-  ended: boolean;
-  company: { name: string };
+  ended: boolean; // 회사 한 판이 끝남(커리어 화면으로)
+  career: Career;
+  company: Company;
   founder: { picks: Record<string, string>; creditsLeft: number };
-  wantsAngelOnStart: boolean; // CO-02
+  wantsAngelOnStart: boolean;
   cash: number;
   ledger: LedgerEntry[];
   accrual: MonthAccrual;
   plHistory: MonthPL[];
-  productPoints: number;
-  customers: number;
+  product: Product;
+  markets: Record<MarketId, MarketState>;
+  competitors: Competitor[];
+  enterprise: EnterpriseDeal[];
+  entPipeline: number;
   irPoints: number;
   networkPoints: number;
   ceoAlloc: Record<ActionId, number>;
-  todayLog: Record<ActionId, number>; // 오늘 실행한 행동 칸
+  todayLog: Record<ActionId, number>;
   valuation: { stored: number; storedDay: number; penaltyUntil: number | null; revenueStage: boolean };
   fundingStage: StageId | null;
   lastRoundDay: number | null;
+  lastPostValue: number;
   rounds: Round[];
+  safes: Safe[];
   capTable: CapEntry[];
   equityHistory: EquityEvent[];
   employees: Employee[];
@@ -242,12 +481,21 @@ export interface GameState {
   seats: Seat[];
   postings: Posting[];
   applicants: Applicant[];
-  instructions: Instruction[];
   channels: Channel[];
+  ai: AiState;
+  economy: { phase: EconomyPhase; until: number; level: number };
+  modifiers: Modifier[];
+  flags: string[];
+  eventSeen: Record<string, number>;
+  decisions: PendingDecision[];
+  news: NewsItem[];
+  notices: Notice[];
+  public: PublicState | null;
   exitAttempt: ExitAttempt | null;
   exitCooldownUntil: number | null;
-  result: GameResult | null;
-  events: GameEvent[]; // UI가 소비하는 일회성 이벤트
+  result: CompanyResult | null;
+  events: GameEvent[];
+  stats: { outages: number; slops: number; quits: number; hires: number; fired: number };
 }
 
 export type GameEvent =
@@ -257,4 +505,12 @@ export type GameEvent =
   | { type: 'exitResult'; success: boolean }
   | { type: 'saleOffer' }
   | { type: 'bankrupt' }
-  | { type: 'monthClosed'; month: string };
+  | { type: 'companyEnded' }
+  | { type: 'monthClosed'; month: string }
+  | { type: 'sfx'; sound: string }
+  | { type: 'float'; text: string; kind: 'good' | 'bad' | 'money'; seat?: string }
+  | { type: 'confetti' }
+  | { type: 'decision'; id: string; urgent: boolean }
+  | { type: 'shipped'; featureId: string }
+  | { type: 'hired'; empId: string }
+  | { type: 'moved' };

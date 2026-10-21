@@ -1,0 +1,18 @@
+{
+  "_note": "WF-01~04(DEC-022 [확정]: 식대·헬스비·병원비·AX) + [Claude 제안] 확장. cost = 직원 1명당 월 비용(원). fx: sat 만족도 목표, health 건강 목표, output 출력 배율, ai AI 적응 속도 배율, skill 숙련 성장 배율, apply 공고 지원자 수 배율 가산, quality 지원자 질 가산",
+  "items": [
+    { "id": "meal", "name": "식대", "ssot": "WF-01", "cost": 200000, "desc": "점심·저녁 식대 지원.", "fx": { "sat": 6, "health": 2, "apply": 0.08 } },
+    { "id": "gym", "name": "헬스비", "ssot": "WF-02", "cost": 100000, "desc": "운동비 지원. 건강이 좋아집니다.", "fx": { "health": 8, "sat": 2, "apply": 0.04 } },
+    { "id": "medical", "name": "병원비", "ssot": "WF-03", "cost": 150000, "desc": "실손·검진 지원. 병가에서 빨리 돌아옵니다.", "fx": { "health": 6, "sat": 3, "apply": 0.05, "sickFast": true } },
+    { "id": "ax", "name": "AX(AI 전환) 지원", "ssot": "WF-04", "cost": 120000, "desc": "AI 도구 교육·구독 지원. AI 적응이 빨라집니다.", "fx": { "ai": 0.6, "sat": 2, "apply": 0.05 } },
+    { "id": "gear", "name": "최신 장비", "cost": 250000, "desc": "고성능 노트북·모니터. 일이 조금 빨라집니다.", "fx": { "output": 0.04, "sat": 3, "apply": 0.06 } },
+    { "id": "flex", "name": "유연근무", "cost": 0, "desc": "출퇴근 시간 자율. 만족도는 크게 오르지만 협업이 조금 느려집니다.", "fx": { "sat": 8, "output": -0.03, "apply": 0.1 } },
+    { "id": "edu", "name": "교육비", "cost": 200000, "desc": "도서·강의·컨퍼런스 지원. 숙련이 빨리 오릅니다.", "fx": { "skill": 0.5, "sat": 2, "apply": 0.05, "quality": 3 } },
+    { "id": "housing", "name": "주거 지원", "cost": 500000, "desc": "회사 근처 주거비 지원. 좋은 인재가 지원합니다.", "fx": { "sat": 8, "apply": 0.12, "quality": 6 } }
+  ],
+  "workPolicies": [
+    { "id": "relaxed", "name": "정시 퇴근", "output": 0.92, "health": 10, "sat": 6, "desc": "출력은 조금 줄지만 건강과 만족도가 좋아집니다." },
+    { "id": "normal", "name": "보통", "output": 1.0, "health": 0, "sat": 0, "desc": "기본 근무." },
+    { "id": "crunch", "name": "야근(크런치)", "output": 1.25, "health": -22, "sat": -14, "desc": "단기간 출력이 크게 늘지만 건강과 만족도가 빠르게 떨어집니다." }
+  ]
+}

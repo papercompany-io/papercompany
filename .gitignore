@@ -6,3 +6,4 @@ release
 playtest/shots
 playtest/userdata*
 *.log
+.sim/

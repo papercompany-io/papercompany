@@ -12,7 +12,8 @@
     "start": "electron .",
     "package": "npm run build && electron-builder --linux dir",
     "package:win": "npm run build && electron-builder --win dir",
-    "package:mac": "npm run build && electron-builder --mac dmg"
+    "package:mac": "npm run build && electron-builder --mac dmg",
+    "sim": "esbuild scripts/sim/bot.ts --bundle --platform=node --outfile=.sim/bot.cjs --log-level=warning && node .sim/bot.cjs"
   },
   "build": {
     "appId": "us.sigmoid.papercompany",

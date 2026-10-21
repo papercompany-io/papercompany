@@ -4,19 +4,54 @@ import depts from '../data/departments.json';
 import candidates from '../data/candidates.json';
 import names from '../data/names.json';
 import hiring from '../data/hiring.json';
-import instructions from '../data/instructions.json';
 import finance from '../data/finance.json';
 import time from '../data/time.json';
 import ceo from '../data/ceo.json';
-import product from '../data/product.json';
 import valuation from '../data/valuation.json';
 import funding from '../data/funding.json';
 import investors from '../data/investors.json';
 import exitData from '../data/exit.json';
-import office from '../data/office.json';
-import type { DeptId, GameState, Grade, StageId } from './types';
+import industries from '../data/industries.json';
+import markets from '../data/markets.json';
+import featuresData from '../data/features.json';
+import orders from '../data/orders.json';
+import offices from '../data/offices.json';
+import welfare from '../data/welfare.json';
+import traits from '../data/traits.json';
+import ai from '../data/ai.json';
+import economy from '../data/economy.json';
+import career from '../data/career.json';
+import missions from '../data/missions.json';
+import achievements from '../data/achievements.json';
+import publicData from '../data/public.json';
+import type { DeptId, Grade, IndustryId, MarketId, StageId } from './types';
 
-export const DATA = { specs, depts, candidates, names, hiring, instructions, finance, time, ceo, product, valuation, funding, investors, exit: exitData, office };
+export const DATA = {
+  specs,
+  depts,
+  candidates,
+  names,
+  hiring,
+  finance,
+  time,
+  ceo,
+  valuation,
+  funding,
+  investors,
+  exit: exitData,
+  industries,
+  markets,
+  orders,
+  offices,
+  welfare,
+  traits,
+  ai,
+  economy,
+  career,
+  missions,
+  achievements,
+  public: publicData,
+};
 
 export type SpecEffects = {
   investorMeeting: number;
@@ -44,8 +79,10 @@ export function specEffects(picks: Record<string, string>): SpecEffects {
   for (const id of Object.values(picks)) {
     const fx = specItem(id).effects as Record<string, number | string>;
     for (const [k, v] of Object.entries(fx)) {
-      if (k === 'earlyRound') e.earlyRound = v as SpecEffects['earlyRound'];
-      else (e as unknown as Record<string, number>)[k] += v as number;
+      if (k === 'earlyRound') {
+        const rank = { hard: 0, ok: 1, big: 2 };
+        if (rank[v as SpecEffects['earlyRound']] > rank[e.earlyRound]) e.earlyRound = v as SpecEffects['earlyRound'];
+      } else (e as unknown as Record<string, number>)[k] += v as number;
     }
   }
   return e;
@@ -55,13 +92,24 @@ export function specCreditsSpent(picks: Record<string, string>): number {
   return Object.values(picks).reduce((sum, id) => sum + specItem(id).price, 0);
 }
 
-export function dept(id: DeptId) {
-  const d = depts.departments.find((x) => x.id === id);
+export interface DeptDef {
+  id: DeptId;
+  name: string;
+  role: string;
+  color: string;
+  baseSalary: number;
+  stage: number;
+  cap?: Record<string, number>;
+}
+
+export const DEPTS = depts.departments as DeptDef[];
+export const DEPT_IDS = DEPTS.map((d) => d.id);
+
+export function dept(id: DeptId): DeptDef {
+  const d = DEPTS.find((x) => x.id === id);
   if (!d) throw new Error('unknown dept ' + id);
   return d;
 }
-
-export const DEPT_IDS = depts.departments.map((d) => d.id) as DeptId[];
 
 export function stage(id: StageId) {
   const st = funding.stages.find((x) => x.id === id);
@@ -79,26 +127,167 @@ export function investor(id: string) {
   return inv;
 }
 
-export function instructionOption(id: string) {
-  const o = instructions.options.find((x) => x.id === id);
-  if (!o) throw new Error('unknown instruction ' + id);
-  return o;
-}
-
 export function gradeOutput(g: Grade): number {
   return (hiring.gradeOutput as Record<Grade, number>)[g];
 }
 
-export function productStage(points: number) {
-  let cur = product.stages[0];
-  for (const st of product.stages) if (points >= st.min) cur = st;
-  return cur;
+// ── 산업·시장 ──
+export interface IndustryDef {
+  id: IndustryId;
+  name: string;
+  unit: string;
+  desc: string;
+  tam: number;
+  adoption: { a0: number; a1: number; mid: number; k: number };
+  price: number;
+  payBase: number;
+  adBase: number;
+  gmv: number;
+  takeBase: number;
+  churnM: number;
+  infra: number;
+  viral: number;
+  baseAcq: number;
+  salesAcq: number;
+  valMult: number;
+  entBase: number;
+  adCost: number;
+  cac: number;
+  salesPer: number;
+  userValue: number;
+  locked: boolean;
+  startCompetitors: number;
+  competitorNames: string[];
 }
 
-export function hasMvp(s: GameState): boolean {
-  return s.productPoints >= product.stages.find((x) => x.id === 'mvp')!.min;
+export const INDUSTRIES = industries.industries as IndustryDef[];
+
+export function industry(id: IndustryId): IndustryDef {
+  return INDUSTRIES.find((x) => x.id === id)!;
 }
 
-export function isScaleUp(s: GameState): boolean {
-  return s.productPoints >= product.stages.find((x) => x.id === 'scale')!.min;
+export interface MarketDef {
+  id: MarketId;
+  name: string;
+  flag: string;
+  tamMult: number;
+  arpu: number;
+  entry: number;
+  comp: number;
+  adCost: number;
+  local: number;
+}
+
+export const MARKETS = markets.markets as MarketDef[];
+export const MARKET_IDS = MARKETS.map((m) => m.id);
+
+export function market(id: MarketId): MarketDef {
+  return MARKETS.find((x) => x.id === id)!;
+}
+
+// ── 기능 ──
+export interface FeatureFx {
+  appeal?: number;
+  conv?: number;
+  churn?: number;
+  pay?: number;
+  arpu?: number;
+  ad?: number;
+  take?: number;
+  gmv?: number;
+  viral?: number;
+  infra?: number;
+  stability?: number;
+  enterprise?: boolean;
+  market?: MarketId;
+  bugs?: number;
+  ai?: boolean;
+}
+
+export interface FeatureDef {
+  id: string;
+  name: string;
+  desc: string;
+  cat: string;
+  dev: number;
+  design: number;
+  levels: number;
+  req: string[];
+  year: number;
+  stage: number;
+  fx: FeatureFx;
+}
+
+const FEATURES = featuresData.industries as unknown as Record<IndustryId, FeatureDef[]>;
+
+export function featuresOf(ind: IndustryId): FeatureDef[] {
+  return FEATURES[ind];
+}
+
+const featureIndex = new Map<string, FeatureDef>();
+for (const list of Object.values(FEATURES)) for (const f of list) featureIndex.set(f.id, f);
+
+export function feature(id: string): FeatureDef {
+  const f = featureIndex.get(id);
+  if (!f) throw new Error('unknown feature ' + id);
+  return f;
+}
+
+// 레벨 L(1부터)을 만드는 작업량: 레벨마다 ×1.8. 밸런싱 배수: 핵심 기능 ×1.4, 나머지 ×2.2(G4 봇 측정으로 조정, A-45)
+export const WORK_MULT = { core: 1.4, other: 3.0 };
+export function featureWork(f: FeatureDef, level: number) {
+  const m = Math.pow(1.8, level - 1) * (f.cat === 'core' ? WORK_MULT.core : WORK_MULT.other);
+  return { dev: Math.round(f.dev * m), design: Math.round(f.design * m) };
+}
+
+export function orderDef(id: string) {
+  return orders.orders.find((o) => o.id === id);
+}
+
+export function ordersFor(d: DeptId) {
+  return orders.orders.filter((o) => o.dept === d);
+}
+
+export interface OfficeTier {
+  id: number;
+  name: string;
+  desc: string;
+  deposit: number;
+  rent: number;
+  comfort: number;
+  size: { w: number; h: number };
+  ceo: { x: number; y: number };
+  exec: { x: number; y: number };
+  zones: { dept: string; x: number; y: number; cols: number; rows: number }[];
+  rooms: string[];
+}
+
+export const OFFICE_TIERS = offices.tiers as OfficeTier[];
+
+export function officeTier(id: number): OfficeTier {
+  return OFFICE_TIERS.find((t) => t.id === id) ?? OFFICE_TIERS[0];
+}
+
+export function trait(id: string) {
+  return traits.traits.find((t) => t.id === id);
+}
+
+export function welfareItem(id: string) {
+  return welfare.items.find((w) => w.id === id);
+}
+
+export function workPolicy(id: string) {
+  return welfare.workPolicies.find((w) => w.id === id) ?? welfare.workPolicies[1];
+}
+
+export function aiModel(id: string) {
+  return ai.models.find((m) => m.id === id);
+}
+
+export function aiVendor(id: string) {
+  return ai.vendors.find((v) => v.id === id)!;
+}
+
+export function priceTierDef(id: string) {
+  return industries.priceTiers.find((p) => p.id === id) ?? industries.priceTiers[1];
 }

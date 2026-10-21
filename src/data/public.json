@@ -1,0 +1,20 @@
+{
+  "_note": "상장사(Claude 제안, [예시값]). IPO 때 새로 찍는 주식 비율, 락업, 주가 변동, 분기 실적 반응, 지분 매각 할인",
+  "ipoNewShares": 0.15,
+  "ipoFee": 0.04,
+  "lockupDays": 180,
+  "dailyVol": 0.018,
+  "sentimentPull": 0.02,
+  "beatJump": [0.06, 0.15],
+  "missDrop": [0.08, 0.22],
+  "guidanceOptions": [
+    { "id": "safe", "name": "보수적", "growth": 0.03, "sentiment": -0.02 },
+    { "id": "normal", "name": "보통", "growth": 0.08, "sentiment": 0.03 },
+    { "id": "bold", "name": "공격적", "growth": 0.18, "sentiment": 0.08 }
+  ],
+  "sellBlockDiscount": 0.06,
+  "sellPriceImpactPerPct": 0.012,
+  "resignDiscount": 0.1,
+  "historyCap": 260,
+  "peBase": 22
+}

@@ -1,0 +1,39 @@
+{
+  "_note": "AT-01~07(AT-01~05·07 [확정]) AI 도입. 공급사·모델은 가상명(OQ-029). mean = 적응 완료 시 출력 가산(적용률 100% 기준), var = 회사마다 실제 효과가 흔들리는 폭, slop = 적용률 100%일 때 한 달 부작용 확률, cost = 적용 직원 1명당 월 구독료(원), release = 출시 연월. deptFit = 부서별 효과 배수. adaptDays = 적응도 0→1 기본 일수",
+  "vendors": [
+    { "id": "neural", "name": "뉴럴웍스", "style": "무난하고 안정적인 범용 모델", "color": "#4f8df5" },
+    { "id": "deep", "name": "딥캐스트", "style": "성능이 높지만 들쭉날쭉하고 부작용이 잦은 모델", "color": "#ff7a45" },
+    { "id": "vertex", "name": "버텍스랩", "style": "비싸지만 보안·안정성이 뛰어난 기업용 모델", "color": "#7a5cff" }
+  ],
+  "models": [
+    { "id": "nova3", "vendor": "neural", "name": "Nova 3", "release": "2027-01", "mean": 0.12, "var": 0.04, "slop": 0.06, "cost": 40000 },
+    { "id": "echo2", "vendor": "deep", "name": "Echo 2", "release": "2027-01", "mean": 0.16, "var": 0.1, "slop": 0.12, "cost": 30000 },
+    { "id": "atlas1", "vendor": "vertex", "name": "Atlas 1", "release": "2027-06", "mean": 0.1, "var": 0.02, "slop": 0.03, "cost": 70000 },
+    { "id": "nova4", "vendor": "neural", "name": "Nova 4", "release": "2028-03", "mean": 0.2, "var": 0.05, "slop": 0.05, "cost": 45000 },
+    { "id": "echo3", "vendor": "deep", "name": "Echo 3", "release": "2028-07", "mean": 0.27, "var": 0.13, "slop": 0.11, "cost": 35000 },
+    { "id": "atlas2", "vendor": "vertex", "name": "Atlas 2", "release": "2028-10", "mean": 0.18, "var": 0.03, "slop": 0.025, "cost": 80000 },
+    { "id": "nova5", "vendor": "neural", "name": "Nova 5", "release": "2029-05", "mean": 0.3, "var": 0.06, "slop": 0.045, "cost": 50000 },
+    { "id": "echo4", "vendor": "deep", "name": "Echo 4", "release": "2029-09", "mean": 0.4, "var": 0.16, "slop": 0.1, "cost": 40000 },
+    { "id": "atlas3", "vendor": "vertex", "name": "Atlas 3", "release": "2030-02", "mean": 0.3, "var": 0.03, "slop": 0.02, "cost": 90000 },
+    { "id": "nova6", "vendor": "neural", "name": "Nova 6", "release": "2030-11", "mean": 0.42, "var": 0.07, "slop": 0.04, "cost": 55000 },
+    { "id": "echo5", "vendor": "deep", "name": "Echo 5", "release": "2031-04", "mean": 0.55, "var": 0.2, "slop": 0.09, "cost": 45000 },
+    { "id": "atlas4", "vendor": "vertex", "name": "Atlas 4", "release": "2031-09", "mean": 0.42, "var": 0.04, "slop": 0.018, "cost": 100000 },
+    { "id": "nova7", "vendor": "neural", "name": "Nova 7", "release": "2032-08", "mean": 0.58, "var": 0.08, "slop": 0.035, "cost": 60000 },
+    { "id": "echo6", "vendor": "deep", "name": "Echo 6", "release": "2033-03", "mean": 0.75, "var": 0.24, "slop": 0.08, "cost": 50000 },
+    { "id": "atlas5", "vendor": "vertex", "name": "Atlas 5", "release": "2033-10", "mean": 0.58, "var": 0.05, "slop": 0.015, "cost": 110000 },
+    { "id": "nova8", "vendor": "neural", "name": "Nova 8", "release": "2035-02", "mean": 0.8, "var": 0.1, "slop": 0.03, "cost": 65000 },
+    { "id": "echo7", "vendor": "deep", "name": "Echo 7", "release": "2035-09", "mean": 1.0, "var": 0.3, "slop": 0.07, "cost": 55000 },
+    { "id": "atlas6", "vendor": "vertex", "name": "Atlas 6", "release": "2036-05", "mean": 0.8, "var": 0.06, "slop": 0.012, "cost": 120000 },
+    { "id": "nova9", "vendor": "neural", "name": "Nova 9", "release": "2038-01", "mean": 1.05, "var": 0.12, "slop": 0.025, "cost": 70000 },
+    { "id": "echo8", "vendor": "deep", "name": "Echo 8", "release": "2038-08", "mean": 1.3, "var": 0.35, "slop": 0.06, "cost": 60000 },
+    { "id": "atlas7", "vendor": "vertex", "name": "Atlas 7", "release": "2039-04", "mean": 1.05, "var": 0.07, "slop": 0.01, "cost": 130000 },
+    { "id": "novax", "vendor": "neural", "name": "Nova X", "release": "2041-06", "mean": 1.35, "var": 0.14, "slop": 0.02, "cost": 75000 },
+    { "id": "echo9", "vendor": "deep", "name": "Echo 9", "release": "2042-02", "mean": 1.6, "var": 0.4, "slop": 0.05, "cost": 65000 },
+    { "id": "atlas8", "vendor": "vertex", "name": "Atlas 8", "release": "2043-01", "mean": 1.35, "var": 0.08, "slop": 0.008, "cost": 140000 }
+  ],
+  "deptFit": { "dev": 1.0, "design": 0.8, "sales": 0.45, "marketing": 0.9, "hr": 0.6, "cs": 1.25, "infra": 0.9, "finlegal": 0.8, "ai": 1.3 },
+  "adaptDays": 75,
+  "switchKeep": 0.3,
+  "slopBugs": 12,
+  "skepticSatPerAdoption": 14
+}

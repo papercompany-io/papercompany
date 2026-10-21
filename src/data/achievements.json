@@ -1,0 +1,679 @@
+{
+ "achievements": [
+  {
+   "id": "ach_mvp",
+   "name": "첫 출시",
+   "desc": "처음으로 MVP를 출시했습니다.",
+   "tier": "bronze",
+   "cond": {
+    "metric": "stage",
+    "gte": 1
+   }
+  },
+  {
+   "id": "ach_user1",
+   "name": "첫 고객",
+   "desc": "처음으로 고객이 생겼습니다.",
+   "tier": "bronze",
+   "cond": {
+    "metric": "users",
+    "gte": 1
+   }
+  },
+  {
+   "id": "ach_user1k",
+   "name": "천 명의 팬",
+   "desc": "고객 1,000명(곳)을 모았습니다.",
+   "tier": "bronze",
+   "cond": {
+    "metric": "users",
+    "gte": 1000
+   }
+  },
+  {
+   "id": "ach_user100k",
+   "name": "십만 고객",
+   "desc": "고객 10만을 모았습니다.",
+   "tier": "silver",
+   "cond": {
+    "metric": "users",
+    "gte": 100000
+   }
+  },
+  {
+   "id": "ach_user1m",
+   "name": "백만 고객",
+   "desc": "고객 100만을 모았습니다.",
+   "tier": "gold",
+   "cond": {
+    "metric": "users",
+    "gte": 1000000
+   }
+  },
+  {
+   "id": "ach_user10m",
+   "name": "천만 고객",
+   "desc": "고객 1,000만을 모았습니다.",
+   "tier": "platinum",
+   "cond": {
+    "metric": "users",
+    "gte": 10000000
+   }
+  },
+  {
+   "id": "ach_mrr10m",
+   "name": "월 천",
+   "desc": "월 매출 1천만원을 넘었습니다.",
+   "tier": "bronze",
+   "cond": {
+    "metric": "mrr",
+    "gte": 10000000
+   }
+  },
+  {
+   "id": "ach_mrr100m",
+   "name": "월 1억",
+   "desc": "월 매출 1억원을 넘었습니다.",
+   "tier": "silver",
+   "cond": {
+    "metric": "mrr",
+    "gte": 100000000
+   }
+  },
+  {
+   "id": "ach_mrr1b",
+   "name": "월 10억",
+   "desc": "월 매출 10억원을 넘었습니다.",
+   "tier": "gold",
+   "cond": {
+    "metric": "mrr",
+    "gte": 1000000000
+   }
+  },
+  {
+   "id": "ach_mrr10b",
+   "name": "월 100억",
+   "desc": "월 매출 100억원을 넘었습니다.",
+   "tier": "platinum",
+   "cond": {
+    "metric": "mrr",
+    "gte": 10000000000
+   }
+  },
+  {
+   "id": "ach_val10b",
+   "name": "백억 클럽",
+   "desc": "기업가치 100억원을 넘었습니다.",
+   "tier": "bronze",
+   "cond": {
+    "metric": "valuation",
+    "gte": 10000000000
+   }
+  },
+  {
+   "id": "ach_val100b",
+   "name": "천억 클럽",
+   "desc": "기업가치 1,000억원을 넘었습니다.",
+   "tier": "silver",
+   "cond": {
+    "metric": "valuation",
+    "gte": 100000000000
+   }
+  },
+  {
+   "id": "ach_unicorn",
+   "name": "유니콘",
+   "desc": "기업가치 1조원을 넘었습니다.",
+   "tier": "gold",
+   "cond": {
+    "metric": "valuation",
+    "gte": 1000000000000
+   }
+  },
+  {
+   "id": "ach_decacorn",
+   "name": "데카콘",
+   "desc": "기업가치 10조원을 넘었습니다.",
+   "tier": "platinum",
+   "cond": {
+    "metric": "valuation",
+    "gte": 10000000000000
+   }
+  },
+  {
+   "id": "ach_cash10b",
+   "name": "곳간이 든든",
+   "desc": "보유 자금 100억원을 넘었습니다.",
+   "tier": "silver",
+   "cond": {
+    "metric": "cash",
+    "gte": 10000000000
+   }
+  },
+  {
+   "id": "ach_profit3",
+   "name": "흑자 기업",
+   "desc": "3개월 연속 흑자를 냈습니다.",
+   "tier": "bronze",
+   "cond": {
+    "metric": "profitMonths",
+    "gte": 3
+   }
+  },
+  {
+   "id": "ach_profit12",
+   "name": "돈 버는 회사",
+   "desc": "12개월 연속 흑자를 냈습니다.",
+   "tier": "silver",
+   "cond": {
+    "metric": "profitMonths",
+    "gte": 12
+   }
+  },
+  {
+   "id": "ach_profit36",
+   "name": "캐시카우",
+   "desc": "36개월 연속 흑자를 냈습니다.",
+   "tier": "gold",
+   "cond": {
+    "metric": "profitMonths",
+    "gte": 36
+   }
+  },
+  {
+   "id": "ach_feat10",
+   "name": "기능 장인",
+   "desc": "기능 레벨 합 10을 달성했습니다.",
+   "tier": "bronze",
+   "cond": {
+    "metric": "featuresDone",
+    "gte": 10
+   }
+  },
+  {
+   "id": "ach_feat30",
+   "name": "풍부한 제품",
+   "desc": "기능 레벨 합 30을 달성했습니다.",
+   "tier": "silver",
+   "cond": {
+    "metric": "featuresDone",
+    "gte": 30
+   }
+  },
+  {
+   "id": "ach_feat60",
+   "name": "올인원 플랫폼",
+   "desc": "기능 레벨 합 60을 달성했습니다.",
+   "tier": "gold",
+   "cond": {
+    "metric": "featuresDone",
+    "gte": 60
+   }
+  },
+  {
+   "id": "ach_share10",
+   "name": "시장의 한 축",
+   "desc": "국내 점유율 10%를 넘었습니다.",
+   "tier": "bronze",
+   "cond": {
+    "metric": "share",
+    "gte": 0.1
+   }
+  },
+  {
+   "id": "ach_share30",
+   "name": "선두 주자",
+   "desc": "국내 점유율 30%를 넘었습니다.",
+   "tier": "silver",
+   "cond": {
+    "metric": "share",
+    "gte": 0.3
+   }
+  },
+  {
+   "id": "ach_share50",
+   "name": "시장 지배자",
+   "desc": "국내 점유율 50%를 넘었습니다.",
+   "tier": "gold",
+   "cond": {
+    "metric": "share",
+    "gte": 0.5
+   }
+  },
+  {
+   "id": "ach_market2",
+   "name": "해외 진출",
+   "desc": "두 번째 시장에 진출했습니다.",
+   "tier": "bronze",
+   "cond": {
+    "metric": "markets",
+    "gte": 2
+   }
+  },
+  {
+   "id": "ach_market5",
+   "name": "글로벌 기업",
+   "desc": "다섯 시장 모두에 진출했습니다.",
+   "tier": "gold",
+   "cond": {
+    "metric": "markets",
+    "gte": 5
+   }
+  },
+  {
+   "id": "ach_ent1",
+   "name": "대기업 고객",
+   "desc": "첫 대기업 계약을 맺었습니다.",
+   "tier": "bronze",
+   "cond": {
+    "metric": "enterprise",
+    "gte": 1
+   }
+  },
+  {
+   "id": "ach_ent10",
+   "name": "엔터프라이즈 강자",
+   "desc": "대기업 계약 10건을 맺었습니다.",
+   "tier": "silver",
+   "cond": {
+    "metric": "enterprise",
+    "gte": 10
+   }
+  },
+  {
+   "id": "ach_acq1",
+   "name": "첫 인수",
+   "desc": "경쟁사를 인수했습니다.",
+   "tier": "silver",
+   "cond": {
+    "metric": "acquisitions",
+    "gte": 1
+   }
+  },
+  {
+   "id": "ach_acq3",
+   "name": "포식자",
+   "desc": "경쟁사 세 곳을 인수했습니다.",
+   "tier": "gold",
+   "cond": {
+    "metric": "acquisitions",
+    "gte": 3
+   }
+  },
+  {
+   "id": "ach_staff1",
+   "name": "첫 동료",
+   "desc": "첫 직원을 뽑았습니다.",
+   "tier": "bronze",
+   "cond": {
+    "metric": "staff",
+    "gte": 1
+   }
+  },
+  {
+   "id": "ach_staff10",
+   "name": "열 명의 팀",
+   "desc": "직원 10명을 넘었습니다.",
+   "tier": "bronze",
+   "cond": {
+    "metric": "staff",
+    "gte": 10
+   }
+  },
+  {
+   "id": "ach_staff50",
+   "name": "중견 조직",
+   "desc": "직원 50명을 넘었습니다.",
+   "tier": "silver",
+   "cond": {
+    "metric": "staff",
+    "gte": 50
+   }
+  },
+  {
+   "id": "ach_staff150",
+   "name": "대기업 같은 스타트업",
+   "desc": "직원 150명을 넘었습니다.",
+   "tier": "gold",
+   "cond": {
+    "metric": "staff",
+    "gte": 150
+   }
+  },
+  {
+   "id": "ach_office3",
+   "name": "한 층 전체",
+   "desc": "판교 오피스 한 층으로 이전했습니다.",
+   "tier": "silver",
+   "cond": {
+    "metric": "officeTier",
+    "gte": 3
+   }
+  },
+  {
+   "id": "ach_office5",
+   "name": "우리 사옥",
+   "desc": "사옥으로 이전했습니다.",
+   "tier": "gold",
+   "cond": {
+    "metric": "officeTier",
+    "gte": 5
+   }
+  },
+  {
+   "id": "ach_leads3",
+   "name": "리더들",
+   "desc": "팀장 3명을 세웠습니다.",
+   "tier": "bronze",
+   "cond": {
+    "metric": "leads",
+    "gte": 3
+   }
+  },
+  {
+   "id": "ach_happy",
+   "name": "일하기 좋은 회사",
+   "desc": "직원 10명 이상에서 평균 만족도 80을 넘었습니다.",
+   "tier": "silver",
+   "cond": {
+    "metric": "happyTeam",
+    "gte": 80
+   }
+  },
+  {
+   "id": "ach_ai50",
+   "name": "AI 네이티브",
+   "desc": "평균 AI 적용률 50%를 넘었습니다.",
+   "tier": "silver",
+   "cond": {
+    "metric": "aiAdoption",
+    "gte": 0.5
+   }
+  },
+  {
+   "id": "ach_ai90",
+   "name": "사람과 AI",
+   "desc": "평균 AI 적용률 90%를 넘었습니다.",
+   "tier": "gold",
+   "cond": {
+    "metric": "aiAdoption",
+    "gte": 0.9
+   }
+  },
+  {
+   "id": "ach_angel",
+   "name": "엔젤의 선택",
+   "desc": "엔젤 투자를 받았습니다.",
+   "tier": "bronze",
+   "cond": {
+    "metric": "fundingIndex",
+    "gte": 0
+   }
+  },
+  {
+   "id": "ach_seed",
+   "name": "씨앗을 심다",
+   "desc": "시드 투자를 받았습니다.",
+   "tier": "bronze",
+   "cond": {
+    "metric": "fundingIndex",
+    "gte": 2
+   }
+  },
+  {
+   "id": "ach_seriesA",
+   "name": "시리즈 A",
+   "desc": "시리즈 A 투자를 받았습니다.",
+   "tier": "silver",
+   "cond": {
+    "metric": "fundingIndex",
+    "gte": 3
+   }
+  },
+  {
+   "id": "ach_seriesC",
+   "name": "레이트 스테이지",
+   "desc": "시리즈 C 투자를 받았습니다.",
+   "tier": "gold",
+   "cond": {
+    "metric": "fundingIndex",
+    "gte": 5
+   }
+  },
+  {
+   "id": "ach_seriesG",
+   "name": "끝판왕 라운드",
+   "desc": "시리즈 G 투자를 받았습니다.",
+   "tier": "platinum",
+   "cond": {
+    "metric": "fundingIndex",
+    "gte": 9
+   },
+   "hidden": true
+  },
+  {
+   "id": "ach_ipo",
+   "name": "상장의 종",
+   "desc": "회사를 상장시켰습니다.",
+   "tier": "gold",
+   "cond": {
+    "metric": "ipos",
+    "gte": 1
+   }
+  },
+  {
+   "id": "ach_ipo2",
+   "name": "두 번째 종",
+   "desc": "두 회사를 상장시켰습니다.",
+   "tier": "platinum",
+   "cond": {
+    "metric": "ipos",
+    "gte": 2
+   },
+   "hidden": true
+  },
+  {
+   "id": "ach_mcap1t",
+   "name": "시총 1조",
+   "desc": "상장사 시가총액 1조원을 넘었습니다.",
+   "tier": "gold",
+   "cond": {
+    "metric": "marketCap",
+    "gte": 1000000000000
+   }
+  },
+  {
+   "id": "ach_mcap10t",
+   "name": "시총 10조",
+   "desc": "상장사 시가총액 10조원을 넘었습니다.",
+   "tier": "platinum",
+   "cond": {
+    "metric": "marketCap",
+    "gte": 10000000000000
+   }
+  },
+  {
+   "id": "ach_exit1",
+   "name": "첫 Exit",
+   "desc": "처음으로 Exit에 성공했습니다.",
+   "tier": "silver",
+   "cond": {
+    "metric": "exits",
+    "gte": 1
+   }
+  },
+  {
+   "id": "ach_exit3",
+   "name": "연쇄 창업가",
+   "desc": "Exit에 세 번 성공했습니다.",
+   "tier": "gold",
+   "cond": {
+    "metric": "exits",
+    "gte": 3
+   }
+  },
+  {
+   "id": "ach_exit10b",
+   "name": "100억의 사나이",
+   "desc": "한 번의 Exit으로 100억원 이상을 손에 쥐었습니다.",
+   "tier": "silver",
+   "cond": {
+    "metric": "exitAmount",
+    "gte": 10000000000
+   }
+  },
+  {
+   "id": "ach_exit100b",
+   "name": "1,000억 Exit",
+   "desc": "한 번의 Exit으로 1,000억원 이상을 손에 쥐었습니다.",
+   "tier": "gold",
+   "cond": {
+    "metric": "exitAmount",
+    "gte": 100000000000
+   }
+  },
+  {
+   "id": "ach_bootstrap",
+   "name": "남의 돈 없이",
+   "desc": "투자 없이 Exit에 성공했습니다.",
+   "tier": "gold",
+   "cond": {
+    "metric": "bootstrapExit",
+    "gte": 1
+   },
+   "hidden": true
+  },
+  {
+   "id": "ach_keep50",
+   "name": "지분 지킴이",
+   "desc": "Exit 때 내 지분이 50% 이상이었습니다.",
+   "tier": "silver",
+   "cond": {
+    "metric": "exitPct",
+    "gte": 0.5
+   }
+  },
+  {
+   "id": "ach_company2",
+   "name": "다시 한 번",
+   "desc": "두 번째 회사를 세웠습니다.",
+   "tier": "bronze",
+   "cond": {
+    "metric": "companies",
+    "gte": 2
+   }
+  },
+  {
+   "id": "ach_company5",
+   "name": "창업 중독",
+   "desc": "다섯 번째 회사를 세웠습니다.",
+   "tier": "gold",
+   "cond": {
+    "metric": "companies",
+    "gte": 5
+   }
+  },
+  {
+   "id": "ach_bankrupt1",
+   "name": "쓴맛",
+   "desc": "처음으로 파산했습니다.",
+   "tier": "bronze",
+   "cond": {
+    "metric": "bankruptcies",
+    "gte": 1
+   },
+   "hidden": true
+  },
+  {
+   "id": "ach_wealth1b",
+   "name": "10억 자산가",
+   "desc": "개인 자산 10억원을 넘었습니다.",
+   "tier": "bronze",
+   "cond": {
+    "metric": "wealth",
+    "gte": 1000000000
+   }
+  },
+  {
+   "id": "ach_wealth100b",
+   "name": "1,000억 자산가",
+   "desc": "개인 자산 1,000억원을 넘었습니다.",
+   "tier": "gold",
+   "cond": {
+    "metric": "wealth",
+    "gte": 100000000000
+   }
+  },
+  {
+   "id": "ach_wealth1t",
+   "name": "조 단위 부자",
+   "desc": "개인 자산 1조원을 넘었습니다.",
+   "tier": "platinum",
+   "cond": {
+    "metric": "wealth",
+    "gte": 1000000000000
+   },
+   "hidden": true
+  },
+  {
+   "id": "ach_rep50",
+   "name": "업계의 유명인",
+   "desc": "명성 50을 넘었습니다.",
+   "tier": "silver",
+   "cond": {
+    "metric": "rep",
+    "gte": 50
+   }
+  },
+  {
+   "id": "ach_rep100",
+   "name": "살아 있는 전설",
+   "desc": "명성 100을 넘었습니다.",
+   "tier": "gold",
+   "cond": {
+    "metric": "rep",
+    "gte": 100
+   }
+  },
+  {
+   "id": "ach_decide50",
+   "name": "결단의 대표",
+   "desc": "경영 결정 50번을 내렸습니다.",
+   "tier": "bronze",
+   "cond": {
+    "metric": "eventsDecided",
+    "gte": 50
+   }
+  },
+  {
+   "id": "ach_decide300",
+   "name": "수많은 갈림길",
+   "desc": "경영 결정 300번을 내렸습니다.",
+   "tier": "silver",
+   "cond": {
+    "metric": "eventsDecided",
+    "gte": 300
+   }
+  },
+  {
+   "id": "ach_age50",
+   "name": "반백의 창업가",
+   "desc": "50세가 넘어서도 회사를 운영했습니다.",
+   "tier": "silver",
+   "cond": {
+    "metric": "age",
+    "gte": 50
+   }
+  },
+  {
+   "id": "ach_retire",
+   "name": "은퇴",
+   "desc": "커리어를 마치고 은퇴했습니다.",
+   "tier": "silver",
+   "cond": {
+    "metric": "retired",
+    "gte": 1
+   }
+  }
+ ]
+}
