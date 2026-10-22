@@ -25,6 +25,7 @@ import { emptyProfile, retire, endingFor, founderAge } from '../../src/core/care
 import { acquire, acquireBlock } from '../../src/core/competitors';
 import { computeValuation } from '../../src/core/valuation';
 import { formatDate, yearFrac } from '../../src/core/calendar';
+import { Meter, summarize, type CompanyMetrics } from './metrics';
 import type { DeptId, GameState, IndustryId, MarketId, StageId } from '../../src/core/types';
 
 const runs = Number(process.argv[2] ?? 3);
@@ -250,6 +251,7 @@ function playCompany(s: GameState, log: (m: string) => void) {
   const start = s.day;
   const ms: Milestones = { mvp: null, rev1: null, staff5: null, seed: null, A: null, B: null, C: null, stage3: null, stage4: null, ipo: null };
   let guard = 0;
+  const meter = new Meter(s);
   while (!s.ended && guard++ < 365 * 40) {
     s.pauseReason = null;
     const look = !NOVICE || s.day % 5 === 0;
@@ -261,6 +263,7 @@ function playCompany(s: GameState, log: (m: string) => void) {
     exitStep(s, log);
     if (s.ended) break;
     runDay(s);
+    meter.day(s);
     s.events.length = 0;
     const d = s.day - start;
     if (ms.mvp === null && hasMvp(s)) ms.mvp = d;
@@ -292,11 +295,12 @@ function playCompany(s: GameState, log: (m: string) => void) {
       log(`  ${formatDate(s.day)} 단계${s.company.stage} 자금 ${(s.cash / 1e8).toFixed(1)}억 매출 ${(lastRevenue(s) / 1e6).toFixed(1)}백만 고객 ${Math.round(totalUsers(s))} 점유 ${(shares(s, 'kr').player * 100).toFixed(1)}% 직원 ${s.employees.length} 버그 ${s.product.bugs.toFixed(0)} 가치 ${(computeValuation(s).value / 1e8).toFixed(0)}억 ${s.fundingStage ?? '-'} 만족 ${avgSat(s).toFixed(0)}`);
     }
   }
-  return { ms, days: s.day - start };
+  return { ms, days: s.day - start, m: meter.result() };
 }
 
 const INDS: IndustryId[] = (process.env.IND ? [process.env.IND] : ["saas", "consumer", "commerce"]) as IndustryId[];
 const out: string[] = [];
+const allM: { m: CompanyMetrics; kind: string; maxVal: number; ind: string; ms: Record<string, number | null> }[] = [];
 for (let r = 0; r < runs; r++) {
   const seed = seed0 + r;
   const profile = emptyProfile();
@@ -312,9 +316,10 @@ for (let r = 0; r < runs; r++) {
     k++;
     const t0 = s.day;
     log(`[판 ${r + 1} 회사 ${k}] ${s.company.industry} 시작 ${formatDate(s.day)} 나이 ${founderAge(s).toFixed(1)}`);
-    const { ms, days } = playCompany(s, log);
+    const { ms, days, m } = playCompany(s, log);
     decisions += s.company.decisions;
     const res = s.result!;
+    allM.push({ m, kind: res.kind, maxVal: res.maxValuation, ind: s.company.industry, ms });
     log(`  끝: ${res.kind} ${formatDate(s.day)} (${(days / 365).toFixed(1)}년) 창업자 몫 ${(res.amount / 1e8).toFixed(1)}억 최대가치 ${(res.maxValuation / 1e8).toFixed(0)}억 최대고객 ${Math.round(res.peakUsers)} 최대직원 ${res.peakEmployees} 결정 ${s.company.decisions} 출시 ${s.product.shipped.length} 장애 ${s.stats.outages} 퇴사 ${s.stats.quits} 외주 ${s.contracts?.completed ?? 0}`);
     log(`  마일스톤(일): ${Object.entries(ms).map(([a, b]) => `${a}=${b ?? '-'}`).join(' ')}`);
     void t0;
@@ -328,4 +333,5 @@ for (let r = 0; r < runs; r++) {
   log(`[판 ${r + 1}] 은퇴 나이 ${founderAge(s).toFixed(1)} 회사 ${s.career.companies.length} 자산 ${(s.career.wealth / 1e8).toFixed(1)}억 명성 ${s.career.rep.toFixed(0)} 엔딩 ${endingFor(s).name} 업적 ${s.career.achievements.length} 결정 ${decisions} 게임 ${years.toFixed(1)}년 = 1배속 ${((years * 365 * DATA.time.dayMs) / 3600000).toFixed(1)}시간`);
   void featuresOf;
 }
+out.push(...summarize(allM));
 console.log(out.join('\n'));

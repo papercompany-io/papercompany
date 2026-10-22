@@ -72,8 +72,12 @@ export function payingUsers(s: GameState, users: number, fx: FxTotals = fxTotals
 
 // 하루에 쌓이는 인사이트. users·paying은 unit으로 나눈 값(산업마다 사용자 규모가 달라서), csOut = 고객지원 '의견 수집' 출력
 export function insightGain(users: number, paying: number, csOut: number): { insight: number; pay: number } {
-  // TODO(human)
-  return { insight: 0, pay: 0 };
+  // 사용자가 많아질수록 덜 늘어남(제곱근): 큰 회사에서도 착수 조건이 의미를 잃지 않게. 의견 수집은 고객 인사이트에만 더함
+  // 지불 의사는 돈을 내는 고객 수에 0.75제곱으로: 결제를 붙인 뒤 수익화 기능이 중반에 열리게
+  return {
+    insight: IN.userK * Math.sqrt(Math.max(0, users)) + IN.csK * csOut,
+    pay: IN.payK * Math.pow(Math.max(0, paying), 0.75),
+  };
 }
 
 export function insightDay(s: GameState, users: number, csOut: number) {
