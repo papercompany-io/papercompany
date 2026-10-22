@@ -4,6 +4,7 @@ import { DATA, industry, specCreditsSpent, specEffects } from './data';
 import { econ } from './economy';
 import { totalShares } from './equity';
 import { mod } from './mods';
+import { debtBalance } from './finance';
 import { appeal, coreFeatures, featureLevel, hasMvp } from './product';
 import { totalUsers } from './market';
 import type { GameState } from './types';
@@ -143,6 +144,13 @@ export function computeValuation(s: GameState): ValuationResult {
   }
   detail = [...detail, `+ 보유 자금 ${Math.round(s.cash).toLocaleString('ko-KR')}원`];
   let value = business + Math.max(0, s.cash);
+  // A-137 남은 대출은 회사가 갚아야 할 돈이라 가치에서 뺍니다
+  const debt = debtBalance(s);
+  if (debt > 0) {
+    // 빚이 커도 사업 자체의 가치는 남습니다(사업가치 × valueFloor 아래로는 안 내려감). 0이 되면 주당 가격이 0이라 라운드 주식 수가 깨짐
+    value = Math.max(business * DATA.finance.loan.valueFloor, value - debt);
+    detail.push(`− 갚을 대출 ${Math.round(debt).toLocaleString('ko-KR')}원`);
+  }
   const penalty = s.valuation.penaltyUntil !== null && s.day < s.valuation.penaltyUntil;
   if (penalty) {
     value *= DATA.exit.failPenaltyFactor;

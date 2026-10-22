@@ -4,9 +4,9 @@ import fs from 'fs';
 import { DATA, featuresOf, stageIndex } from '../../src/core/data';
 import { runDay } from '../../src/core/sim';
 import { newCareer, nextCompany, defaultPicks, ownedSpecs, type SetupChoices } from '../../src/core/state';
-import { addToRoadmap, availableFeatures, hasMvp, appeal, fxTotals } from '../../src/core/product';
+import { addToRoadmap, availableFeatures, hasMvp, appeal, fxTotals, canCharge } from '../../src/core/product';
 import { createPosting, offerJob } from '../../src/core/hiring';
-import { runwayMonths, lastRevenue, projectedMonthlyPayroll } from '../../src/core/finance';
+import { runwayMonths, lastRevenue, projectedMonthlyPayroll, debtBalance } from '../../src/core/finance';
 import { startRound, sendLetter, requestDecision, closeForOffer, acceptOffer, activeRound, fits, decisionProbability, selectableStages } from '../../src/core/funding';
 import { setOrder } from '../../src/core/orders';
 import { audience, campaignBlock, campaignCost, campaignDef, startCampaign } from '../../src/core/ads';
@@ -15,6 +15,7 @@ import { moveOffice, moveBlock, seatsAvailable, furnitureItems, buyFurniture, bu
 import { chooseModel, latestModels, setAdoption } from '../../src/core/aiadopt';
 import { promoteLead, leadInfo, avgSat } from '../../src/core/staff';
 import { resolveDecision } from '../../src/core/events';
+import { LOAN_EVENT, policyApproval } from '../../src/core/loans';
 import { startExit, acceptSale, declineSale, annualRevenue, exitBlocked } from '../../src/core/exit';
 import { sellShares, resign } from '../../src/core/public';
 import { setCeoMode, executiveBlock, setCeoWork } from '../../src/core/ceo';
@@ -86,7 +87,9 @@ function hireStep(s: GameState) {
     for (const a of apps.slice(0, Math.max(0, n - have))) {
       if (a.grade === 'C' && s.company.stage >= 2) continue;
       // 신중한 채용: 이 사람까지 더해도 런웨이 12개월 이상
-      if (s.cash / (burn + a.desiredSalary * 1.2) < (NOVICE ? 5 : 12)) return;
+      // 빌린 돈(A-137)은 여유 자금이 아님: 전략 봇은 남은 빚을 빼고 셈
+      const free = NOVICE ? s.cash : s.cash - debtBalance(s);
+      if (free / (burn + a.desiredSalary * 1.2) < (NOVICE ? 5 : 12)) return;
       if (offerJob(s, a.id, false).ok) burn += a.desiredSalary * 1.2;
     }
   }
@@ -194,7 +197,9 @@ function opsStep(s: GameState) {
     const ct = s.contracts;
     if (ct && !ct.active && ct.offers.length && s.cash < 25000000) acceptContract(s, [...ct.offers].sort((a, b) => a.work - b.work)[0].id);
     // 실무 모드(A-101): 기본 업무 하나 + 초대받은 외출(투자 미팅·네트워킹·고객사 방문)은 겹치지 않고 돈이 되면 수락
-    setCeoWork(s, s.contracts?.active && s.cash < 25000000 ? 'contract' : hasMvp(s) ? 'sales' : 'dev');
+    // 결제 기능(A-111)이 없으면 영업해 봐야 매출이 없으므로, 개발자가 없을 땐 결제까지 대표가 직접 만듭니다(유능한 플레이어)
+    const devNeeded = !hasMvp(s) || (!NOVICE && !canCharge(s) && !s.employees.some((e) => e.dept === 'dev'));
+    setCeoWork(s, s.contracts?.active && s.cash < 25000000 ? 'contract' : devNeeded ? 'dev' : 'sales');
     for (const o of outings(s).filter((x) => x.status === 'offer')) if (o.cost * 20 < s.cash) acceptOuting(s, o.id);
   } else {
     // 경영 모드(A-101): 결재가 밀리면 결재, 아니면 대기업 영업. 외출 초대는 실무 모드와 같이 수락
@@ -213,6 +218,15 @@ function decide(s: GameState) {
     const opts = d.choices.map((c, i) => ({ c, i })).filter((x) => x.c.enabled);
     if (!opts.length) continue;
     if (NOVICE && (d.id.charCodeAt(d.id.length - 1) % 2 === 0) && s.day < d.deadline) continue; // 절반은 기한까지 두어 기본 선택
+    // 대출 제안(A-137): 정책자금이 붙을 만하면 정책자금, 곧 바닥이면 은행, 아니면 빚 없이
+    if (!NOVICE && d.eventId === LOAN_EVENT) {
+      const rw = runwayMonths(s) ?? 99;
+      const pol = d.choices.findIndex((c) => c.label.startsWith('정책자금') && c.enabled);
+      const bank = d.choices.findIndex((c) => c.label.startsWith('은행') && c.enabled);
+      const pick = rw < 1.5 && bank >= 0 ? bank : pol >= 0 && policyApproval(s).p >= 0.5 ? pol : bank >= 0 && rw < 2.5 ? bank : d.choices.length - 1;
+      resolveDecision(s, d.id, pick);
+      continue;
+    }
     // 돈이 넉넉하면 비싼 선택(보통 좋은 결과)도, 아니면 싼 것
     const rich = s.cash > 5e8;
     opts.sort((a, b) => (rich ? 0 : a.c.cost - b.c.cost));
@@ -262,8 +276,18 @@ function playCompany(s: GameState, log: (m: string) => void) {
     decide(s);
     exitStep(s, log);
     if (s.ended) break;
+    if (process.argv.includes('--rounds')) for (const r of s.rounds) {
+      const key = r.id + r.status + (r.leadId ?? '');
+      if (!dumped.has(key)) {
+        dumped.add(key);
+        const ps = Object.entries(r.letters).map(([k, l]) => `${k}:${l.interest.toFixed(0)}${l.decision ? '/' + l.decision : ''}${l.decisionP !== null ? '(' + (l.decisionP * 100).toFixed(0) + '%)' : ''}`).join(' ');
+        log(`   라운드 ${formatDate(s.day)} ${r.stage} ${r.status} 리드 ${r.leadId ?? '-'} 프리 ${(r.preValue / 1e8).toFixed(1)}억 | ${ps}`);
+      }
+    }
     runDay(s);
     meter.day(s);
+    // --nan: 기업가치·주식 수가 처음 NaN이 되는 날을 남깁니다(계산 버그 찾기)
+    if (process.argv.includes('--nan') && !dumped.has('nv') && (Number.isNaN(computeValuation(s).value) || s.capTable.some((c) => Number.isNaN(c.shares)))) { dumped.add('nv'); const cv = computeValuation(s); log(`   NV ${formatDate(s.day)} cash=${s.cash} b=${cv.business} loans=${JSON.stringify(s.loans)} cap=${JSON.stringify(s.capTable.slice(-3))} ledger=${JSON.stringify(s.ledger.slice(-4))}`); }
     s.events.length = 0;
     const d = s.day - start;
     if (ms.mvp === null && hasMvp(s)) ms.mvp = d;

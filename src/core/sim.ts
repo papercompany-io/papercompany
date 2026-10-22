@@ -8,6 +8,7 @@ import { economyDay } from './economy';
 import { applySeatMoves } from './employees';
 import { eventsDay } from './events';
 import { contractsDay } from './contracts';
+import { loansDay } from './loans';
 import { checkBankruptcy, checkBoard, exitDayEnd, inboundOfferMonth } from './exit';
 import { accrueDay, closeMonth } from './finance';
 import { paydayForecast } from './forecast';
@@ -97,6 +98,7 @@ export function endDay(s: GameState) {
   officeDay(s);
   eventsDay(s);
   contractsDay(s);
+  loansDay(s);
   bankruptcyWarning(s);
   economyDay(s);
   publicDay(s);

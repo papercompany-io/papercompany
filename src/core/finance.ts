@@ -81,6 +81,7 @@ export function computePL(s: GameState, a: MonthAccrual, dim: number): Omit<Mont
   const opex = pay.total + a.entertainment + a.recruiting + a.ads + infra + rent + welfare + ai + a.other;
   const operatingProfit = revenue - vat - opex;
   const tax = taxOf(s, operatingProfit);
+  const interest = Math.round(a.interest ?? 0);
   return {
     month: a.month,
     revenue,
@@ -103,7 +104,8 @@ export function computePL(s: GameState, a: MonthAccrual, dim: number): Omit<Mont
     opex: Math.round(opex),
     operatingProfit: Math.round(operatingProfit),
     tax,
-    netIncome: Math.round(operatingProfit - tax),
+    interest,
+    netIncome: Math.round(operatingProfit - tax - interest),
     cashBefore: Math.round(a.cashStart),
     investment: a.investment,
     usersEnd: 0,
@@ -113,6 +115,7 @@ export function computePL(s: GameState, a: MonthAccrual, dim: number): Omit<Mont
 // 월급일 정산: 지난달 매출이 들어오고, 월급·4대보험·퇴직연금·접대비·인프라·월세·복지·AI 구독·법인세가 나갑니다.
 export function closeMonth(s: GameState, usersEnd: number): MonthPL {
   const dim = daysInMonthOf(s.day - 1);
+  s.accrual.interest = loanInterestDue(s); // A-137 지난달 이자
   const pl = computePL(s, s.accrual, dim);
   pl.usersEnd = Math.floor(usersEnd);
   const label = pl.month.replace('-', '년 ') + '월';
@@ -127,6 +130,9 @@ export function closeMonth(s: GameState, usersEnd: number): MonthPL {
   if (pl.welfare > 0) book(s, `${label} 복지비`, -pl.welfare);
   if (pl.ai > 0) book(s, `${label} AI 도구 구독`, -pl.ai);
   if (pl.tax > 0) book(s, `${label} 법인세`, -pl.tax);
+  if (pl.interest) book(s, `${label} 대출 이자`, -pl.interest);
+  const paid = repayLoans(s, label);
+  if (paid) pl.loanPaid = paid;
   const full: MonthPL = { ...pl, cashAfter: Math.round(s.cash) };
   s.plHistory.push(full);
   if (s.plHistory.length > 480) s.plHistory.splice(0, s.plHistory.length - 480);
@@ -180,7 +186,8 @@ export function nextPaydayForecast(s: GameState, rates: DailyRates, futureEntert
   const rent = rentMonthly(s);
   const op = revenue - vat - (pay.total + ent + a.recruiting + a.ads + ads + infra + welfare + ai + rent + a.other);
   const tax = taxOf(s, op);
-  const cashAfter = s.cash - ads + revenue - vat - pay.total - ent - infra - welfare - ai - rent - tax;
+  const loan = loanInterestDue(s) + loanPrincipalDue(s); // A-137 이번 월급일에 갚을 이자·원금
+  const cashAfter = s.cash - ads + revenue - vat - pay.total - ent - infra - welfare - ai - rent - tax - loan;
   return { cashAfter: Math.round(cashAfter), salaryOut: pay.total, revenue, daysLeft: left };
 }
 
@@ -190,8 +197,40 @@ export function runwayMonths(s: GameState): number | null {
   const h = s.plHistory.slice(-3);
   const avgNet = h.length ? h.reduce((a, m) => a + m.netIncome + m.other, 0) / h.length : 0;
   const lastRev = h.length ? h[h.length - 1].revenue - h[h.length - 1].vat : 0;
-  const fixed = projectedMonthlyPayroll(s) + rentMonthly(s) + welfareMonthly(s);
+  const fixed = projectedMonthlyPayroll(s) + rentMonthly(s) + welfareMonthly(s) + loanPrincipalDue(s);
   const burn = Math.max(-avgNet, fixed - lastRev);
   if (burn <= 0) return null;
   return Math.max(0, s.cash) / burn;
+}
+
+// ── A-137 대출: 남은 빚, 이번 달 이자·원금, 월급일 상환 ──
+export function debtBalance(s: GameState): number {
+  return (s.loans ?? []).reduce((a, l) => a + l.balance, 0);
+}
+
+export function guaranteedDebt(s: GameState): number {
+  return (s.loans ?? []).filter((l) => l.guaranteed).reduce((a, l) => a + l.balance, 0);
+}
+
+export function loanInterestDue(s: GameState): number {
+  return Math.round((s.loans ?? []).reduce((a, l) => a + (l.balance * l.rate) / 12, 0));
+}
+
+export function loanPrincipalDue(s: GameState): number {
+  return Math.round((s.loans ?? []).reduce((a, l) => a + (s.day >= l.graceUntil ? Math.min(l.balance, l.principalPay) : 0), 0));
+}
+
+// 월급일: 거치 기간이 끝난 대출의 원금을 갚습니다(손익이 아니라 현금만 줄어듦). 다 갚은 대출은 지웁니다.
+function repayLoans(s: GameState, label: string): number {
+  let paid = 0;
+  for (const l of s.loans ?? []) {
+    if (s.day < l.graceUntil) continue;
+    const p = Math.min(l.balance, l.principalPay);
+    if (p <= 0) continue;
+    l.balance -= p;
+    paid += p;
+    book(s, `${label} ${l.lender} 원금 상환`, -p);
+  }
+  if (s.loans) s.loans = s.loans.filter((l) => l.balance > 0.5);
+  return Math.round(paid);
 }

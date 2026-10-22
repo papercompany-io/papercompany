@@ -21,6 +21,8 @@ export interface CompanyMetrics {
   keyQuits: number;
   compEvents: number;
   eventCats: Record<string, number>;
+  loans: number; // 받은 대출 수(A-137)
+  loanKinds: string[];
 }
 
 export class Meter {
@@ -34,6 +36,7 @@ export class Meter {
   private keyQuits = 0;
   private compEvents = 0;
   private cats: Record<string, number> = {};
+  private loanKinds: string[] = [];
 
   constructor(s: GameState) {
     this.snap(s);
@@ -90,6 +93,7 @@ export class Meter {
     if (s.company.officeTier !== this.prev.tier) n++;
     const mk = Object.values(s.markets).filter((m) => m.launched).length;
     if (mk !== this.prev.markets) n++;
+    for (const l of s.loans ?? []) if (newKey('L' + l.id)) this.loanKinds.push(l.kind);
     const rw = runwayMonths(s);
     const low = !s.public && rw !== null && rw < 3;
     if (low && !this.lowRunway) {
@@ -143,6 +147,8 @@ export class Meter {
       keyQuits: this.keyQuits,
       compEvents: this.compEvents,
       eventCats: this.cats,
+      loans: this.loanKinds.length,
+      loanKinds: this.loanKinds,
     };
   }
 }
@@ -181,6 +187,11 @@ export function summarize(all: { m: CompanyMetrics; kind: string; maxVal: number
   const sd = Math.sqrt(lv.reduce((a, b) => a + (b - mean) ** 2, 0) / lv.length);
   out.push(`  최고 기업가치(억): ${fmt(vals)} | log10 표준편차 ${sd.toFixed(2)}`);
   out.push(`  위기: 회사당 ${fmt(ms.map((m) => m.crises))}회 (런웨이 ${ms.reduce((a, m) => a + m.runwayCrises, 0)} · 핵심 퇴사 ${ms.reduce((a, m) => a + m.keyQuits, 0)} · 경쟁 ${ms.reduce((a, m) => a + m.compEvents, 0)}) | 간격 중앙 ${med(ms.map((m) => m.crisisGapMed ?? NaN).filter((x) => !isNaN(x)))}일 · 최대 간격 중앙 ${med(ms.map((m) => m.crisisGapMax ?? NaN).filter((x) => !isNaN(x)))}일`);
+  const crisis = all.filter((x) => x.m.runwayCrises > 0);
+  const surv = crisis.filter((x) => x.kind !== 'bankrupt').length;
+  const lk: Record<string, number> = {};
+  for (const x of all) for (const k of x.m.loanKinds) lk[k] = (lk[k] ?? 0) + 1;
+  out.push(`  런웨이 3개월 미만에 빠진 회사 ${crisis.length}개 중 생존 ${surv}개(${crisis.length ? Math.round((surv / crisis.length) * 100) : 0}%) | 대출 받은 회사 ${all.filter((x) => x.m.loans > 0).length}/${all.length} · 종류 ${Object.entries(lk).map(([k, v]) => `${k} ${v}`).join(' · ') || '없음'}`);
   const cats: Record<string, number> = {};
   for (const m of ms) for (const [k, v] of Object.entries(m.eventCats)) cats[k] = (cats[k] ?? 0) + v;
   const tot = Object.values(cats).reduce((a, b) => a + b, 0);

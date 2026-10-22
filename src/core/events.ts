@@ -19,6 +19,7 @@ import { pick, rand, weighted } from './rng';
 import { avgHealth, avgSat, hasTrait, removeEmployee, rollTalent, startSkill } from './staff';
 import { takeDesk } from './office';
 import { onEmployeeJoined } from './messenger';
+import { applyLoanChoice } from './loans';
 import { DATA } from './data';
 import type { DeptId, Employee, GameState, Grade, MarketId, PendingDecision } from './types';
 
@@ -416,6 +417,7 @@ export function applyFx(s: GameState, fx: Record<string, unknown>, ctx: Ctx) {
     s.public.sentiment = Math.max(0.4, Math.min(2, s.public.sentiment * (1 + num('stock'))));
     s.public.price *= 1 + num('stock');
   }
+  if (typeof fx.loan === 'string') applyLoanChoice(s, fx.loan); // A-137 대출 제안
   if (typeof fx.flag === 'string') setFlag(s, fx.flag);
   if (typeof fx.unflag === 'string') clearFlag(s, fx.unflag);
   const comp = s.competitors.find((c) => c.id === ctx.competitorId);

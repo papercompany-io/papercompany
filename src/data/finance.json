@@ -7,5 +7,34 @@
   "corpTaxRate": 0.1,
   "corpTaxHighRate": 0.2,
   "corpTaxHighFrom": 20000000000,
-  "severanceMonths": 1
+  "severanceMonths": 1,
+  "loan": {
+    "_note": "A-137 대출 [예시값]. 런웨이가 offerRunway개월 아래로 처음 내려가면(offerCooldown일에 한 번) 메신저로 제안. policy = 정책자금(심사 reviewDays일, 승인 확률 = pBase + 매출 있음 pRevenue + 품질 pQuality×(1−버그/100) + 명성 pRep×명성(최대 pRepCap), 창업 maxAgeYears년 안), bank = 은행(바로 실행, 대표 개인 보증: 파산하면 남은 빚을 창업자 자산에서 갚음). 한도 = base + revMult × 지난달 매출(최대 cap). 이자 = 남은 원금 × rate/12 매달, graceMonths 동안은 이자만, 그 뒤 termMonths 동안 원금을 똑같이 나눠 갚음. 기업가치는 남은 빚만큼 깎임. valueFloor = 빚을 빼도 기업가치는 사업가치 × 이 비율 아래로 내려가지 않음(0이 되면 라운드 주식 수 계산이 깨짐)",
+    "offerRunway": 4,
+    "offerCooldown": 150,
+    "policy": {
+      "rate": 0.035,
+      "base": 100000000,
+      "revMult": 6,
+      "cap": 500000000,
+      "graceMonths": 6,
+      "termMonths": 36,
+      "reviewDays": 18,
+      "pBase": 0.3,
+      "pRevenue": 0.3,
+      "pQuality": 0.2,
+      "pRep": 0.003,
+      "pRepCap": 0.1,
+      "maxAgeYears": 7
+    },
+    "bank": {
+      "rate": 0.085,
+      "base": 50000000,
+      "revMult": 3,
+      "cap": 300000000,
+      "graceMonths": 0,
+      "termMonths": 24
+    },
+    "valueFloor": 0.3
+  }
 }

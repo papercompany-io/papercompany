@@ -1409,3 +1409,7 @@ input[type='checkbox'] { accent-color: var(--accent); width: 16px; height: 16px;
 .mg-working-row { display: flex; align-items: center; gap: 6px; border: none; background: none; color: inherit; font: inherit; font-size: var(--fs-sm); padding: 3px 4px; border-radius: var(--r-xs); cursor: pointer; text-align: left; }
 .mg-working-row:hover { background: rgba(255, 255, 255, 0.08); }
 .mg-working-row small { margin-left: auto; opacity: 0.7; }
+
+/* 화면(A-137): 재무 통장 판의 "갚을 대출" 줄 — 이름 아래 작은 글씨로 빌린 곳·다음 월급일 상환액 */
+.fb-row .fb-stack { flex-direction: column; align-items: flex-start; gap: 0; }
+.fb-row .fb-stack small { font-size: var(--fs-xs, 11px); color: var(--text-3, var(--text-2)); font-weight: 400; }

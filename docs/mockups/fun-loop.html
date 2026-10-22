@@ -1,0 +1,143 @@
+<title>페이퍼컴퍼니 개선 시안</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;800&display=swap">
+<style>
+/* 짜임: 바퀴마다 한 절. 절 안에서 "지금"과 "바꿀 것"을 나란히, 아래에 바뀌는 이유를 한 줄씩. 프로젝트 theme.css 토큰 값을 그대로 씀 */
+:root {
+  --bg: #f3f6f9;          /* c-gray-50: 앱 바탕 */
+  --surface: #ffffff;     /* 창 */
+  --tile: #e9eef3;        /* surface-tile: 통장 판 */
+  --line: #dde3ea;
+  --text: #2b3440;
+  --text-2: #4a5561;
+  --muted: #7c8794;
+  --accent: #2f7db8;      /* 파랑 하나 */
+  --good: #2f8742;
+  --bad: #ad3229;
+  --bad-bg: #fdecea;
+  --new-bg: #e8f2fa;
+  --chrome: #252a37;
+  --chrome-text: #e6e9f0;
+  --font: "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #1c202b; --surface: #252a37; --tile: #2f3546; --line: #3b4256; --text: #e6e9f0; --text-2: #c4ced8; --muted: #a3abbd;
+  --accent: #7fb0d8; --good: #59c46d; --bad: #f07068; --bad-bg: #3a2523; --new-bg: #22344a; --chrome: #13161e; --chrome-text: #e6e9f0; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #1c202b; --surface: #252a37; --tile: #2f3546; --line: #3b4256; --text: #e6e9f0; --text-2: #c4ced8; --muted: #a3abbd;
+  --accent: #7fb0d8; --good: #59c46d; --bad: #f07068; --bad-bg: #3a2523; --new-bg: #22344a; --chrome: #13161e; --chrome-text: #e6e9f0; color-scheme: dark }
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--text); font-family: var(--font); line-height: 1.55;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 48px; }
+main { max-width: 980px; margin: 0 auto; display: flex; flex-direction: column; gap: 36px; }
+header h1 { font-size: 1.5rem; margin: 0 0 6px; text-wrap: balance; }
+header p { margin: 0; color: var(--text-2); max-width: 65ch; }
+section.round { display: flex; flex-direction: column; gap: 16px; }
+.round h2 { font-size: 1.15rem; margin: 0; text-wrap: balance; }
+.round .tag { font-size: 0.75rem; letter-spacing: 0.04em; color: var(--muted); }
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 720px) { .pair { grid-template-columns: 1fr; } }
+.side { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.side > .label { font-size: 0.78rem; font-weight: 600; letter-spacing: 0.04em; color: var(--muted); }
+.win { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.bank { background: var(--tile); border: 1px solid var(--line); border-radius: 6px; padding: 6px 14px; }
+.row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 6px 0; color: var(--text-2); font-size: 0.92rem; }
+.row + .row { border-top: 1px solid var(--line); }
+.row b { color: var(--text); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.row.big { font-weight: 800; color: var(--text); }
+.row .sub { display: block; font-size: 0.78rem; color: var(--muted); font-weight: 400; }
+.bad { color: var(--bad) !important; }
+.new { background: var(--new-bg); border-radius: 4px; margin-inline: -6px; padding-inline: 6px; }
+.why { margin: 0; padding-left: 18px; color: var(--text-2); font-size: 0.9rem; display: flex; flex-direction: column; gap: 4px; }
+.msg { display: flex; flex-direction: column; gap: 8px; }
+.msg .from { font-size: 0.8rem; color: var(--muted); }
+.bubble { background: var(--tile); border-radius: 6px; padding: 10px 12px; font-size: 0.92rem; }
+.choice { border: 1px solid var(--line); border-radius: 4px; padding: 8px 10px; display: flex; flex-direction: column; gap: 2px; background: var(--surface); }
+.choice b { font-size: 0.92rem; }
+.choice span { font-size: 0.8rem; color: var(--text-2); }
+.empty { color: var(--muted); font-size: 0.9rem; padding: 18px 0; text-align: center; }
+table { width: 100%; border-collapse: collapse; font-size: 0.88rem; font-variant-numeric: tabular-nums; }
+td { padding: 5px 6px; border-bottom: 1px solid var(--line); }
+td:last-child { text-align: right; }
+tr.total td { font-weight: 800; }
+.scroll { overflow-x: auto; }
+.hidden-list { font-size: 0.85rem; color: var(--muted); margin: 0; }
+</style>
+
+<main>
+  <header>
+    <h1>페이퍼컴퍼니 개선 시안</h1>
+    <p>재미 개선 바퀴마다 바뀌는 화면을 지금 모습과 나란히 놓습니다. 색·글꼴·문구는 게임 화면(theme.css 토큰)과 같게 맞췄습니다. 효과 수치·시장 크기·경쟁사 정보·복지 비용은 넣지 않습니다.</p>
+  </header>
+
+  <section class="round" id="r1">
+    <span class="tag">1바퀴 · 돈 · A-137</span>
+    <h2>빚으로 버티기: 대출 제안과 갚을 돈 표시</h2>
+
+    <div class="pair">
+      <div class="side">
+        <span class="label">지금 · 메신저</span>
+        <div class="win"><div class="empty">돈이 3개월 치만 남아도 아무도 연락하지 않습니다. 고를 수 있는 길은 투자 라운드뿐입니다.</div></div>
+      </div>
+      <div class="side">
+        <span class="label">바꿀 것 · 메신저(재무 담당 비서, 결정 카드)</span>
+        <div class="win msg">
+          <span class="from">재무 담당 비서 · 기한 10일</span>
+          <div class="bubble">대표님, 지금 쓰는 속도면 통장 잔고가 몇 달 못 갑니다. 투자 말고도 빚으로 버티는 길이 있습니다. 정책자금은 이자가 싸지만 심사가 있고, 은행은 바로 나오지만 비싸고 대표님 개인 보증이 붙습니다.</div>
+          <div class="choice"><b>정책자금 신청</b><span>최대 1.9억원, 심사 2~3주, 이자 낮음, 6개월은 이자만</span></div>
+          <div class="choice"><b>은행 대출 받기</b><span>최대 9,500만원 바로 입금, 이자 높음, 대표 개인 보증(파산하면 남은 빚을 대표가 갚음)</span></div>
+          <div class="choice"><b>빚은 지지 않는다</b><span>투자나 비용 줄이기로 버팁니다</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pair">
+      <div class="side">
+        <span class="label">지금 · 재무 앱 통장 판</span>
+        <div class="bank">
+          <div class="row"><span>통장 잔고</span><b>2억 3,400만원</b></div>
+          <div class="row"><span>이대로 버틸 수 있는 기간</span><b>7.2개월</b></div>
+          <div class="row big"><span>이번 달 적자</span><b class="bad">-3,250만원</b></div>
+        </div>
+      </div>
+      <div class="side">
+        <span class="label">바꿀 것 · 재무 앱 통장 판</span>
+        <div class="bank">
+          <div class="row"><span>통장 잔고</span><b>2억 3,400만원</b></div>
+          <div class="row new"><span>갚을 대출<span class="sub">창업진흥공단 · 다음 월급일에 이자 55만원 + 원금 528만원</span></span><b>1억 9,000만원</b></div>
+          <div class="row"><span>이대로 버틸 수 있는 기간</span><b>6.1개월</b></div>
+          <div class="row big"><span>이번 달 적자</span><b class="bad">-3,305만원</b></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pair">
+      <div class="side">
+        <span class="label">지금 · 손익표 아래쪽</span>
+        <div class="win scroll"><table>
+          <tr><td>= 영업이익</td><td>-3,250만원</td></tr>
+          <tr><td>− 법인세</td><td>0</td></tr>
+          <tr class="total"><td>= 순이익(손익)</td><td>-3,250만원</td></tr>
+        </table></div>
+      </div>
+      <div class="side">
+        <span class="label">바꿀 것 · 손익표 아래쪽</span>
+        <div class="win scroll"><table>
+          <tr><td>= 영업이익</td><td>-3,250만원</td></tr>
+          <tr><td>− 법인세</td><td>0</td></tr>
+          <tr class="new"><td>− 대출 이자</td><td>-55만원</td></tr>
+          <tr class="total"><td>= 순이익(손익)</td><td>-3,305만원</td></tr>
+        </table></div>
+      </div>
+    </div>
+
+    <ul class="why">
+      <li>대출 제안은 새 화면 없이 메신저 결정 카드로 옵니다. 런웨이가 4개월 아래로 처음 떨어질 때, 150일에 한 번만.</li>
+      <li>선택지 설명에는 한도와 조건만 말로 씁니다. 심사 확률과 이자 계산식은 보여 주지 않습니다.</li>
+      <li>정책자금 심사 결과는 2~3주 뒤 같은 대화방에 옵니다. 떨어지면 심사위원 의견(아직 매출이 없음, 제품 오류가 많음)을 말로 알려 줍니다.</li>
+      <li>갚을 대출 줄은 빚이 있을 때만 나타납니다. 다음 월급일에 나갈 돈을 함께 적어 버틸 기간이 왜 줄었는지 보이게 합니다.</li>
+      <li>대출 이자는 영업비용이 아니라 영업이익 아래에 따로 적습니다. 원금 상환은 손익이 아니라 통장에서만 빠집니다.</li>
+    </ul>
+    <p class="hidden-list">화면에 넣지 않는 것: 정책자금 심사 확률, 승인 점수 항목별 가중치, 다른 회사가 받은 대출.</p>
+  </section>
+</main>

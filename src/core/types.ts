@@ -223,6 +223,8 @@ export interface MonthPL {
   welfare: number;
   ai: number;
   other: number; // 이벤트·기타
+  interest?: number; // 대출 이자(A-137, 영업 밖 비용)
+  loanPaid?: number; // 대출 원금 상환(손익 아님, 현금만)
   opex: number;
   operatingProfit: number;
   tax: number;
@@ -231,6 +233,20 @@ export interface MonthPL {
   cashAfter: number;
   investment: number;
   usersEnd: number;
+}
+
+// A-137 대출: 남은 원금(balance)에 매달 이자, 거치 기간(graceUntil 전)엔 이자만, 그 뒤 매달 principalPay씩 원금
+export interface Loan {
+  id: string;
+  kind: 'policy' | 'bank';
+  lender: string;
+  principal: number;
+  balance: number;
+  rate: number; // 연 이자율
+  startDay: number;
+  graceUntil: number;
+  principalPay: number;
+  guaranteed: boolean; // 대표 개인 보증
 }
 
 export interface MonthAccrual {
@@ -250,6 +266,7 @@ export interface MonthAccrual {
   investment: number;
   cashStart: number;
   days: number;
+  interest?: number; // A-137
 }
 
 export interface LedgerEntry {
@@ -575,6 +592,9 @@ export interface GameState {
   outings?: Outing[];
   todayLog: Record<ActionId, number>;
   contracts?: import('./contracts').ContractState; // 외주 일감(A-79)
+  loans?: Loan[]; // 대출(A-137)
+  loanApp?: { kind: 'policy'; amount: number; decideDay: number; p: number } | null; // 정책자금 심사 중
+  loanOfferDay?: number; // 마지막 대출 제안 날
   valuation: { stored: number; storedDay: number; penaltyUntil: number | null; revenueStage: boolean };
   fundingStage: StageId | null;
   lastRoundDay: number | null;

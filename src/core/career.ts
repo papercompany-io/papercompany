@@ -3,6 +3,7 @@ import { DATA } from './data';
 import { yearFrac } from './calendar';
 import { investorPct } from './equity';
 import { news } from './notify';
+import { guaranteedDebt } from './finance';
 import { totalUsers } from './market';
 import { computeValuation } from './valuation';
 import type { CompanyEndKind, CompanyResult, GameState, Profile } from './types';
@@ -72,6 +73,13 @@ export function finishCompany(s: GameState, kind: CompanyEndKind, amount: number
   s.speed = 0;
   s.pauseReason = null;
   s.career.wealth += Math.round(amount - (opts.alreadyPaid ?? 0));
+  // A-137 대표 개인 보증: 파산하면 남은 보증 대출을 창업자 자산에서 갚습니다(모자라면 있는 만큼)
+  const owed = kind === 'bankrupt' ? guaranteedDebt(s) : 0;
+  if (owed > 0) {
+    const paid = Math.min(owed, Math.max(0, s.career.wealth));
+    s.career.wealth -= paid;
+    news(s, `[개인 보증] ${s.company.name} 대표, 회사 대출 ${paid >= 1e8 ? `${(paid / 1e8).toFixed(1)}억원` : `${Math.round(paid / 1e4).toLocaleString('ko-KR')}만원`}을 개인 돈으로 갚아`, 'company');
+  }
   const big = Math.log10(Math.max(1, amount / 1e8) + 1) * 8;
   let rep = 0;
   if (kind === 'sale') rep = 5 + big;

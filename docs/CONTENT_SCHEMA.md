@@ -147,6 +147,7 @@ Choice:
 | `compAppeal` | 대상 경쟁사 매력도 비율 변화(0.1 = 10%↑) |
 | `compDie` | `true`면 대상 경쟁사 폐업 |
 | `mod` | 기간 효과 배열 `[{"key": 키, "value": 값, "days": 기간}]`. 키: `appeal`(매력도 배율 가산) `acq`(획득 속도 배율 가산) `churn`(이탈률 배율 가산) `output`(전 직원 출력 배율 가산) `valuation`(기업가치 배율 가산) `invest`(투자 성공 확률 가산, 0.1=10%p) `infra`(인프라 비용 배율 가산) `outage`(장애 위험 배율 가산) `sat`(만족도 목표 가산, 점수) `price`(객단가 배율 가산) |
+| `loan` | 대출 선택(A-137): `"policy"`면 정책자금 심사 신청(2~3주 뒤 승인·거절), `"bank"`면 은행 대출 바로 실행(대표 개인 보증). 한도·이자는 `finance.json`의 `loan` |
 | `hire` | 특별 인재 합류 `{"name": "이름", "dept": "dev", "grade": "S", "salary": 9000000, "trait": "특성 id"}`(좌석이 있어야 함) |
 | `news` | 페이퍼뉴스에 실릴 헤드라인(`{company}` 치환 가능) |
 
@@ -191,3 +192,16 @@ Choice:
 `cond.metric` 목록(엔진이 계산): `users` 전체 사용자 · `mrr` 지난달 매출 · `valuation` 기업가치 · `employees` 직원 수 · `cash` 보유 자금 · `featuresDone` 완성한 기능 수(레벨 합) · `markets` 진출 시장 수 · `stage` 회사 단계 · `fundingIndex` 투자 단계 순번(엔젤 0 … 시리즈 G 9) · `marketCap` 상장사 시가총액 · `profitMonths` 연속 흑자 개월 · `officeTier` 사무실 등급(1~5) · `aiAdoption` 평균 AI 적용률 · `founderPct` 내 지분 · `wealth` 창업자 개인 자산(커리어) · `companies` 세운 회사 수(커리어) · `exits` 성공한 Exit 수(커리어) · `bankruptcies` 파산 수(커리어) · `ipos` 상장 수(커리어) · `exitAmount` 한 번의 Exit 결과 금액 최대 · `rep` 명성 · `age` 창업자 나이 · `acquisitions` 인수한 경쟁사 수 · `share` 국내 시장 점유율(0~1) · `eventsDecided` 결정한 이벤트 수 · `bootstrapExit` 무투자 Exit 수 · `leads` 팀장 수 · `enterprise` 대기업 계약 수 · `satAvg` 평균 만족도.
 
 `gte`(이상) 또는 `lte`(이하) 중 하나. 상장사 시가총액이나 산업 조건이 필요하면 `industry` 키를 더할 수 있습니다.
+
+## 대출 `src/data/finance.json` → `loan` (A-137)
+
+| 키 | 뜻 |
+| --- | --- |
+| `offerRunway` | 버틸 기간이 이 개월 아래로 내려가면 대출 제안(메신저 결정 `ev_b_fin_loan_offer`). 0이면 제안 없음 |
+| `offerCooldown` | 제안 사이 최소 일수 |
+| `policy` / `bank` | 정책자금 / 은행. `rate` 연 이자율, `base` + `revMult` × 지난달 매출 = 한도(최대 `cap`), `graceMonths` 이자만 내는 기간, `termMonths` 원금을 나눠 갚는 개월 수 |
+| `policy.reviewDays` | 심사 기간(여기에 0~4일 무작위 더함) |
+| `policy.pBase` `pRevenue` `pQuality` `pRep` `pRepCap` | 승인 확률 = pBase + (매출 있으면 pRevenue) + pQuality × (1 − 버그/100) + min(pRepCap, 명성 × pRep), 0.1~0.9 |
+| `policy.maxAgeYears` | 창업 뒤 이 햇수가 지나면 정책자금 대상 아님 |
+
+남은 대출은 기업가치에서 빠지고, 이자는 손익표의 영업이익 아래 "대출 이자", 원금은 월급일에 통장에서만 빠집니다. 은행 대출이 남은 채 파산하면 남은 원금을 창업자 개인 자산에서 갚습니다.

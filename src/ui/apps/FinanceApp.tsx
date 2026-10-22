@@ -2,7 +2,7 @@
 // 화면 짜임은 채용 메뉴(A-88)를 따름: 왼쪽 회색 판(이번 달·요약 줄·막대), 오른쪽 카드 목록(월별 기록)
 import { useState } from 'react';
 import { formatDate, formatMonth } from '../../core/calendar';
-import { currentPL, runwayMonths } from '../../core/finance';
+import { currentPL, debtBalance, loanInterestDue, loanPrincipalDue, runwayMonths } from '../../core/finance';
 import { wonShort } from '../../core/format';
 import { computeValuation } from '../../core/valuation';
 import { useGame } from '../store';
@@ -34,6 +34,7 @@ const COSTS: Line[] = [
   ['AI 도구 구독', (m) => m.ai],
   ['기타(이벤트·진출·인수·위로금)', (m) => m.other],
   ['법인세', (m) => m.tax],
+  ['대출 이자', (m) => m.interest ?? 0], // A-137
 ];
 
 // 비용 막대를 몇 갈래로 묶어 보여 줄지. 13줄을 다 그리면 왼쪽 판이 표처럼 빽빽해짐
@@ -70,6 +71,8 @@ function PLView() {
   const [table, setTable] = useState(false);
   const rw = runwayMonths(s);
   const spent = cur.revenue - cur.netIncome;
+  const debt = debtBalance(s);
+  const lenders = [...new Set((s.loans ?? []).map((l) => l.lender))].join(', ');
   return (
     <div className="col">
       <div className="fin-budget">
@@ -83,6 +86,20 @@ function PLView() {
             <Money v={s.cash} testId="fin-cash" />
           </b>
         </div>
+        {debt > 0 && (
+          // A-137 빚이 있을 때만: 누구에게 얼마를 갚아야 하고 다음 월급일에 얼마가 나가는지
+          <div className="fb-row" data-testid="fin-debt">
+            <span className="fb-stack">
+              갚을 대출
+              <small>
+                {lenders} · 다음 월급일에 이자 {man(loanInterestDue(s))}만원{loanPrincipalDue(s) > 0 ? ` + 원금 ${man(loanPrincipalDue(s))}만원` : ''}
+              </small>
+            </span>
+            <b>
+              <Money v={debt} />
+            </b>
+          </div>
+        )}
         <div className="fb-row" title="최근 3개월 동안 돈이 줄어든 속도로 계산합니다">
           <span>이대로 버틸 수 있는 기간</span>
           <b className={rw !== null && rw < 3 ? 'fin-bad' : ''}>{rw === null ? '계속(흑자)' : rw > 120 ? '10년 넘게' : `${rw.toFixed(1)}개월`}</b>
@@ -133,10 +150,11 @@ function PLTable({ months }: { months: PLMonth[] }) {
   const rows: [string, (m: PLMonth) => number, string?][] = [
     ['총매출', (m) => m.revenue, 'strong'],
     ...REVENUES.map(([l, f]): [string, (m: PLMonth) => number] => [`  ${l}`, f]),
-    ...COSTS.filter(([l]) => l !== '법인세').map(([l, f]): [string, (m: PLMonth) => number] => [`− ${l}`, (m) => -f(m)]),
+    ...COSTS.filter(([l]) => l !== '법인세' && l !== '대출 이자').map(([l, f]): [string, (m: PLMonth) => number] => [`− ${l}`, (m) => -f(m)]),
     ['영업비용 합계', (m) => -m.opex, 'sub'],
     ['= 영업이익', (m) => m.operatingProfit, 'strong'],
     ['− 법인세', (m) => -m.tax],
+    ...(months.some((m) => m.interest) ? [['− 대출 이자', (m: PLMonth) => -(m.interest ?? 0)] as [string, (m: PLMonth) => number]] : []),
     ['= 순이익(손익)', (m) => m.netIncome, 'total'],
     ['투자금 유입', (m) => m.investment],
     ['월초 자금', (m) => m.cashBefore],
