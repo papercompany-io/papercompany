@@ -1,57 +1,63 @@
-.office { position: absolute; inset: 0; overflow: clip; background: #24272c; cursor: grab; touch-action: none; user-select: none; }
+.office { position: absolute; inset: 0; overflow: clip; background: #5d6473; cursor: grab; touch-action: none; user-select: none; }
 .office.dragging { cursor: grabbing; }
 .office-canvas { position: absolute; left: 0; top: 0; image-rendering: pixelated; image-rendering: crisp-edges; }
+
+/* 부서 구역 좌석 범례(OF-02) */
+.zone-legend {
+  position: absolute; left: 14px; bottom: 14px; z-index: 6; background: rgba(23, 27, 44, 0.86); border-radius: 6px; padding: 8px 10px;
+  display: flex; gap: 12px; align-items: center; color: #e8eaf4; font-size: 12px; font-weight: 700; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+.zl-title { font-family: var(--pixel); font-weight: 400; color: #b9c0d8; font-size: 11px; }
+.zl-item { display: flex; align-items: center; gap: 5px; cursor: default; }
+.zl-item b { font-weight: 800; color: #fff; font-variant-numeric: tabular-nums; }
+.zone-dot { width: 9px; height: 9px; border-radius: 2px; background: var(--dc); }
+
+/* 클릭 영역(투명) */
 .actor-hit { position: absolute; background: transparent; border: none; padding: 0; cursor: pointer; z-index: 3; }
 
-/* 이름표: 어두운 작은 꼬리표 */
+/* Startup Company식 이름표 */
 .nametag {
-  position: absolute; transform: translate(-50%, -100%); z-index: 4; cursor: pointer; white-space: nowrap; user-select: none;
-  background: rgba(18, 20, 24, 0.92); border: 1px solid var(--bd2); border-radius: 4px; padding: 3px 7px; min-width: 60px; text-align: center;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  position: absolute; transform: translate(-50%, -100%); z-index: 4; cursor: pointer;
+  background: #fff; border-radius: 4px; padding: 3px 7px 3px; min-width: 64px; text-align: center;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.18), 0 4px 10px rgba(10, 14, 30, 0.25); white-space: nowrap; user-select: none;
 }
-.nametag::after { content: ''; position: absolute; left: 50%; bottom: -4px; transform: translateX(-50%); border: 4px solid transparent; border-bottom: 0; border-top-color: var(--bd2); }
-.tag-name { font-size: 11px; font-weight: 600; color: var(--tx); display: flex; align-items: center; justify-content: center; gap: 4px; line-height: 1.3; }
-.tag-dept { width: 6px; height: 6px; border-radius: 50%; background: var(--dc); flex: none; }
-.tag-badge { font-size: 9px; font-weight: 600; color: var(--tx2); border: 1px solid var(--bd2); border-radius: 3px; padding: 0 3px; }
-.tag-sub { font-size: 10px; color: var(--tx3); line-height: 1.25; }
-.tag-sub.idle { color: var(--neg-tx); }
-.tag-emoji { display: inline-flex; }
-.tag-mood { height: 2px; background: var(--s4); border-radius: 1px; overflow: hidden; margin-top: 3px; }
-.tag-mood i { display: block; height: 100%; }
-.nametag.pending .tag-sub { color: var(--warn-tx); }
-.nametag.ceo { border-color: var(--acc); }
-.nametag.ceo::after { border-top-color: var(--acc); }
-.nametag.ceo .tag-mood { display: none; }
-.nametag.pulse { animation: tagpulse 1.4s ease-in-out infinite; }
-.tag-arrow { position: absolute; left: 50%; top: -22px; transform: translateX(-50%); background: var(--acc); color: #fff; font-size: 10px; font-weight: 600; border-radius: 3px; padding: 1px 6px; }
-@keyframes tagpulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(91, 141, 239, 0.7); } 50% { box-shadow: 0 0 0 5px rgba(91, 141, 239, 0); } }
-.mood-bubble { position: absolute; transform: translate(-50%, -100%); z-index: 4; display: flex; background: rgba(18, 20, 24, 0.9); border: 1px solid var(--bd2); border-radius: 4px; padding: 2px; pointer-events: none; animation: bob 1.6s ease-in-out infinite; }
-@keyframes bob { 0%, 100% { transform: translate(-50%, -100%); } 50% { transform: translate(-50%, -112%); } }
+.nametag::after {
+  content: ''; position: absolute; left: 50%; bottom: -4px; transform: translateX(-50%);
+  border: 4px solid transparent; border-bottom: 0; border-top-color: #fff;
+}
+.tag-name { font-size: 11px; font-weight: 800; color: #2d3142; display: flex; align-items: center; justify-content: center; gap: 4px; line-height: 1.3; }
+.tag-dept { width: 8px; height: 8px; border-radius: 2px; background: var(--dc); flex: none; }
+.tag-badge { font-size: 9px; font-weight: 800; color: #8a5b00; background: #ffe7b0; border-radius: 3px; padding: 0 3px; }
+.tag-sub { font-size: 10px; font-weight: 700; color: #2b8a4b; letter-spacing: -0.01em; line-height: 1.25; }
+.tag-sub.idle { color: #d9453b; }
+.nametag.pending { background: #fff6e3; cursor: default; }
+.nametag.pending::after { border-top-color: #fff6e3; }
+.nametag.pending .tag-sub { color: #a96a00; }
+.nametag.ceo { background: #2d8fd5; }
+.nametag.ceo::after { border-top-color: #2d8fd5; }
+.nametag.ceo .tag-name { color: #fff; }
+.nametag.ceo .tag-sub { color: #d8ecff; }
+.nametag.pulse { animation: tagpulse 1.1s ease-in-out infinite; }
+.tag-arrow {
+  position: absolute; left: 50%; top: -24px; transform: translateX(-50%); background: #ffcf3f; color: #3b2a00;
+  font-size: 11px; font-weight: 900; border-radius: 4px; padding: 1px 6px; animation: tagbounce 0.9s ease-in-out infinite;
+}
+@keyframes tagpulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(45, 143, 213, 0.9); } 50% { box-shadow: 0 0 0 6px rgba(45, 143, 213, 0); } }
+@keyframes tagbounce { 0%, 100% { transform: translate(-50%, 0); } 50% { transform: translate(-50%, -4px); } }
 
-/* 카메라 도구 */
-.cam-tools { position: absolute; right: 12px; bottom: 12px; z-index: 5; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+/* 카메라 도구(Startup Company의 둥근 흰 버튼) */
+.cam-tools { position: absolute; right: 16px; bottom: 16px; z-index: 6; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
 .round-btn {
-  width: 34px; height: 34px; border-radius: var(--r); border: 1px solid var(--bd2); background: rgba(18, 20, 24, 0.92); color: var(--tx2);
-  font-size: 16px; line-height: 1; display: flex; align-items: center; justify-content: center;
+  width: 42px; height: 42px; border-radius: 50%; border: none; background: #fff; color: var(--hud); font-size: 20px; font-weight: 900; line-height: 1;
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.15), 0 4px 12px rgba(8, 12, 28, 0.3); display: flex; align-items: center; justify-content: center;
 }
-.round-btn:hover:not(:disabled) { color: var(--tx); background: var(--s3); }
-.round-btn:disabled { opacity: 0.35; cursor: default; }
-.cam-hint { font-size: 11px; color: var(--tx3); background: rgba(18, 20, 24, 0.85); border-radius: 4px; padding: 3px 7px; white-space: nowrap; }
-
-/* 책상 배치(왼쪽 아래) */
-.desk-panel {
-  position: absolute; left: calc(var(--side-w) + 12px); bottom: 12px; z-index: 6; width: 290px; border-radius: var(--r); background: rgba(18, 20, 24, 0.94);
-  border: 1px solid var(--bd); padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; backdrop-filter: blur(6px);
-}
-.dp-row { display: flex; align-items: baseline; gap: 8px; }
-.dp-name { font-weight: 650; font-size: 13px; }
-.dp-count { margin-left: auto; font-size: 11px; color: var(--tx3); font-variant-numeric: tabular-nums; }
-.dp-tools { display: flex; gap: 4px; }
-.dp-btn { flex: 1; height: 28px; border-radius: 4px; background: var(--s2); color: var(--tx2); border: 1px solid var(--bd2); font-weight: 600; font-size: 12px; display: flex; align-items: center; justify-content: center; gap: 5px; }
-.dp-btn:hover:not(:disabled) { color: var(--tx); background: var(--s3); }
-.dp-btn.on { background: var(--acc); border-color: var(--acc); color: #fff; }
-.dp-btn:disabled { opacity: 0.4; cursor: default; }
-.dp-tip { font-size: 11px; color: var(--tx3); line-height: 1.45; }
-.dp-tip.bad { color: var(--neg-tx); }
-.office.editing { cursor: crosshair; }
-.office.editing .actor-hit, .office.editing .nametag { pointer-events: none; }
+.round-btn:hover { background: #f2f6fb; }
+.round-btn:disabled { color: #b9bdc8; cursor: default; }
+.cam-hint { font-size: 11px; color: #fff; background: rgba(23, 27, 44, 0.7); border-radius: 4px; padding: 3px 7px; white-space: nowrap; }
+.tag-emoji { font-size: 11px; }
+.tag-mood { height: 3px; background: #e6eaf2; border-radius: 2px; overflow: hidden; margin-top: 2px; }
+.tag-mood i { display: block; height: 100%; }
+.nametag.ceo .tag-mood { display: none; }
+.mood-bubble { position: absolute; transform: translate(-50%, -100%); z-index: 4; background: #fff; border-radius: 10px; padding: 1px 5px; font-size: 13px; box-shadow: 0 2px 6px rgba(10, 14, 30, 0.3); pointer-events: none; animation: bob 1.4s ease-in-out infinite; }
+@keyframes bob { 0%, 100% { transform: translate(-50%, -100%); } 50% { transform: translate(-50%, -115%); } }
+.zone-legend { flex-wrap: wrap; max-width: calc(100% - 120px); }

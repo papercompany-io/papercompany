@@ -1,6 +1,6 @@
 // F08 투자 메뉴: FR-01 단계 사다리, FR-13 라운드 열기, FR-11 룸·투자금, FR-10 투자사 레터, FR-06·07 협상·판정,
 // FR-09 클럽딜, FR-08 제안서 수락·거절, EQ-02 희석, EQ-03 지분 구조
-import { CircleCheck, TriangleAlert } from 'lucide-react';
+import { PxIcon } from '../icons';
 import { useState } from 'react';
 import { DATA, investor, stage, stageIndex } from '../../core/data';
 import { formatDate } from '../../core/calendar';
@@ -166,7 +166,7 @@ function RoundTab({ initialStage, goInvestors }: { initialStage?: string; goInve
         {stageConditions(s, stageId).length === 0 && <div className="tiny muted">특별한 조건이 없습니다.</div>}
         {stageConditions(s, stageId).map((c) => (
           <div key={c.label} className="tiny">
-            {c.ok ? <CircleCheck size={14} color="var(--pos-tx)" /> : <TriangleAlert size={14} color="var(--warn-tx)" />} {c.label}
+            <PxIcon id={c.ok ? 'check' : 'warn'} size={14} /> {c.label}
           </div>
         ))}
         {err && <div className="err">{err}</div>}
@@ -524,7 +524,7 @@ function CapTab() {
         </table>
         <div className="capbar">
           {s.capTable.map((c, i) => (
-            <div key={c.holderId} title={`${c.name} ${pcts[i]}`} style={{ flex: c.shares, background: c.kind === 'founder' ? '#5b8def' : c.kind === 'cofounder' ? '#c4934a' : ['#8a5a6a', '#6d63a8', '#3f8a6a', '#3a8a8c'][i % 4] }} />
+            <div key={c.holderId} title={`${c.name} ${pcts[i]}`} style={{ flex: c.shares, background: c.kind === 'founder' ? '#2f8fff' : c.kind === 'cofounder' ? '#f2a33a' : ['#e5484d', '#8e6bff', '#3fbf7f', '#11a3a6'][i % 4] }} />
           ))}
         </div>
       </div>

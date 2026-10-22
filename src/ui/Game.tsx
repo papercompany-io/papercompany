@@ -26,7 +26,7 @@ import { play, type Sfx } from './sound';
 import { getSettings, useSettings } from './meta';
 import { Toasts, DecisionModal, Confetti } from './Feedback';
 import type { GameState } from '../core/types';
-import { Briefcase, Save, TrendingUp, UsersRound, Wallet } from 'lucide-react';
+import { PxIcon } from './icons';
 import './game.css';
 
 interface Props {
@@ -258,7 +258,7 @@ function TopBar({ s }: { s: GameState }) {
       </div>
       <div className="tb-stats">
         <div className="tb-stat cash" title={`회사 자금 · 이번 달 손익 ${net >= 0 ? '흑자' : '적자'}`}>
-          <Wallet size={18} strokeWidth={1.75} />
+          <PxIcon id="coin" size={20} />
           <div>
             <Money v={Math.round(cashShown)} testId="hud-cash" />
             <span className={net >= 0 ? 'up' : 'down'}>{net >= 0 ? '▲' : '▼'}</span>
@@ -266,7 +266,7 @@ function TopBar({ s }: { s: GameState }) {
           </div>
         </div>
         <div className="tb-stat" title={s.public ? '시가총액' : '기업가치'}>
-          <TrendingUp size={18} strokeWidth={1.75} />
+          <PxIcon id="chart" size={20} />
           <div>
             <span data-testid="hud-valuation">
               <Money v={computeValuation(s).value} />
@@ -275,14 +275,14 @@ function TopBar({ s }: { s: GameState }) {
           </div>
         </div>
         <div className="tb-stat" title={`${industry(s.company.industry).unit} 수`}>
-          <UsersRound size={18} strokeWidth={1.75} />
+          <PxIcon id="users" size={20} />
           <div>
             <span data-testid="hud-users">{Math.floor(totalUsers(s)).toLocaleString('ko-KR')}</span>
             <small>{hasMvp(s) ? `품질 ${quality(s)}점` : `핵심 기능 ${coreDone}/${cores.length}`}</small>
           </div>
         </div>
         <div className="tb-stat" title="직원">
-          <Briefcase size={18} strokeWidth={1.75} />
+          <PxIcon id="case" size={20} />
           <div>
             <span>
               {s.employees.length}명{s.pendingHires.length > 0 && <small> +{s.pendingHires.length}</small>}
@@ -294,14 +294,13 @@ function TopBar({ s }: { s: GameState }) {
       <div className="tb-time">
         <div className="tb-date" data-testid="hud-date">
           <span>
-            {formatDate(s.day)} ({WEEK[d.getUTCDay()]}) <span className="tb-clock">{clockOf(s.msInDay)}</span>
+            {formatDate(s.day)} ({WEEK[d.getUTCDay()]})
           </span>
-          <span className="tb-date-sub">
-            <span className={`hud-econ ${s.economy.phase}`} title="경기">
-              경기 {s.economy.phase === 'boom' ? '호황' : s.economy.phase === 'recession' ? '불황' : '보통'}
-            </span>
-            <span>대표 {Math.floor(founderAge(s))}세</span>
+          <span className="tb-clock">{clockOf(s.msInDay)}</span>
+          <span className={`hud-econ ${s.economy.phase}`} title="경기">
+            {s.economy.phase === 'boom' ? '호황' : s.economy.phase === 'recession' ? '불황' : '보통'}
           </span>
+          <span className="tb-age">대표 {Math.floor(founderAge(s))}세</span>
         </div>
         <div className="tb-controls">
           <div className="hud-speed">
@@ -330,7 +329,6 @@ function TopBar({ s }: { s: GameState }) {
               setTimeout(() => setSaved(null), 1500);
             }}
           >
-            <Save size={14} strokeWidth={1.75} />
             {saved ?? '저장'}
           </button>
         </div>

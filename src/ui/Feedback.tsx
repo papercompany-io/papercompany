@@ -5,10 +5,10 @@ import { wonShort } from '../core/format';
 import type { GameState, Notice, PendingDecision } from '../core/types';
 import { act } from './store';
 import { play } from './sound';
-import { CircleCheck, Flag, Info, OctagonAlert, TriangleAlert, Trophy, type LucideIcon } from 'lucide-react';
+import { PxIcon, type PxId } from './icons';
 import './feedback.css';
 
-const ICON: Record<Notice['kind'], LucideIcon> = { info: Info, good: CircleCheck, bad: TriangleAlert, urgent: OctagonAlert, achievement: Trophy, mission: Flag };
+const ICON: Record<Notice['kind'], PxId> = { info: 'talk', good: 'check', bad: 'warn', urgent: 'siren', achievement: 'trophy', mission: 'star' };
 
 export function Toasts({ s, enabled, onOpen }: { s: GameState; enabled: boolean; onOpen: (app: string, arg?: string) => void }) {
   const seen = useRef<string | null>(s.notices.length ? s.notices[s.notices.length - 1].id : null);
@@ -46,10 +46,7 @@ export function Toasts({ s, enabled, onOpen }: { s: GameState; enabled: boolean;
           }}
         >
           <span className="toast-ic">
-            {(() => {
-              const I = ICON[n.kind];
-              return <I strokeWidth={1.75} />;
-            })()}
+            <PxIcon id={ICON[n.kind]} size={20} />
           </span>
           <span className="toast-text">{n.text}</span>
         </button>
@@ -123,7 +120,7 @@ export function DecisionModal({ d, onClose, onOpenMessenger }: { d: PendingDecis
   );
 }
 
-const COLORS = ['#5b8def', '#3fbf86', '#d9a441', '#e8eaed', '#8db1ff', '#6fd6a6'];
+const COLORS = ['#2d8fd5', '#36b44a', '#f0a020', '#d9453b', '#a77bff', '#ff7043'];
 
 export function Confetti() {
   const bits = useMemo(

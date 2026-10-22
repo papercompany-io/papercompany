@@ -14,7 +14,6 @@ import { Pix } from './pixel';
 import { TH, TW, ZOOM_MAX, ZOOM_MIN, actors, clampCamera, defaultCamera, defaultZoom, drawOffice, makeView, setLayout, type Actor, type Camera, type EditState } from './scene';
 import { play } from '../sound';
 import { PxIcon, bubbleIcon } from '../icons';
-import { LocateFixed, Move, Plus, Trash2, ZoomIn, ZoomOut } from 'lucide-react';
 import type { FloatFx } from '../Game';
 import './office.css';
 
@@ -254,10 +253,10 @@ export function Office({ onCeo, onEmployee, pulseCeo, keysEnabled, floats = [] }
 
       <div className="cam-tools" onPointerDown={(e) => e.stopPropagation()}>
         <button className="round-btn" data-testid="zoom-in" title="확대" onClick={() => zoomTo(scale + 1)} disabled={scale >= ZOOM_MAX}>
-          <ZoomIn size={16} strokeWidth={1.75} />
+          +
         </button>
         <button className="round-btn" data-testid="zoom-out" title="축소" onClick={() => zoomTo(scale - 1)} disabled={scale <= ZOOM_MIN}>
-          <ZoomOut size={16} strokeWidth={1.75} />
+          −
         </button>
         <button
           className="round-btn"
@@ -268,7 +267,7 @@ export function Office({ onCeo, onEmployee, pulseCeo, keysEnabled, floats = [] }
             setCam(null);
           }}
         >
-          <LocateFixed size={16} strokeWidth={1.75} />
+          ⌂
         </button>
         <div className="cam-hint">끌어서 이동 · 휠로 확대</div>
       </div>
@@ -296,15 +295,12 @@ function DeskPanel({ s, mode, msg, onMode }: { s: GameState; mode: EditState['mo
       </div>
       <div className="dp-tools">
         <button className={`dp-btn ${mode === 'place' ? 'on' : ''}`} data-testid="desk-place" onClick={() => onMode('place')}>
-          <Plus size={14} strokeWidth={2} />
           책상 놓기
         </button>
         <button className={`dp-btn ${mode === 'move' ? 'on' : ''}`} data-testid="desk-move" disabled={!all.length} onClick={() => onMode('move')}>
-          <Move size={14} strokeWidth={2} />
           옮기기
         </button>
         <button className={`dp-btn ${mode === 'remove' ? 'on' : ''}`} data-testid="desk-remove" disabled={!all.length} onClick={() => onMode('remove')}>
-          <Trash2 size={14} strokeWidth={2} />
           치우기
         </button>
       </div>
