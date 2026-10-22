@@ -246,3 +246,14 @@ Choice:
 | `successGrowth` · `successRunway` · `successMult` | 잘나가는 회사(월 매출 성장·버틸 기간)에 위협 가중치 배율 |
 | `desperateRunway` · `desperateBoost` · `desperateDamp` | 절박도(버틸 기간이 이보다 짧거나 고객 감소)만큼 기회 가중치 ↑, 위협 ↓ |
 | `quietDays` · `quietBoost` | 조용한 날이 길수록 하루 사건 확률 배율 |
+
+## 상장사 주주 신뢰 `src/data/public.json` → `pressure` (A-142)
+
+| 키 | 뜻 |
+| --- | --- |
+| `startTrust` | 상장 때 주주 신뢰(0~100, `company.board`를 함께 씀) |
+| `beatTrust` · `missTrust` · `missStreakTrust` | 가이던스를 넘으면 +, 못 넘으면 −(missTrust + missStreakTrust × (연속 미달 − 1)) |
+| `belowIpoTrust` | 주가가 공모가 아래인 분기마다 − |
+| `activistStreak` | 이만큼 연속 미달이면 행동주의 펀드 사건(`ev_b_pub_activist`) |
+| `warnBelow` | 이 아래면 분기마다 경고 |
+| `controlPct` · `firedDiscount` | 신뢰 0일 때 창업자 지분이 controlPct 미만이면 해임, 남은 지분은 주가 × firedDiscount |

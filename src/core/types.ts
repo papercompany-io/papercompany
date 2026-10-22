@@ -463,6 +463,8 @@ export interface PublicState {
   founderSold: number; // 팔아서 받은 돈
   founderSoldShares: number;
   buybacks: number;
+  missStreak?: number; // 가이던스 연속 미달(A-142)
+  ipoPrice?: number; // 공모가(A-142)
 }
 
 // 플레이어가 정한 서비스(산업 단계): 분야·이름은 직접 입력, 로고는 심볼 + 배경색

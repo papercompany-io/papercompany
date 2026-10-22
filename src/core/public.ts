@@ -2,7 +2,8 @@
 import { DATA, industry } from './data';
 import { quarterLabel } from './calendar';
 import { econ } from './economy';
-import { founderShares, recordEquity, totalShares } from './equity';
+import { founderPct, founderShares, recordEquity, totalShares } from './equity';
+import { noteCrisis, trigger } from './events';
 import { book } from './finance';
 import { finishCompany } from './career';
 import { news, notify } from './notify';
@@ -11,6 +12,7 @@ import { revenueGrowth } from './valuation';
 import type { GameState } from './types';
 
 const P = DATA.public;
+const PR = P.pressure;
 
 function gauss(s: GameState): number {
   const u = Math.max(1e-9, rand(s));
@@ -39,7 +41,10 @@ export function goPublic(s: GameState, ipoValue: number) {
     founderSold: 0,
     founderSoldShares: 0,
     buybacks: 0,
+    missStreak: 0,
+    ipoPrice: price,
   };
+  s.company.board = PR.startTrust; // A-142 주주 신뢰
   s.company.stage = 5;
   recordEquity(s, 'IPO 공모');
   news(s, `[상장] ${s.company.name}, 코스닥 상장… 공모가 기준 시가총액 ${Math.round((price * (existing + newShares)) / 1e8).toLocaleString('ko-KR')}억원`, 'public');
@@ -90,8 +95,34 @@ export function publicQuarter(s: GameState) {
     notify(s, `분기 실적: 매출 ${Math.round(rev / 1e8).toLocaleString('ko-KR')}억원으로 가이던스(${Math.round(p.guidance / 1e8).toLocaleString('ko-KR')}억원)를 ${beat ? '넘었습니다. 주가가 올랐습니다' : '밑돌았습니다. 주가가 떨어졌습니다'}.`, beat ? 'good' : 'bad', 'stock');
   }
   p.lastQuarter = { label: quarterLabel(s.day - 2), revenue: rev, guidance: p.guidance, beat };
+  if (beat !== null) shareholderPressure(s, beat);
+  if (s.ended) return;
   p.quarterStartRev = rev;
   setGuidance(s, 'normal', true);
+}
+
+// A-142 분기 압박: 가이던스를 못 지키면 주주 신뢰가 깎이고, 연속이면 더. 신뢰가 바닥이면 지분이 과반 아닌 창업자는 해임
+function shareholderPressure(s: GameState, beat: boolean) {
+  const p = s.public!;
+  p.missStreak = beat ? 0 : (p.missStreak ?? 0) + 1;
+  let d = beat ? PR.beatTrust : -(PR.missTrust + PR.missStreakTrust * (p.missStreak - 1));
+  if (p.ipoPrice && p.price < p.ipoPrice) d -= PR.belowIpoTrust;
+  s.company.board = Math.max(0, Math.min(100, s.company.board + d));
+  if (!beat && p.missStreak === PR.activistStreak && !s.flags.includes('activist')) {
+    noteCrisis(s);
+    trigger(s, 'ev_b_pub_activist');
+  }
+  if (s.company.board <= 0) {
+    const fp = founderPct(s);
+    if (fp < PR.controlPct) {
+      const shares = founderShares(s);
+      const proceeds = Math.round(shares * p.price * PR.firedDiscount);
+      finishCompany(s, 'fired', p.founderSold + proceeds, { exitValue: p.price * totalShares(s.capTable), founderPct: fp, alreadyPaid: p.founderSold, reason: '가이던스를 거듭 지키지 못해 주주들이 대표를 해임했습니다. 남은 지분은 낮은 값에 넘겼습니다.' });
+      return;
+    }
+    s.company.board = 10; // 지분이 과반이면 버팀(다만 신뢰는 바닥 근처)
+  }
+  if (s.company.board < PR.warnBelow) notify(s, `주주 신뢰가 많이 떨어졌습니다. 가이던스를 계속 못 지키면 대표에서 물러나야 할 수 있습니다. 지킬 수 있는 가이던스를 내세요(주식 메뉴).`, 'urgent', 'stock');
 }
 
 export function setGuidance(s: GameState, optId: string, auto = false): string | null {

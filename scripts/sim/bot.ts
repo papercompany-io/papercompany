@@ -13,11 +13,13 @@ import { audience, campaignBlock, campaignCost, campaignDef, startCampaign } fro
 import { setAdBudget, launchMarket, launchBlock, totalUsers, shares, demand, revenuePerUser } from '../../src/core/market';
 import { moveOffice, moveBlock, seatsAvailable, furnitureItems, buyFurniture, buyFurnitureBlock } from '../../src/core/office';
 import { chooseModel, latestModels, setAdoption } from '../../src/core/aiadopt';
-import { promoteLead, leadInfo, avgSat } from '../../src/core/staff';
+import { promoteLead, leadInfo, avgSat, marketSalary } from '../../src/core/staff';
 import { resolveDecision } from '../../src/core/events';
 import { LOAN_EVENT, policyApproval } from '../../src/core/loans';
 import { startExit, acceptSale, declineSale, annualRevenue, exitBlocked } from '../../src/core/exit';
-import { sellShares, resign } from '../../src/core/public';
+import { sellShares, resign, setGuidance } from '../../src/core/public';
+
+const guidanceSet = new Map<string, string>();
 import { setCeoMode, executiveBlock, setCeoWork } from '../../src/core/ceo';
 import { acceptOuting, outings } from '../../src/core/outings';
 import { acceptContract } from '../../src/core/contracts';
@@ -67,7 +69,9 @@ function targetHeadcount(s: GameState): Partial<Record<DeptId, number>> {
   const rev = lastRevenue(s);
   const burn = Math.max(1, monthlyBurn(s));
   const cushion = s.cash / burn; // 개월
-  const total = Math.floor(3 + rev / 1.2e7 + (cushion > 18 ? Math.min(60, s.cash / (6e6 * 24)) : 0));
+  // 인원 계획은 지금 시장 월급으로(연도에 따라 오름). 예전 상수 600만원은 2050년대에 실제의 절반 아래라 과채용으로 파산했음
+  const pay = marketSalary(s, 'dev', 'B') * 1.2;
+  const total = Math.floor(3 + rev / (pay * 2) + (cushion > 18 ? Math.min(60, s.cash / (pay * 24)) : 0));
   if (st === 0) return { dev: Math.min(2, total) };
   const n = Math.max(3, total);
   const share = (f: number) => Math.max(1, Math.round(n * f));
@@ -254,6 +258,15 @@ function exitStep(s: GameState, log: (m: string) => void) {
   }
   if (s.public) {
     const p = s.public;
+    // 가이던스(A-142): 분기마다 한 번, 지난 두 분기 성장에 맞춰 지킬 수 있는 만큼(전략 봇만, 보통 봇은 자동 '보통')
+    if (!NOVICE && p.lastQuarter && guidanceSet.get(s.company.name) !== p.lastQuarter.label) {
+      guidanceSet.set(s.company.name, p.lastQuarter.label);
+      const h = s.plHistory.slice(-6);
+      const q1 = h.slice(0, 3).reduce((a, m) => a + m.revenue, 0);
+      const q2 = h.slice(3).reduce((a, m) => a + m.revenue, 0);
+      const g = q1 > 0 ? q2 / q1 - 1 : 0;
+      setGuidance(s, g >= 0.2 ? 'bold' : g >= 0.1 ? 'normal' : 'safe');
+    }
     if (s.day >= p.lockupUntil && s.day % 365 === p.lockupUntil % 365) sellShares(s, 0.15);
     if (s.day - p.ipoDay > 365 * 4) {
       log(`  상장 4년 → 사임`);

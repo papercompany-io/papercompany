@@ -92,6 +92,15 @@ export function StockApp() {
             ))}
           </div>
           <Help text="높게 약속하면 지금 주가가 오르지만, 못 지키면 크게 떨어집니다." />
+          {/* A-142 주주 신뢰: 가이던스를 못 지키면 떨어지고, 0이 되면 지분이 과반 아닌 대표는 해임 */}
+          <div className="emp-bar stock-trust" data-testid="shareholder-trust" title="가이던스를 지키면 오르고 못 지키면 떨어집니다. 바닥이 되면 지분이 과반이 아닌 대표는 해임될 수 있습니다.">
+            <span>주주 신뢰</span>
+            <div className={`meter ${s.company.board < 35 ? 'bad' : s.company.board < 55 ? 'warnc' : ''}`}>
+              <div style={{ width: `${s.company.board}%` }} />
+            </div>
+            <b>{Math.round(s.company.board)}</b>
+          </div>
+          {(p.missStreak ?? 0) > 0 && <div className="tiny warn">가이던스를 {p.missStreak}분기 연속 지키지 못했습니다.</div>}
         </div>
         <div className="card col grow">
           <b>지분 매각</b>

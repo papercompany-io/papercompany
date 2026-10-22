@@ -5,16 +5,49 @@
   "lockupDays": 180,
   "dailyVol": 0.018,
   "sentimentPull": 0.02,
-  "beatJump": [0.06, 0.15],
-  "missDrop": [0.08, 0.22],
+  "beatJump": [
+    0.06,
+    0.15
+  ],
+  "missDrop": [
+    0.08,
+    0.22
+  ],
   "guidanceOptions": [
-    { "id": "safe", "name": "보수적", "growth": 0.03, "sentiment": -0.02 },
-    { "id": "normal", "name": "보통", "growth": 0.08, "sentiment": 0.03 },
-    { "id": "bold", "name": "공격적", "growth": 0.18, "sentiment": 0.08 }
+    {
+      "id": "safe",
+      "name": "보수적",
+      "growth": 0.03,
+      "sentiment": -0.02
+    },
+    {
+      "id": "normal",
+      "name": "보통",
+      "growth": 0.08,
+      "sentiment": 0.03
+    },
+    {
+      "id": "bold",
+      "name": "공격적",
+      "growth": 0.18,
+      "sentiment": 0.08
+    }
   ],
   "sellBlockDiscount": 0.06,
   "sellPriceImpactPerPct": 0.012,
   "resignDiscount": 0.1,
   "historyCap": 260,
-  "peBase": 22
+  "peBase": 22,
+  "pressure": {
+    "_note": "A-142 상장사 분기 압박 [예시값]. 주주 신뢰(company.board, 0~100)는 상장 때 startTrust. 분기 실적이 가이던스를 넘으면 +beatTrust, 못 넘으면 −(missTrust + missStreakTrust × 연속 미달 횟수), 주가가 공모가 아래면 분기마다 −belowIpoTrust. 연속 미달이 activistStreak번이면 행동주의 펀드 사건(ev_b_pub_activist), 신뢰가 warnBelow 아래면 경고, 0이 되면 창업자 지분이 controlPct 미만일 때 해임 — 남은 지분은 주가 × firedDiscount로 넘김",
+    "startTrust": 70,
+    "beatTrust": 6,
+    "missTrust": 10,
+    "missStreakTrust": 6,
+    "belowIpoTrust": 3,
+    "activistStreak": 2,
+    "warnBelow": 30,
+    "controlPct": 0.5,
+    "firedDiscount": 0.7
+  }
 }

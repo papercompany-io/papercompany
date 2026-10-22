@@ -1413,3 +1413,6 @@ input[type='checkbox'] { accent-color: var(--accent); width: 16px; height: 16px;
 /* 화면(A-137): 재무 통장 판의 "갚을 대출" 줄 — 이름 아래 작은 글씨로 빌린 곳·다음 월급일 상환액 */
 .fb-row .fb-stack { flex-direction: column; align-items: flex-start; gap: 0; }
 .fb-row .fb-stack small { font-size: var(--fs-xs, 11px); color: var(--text-3, var(--text-2)); font-weight: 400; }
+
+/* 화면(A-142): 주식 앱 가이던스 판의 "주주 신뢰" 막대 — 이름 칸을 넓혀 한 줄로 */
+.emp-bar.stock-trust { grid-template-columns: 64px 1fr 28px; margin-top: 6px; }
