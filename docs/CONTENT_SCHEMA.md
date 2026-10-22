@@ -216,3 +216,21 @@ Choice:
 | `milestones` | 처음 넘을 때 뉴스·알림을 보내는 사용자 수(광고 매출이 있는 산업만) |
 
 사용자 한 명당 광고 매출 = (산업 `adBase` + 기능 효과) × 시장 객단가 배율 × `adScale`.
+
+## 경쟁사 반격 `src/data/markets.json` → `rivalry` (A-140)
+
+| 키 | 뜻 |
+| --- | --- |
+| `leadRatio` · `minPlayerShare` | 겹치는 시장에서 우리 점유율이 그 경쟁사의 몇 배 이상이고 최소 얼마 이상이면 위협으로 봄 |
+| `attackCost` | 반격에 드는 경쟁사 자금(이보다 적으면 반격 못 함) |
+| `warnDays` · `attackDays` · `cooldownDays` | 예고 뉴스 → 반격 시작까지, 반격 기간, 끝난 뒤 쉬는 날 |
+| `priceBoost` | 가격형 반격 중 점유 가중치 배율 |
+| `featureCatch` · `featureOver` | 기능형: 우리 매력도 × featureOver까지 남은 차이의 featureCatch만큼 한 번에 따라붙음 |
+| `marketingAware` | 광고형: 인지도 += (1 − 인지도) × 이 값 |
+| `randomPerAggression` | 위협이 없어도 매달 반격을 계획할 확률(× 공격성). 0이면 위협받을 때만 |
+| `raiseBase` · `raisePerShare` · `raiseCap` | 경쟁사 투자 유치 확률 배율 = min(raiseCap, raiseBase + 점유율 × raisePerShare) |
+| `events` | 성격별로 반격 시작 때 띄우는 사건 id. 이 사건들은 `cond: {"flag": "rival_attack_now"}`라 무작위로 오지 않음 |
+
+경쟁사 `style`: `price`(가격으로 맞서는 곳) · `feature`(기능을 빨리 따라오는 곳) · `marketing`(광고를 크게 쓰는 곳). 화면에는 쓰지 않고 예고 뉴스 말투로만 드러납니다.
+
+사건 문구의 `{competitor}가` `{company}를`처럼 이름 바로 뒤 조사(이·가·을·를·은·는·과·와)는 이름 받침에 맞게 바뀝니다.

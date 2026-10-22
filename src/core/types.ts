@@ -377,7 +377,13 @@ export interface Competitor {
   bornDay: number;
   boostUntil: number | null; // 가격 전쟁 등
   acquiredDay: number | null;
+  style?: RivalStyle; // 성격(A-140). 없으면 예전 저장(aggression으로 정함)
+  plan?: { kind: RivalStyle; startDay: number } | null; // 예고한 반격
+  attack?: { kind: RivalStyle; until: number } | null; // 진행 중인 반격
+  nextAttackDay?: number; // 이 날 전에는 반격하지 않음
 }
+
+export type RivalStyle = 'price' | 'feature' | 'marketing';
 
 export interface EnterpriseDeal {
   id: string;

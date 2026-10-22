@@ -1,6 +1,6 @@
 // 경쟁사(Claude 제안): 산업마다 가상 경쟁사가 매달 성장·투자 유치·가격 전쟁·폐업하고, 몇 년마다 새로 들어옵니다.
 // 4단계부터 경쟁사 인수(M&A)로 고객과 매력도를 흡수할 수 있습니다.
-import { industry, market, MARKET_IDS } from './data';
+import { DATA, industry, market, MARKET_IDS } from './data';
 import { yearOf } from './calendar';
 import { demand, revenuePerUser, shares } from './market';
 import { spendNow } from './finance';
@@ -8,7 +8,12 @@ import { nextId } from './ids';
 import { news, notify } from './notify';
 import { appeal } from './product';
 import { pick, rand, randRange } from './rng';
-import type { Competitor, GameState, MarketId, PriceTier } from './types';
+import { trigger } from './events';
+import { clearFlag, setFlag } from './mods';
+import type { Competitor, GameState, MarketId, PriceTier, RivalStyle } from './types';
+
+const R = DATA.markets.rivalry;
+const STYLES: RivalStyle[] = ['price', 'feature', 'marketing'];
 
 export function makeCompetitor(s: GameState, strength: number): Competitor | null {
   const ind = industry(s.company.industry);
@@ -31,7 +36,73 @@ export function makeCompetitor(s: GameState, strength: number): Competitor | nul
     bornDay: s.day,
     boostUntil: null,
     acquiredDay: null,
+    style: pick(s, STYLES),
   };
+}
+
+// ── A-140 경쟁사 반격 ──
+export function rivalStyle(c: Competitor): RivalStyle {
+  return c.style ?? (c.aggression > 0.66 ? 'price' : c.aggression > 0.33 ? 'marketing' : 'feature');
+}
+
+export const STYLE_NAME: Record<RivalStyle, string> = { price: '가격으로 맞서는 곳', feature: '기능을 빨리 따라오는 곳', marketing: '광고를 크게 쓰는 곳' };
+
+// 그 경쟁사가 느끼는 위협: 겹치는 시장에서 우리 점유율 ÷ 그쪽 점유율(가장 큰 곳)
+function threat(s: GameState, c: Competitor): { ratio: number; player: number } {
+  let best = { ratio: 0, player: 0 };
+  for (const m of c.markets) {
+    if (!s.markets[m].launched) continue;
+    const sh = shares(s, m);
+    const mine = sh.comps.find((x) => x.id === c.id)?.share ?? 0;
+    const ratio = sh.player / Math.max(0.005, mine);
+    if (ratio > best.ratio) best = { ratio, player: sh.player };
+  }
+  return best;
+}
+
+const WARN: Record<RivalStyle, string[]> = {
+  price: ['{name}, 다음 달 요금제 전면 개편 예고 — 업계 "출혈 경쟁" 우려', '{name} 내부 문건 "{company} 고객을 가격으로 데려온다"'],
+  feature: ['{name}, 개발자 대거 채용 — "{company}의 핵심 기능 따라잡겠다"', '{name}, 대규모 업데이트 예고'],
+  marketing: ['{name}, 대형 광고 캠페인 준비 — 광고 대행사 입찰', '{name}, 마케팅 예산 두 배로 늘린다'],
+};
+
+function planAttack(s: GameState, c: Competitor) {
+  const kind = rivalStyle(c);
+  c.plan = { kind, startDay: s.day + R.warnDays };
+  news(s, `[경쟁] ${pick(s, WARN[kind]).replace('{name}', c.name).replace('{company}', s.company.name)}`, 'competitor');
+}
+
+function startAttack(s: GameState, c: Competitor, mine: number) {
+  const kind = c.plan!.kind;
+  c.plan = null;
+  c.attack = { kind, until: s.day + R.attackDays };
+  c.nextAttackDay = s.day + R.attackDays + R.cooldownDays;
+  c.cash -= R.attackCost;
+  if (kind === 'price') {
+    c.priceTier = 'low';
+    c.boostUntil = s.day + R.attackDays;
+  } else if (kind === 'feature') {
+    const target = mine * R.featureOver;
+    if (target > c.appeal) c.appeal += (target - c.appeal) * R.featureCatch;
+  } else c.awareness = Math.min(0.95, c.awareness + (1 - c.awareness) * R.marketingAware);
+  // 반격은 그 경쟁사 이름으로 사건 카드가 되어 우리에게 대응을 묻습니다
+  const ev = (R.events as Record<RivalStyle, string>)[kind];
+  setFlag(s, 'rival_attack_now');
+  const d = trigger(s, ev, { competitorId: c.id });
+  clearFlag(s, 'rival_attack_now');
+  if (!d) notify(s, `${c.name}이(가) 반격을 시작했습니다.`, 'bad', 'market');
+}
+
+function rivalryMonth(s: GameState, c: Competitor, mine: number) {
+  if (c.attack && c.attack.until <= s.day) c.attack = null;
+  if (c.plan && s.day >= c.plan.startDay) {
+    startAttack(s, c, mine);
+    return;
+  }
+  if (c.plan || c.attack || (c.nextAttackDay ?? 0) > s.day || c.cash < R.attackCost) return;
+  const th = threat(s, c);
+  const threatened = th.player >= R.minPlayerShare && th.ratio >= R.leadRatio;
+  if (threatened || rand(s) < R.randomPerAggression * c.aggression) planAttack(s, c);
 }
 
 // 시장이 성숙할수록(늦게 창업할수록) 기존 강자가 강합니다(A-53).
@@ -113,7 +184,7 @@ export function competitorsMonth(s: GameState) {
     c.awareness = Math.max(0.03, Math.min(0.95, c.awareness));
     c.cash -= randRange(s, 0.3e8, 1.2e8) * (1 + c.aggression);
     // 투자 유치
-    if (c.cash < 3e8 && rand(s) < (s.economy.phase === 'recession' ? 0.3 : 0.65)) {
+    if (c.cash < 3e8 && rand(s) < (s.economy.phase === 'recession' ? 0.3 : 0.65) * Math.min(R.raiseCap, R.raiseBase + sh * R.raisePerShare)) {
       const amt = randRange(s, 1e9, 1e10) * (s.economy.phase === 'boom' ? 1.5 : s.economy.phase === 'recession' ? 0.5 : 1);
       c.cash += amt;
       c.awareness = Math.min(0.9, c.awareness + 0.03);
@@ -134,13 +205,8 @@ export function competitorsMonth(s: GameState) {
         news(s, `[해외] ${c.name}, ${market(next).name} 진출`, 'competitor');
       }
     }
-    // 가격 전쟁(공격적인 곳)
-    if (rand(s) < 0.04 * c.aggression && c.boostUntil === null) {
-      c.boostUntil = s.day + 60;
-      c.priceTier = 'low';
-      news(s, `[경쟁] ${c.name}, 대대적인 가격 인하 발표`, 'competitor');
-      notify(s, `${c.name}이(가) 가격을 크게 내렸습니다. 두 달 동안 그쪽 매력도가 올라갑니다.`, 'bad', 'market');
-    }
+    // 반격(A-140): 우리가 앞서면 성격대로 예고 뒤 반격. 예전의 무작위 가격 전쟁도 여기로 합침
+    rivalryMonth(s, c, mine);
     if (c.boostUntil !== null && c.boostUntil <= s.day) c.boostUntil = null;
   }
   // 신규 진입: 시장이 커질수록 새 경쟁사가 들어옵니다.

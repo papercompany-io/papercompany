@@ -38,7 +38,7 @@ export function shares(s: GameState, m: MarketId): { player: number; comps: { id
   const cw = s.competitors
     .filter((c) => c.alive && c.markets.includes(m))
     .map((c) => {
-      const boost = c.boostUntil !== null && c.boostUntil > s.day ? 1.25 : 1;
+      const boost = c.boostUntil !== null && c.boostUntil > s.day ? M.rivalry.priceBoost : 1; // 가격 인하 반격(A-140)
       return { id: c.id, name: c.name, w: weightOf(c.appeal * boost, Math.min(1, c.awareness * comp), c.priceTier) };
     });
   // 현지 기업·대체재 몫(A-47): 경쟁사 평균 매력도 기준, 해외일수록(comp) 큽니다. 한 회사가 시장을 다 먹지 못하게 합니다.

@@ -74,5 +74,27 @@
       100000,
       1000000
     ]
+  },
+  "rivalry": {
+    "_note": "A-140 경쟁사 반격 [예시값]. 경쟁사마다 성격 style(price 가격형·feature 기능형·marketing 광고형). 우리가 그 경쟁사와 겹치는 시장에서 점유율이 그쪽의 leadRatio배 이상이고 minPlayerShare 이상이며, 그쪽 자금이 attackCost 이상이면 반격을 계획: 뉴스로 warnDays일 전에 예고 → attackDays일 동안 반격(자금 attackCost 소진). price = 가격 인하(점유 가중치 × priceBoost), feature = 우리 매력도 × featureOver까지 featureCatch 비율로 따라붙음, marketing = 인지도를 (1−인지도) × marketingAware만큼. 반격이 시작되면 events의 사건 카드(실제 그 경쟁사 이름)로 우리에게 대응을 묻습니다. 끝나면 cooldownDays일 쉼. 위협이 없어도 randomPerAggression × aggression 확률로 매달 반격을 계획(지금 0: 작은 회사를 괜히 때리지 않게). 투자 유치 확률은 점유율이 클수록(× min(raiseCap, raiseBase + 점유율 × raisePerShare))",
+    "leadRatio": 2,
+    "minPlayerShare": 0.15,
+    "attackCost": 1000000000,
+    "warnDays": 30,
+    "attackDays": 90,
+    "cooldownDays": 270,
+    "priceBoost": 1.35,
+    "featureCatch": 0.3,
+    "featureOver": 1.05,
+    "marketingAware": 0.15,
+    "randomPerAggression": 0,
+    "raiseBase": 0.6,
+    "raisePerShare": 4,
+    "raiseCap": 1.8,
+    "events": {
+      "price": "ev_b_comp_price_war",
+      "feature": "ev_b_comp_copycat",
+      "marketing": "ev_b_comp_smear"
+    }
   }
 }

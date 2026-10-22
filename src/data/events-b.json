@@ -4098,10 +4098,7 @@
       "weight": 1.2,
       "cooldown": 180,
       "cond": {
-        "competitor": true,
-        "stageMin": 1,
-        "stageMax": 2,
-        "marketsMin": 1
+        "flag": "rival_attack_now"
       },
       "texts": [
         "{competitor}가 첫 3개월 무료 행사를 시작했습니다. 우리 고객들이 문의하고 있습니다.",
@@ -4191,7 +4188,8 @@
         }
       ],
       "deadline": 7,
-      "default": 3
+      "default": 3,
+      "_note": "A-140: 무작위로 오지 않음. 경쟁사 반격(competitors.ts)이 시작될 때 그 회사 이름으로 띄움"
     },
     {
       "id": "ev_b_comp_mega_round",
@@ -4394,11 +4392,7 @@
       "weight": 1,
       "cooldown": 360,
       "cond": {
-        "competitor": true,
-        "stageMin": 1,
-        "stageMax": 2,
-        "usersMin": 500,
-        "noFlag": "copycat_notice"
+        "flag": "rival_attack_now"
       },
       "texts": [
         "{competitor} 새 버전이 우리 화면 구성을 거의 그대로 베꼈습니다. 문구까지 똑같습니다.",
@@ -4462,7 +4456,8 @@
         }
       ],
       "deadline": 7,
-      "default": 2
+      "default": 2,
+      "_note": "A-140: 무작위로 오지 않음. 경쟁사 반격(competitors.ts)이 시작될 때 그 회사 이름으로 띄움"
     },
     {
       "id": "ev_b_comp_copycat_reply",
@@ -4785,9 +4780,7 @@
       "weight": 1,
       "cooldown": 240,
       "cond": {
-        "competitor": true,
-        "stageMin": 2,
-        "usersMin": 1000
+        "flag": "rival_attack_now"
       },
       "texts": [
         "{competitor}가 \"아직도 느린 앱 쓰세요?\"라며 우리를 저격하는 광고를 냈습니다.",
@@ -4887,7 +4880,8 @@
         }
       ],
       "deadline": 7,
-      "default": 2
+      "default": 2,
+      "_note": "A-140: 무작위로 오지 않음. 경쟁사 반격(competitors.ts)이 시작될 때 그 회사 이름으로 띄움"
     },
     {
       "id": "ev_b_comp_bigco_entry",

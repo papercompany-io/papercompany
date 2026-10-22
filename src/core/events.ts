@@ -198,8 +198,19 @@ function pickTarget(s: GameState, how: string | undefined): Employee | null | un
   return pick(s, pool);
 }
 
+// 이름 뒤 조사를 받침에 맞춤: "{competitor}가" → 데일리픽이 / 모먼트가
+const JOSA: Record<string, [string, string]> = { 이: ['이', '가'], 가: ['이', '가'], 을: ['을', '를'], 를: ['을', '를'], 은: ['은', '는'], 는: ['은', '는'], 과: ['과', '와'], 와: ['과', '와'] };
+function josa(word: string, p: string): string {
+  const pair = JOSA[p];
+  const code = word.charCodeAt(word.length - 1) - 0xac00;
+  if (!pair || code < 0 || code > 11171) return word + p;
+  return word + (code % 28 ? pair[0] : pair[1]);
+}
+
 function fill(s: GameState, text: string, ctx: Ctx, amount?: number): string {
   const comp = s.competitors.find((c) => c.id === ctx.competitorId);
+  const names: Record<string, string> = { target: ctx.target?.name ?? '직원', company: s.company.name, competitor: comp?.name ?? '경쟁사', market: market(ctx.market).name };
+  text = text.replace(/\{(target|company|competitor|market)\}(이|가|을|를|은|는|과|와)(?![가-힣])/g, (_, k: string, p: string) => josa(names[k], p));
   return text
     .replace(/\{target\}/g, ctx.target?.name ?? '직원')
     .replace(/\{dept\}/g, ctx.target ? dept(ctx.target.dept).name : '팀')
@@ -243,7 +254,7 @@ function defaultIndex(d: PendingDecision): number {
   return idx >= 0 ? idx : d.choices.length - 1;
 }
 
-export function trigger(s: GameState, forceId?: string): PendingDecision | null {
+export function trigger(s: GameState, forceId?: string, opts: { competitorId?: string } = {}): PendingDecision | null {
   const cands: { ev: EventDef; target: Employee | null }[] = [];
   for (const ev of EVENTS) {
     if (forceId && ev.id !== forceId) continue;
@@ -265,7 +276,8 @@ export function trigger(s: GameState, forceId?: string): PendingDecision | null 
     cands.map((c) => c.ev.weight ?? 1),
   );
   const alive = s.competitors.filter((c) => c.alive);
-  const ctx: Ctx = { target, competitorId: alive.length ? pick(s, alive).id : null, market: pick(s, launchedMarkets(s).length ? launchedMarkets(s) : ['kr']) };
+  // A-140: 반격하는 경쟁사가 직접 보낸 사건이면 그 회사 이름으로
+  const ctx: Ctx = { target, competitorId: opts.competitorId ?? (alive.length ? pick(s, alive).id : null), market: pick(s, launchedMarkets(s).length ? launchedMarkets(s) : ['kr']) };
   // DC-03 질문 변형: 직전에 쓴 문장은 피합니다.
   const lastV = s.eventSeen[`${ev.id}#v`] ?? -1;
   let vi = Math.floor(rand(s) * ev.texts.length);
