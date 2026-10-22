@@ -2,7 +2,8 @@
 // 대기업 계약(CA-03·OQ-046 [Claude 제안])과 장애(OP-02)도 여기서 처리합니다.
 import { DATA, dept, industry, orderDef, trait } from './data';
 import { deptMembers } from './employees';
-import { addMod, mod } from './mods';
+import { addMod, clearFlag, mod, setFlag } from './mods';
+import { trigger } from './events';
 import { news, notify, float } from './notify';
 import { post, teamChannelId } from './messenger';
 import { applyWork, appeal, fixBugs, fxTotals, hasMvp, insightDay } from './product';
@@ -169,9 +170,11 @@ function outageRoll(s: GameState) {
   if (users < 20) return;
   const stab = Math.min(0.7, fxTotals(s).stability);
   const infra = deptCoverage(s, 'infra') * (orderOf(s, 'infra') === 'infra_reliability' ? 0.6 : 0.4);
-  const p = 0.0022 * (1 + s.product.bugs / 22) * (1 - stab) * (1 - infra) * Math.max(0.2, 1 + mod(s, 'outage'));
+  const OU = DATA.orders.outage;
+  const debt = s.product.debt;
+  const p = 0.0022 * (1 + s.product.bugs / 22) * (1 - stab) * (1 - infra) * Math.max(0.2, 1 + mod(s, 'outage')) * (1 + OU.debtProb * debt); // A-143 기술 부채
   if (rand(s) >= p) return;
-  const sev = randRange(s, 0.6, 1.6) * (1 + s.product.bugs / 60);
+  const sev = randRange(s, 0.6, 1.6) * (1 + s.product.bugs / 60) * (1 + OU.debtSev * debt);
   for (const m of Object.values(s.markets)) {
     if (!m.launched) continue;
     m.users *= 1 - 0.012 * sev;
@@ -181,7 +184,14 @@ function outageRoll(s: GameState) {
   s.stats.outages += 1;
   const hours = Math.max(1, Math.round(sev * 4));
   notify(s, `서비스 장애 ${hours}시간! 고객 일부가 떠나고 2주 동안 이탈이 늘어납니다. (버그를 줄이고 인프라·안정성 기능을 갖추세요)`, 'bad', 'product');
-  if (sev > 1.3) news(s, `[장애] ${s.company.name} 서비스 ${hours}시간 먹통… 이용자 불만`, 'company');
+  if (sev > OU.majorSev) {
+    news(s, `[장애] ${s.company.name} 서비스 ${hours}시간 먹통… 이용자 불만`, 'company');
+    // A-143 큰 장애는 결정 카드로(원인이 기술 부채면 그쪽 카드), 투자사는 한동안 기억합니다
+    s.lastMajorOutage = s.day;
+    setFlag(s, 'outage_now');
+    trigger(s, debt >= OU.debtCard ? 'ev_product_debt_outage' : 'ev_product_outage');
+    clearFlag(s, 'outage_now');
+  }
   post(s, s.channels.some((c) => c.id === 'team-dev') ? 'team-dev' : 'all', '시스템', `서비스 장애 ${hours}시간 — 복구했습니다.`, 'system');
   float(s, '장애!', 'bad');
 }

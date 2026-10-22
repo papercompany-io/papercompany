@@ -2188,7 +2188,7 @@
       "cooldown": 120,
       "urgent": true,
       "cond": {
-        "usersMin": 1000
+        "flag": "outage_now"
       },
       "texts": [
         "대표님, 서비스가 전면 중단됐습니다. 사용자 문의가 폭주하고 있습니다.",
@@ -2296,7 +2296,8 @@
         }
       ],
       "deadline": 3,
-      "default": 0
+      "default": 0,
+      "_note": "A-143: 무작위로 오지 않음. 실제 큰 장애(orders.ts outageRoll)가 나면 띄움(기술 부채가 크면 debt_outage)"
     },
     {
       "id": "ev_product_leak_suspect",
@@ -2598,7 +2599,7 @@
       "cooldown": 120,
       "urgent": true,
       "cond": {
-        "flag": "tech_debt"
+        "flag": "outage_now"
       },
       "texts": [
         "대표님, 결국 우려하던 일이 터졌습니다. 오래된 모듈이 연쇄적으로 장애를 일으키고 있습니다.",
@@ -2684,7 +2685,8 @@
         }
       ],
       "deadline": 3,
-      "default": 1
+      "default": 1,
+      "_note": "A-143: 무작위로 오지 않음. 실제 큰 장애(orders.ts outageRoll)가 나면 띄움(기술 부채가 크면 debt_outage)"
     },
     {
       "id": "ev_product_oss_license",

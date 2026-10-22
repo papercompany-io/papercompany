@@ -147,6 +147,8 @@ function fundStep(s: GameState) {
 }
 
 function opsStep(s: GameState) {
+  // 실험(계측): CRUNCH=1이면 늘 야근 — 기술 부채의 대가를 재려고
+  if (process.env.CRUNCH) s.company.workPolicy = 'crunch';
   // 지시
   if (s.product.bugs > (NOVICE ? 60 : 35)) setOrder(s, 'dev', 'dev_stabilize');
   else if (s.product.bugs < (NOVICE ? 25 : 15)) setOrder(s, 'dev', 'dev_build');

@@ -257,3 +257,12 @@ Choice:
 | `activistStreak` | 이만큼 연속 미달이면 행동주의 펀드 사건(`ev_b_pub_activist`) |
 | `warnBelow` | 이 아래면 분기마다 경고 |
 | `controlPct` · `firedDiscount` | 신뢰 0일 때 창업자 지분이 controlPct 미만이면 해임, 남은 지분은 주가 × firedDiscount |
+
+## 장애 연쇄 `src/data/orders.json` → `outage` (A-143)
+
+| 키 | 뜻 |
+| --- | --- |
+| `debtProb` · `debtSev` | 기술 부채(0~1.5)가 장애 확률·심각도에 곱해지는 정도 |
+| `majorSev` | 이 심각도를 넘으면 큰 장애: 뉴스 + 결정 카드 + 투자사 기억 |
+| `debtCard` | 기술 부채가 이 이상이면 `ev_product_debt_outage`, 아니면 `ev_product_outage`(두 카드 모두 `cond: {"flag": "outage_now"}`라 실제 장애 때만) |
+| `investPenalty` · `investDays` | 큰 장애 뒤 투자 결정 확률 감점(최대값)과 기간(날이 갈수록 0으로) |

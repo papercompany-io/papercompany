@@ -266,6 +266,12 @@ export function decisionProbability(s: GameState, r: Round, investorId: string):
   if (lf) factors.push({ label: '레거시: 투자자 관계', value: lf });
   const mi = mod(s, 'invest');
   if (mi) factors.push({ label: '최근 일(이벤트)', value: mi });
+  // A-143 투자사는 최근 큰 장애를 기억합니다(날이 갈수록 잊음)
+  const OU = DATA.orders.outage;
+  if (s.lastMajorOutage !== undefined && s.day - s.lastMajorOutage < OU.investDays) {
+    const ago = s.day - s.lastMajorOutage;
+    factors.push({ label: `최근 큰 서비스 장애(${ago}일 전)`, value: -OU.investPenalty * (1 - ago / OU.investDays) });
+  }
   if (stageIndex(r.stage) >= stageIndex('A')) {
     const g = revenueGrowth(s);
     if (g !== null && g >= 0.08) factors.push({ label: `매출 성장률 월 ${(g * 100).toFixed(1)}%`, value: P.growthGood });
