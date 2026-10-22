@@ -12,3 +12,5 @@ playtest/dumps*
 # OpenRouter 키(A-139)
 .env
 .env.*
+
+.claude/worktrees/
