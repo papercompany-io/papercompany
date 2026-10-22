@@ -19,7 +19,7 @@ import { deptMembers } from '../../core/employees';
 import { deptOutput, isSick } from '../../core/staff';
 import { act, getGame, useGame } from '../store';
 import { DecisionView } from '../Feedback';
-import { InvestPeek } from './InvestApp';
+import { InvestPeek, InvestorBar } from './InvestApp';
 import { PixelAvatar } from '../office/Avatar';
 import type { Channel, DeptId, Employee, GameState, Message } from '../../core/types';
 import './apps.css';
@@ -266,7 +266,14 @@ export function MessengerApp({ initial, openInvest }: { initial?: string; openIn
                 {m.kind === 'system' ? (
                   <div className="mg-sys">
                     <span className="mg-time">{timeOf(m.at)}</span>
-                    {m.text}
+                    {m.text.startsWith('[결과] ') ? (
+                      <span className="mg-result">
+                        <b>결과</b>
+                        {m.text.slice(5)}
+                      </span>
+                    ) : (
+                      m.text
+                    )}
                   </div>
                 ) : (
                   <div className={`mg-msg ${grouped ? 'grouped' : ''} ${m.kind}`}>
@@ -279,7 +286,7 @@ export function MessengerApp({ initial, openInvest }: { initial?: string; openIn
                           <span className="mg-time">{timeOf(m.at)}</span>
                         </div>
                       )}
-                      <div className="mg-text">{m.text}</div>
+                      <MsgText m={m} />
                       {m.decisionId && <MsgDecision id={m.decisionId} />}
                       {m.outingId && <MsgOuting id={m.outingId} />}
                     </div>
@@ -313,13 +320,15 @@ export function MessengerApp({ initial, openInvest }: { initial?: string; openIn
             <ChatInput channelId={ch.id} placeholder={ch.kind === 'all' ? '모두에게 메시지 쓰기 — 이름을 부르면 그 사람이, 팀 이름과 일을 말하면 그 팀이 답합니다' : '이 그룹에 메시지 쓰기'} busy={!!typing || shown < total} onErr={setErr} />
           ) : ch.kind === 'dm' && members[0] ? (
             <DmActions empId={members[0].id} name={members[0].name} busy={!!typing || shown < total} onErr={setErr} />
+          ) : ch.kind === 'external' && DATA.investors.investors.some((i) => i.id === ch.memberIds[0]) ? (
+            <InvestorBar investorId={ch.memberIds[0]} onPeek={() => setPeek(true)} onOpenInvest={openInvest} />
           ) : (
             <div className="mg-box muted">
               {ch.kind === 'all' && <span>#전체는 회사 소식을 보는 채널입니다. 일은 각 팀 채널에서 부서가 맡을 일을 정합니다.</span>}
               {ch.kind === 'group' && <span>지시는 팀 채널에서 부서 단위로 내립니다. 직원의 고민·제안은 DM으로 오고, 메시지 속 버튼으로 답합니다.</span>}
               {ch.kind === 'external' && (
                 <>
-                  <span>투자사 레터는 투자 메뉴에서 보냅니다. 다른 외부 연락은 메시지 속 버튼으로 답합니다.</span>
+                  <span>외부 연락은 메시지 속 버튼으로 답합니다.</span>
                   <button className="btn small" data-testid="invest-peek-btn" onClick={() => setPeek(true)}>
                     투자 현황 보기
                   </button>
@@ -521,17 +530,50 @@ function MsgOuting({ id }: { id: string }) {
   );
 }
 
+// 메시지 본문(A-152): 내가 보낸 레터("[회사 소개] …")는 레터 카드로, 결정 답("→ 고른 답")은 답장 표시로
+function MsgText({ m }: { m: Message }) {
+  if (m.kind === 'player') {
+    const reply = /^(\(답이 없어 기본 선택\) )?→ (.+)$/s.exec(m.text);
+    if (reply)
+      return (
+        <div className="mg-reply">
+          <span>{reply[1] ? '기본 답' : '답장'}</span>
+          <b>{reply[2]}</b>
+        </div>
+      );
+    const letter = /^\[([^\]]+)\] (.+)$/s.exec(m.text);
+    if (letter)
+      return (
+        <div className="mg-letter">
+          <span className="mg-letter-kind">
+            <PxIcon id="talk" size={12} /> 레터 · {letter[1]}
+          </span>
+          <div>{letter[2]}</div>
+        </div>
+      );
+  }
+  return <div className="mg-text">{m.text}</div>;
+}
+
 function MsgDecision({ id }: { id: string }) {
   const s = useGame();
   const d = s.decisions.find((x) => x.id === id);
   if (!d) return null;
+  // 답한 뒤에는 아래에 내 답·결과 메시지가 따로 오므로 짧게
+  if (d.resolved)
+    return (
+      <div className="mg-attach done">
+        <PxIcon id="check" size={14} /> 답함 · <b>{d.choices[d.resolved.choice]?.label}</b>
+      </div>
+    );
+  const left = Math.max(0, d.deadline - s.day);
   return (
-    <div className="mg-attach">
-      {!d.resolved && (
-        <div className="mg-attach-due">
-          답변 기한 D-{Math.max(0, d.deadline - s.day)} · 지나면 기본 선택
-        </div>
-      )}
+    <div className={`mg-attach ${d.urgent ? 'urgent' : ''}`}>
+      <div className="mg-attach-head">
+        <b>답을 골라 주세요</b>
+        <span className={`chip ${left <= 1 ? 'red' : 'amber'}`}>{left === 0 ? '오늘까지' : `${left}일 남음`}</span>
+        <span className="mg-attach-note">답하지 않으면 "기본" 답으로 정해집니다</span>
+      </div>
       <DecisionView d={d} />
     </div>
   );

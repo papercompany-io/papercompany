@@ -145,6 +145,7 @@ export interface IndustryDef {
   friendsPerNet: number;
   needsBilling?: boolean; // 결제 기능을 만들어야 구독·거래 매출이 생김(A-111)
   tam: number;
+  tamMult?: Partial<Record<MarketId, number>>; // A-156 이 산업만 쓰는 해외 잠재 고객 배수(B2C)
   adoption: { a0: number; a1: number; mid: number; k: number };
   price: number;
   payBase: number;
@@ -190,6 +191,11 @@ export const MARKET_IDS = MARKETS.map((m) => m.id);
 
 export function market(id: MarketId): MarketDef {
   return MARKETS.find((x) => x.id === id)!;
+}
+
+// 시장 m의 잠재 고객 배수(국내 = 1). B2C 산업은 해외 사람 수가 그대로 고객이라 산업 값이 따로 있음(A-156)
+export function tamMultOf(ind: IndustryId, m: MarketId): number {
+  return industry(ind).tamMult?.[m] ?? market(m).tamMult;
 }
 
 // ── 기능 ──

@@ -5441,6 +5441,7 @@
       "id": "ev_office_water_leak",
       "cat": "office",
       "from": "건물 관리인",
+      "outside": true,
       "weight": 0.8,
       "cooldown": 300,
       "urgent": true,
@@ -5515,6 +5516,7 @@
       "id": "ev_office_rent_hike",
       "cat": "office",
       "from": "건물주",
+      "outside": true,
       "weight": 0.9,
       "cooldown": 365,
       "cond": {

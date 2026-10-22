@@ -4,7 +4,9 @@ import { useState } from 'react';
 import { DATA, industry, market, MARKET_IDS } from '../../core/data';
 import { activeCampaigns } from '../../core/ads';
 import { Ads } from './AdsPanel';
-import { infraPerUser, launchBlock, launchMarket, revenuePerUser, setAdBudget, shares, totalUsers, deptCoverage } from '../../core/market';
+import { infraPerUser, launchBlock, launchMarket, revenuePerUser, roomState, setAdBudget, shares, totalUsers, deptCoverage } from '../../core/market';
+import { ROOM_LINE } from '../../core/marketing';
+import { LossBars } from './CustomerFlow';
 import { acquire, acquireBlock, acquisitionPrice, competitorUsers } from '../../core/competitors';
 import { appeal, fxTotals } from '../../core/product';
 import { enterpriseThreshold, orderOf } from '../../core/orders';
@@ -125,7 +127,7 @@ function Markets({ setMsg, goAds }: { setMsg: (m: string | null) => void; goAds:
             <div className="hf-label inv-room-label">
               <span>한 달 광고 예산</span>
               <b>{wonShort(ms.adBudget)}</b>
-              <Help text="광고는 우리를 아는 사람을 늘리고, 고객을 직접 데려옵니다. 고객이 많아질수록 한 명 데려오는 값이 비싸집니다. 마케팅팀이 '퍼포먼스 광고 운영'을 하면 효율이 오릅니다. 매일 예산의 1/30씩 나갑니다." />
+              <Help text="광고는 우리를 아는 사람을 늘리고, 고객을 직접 데려옵니다. 고객이 많아질수록 한 명 데려오는 값이 비싸집니다. 마케팅팀이 '퍼포먼스 광고 운영'을 하면 효율이 오르고, 마케터가 많을수록 채널을 더 돌립니다. 매일 예산의 1/30씩 나갑니다." />
             </div>
             <input
               type="range"
@@ -227,17 +229,12 @@ function TeamOrders() {
   );
 }
 
-// 고객이 들고 나는 줄(최근 2주 평균, 한 달 환산): 재무 판처럼 들어옴/나감 + 왜 그런지 한 줄
+// 고객이 들고 나는 줄(최근 2주 평균, 한 달 환산): 재무 판처럼 들어옴/나감 + 떠나는 이유 막대 + 제품 여유 한 줄(A-158)
 function GrowthPanel({ flow, users, unit }: { flow: NonNullable<MarketState['flow']>; users: number; unit: string }) {
   const gain = flow.inbound + flow.viral + flow.sales + flow.paid;
   const net = gain - flow.lost;
-  const capped = users >= flow.target * 0.9;
   const m = (v: number) => (v * 30 >= 100 ? n(v * 30) : (v * 30).toFixed(1));
-  const why = capped
-    ? '지금 매력과 알려진 정도로 올 수 있는 고객은 거의 다 왔습니다. 더 크려면 광고·마케팅·영업으로 더 알리거나, 기능·품질로 제품을 더 좋게 만드세요.'
-    : net <= 0
-      ? '들어오는 고객보다 떠나는 고객이 많습니다. 버그·가격·고객지원 부족·경기가 떠나는 고객을 늘립니다.'
-      : '아직 더 올 고객이 있습니다. 영업·광고·입소문으로 더 빨리 데려올 수 있습니다.';
+  const why = ROOM_LINE[roomState(users, flow.target)] + (net <= 0 ? ' 지금은 들어오는 고객보다 떠나는 고객이 많습니다.' : '');
   return (
     <div className="mkt-flow" data-testid="growth-panel">
       <div className="hf-label">한 달에 들고 나는 {unit}(최근 2주 기준)</div>
@@ -268,6 +265,12 @@ function GrowthPanel({ flow, users, unit }: { flow: NonNullable<MarketState['flo
           {m(net)}
         </b>
       </div>
+      {flow.why && flow.lost > 0 && (
+        <>
+          <div className="hf-label">떠나는 이유</div>
+          <LossBars why={flow.why} lost={flow.lost} />
+        </>
+      )}
       <div className="ew-note">{why}</div>
     </div>
   );

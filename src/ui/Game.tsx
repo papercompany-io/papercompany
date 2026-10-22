@@ -25,7 +25,7 @@ import { Money, useTween } from './common';
 import { ServiceLogo } from './logo';
 import { nextHint } from './hints';
 import { requestAutosave } from './autosave';
-import { pct } from '../core/format';
+import { countShort, pct } from '../core/format';
 import { play, type Sfx } from './sound';
 import { getSettings, useSettings } from './meta';
 import { Toasts, DecisionModal, Confetti, SideStack } from './Feedback';
@@ -376,10 +376,11 @@ function TopBar({ s }: { s: GameState }) {
                 <small data-testid="hud-equity">내 지분 {founderPct(s) >= 0.9995 ? '100%' : pct(founderPct(s))}</small>
               </div>
             </div>
-            <div className="tb-stat" title={`${industry(s.company.industry).unit} 수`}>
+            <div className="tb-stat" title={`${industry(s.company.industry).unit} ${Math.floor(totalUsers(s)).toLocaleString('ko-KR')}`}>
               <PxIcon id="users" size={18} />
               <div>
-                <span data-testid="hud-users">{Math.floor(totalUsers(s)).toLocaleString('ko-KR')}</span>
+                {/* 100만 넘으면 짧게(A-158): 3,400만 · 4.2억 */}
+                <span data-testid="hud-users">{totalUsers(s) >= 1e6 ? countShort(totalUsers(s)) : Math.floor(totalUsers(s)).toLocaleString('ko-KR')}</span>
                 <small>{hasMvp(s) ? `품질 ${quality(s)}점` : `핵심 기능 ${coreDone}/${cores.length}`}</small>
               </div>
             </div>

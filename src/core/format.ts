@@ -30,6 +30,28 @@ export function wonCompact(n: number): string {
   return wonShort(n);
 }
 
+// 사람 수 짧게(A-156): 9,800 · 12.5만 · 3,400만 · 1.2억 · 12억
+export function countShort(n: number): string {
+  const a = Math.abs(n);
+  const sign = n < 0 ? '-' : '';
+  const one = (x: number) => (x >= 100 ? Math.round(x).toLocaleString('ko-KR') : String(Math.round(x * 10) / 10));
+  if (a < 1e4) return `${sign}${Math.round(a).toLocaleString('ko-KR')}`;
+  if (a < 1e8) return `${sign}${one(a / 1e4)}만`;
+  return `${sign}${one(a / 1e8)}억`;
+}
+
+// 받침에 맞춘 조사만 돌려줌(A-157): `"${name}"${josa(name, '이')}` → "할인 프로모션"이 / "검색 광고"가
+const JOSA_PAIR: Record<string, [string, string]> = { 이: ['이', '가'], 가: ['이', '가'], 을: ['을', '를'], 를: ['을', '를'], 은: ['은', '는'], 는: ['은', '는'], 과: ['과', '와'], 와: ['과', '와'], 으로: ['으로', '로'], 로: ['으로', '로'] };
+export function josa(word: string, p: string): string {
+  const pair = JOSA_PAIR[p];
+  if (!pair) return p;
+  const code = word.charCodeAt(word.length - 1) - 0xac00;
+  if (code < 0 || code > 11171) return pair[1];
+  const jong = code % 28;
+  if (p === '으로' || p === '로') return jong === 0 || jong === 8 ? '로' : '으로';
+  return jong ? pair[0] : pair[1];
+}
+
 export function pct(f: number, digits = 2): string {
   return `${(f * 100).toFixed(digits)}%`;
 }

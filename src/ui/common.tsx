@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { won, wonShort } from '../core/format';
+import { PxIcon, type PxId } from './icons';
 
 export function Money({ v, full, testId }: { v: number; full?: boolean; testId?: string }) {
   return (
@@ -9,11 +10,13 @@ export function Money({ v, full, testId }: { v: number; full?: boolean; testId?:
   );
 }
 
-export function Tabs<T extends string>({ tabs, value, onChange }: { tabs: { id: T; label: string }[]; value: T; onChange: (t: T) => void }) {
+// icon(선택, A-158): Startup Company 제품 창처럼 탭 이름 앞에 작은 아이콘
+export function Tabs<T extends string>({ tabs, value, onChange }: { tabs: { id: T; label: string; icon?: PxId }[]; value: T; onChange: (t: T) => void }) {
   return (
     <div className="tabs">
       {tabs.map((t) => (
-        <button key={t.id} data-testid={`tab-${t.id}`} className={`tab ${value === t.id ? 'on' : ''}`} onClick={() => onChange(t.id)}>
+        <button key={t.id} data-testid={`tab-${t.id}`} className={`tab ${value === t.id ? 'on' : ''} ${t.icon ? 'has-icon' : ''}`} onClick={() => onChange(t.id)}>
+          {t.icon && <PxIcon id={t.icon} size={14} />}
           {t.label}
         </button>
       ))}

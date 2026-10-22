@@ -1,15 +1,16 @@
 // RV·시장 시뮬레이션(Claude 제안, PD-02/04·RV-01 확장):
 // 시장 수요(잠재 고객 × 도입률 × 경기) → 매력도·인지도·가격으로 나눈 점유율 → 목표 고객 수.
 // 고객은 목표를 향해 획득 속도(입소문·광고·영업)만큼 늘고, 이탈률(버그·가격·고객지원·경쟁)만큼 줄어듭니다.
-import { DATA, industry, market, MARKET_IDS, priceTierDef, type IndustryDef } from './data';
+import { DATA, industry, market, MARKET_IDS, priceTierDef, tamMultOf, type IndustryDef } from './data';
 import { yearFrac } from './calendar';
 import { econ } from './economy';
 import { spendNow } from './finance';
 import { mod } from './mods';
 import { news, notify } from './notify';
 import { appeal, canCharge, fxTotals, hasMvp, type FxTotals } from './product';
-import { adDay, campaignDay, endCampaigns, fullInform, recordAdStats, recordCampaigns, setTotalAdBudget } from './ads';
-import type { GameState, MarketId } from './types';
+import { adDay, audience, campaignDay, endCampaigns, fullInform, opensAt, recordAdStats, recordCampaigns, setTotalAdBudget } from './ads';
+import { countShort } from './format';
+import type { CustMonth, GameState, MarketId } from './types';
 import { orderShare } from './assign';
 
 const M = DATA.markets;
@@ -23,7 +24,7 @@ export function adoption(ind: IndustryDef, day: number): number {
 // 시장 m의 전체 수요(이 제품군을 쓰려는 사람·회사 수)
 export function demand(s: GameState, m: MarketId): number {
   const ind = industry(s.company.industry);
-  return ind.tam * market(m).tamMult * adoption(ind, s.day) * econ(s, 'demand');
+  return ind.tam * tamMultOf(ind.id, m) * adoption(ind, s.day) * econ(s, 'demand');
 }
 
 function weightOf(appealV: number, awareness: number, tier: string): number {
@@ -106,8 +107,13 @@ export function deptCoverage(s: GameState, d: 'cs' | 'infra'): number {
   const users = totalUsers(s);
   if (users <= 0) return 1;
   const out = s.employees.filter((e) => e.dept === d && !isAbsent(s, e.id)).length;
-  const need = users / cap[s.company.industry];
-  return Math.min(1, out / Math.max(0.5, need));
+  return Math.min(1, out / Math.max(0.5, deptNeed(s, users / cap[s.company.industry])));
+}
+
+// 필요 인원(A-156 규모의 경제, B2C만): from명까지는 사용자에 비례, 그 뒤로는 사용자 10배마다 perDecade명씩
+export function deptNeed(s: GameState, linear: number): number {
+  const k = (DATA.depts.capScale as Partial<Record<'b2c' | 'b2b', { from: number; perDecade: number }>>)[audience(s)];
+  return !k || linear <= k.from ? linear : k.from + k.perDecade * Math.log10(linear / k.from);
 }
 
 function isAbsent(s: GameState, id: string) {
@@ -159,8 +165,9 @@ export function marketDay(s: GameState, push: DayPush) {
     ms.awareness += awAd + awCp;
     let gotAd = 0;
     let gotCp = 0;
-    const word = ind.viral * (1 + fx.viral * 10) * Math.sqrt(Math.min(1, ms.users / Math.max(1, D))) * 0.02;
-    ms.awareness += (push.contentAwareness / Math.sqrt(md.tamMult) + word) * (1 - ms.awareness);
+    const viralM = 1 + mod(s, 'viral'); // 친구 초대 보상 같은 캠페인(A-157)
+    const word = ind.viral * (1 + fx.viral * 10) * viralM * Math.sqrt(Math.min(1, ms.users / Math.max(1, D))) * 0.02;
+    ms.awareness += (push.contentAwareness / Math.sqrt(tamMultOf(ind.id, m)) + word) * (1 - ms.awareness);
     ms.awareness -= ms.awareness * M.awarenessDecayPerDay;
     // 쓰는 사람은 이미 알고, 주변에도 말합니다(A-95): 인지도는 사용자 비중의 일정 배수 아래로 내려가지 않습니다.
     ms.awareness = Math.max(0, Math.min(1, Math.max(ms.awareness, (ms.users / Math.max(1, D)) * M.userAwareness)));
@@ -178,7 +185,7 @@ export function marketDay(s: GameState, push: DayPush) {
       // 아무도 모르는 서비스는 검색되지 않습니다(A-95). 인지도가 오르거나, 쓰는 사람이 쌓여 순위·검색에 걸리면 스스로 찾아옵니다.
       const found = Math.min(1, Math.max(ms.awareness / M.discoveryAwareness, Math.sqrt(ms.users / M.discoveryUsers)));
       const inbound = gap * ind.baseAcq * (1 + fx.conv) * foreign * found;
-      const viral = ((ms.users * ind.viral * (1 + fx.viral * 10)) / 30) * Math.min(1, gap / Math.max(1, D)) * foreign;
+      const viral = ((ms.users * ind.viral * (1 + fx.viral * 10) * viralM) / 30) * Math.min(1, gap / Math.max(1, D)) * foreign;
       const raw = (inbound + viral) * acqM;
       organic = Math.min(gap * M.outbound.gapRate, raw);
       const k = raw > 0 ? organic / raw : 0;
@@ -203,14 +210,22 @@ export function marketDay(s: GameState, push: DayPush) {
     recordCampaigns(cp.list, gotCp, awCp);
     // 이탈
     const bugF = 1 + s.product.bugs / 45;
-    const churnM = ind.churnM * pt.churn * Math.max(0.3, 1 + fx.churn + csFx + mod(s, 'churn') - 0.04 * Math.pow(push.retention, 0.6)) * bugF * econ(s, 'churn');
+    const ret = 0.04 * Math.pow(push.retention, 0.6);
+    const churnM = ind.churnM * pt.churn * Math.max(0.3, 1 + fx.churn + csFx + mod(s, 'churn') - ret) * bugF * econ(s, 'churn');
     let lost = ms.users * (churnM / 30);
-    if (ms.users > target) lost += (ms.users - target) * excessChurn(s, m);
+    const why = lossWhy(s, ms.users, { ind: ind.churnM, price: pt.churn, bugF, econ: econ(s, 'churn'), features: fx.churn, cs: csFx, ret });
+    if (ms.users > target) {
+      const ex = (ms.users - target) * excessChurn(s, m);
+      lost += ex;
+      why.excess = ex;
+    }
     ms.users = Math.max(0, ms.users - lost);
     day.lost = lost;
     // 성장 분석용 이동 평균(약 2주)
     const f = ms.flow ?? { target, ...day };
     const a = 1 / 14;
+    const fw = f.why ?? {};
+    const keys = new Set([...Object.keys(fw), ...Object.keys(why)]);
     ms.flow = {
       target,
       inbound: f.inbound + (day.inbound - f.inbound) * a,
@@ -218,7 +233,17 @@ export function marketDay(s: GameState, push: DayPush) {
       sales: f.sales + (day.sales - f.sales) * a,
       paid: f.paid + (day.paid - f.paid) * a,
       lost: f.lost + (day.lost - f.lost) * a,
+      why: Object.fromEntries([...keys].map((k) => [k, (fw[k] ?? 0) + ((why[k] ?? 0) - (fw[k] ?? 0)) * a]).filter(([, v]) => (v as number) > 1e-4)),
     };
+    // 이번 달 고객 리포트(A-157)
+    const cm = custMonthOf(s);
+    const add = (o: Partial<Record<string, number>>, k: string, v: number) => v > 0 && (o[k] = (o[k] ?? 0) + v);
+    add(cm.gain, 'inbound', day.inbound);
+    add(cm.gain, 'viral', day.viral);
+    add(cm.gain, 'sales', day.sales);
+    add(cm.gain, 'ads', gotAd);
+    add(cm.gain, 'campaign', gotCp);
+    for (const [k, v] of Object.entries(why)) add(cm.lost, k, v);
     // 매출 누적(일할)
     const rpu = revenuePerUser(s, m, fx);
     s.accrual.revSub += (ms.users * rpu.sub) / 30;
@@ -228,6 +253,77 @@ export function marketDay(s: GameState, push: DayPush) {
   }
   const u = totalUsers(s);
   s.company.peakUsers = Math.max(s.company.peakUsers, u);
+  scaleMilestone(s, u);
+}
+
+export function custMonthOf(s: GameState): CustMonth {
+  return (s.company.custMonth ??= { start: totalUsers(s), gain: {}, lost: {} });
+}
+
+// 하루 이탈을 이유별로 나눕니다(A-157 고객 리포트). 좋은 요인(기능·리텐션·고객지원·좋은 기간 효과)만 있을 때 떠났을 몫이 "원래 떠나는 고객",
+// 그 위로 더 떠난 몫을 나쁜 요인마다 크기(로그) 비율로 나눕니다. 곱해지는 요인끼리 겹치는 몫도 한쪽에 몰리지 않습니다.
+function lossWhy(s: GameState, users: number, k: { ind: number; price: number; bugF: number; econ: number; features: number; cs: number; ret: number }): Record<string, number> {
+  const mods = s.modifiers.filter((x) => x.key === 'churn' && x.until > s.day);
+  const goodAdd = Math.min(0, k.features) + Math.min(0, k.cs) - k.ret + mods.reduce((a, x) => a + Math.min(0, x.value), 0);
+  const badAdd: [string, number][] = [['cs', Math.max(0, k.cs)], ['natural', Math.max(0, k.features)]];
+  for (const x of mods) if (x.value > 0) badAdd.push([`mod:${x.label}`, x.value]);
+  const addSum = badAdd.reduce((a, [, v]) => a + v, 0);
+  const innerGood = Math.max(0.3, 1 + goodAdd);
+  const innerAll = Math.max(0.3, 1 + goodAdd + addSum);
+  const goodRate = k.ind * Math.min(1, k.price) * innerGood * Math.min(1, k.econ);
+  const allRate = k.ind * k.price * innerAll * k.bugF * k.econ;
+  const out: Record<string, number> = { natural: (users * goodRate) / 30 };
+  const extra = (users * Math.max(0, allRate - goodRate)) / 30;
+  const logs: [string, number][] = [
+    ['price', Math.log(Math.max(1, k.price))],
+    ['bugs', Math.log(k.bugF)],
+    ['natural', Math.log(Math.max(1, k.econ))], // 경기 탓은 화면·메신저에서 말하지 않음(경기 문구는 뉴스로만) — 원래 떠나는 고객에 넣음
+  ];
+  for (const [key, v] of badAdd) logs.push([key, addSum > 0 ? (Math.log(innerAll / innerGood) * v) / addSum : 0]);
+  const L = logs.reduce((a, [, v]) => a + Math.max(0, v), 0);
+  if (extra > 0 && L > 0) for (const [key, v] of logs) if (v > 0) out[key] = (out[key] ?? 0) + (extra * v) / L;
+  return out;
+}
+
+// 규모 사다리(A-156): 1만 → 10만 → … → 10억(B2B는 고객사 10 → 10만)
+export function scaleSteps(s: GameState): number[] {
+  return DATA.markets.scale[audience(s)];
+}
+
+export function unitWord(s: GameState): string {
+  return industry(s.company.industry).unit === '고객사' ? '곳' : '명';
+}
+
+// 처음 넘은 단계는 뉴스·알림(그 단계에서 새로 열린 광고 채널·캠페인도 같이). 예전 저장이 한꺼번에 여러 단계를 넘으면 가장 높은 것만 알림
+function scaleMilestone(s: GameState, u: number) {
+  const crossed = scaleSteps(s).filter((n) => u >= n && !s.flags.includes(`scale-${n}`));
+  if (!crossed.length) return;
+  for (const n of crossed) s.flags.push(`scale-${n}`);
+  const n = crossed[crossed.length - 1];
+  const unit = industry(s.company.industry).unit;
+  const who = `${unit} ${countShort(n)}${unitWord(s)}`;
+  news(s, `[성장] ${s.company.name}, ${who} 돌파`, 'company');
+  const opened = opensAt(s, n);
+  notify(s, `${who}을 넘었습니다.${opened.length ? ` 이제 ${opened.map((x) => `"${x}"`).join(', ')}을(를) 할 수 있습니다(시장·광고).` : ''}`, 'mission', 'market');
+  if (n >= scaleSteps(s)[Math.max(0, scaleSteps(s).length - 2)]) s.events.push({ type: 'confetti' });
+}
+
+// 제품 여유(A-156, SC의 잠재 사용자를 말로): 지금 사용자 ÷ 지금 제품이 받쳐 주는 고객 수(잠재 고객 × 점유율, 화면에 숫자로 안 보임)
+export type RoomState = 'room' | 'near' | 'full' | 'over';
+export function roomState(users: number, target: number): RoomState {
+  const R = DATA.markets.scale.room;
+  const r = target > 0 ? users / target : 0;
+  return r > R.over ? 'over' : r >= R.full ? 'full' : r >= R.near ? 'near' : 'room';
+}
+
+export function growthRoom(s: GameState): { state: RoomState; closed: MarketId[] } {
+  let users = 0;
+  let target = 0;
+  for (const m of launchedMarkets(s)) {
+    users += s.markets[m].users;
+    target += demand(s, m) * shares(s, m).player;
+  }
+  return { state: roomState(users, target), closed: MARKET_IDS.filter((m) => !s.markets[m].launched) };
 }
 
 // 해외 진출(시장 메뉴): 현지화 기능 + 진출 비용

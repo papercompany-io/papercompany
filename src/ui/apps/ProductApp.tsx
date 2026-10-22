@@ -1,9 +1,12 @@
-// F09 업무 창(A-136, 예전 제품 창 · Startup Company식): 위 제품 띠(로고·순위·품질·사용자) + 탭(상태·기능·만드는 순서·외주·출시 기록)
+// F09 업무 창(A-136, 예전 제품 창 · Startup Company식): 위 제품 띠(로고·순위·품질·사용자) + 탭(상태·기능·마케팅·만드는 순서·외주·출시 기록)
+//  A-158: 상태 탭을 SC 제품 창 Stats 짜임으로, 마케팅 탭(광고 판)을 제품 창 안에, 기능은 분류별 묶음
 //  상태: MVP 전에는 출시까지 공정(진행률·남은 날·누가 만드나), 출시 후에는 지금 사용자·어제 매출·품질 계기판·추이 그래프
 //  기능: 위 요약(잠재 고객·사용자·매력도 구성 팝업 / 다음 출시·작업량) + 기능 카드 줄(그림·레벨·업그레이드)
 //  만드는 순서(로드맵) · 출시 기록
 // 오른쪽 위 제품 카드(ProductCard)도 여기서 내보냅니다.
 import { ContractsCard } from './ScheduleApp';
+import { Ads } from './AdsPanel';
+import { activeCampaigns } from '../../core/ads';
 import { contractsOpen } from '../../core/contracts';
 import { useEffect, useState } from 'react';
 import { DATA, feature, gradeOutput, industry, featuresOf, featureWork, priceTierDef, type FeatureDef, type FeatureFx } from '../../core/data';
@@ -12,18 +15,33 @@ import { ceoDevPerDay } from '../../core/ceo';
 import { hasActiveContract } from '../../core/contracts';
 import { deptOutput } from '../../core/staff';
 import { orderOf } from '../../core/orders';
-import { formatDate } from '../../core/calendar';
-import { revenuePerUser, totalUsers } from '../../core/market';
-import { wonShort } from '../../core/format';
+import { formatDate, formatMonth } from '../../core/calendar';
+import { launchedMarkets, revenuePerUser, totalUsers, unitWord } from '../../core/market';
+import { AxisChart, FlowBars, flowAll, RoomNote, ScaleLadder } from './CustomerFlow';
+import { computeValuation } from '../../core/valuation';
+import { countShort, josa, wonCompact, wonShort } from '../../core/format';
 import { commandOrder } from '../../core/reactions';
 import { act, useGame } from '../store';
 import { Tabs, Help, useTween } from '../common';
 import { ServiceLogo } from '../logo';
 import { PxIcon } from '../icons';
-import { Spark } from './StockApp';
 import { play } from '../sound';
 import type { GameState, PriceTier } from '../../core/types';
 import './apps.css';
+
+// 분류가 하는 일(A-158, 기능 탭 묶음 머리): 효과 숫자 대신 역할만
+const CAT_ROLE: Record<string, string> = {
+  core: '제품의 뼈대입니다. 다 있어야 출시합니다',
+  growth: '더 많이 데려옵니다',
+  monetize: '돈을 법니다',
+  retention: '덜 떠나게 합니다',
+  infra: '안정과 서버 비용',
+  enterprise: '큰 회사와 계약을 맺게 합니다',
+  global: '다른 나라에 나갈 수 있게 합니다',
+  ai: '새 기술로 매력을 더합니다',
+  platform: '다른 서비스와 이어 판을 키웁니다',
+};
+const CAT_ORDER = ['core', 'growth', 'monetize', 'retention', 'infra', 'enterprise', 'global', 'ai', 'platform'];
 
 const CAT_NAME: Record<string, string> = {
   core: '핵심',
@@ -153,14 +171,14 @@ export function ProductCard({ onOpen }: { onOpen: () => void }) {
               <PxIcon id="check" size={14} />
               {quality(s)}%
             </span>
-            <span className="pc-tile" title="사용자">
+            <span className="pc-tile" title={`사용자 ${num(users)}`}>
               <PxIcon id="users" size={14} />
-              {num(users)}
+              {users >= 1e5 ? countShort(users) : num(users)}
             </span>
             <span className={`pc-tile ${delta < 0 ? 'down' : 'up'}`} title="어제보다 늘어난 사용자">
               <PxIcon id="chart" size={14} />
               {delta >= 0 ? '+' : ''}
-              {num(delta)}
+              {Math.abs(delta) >= 1e5 ? countShort(delta) : num(delta)}
             </span>
           </div>
           <div className="pc-foot">{cur ? `만드는 중: ${feature(cur.id).name}${feature(cur.id).levels > 1 ? ` Lv${cur.level}` : ''} · ${dayText(v.etas[0])}` : '만들 기능이 없습니다'}</div>
@@ -170,12 +188,13 @@ export function ProductCard({ onOpen }: { onOpen: () => void }) {
   );
 }
 
-type ProductTab = 'status' | 'features' | 'roadmap' | 'contract' | 'log';
+type ProductTab = 'status' | 'features' | 'marketing' | 'roadmap' | 'contract' | 'log';
 
 export function ProductApp({ initialTab, openSchedule, openHiring }: { initialTab?: string; openSchedule?: () => void; openHiring?: () => void }) {
   const s = useGame();
   const mvp = hasMvp(s);
   const [tab, setTab] = useState<ProductTab>((initialTab as ProductTab) ?? 'status');
+  const [msg, setMsg] = useState<string | null>(null);
   // 알림 카드(외주 진행, A-144)에서 열면 창이 이미 떠 있어도 그 탭으로
   useEffect(() => {
     if (initialTab) setTab(initialTab as ProductTab);
@@ -205,27 +224,32 @@ export function ProductApp({ initialTab, openSchedule, openHiring }: { initialTa
           <PxIcon id="check" size={16} />
           {quality(s)}%
         </span>
-        <span className="pd-pill" title="사용자">
+        <span className="pd-pill" title={`사용자 ${num(totalUsers(s))}`}>
           <PxIcon id="users" size={16} />
-          {num(totalUsers(s))}
+          {totalUsers(s) >= 1e5 ? countShort(totalUsers(s)) : num(totalUsers(s))}
         </span>
       </div>
+      {/* 탭(A-158, Startup Company 제품 창처럼 아이콘 + 이름). 마케팅 탭은 시장·광고 창의 광고 탭과 같은 판 */}
       <Tabs
         tabs={[
-          { id: 'status', label: '상태' },
-          { id: 'features', label: '기능' },
+          { id: 'status', label: '상태', icon: 'chart' },
+          { id: 'features', label: '기능', icon: 'star' },
+          ...(mvp ? [{ id: 'marketing' as const, label: `마케팅${activeCampaigns(s).length ? ` · 캠페인 ${activeCampaigns(s).length}` : ''}`, icon: 'talk' as const }] : []),
           {
             id: 'roadmap',
             label: `만드는 순서 ${s.product.roadmap.length}/${ROADMAP_MAX}`,
+            icon: 'clock',
           },
-          ...(showContract ? [{ id: 'contract' as const, label: `외주${s.contracts?.active ? ' · 진행 중' : s.contracts?.offers.length ? ` ${s.contracts.offers.length}` : ''}` }] : []),
-          { id: 'log', label: '출시 기록' },
+          ...(showContract ? [{ id: 'contract' as const, label: `외주${s.contracts?.active ? ' · 진행 중' : s.contracts?.offers.length ? ` ${s.contracts.offers.length}` : ''}`, icon: 'case' as const }] : []),
+          { id: 'log', label: '출시 기록', icon: 'check' },
         ]}
         value={tab}
         onChange={setTab}
       />
+      {msg && <div className="warn">{msg}</div>}
       {tab === 'status' && (mvp ? <LiveStatus s={s} v={v} openSchedule={openSchedule} /> : <MvpStatus s={s} v={v} openSchedule={openSchedule} openHiring={openHiring} />)}
       {tab === 'features' && <Features s={s} v={v} />}
+      {tab === 'marketing' && <Ads setMsg={setMsg} />}
       {tab === 'roadmap' && <Roadmap s={s} v={v} openSchedule={openSchedule} goFeatures={() => setTab('features')} />}
       {tab === 'contract' && <ContractsCard />}
       {tab === 'log' && <ShipLog s={s} />}
@@ -448,7 +472,8 @@ function Gauge({ value, label }: { value: number; label: string }) {
   );
 }
 
-// 출시 후 상태: 지금 사용자·어제 매출·품질 계기판·그래프
+// 출시 후 상태 = 대시보드(A-158, Startup Company 제품 창 Stats 탭 짜임): 큰 타일 3개(지금 · 오늘 매출 · 품질) → 눈금 그래프 2개
+// → 고객이 들고 나는 길 → 시장별 사용자 → 지금 만드는 기능. 받쳐 주는 고객 수(SC의 잠재 사용자)는 규모 사다리와 말로만
 function LiveStatus({ s, v, openSchedule }: { s: GameState; v: View; openSchedule?: () => void }) {
   const d = s.product.daily ?? [];
   const last = d[d.length - 1];
@@ -458,23 +483,52 @@ function LiveStatus({ s, v, openSchedule }: { s: GameState; v: View; openSchedul
   const cur = s.product.roadmap[0];
   const curF = cur ? feature(cur.id) : null;
   const need = cur ? itemNeed(cur) : null;
+  const ind = industry(s.company.industry);
+  const w = unitWord(s);
+  const f = flowAll(s);
+  const newToday = f ? f.inbound + f.viral + f.sales + f.paid : 0;
+  const ads = launchedMarkets(s).reduce((a, m) => a + s.markets[m].adBudget, 0);
+  const months = s.plHistory.filter((m) => m.usersEnd > 0).slice(-24);
+  const monthly = months.length >= 3;
+  const big = (x: number) => (Math.abs(x) >= 1e4 ? countShort(x) : num(x));
   return (
     <div className="col">
-      <div className="pd-tiles3" data-testid="product-status">
-        <div className="pd-tile center">
+      <div className="pd-tiles3 pd-dash" data-testid="product-status">
+        <div className="pd-tile pd-scale">
           <div className="pd-tile-label">
-            <span className="pd-live" /> 지금 사용자
+            <span className="pd-live" /> 지금 {ind.unit}
           </div>
-          <div className="pd-tile-huge">{num(users)}</div>
-          <div className={`tiny ${delta < 0 ? 'neg' : 'pos'}`}>
-            어제보다 {delta >= 0 ? '+' : ''}
-            {num(delta)}
+          <div className="pd-tile-huge" title={`${num(users)}${w}`}>
+            {countShort(users)}
+            <small>{w}</small>
           </div>
+          <div className="pd-kv">
+            <span>오늘 새로 온 {ind.unit}</span>
+            <b>{big(newToday)}</b>
+          </div>
+          <div className="pd-kv">
+            <span>어제보다</span>
+            <b className={delta < 0 ? 'neg' : 'pos'}>
+              {delta >= 0 ? '+' : ''}
+              {big(delta)}
+            </b>
+          </div>
+          <ScaleLadder s={s} />
+          <RoomNote s={s} />
         </div>
         <div className="pd-tile">
           <div className="pd-tile-label">어제 매출</div>
           <div className="pd-tile-big">{wonShort(last?.rev ?? 0)}</div>
+          <div className="tiny muted">한 달이면 약 {wonCompact((last?.rev ?? 0) * 30)}</div>
           <MoneyNote s={s} />
+          <div className="pd-kv">
+            <span>한 달 광고비</span>
+            <b>{wonShort(ads)}</b>
+          </div>
+          <div className="pd-kv">
+            <span>회사 가치</span>
+            <b>{wonCompact(computeValuation(s).value)}</b>
+          </div>
           <div className="pd-kv">
             <span>매력도</span>
             <b>{appeal(s).toFixed(1)}</b>
@@ -492,11 +546,14 @@ function LiveStatus({ s, v, openSchedule }: { s: GameState; v: View; openSchedul
             </div>
           </div>
         </div>
-        <div className="pd-tile center">
+        <div className="pd-tile">
           <div className="pd-tile-label">
             품질 <Help text="버그가 적을수록 높습니다. 새 기능을 만들 때마다 버그가 생기고, 품질이 낮으면 고객이 떠나고 장애가 납니다. 개발팀에 '안정화·버그 수정'을 맡기면 오릅니다." />
           </div>
-          <Gauge value={quality(s)} label="품질" />
+          <div className="pd-qrow">
+            <Gauge value={quality(s)} label="품질" />
+            <Stability q={quality(s)} />
+          </div>
           <div className="pd-kv">
             <span>
               기술 부채 <Help text="급하게(야근) 만든 코드가 쌓인 정도입니다. 높을수록 새 기능에 버그가 더 생깁니다. '기술 부채 정리'로 줄입니다." />
@@ -509,19 +566,28 @@ function LiveStatus({ s, v, openSchedule }: { s: GameState; v: View; openSchedul
             </span>
             <b>+{Math.round(s.product.polish * 100)}%</b>
           </div>
+          <div className="pd-kv">
+            <span>지금까지 장애</span>
+            <b>{s.stats.outages}번</b>
+          </div>
         </div>
       </div>
-      <Inflow s={s} />
       <div className="pd-charts">
         <div className="pd-tile">
-          <div className="pd-tile-label">사용자 (최근 {d.length}일)</div>
-          <Spark points={d.map((x) => x.users)} h={110} />
+          <div className="pd-tile-label">{monthly ? `${ind.unit} (월말)` : `${ind.unit} (최근 ${d.length}일)`}</div>
+          {monthly ? (
+            <AxisChart points={months.map((m) => m.usersEnd)} from={formatMonth(months[0].month)} to={formatMonth(months[months.length - 1].month)} fmt={(x) => countShort(x)} />
+          ) : (
+            <AxisChart points={d.map((x) => x.users)} from={d.length ? formatDate(d[0].day) : ''} to={d.length ? formatDate(d[d.length - 1].day) : ''} fmt={(x) => countShort(x)} />
+          )}
         </div>
         <div className="pd-tile">
           <div className="pd-tile-label">하루 매출 (최근 {d.length}일)</div>
-          <Spark points={d.map((x) => x.rev)} h={110} />
+          <AxisChart points={d.map((x) => x.rev)} from={d.length ? formatDate(d[0].day) : ''} to={d.length ? formatDate(d[d.length - 1].day) : ''} fmt={(x) => wonCompact(x)} />
         </div>
       </div>
+      <Inflow s={s} />
+      <MarketUsers s={s} />
       <div className="pd-hero">
         <div className="pd-hero-main">
           <div className="pd-stage">지금 만드는 기능</div>
@@ -557,43 +623,63 @@ function LiveStatus({ s, v, openSchedule }: { s: GameState; v: View; openSchedul
   );
 }
 
-// 고객이 어디서 오나(최근 약 2주 하루 평균): 홍보 없이는 지인 말고 거의 오지 않습니다.
+// 안정 · 불안정 · 위험 세로 막대(SC 호스팅 탭의 응답 시간 막대처럼). 품질로 화살표 위치
+function Stability({ q }: { q: number }) {
+  const state = q >= 75 ? 'ok' : q >= 50 ? 'mid' : 'bad';
+  return (
+    <div className="pd-stab" title="품질이 낮을수록 장애가 잦고 고객이 떠납니다">
+      <div className="pd-stab-bar">
+        <i style={{ bottom: `${Math.max(2, Math.min(98, q))}%` }} />
+      </div>
+      <div className="pd-stab-lab">
+        <span className={state === 'bad' ? 'st-bad' : ''}>위험</span>
+        <span className={state === 'mid' ? 'st-mid' : ''}>불안정</span>
+        <span className={state === 'ok' ? 'st-ok' : ''}>안정</span>
+      </div>
+    </div>
+  );
+}
+
+// 고객 흐름(모든 시장, 최근 2주를 한 달로 환산): 들어오는 길 · 떠나는 이유(A-158)
 function Inflow({ s }: { s: GameState }) {
-  const f = s.markets.kr.flow;
-  const unit = industry(s.company.industry).unit;
-  const rows: [string, number, string][] = f
-    ? [
-        ['스스로 찾아옴', f.inbound, '인지도가 3%는 넘어야 검색으로 찾아옵니다.'],
-        ['입소문', f.viral, '쓰는 사람이 많을수록, 입소문 기능이 있을수록 늘어납니다.'],
-        ['영업', f.sales, '대표 주 업무 "영업"·고객사 방문이나 세일즈팀.'],
-        ['광고', f.paid, '시장·광고 메뉴의 광고 예산.'],
-      ]
-    : [];
-  const inTotal = rows.reduce((a, r) => a + r[1], 0);
-  const fmt = (x: number) => (x >= 10 ? num(x) : x.toFixed(1));
+  const f = flowAll(s);
+  const ind = industry(s.company.industry);
+  const ads = launchedMarkets(s).reduce((a, m) => a + s.markets[m].adBudget, 0);
   return (
     <div className="pd-tile" data-testid="inflow">
       <div className="pd-tile-label">
-        {unit}이 어디서 오나 (하루 평균) <Help text="홍보를 하지 않으면 출시 날 들어온 대표의 지인 말고는 거의 들어오지 않습니다. 광고·영업·콘텐츠로 인지도를 올려야 합니다." />
+        {ind.unit}{josa(ind.unit, '이')} 들고 나는 길 (한 달 환산) <Help text="최근 2주 평균을 한 달로 바꾼 값입니다. 홍보를 하지 않으면 출시 날 들어온 대표의 지인 말고는 거의 들어오지 않습니다. 떠나는 이유는 매달 초 고객 리포트(메신저)로도 받습니다." />
       </div>
-      <div className="pd-inflow">
-        {rows.map(([name, x, tip]) => (
-          <div key={name} className="pd-inflow-row" title={tip}>
-            <span>{name}</span>
-            <span className="pd-inflow-bar">
-              <i style={{ width: `${inTotal > 0 ? (x / inTotal) * 100 : 0}%` }} />
-            </span>
-            <b>+{fmt(x)}</b>
-          </div>
-        ))}
-        <div className="pd-inflow-row neg">
-          <span>떠남</span>
-          <span />
-          <b>-{fmt(f?.lost ?? 0)}</b>
-        </div>
-      </div>
+      {f ? <FlowBars flow={f} unit={ind.unit} /> : <div className="tiny muted">하루가 지나면 쌓입니다.</div>}
       <div className="tiny muted">
-        국내 인지도 {(s.markets.kr.awareness * 100).toFixed(2)}% · 광고 예산 월 {wonShort(s.markets.kr.adBudget)}
+        국내 인지도 {(s.markets.kr.awareness * 100).toFixed(2)}% · 광고 예산 월 {wonShort(ads)}
+      </div>
+    </div>
+  );
+}
+
+// 시장별 우리 사용자(진출한 시장이 둘 이상일 때)
+function MarketUsers({ s }: { s: GameState }) {
+  const ms = launchedMarkets(s);
+  if (ms.length < 2) return null;
+  const total = Math.max(1, totalUsers(s));
+  return (
+    <div className="pd-tile">
+      <div className="pd-tile-label">시장별 {industry(s.company.industry).unit}</div>
+      <div className="cf-list">
+        {[...ms]
+          .sort((a, b) => s.markets[b].users - s.markets[a].users)
+          .map((m) => (
+            <div key={m} className="cf-row cf-mkt">
+              <span>
+                <span className="mk-flag">{DATA.markets.markets.find((x) => x.id === m)!.flag}</span> {DATA.markets.markets.find((x) => x.id === m)!.name}
+              </span>
+              <span className="cf-bar">
+                <i style={{ width: `${(s.markets[m].users / total) * 100}%` }} />
+              </span>
+              <b>{countShort(s.markets[m].users)}</b>
+            </div>
+          ))}
       </div>
     </div>
   );
@@ -680,13 +766,29 @@ function Features({ s, v }: { s: GameState; v: View }) {
     );
   };
 
+  // 분류별 묶음: 머리(분류 · 하는 일 · 개수) + 카드 줄
+  const groups = (list: FeatureDef[]) =>
+    CAT_ORDER.filter((c) => list.some((f) => f.cat === c)).map((c) => {
+      const fs = list.filter((f) => f.cat === c);
+      return (
+        <div key={c} className="fc-group">
+          <div className="fc-group-head">
+            <span className={`cat ${c}`}>{CAT_NAME[c]}</span>
+            <span>{CAT_ROLE[c]}</span>
+            <b>{fs.length}개</b>
+          </div>
+          <div className="fc-row">{fs.map(card)}</div>
+        </div>
+      );
+    });
+
   return (
     <div className="col">
       <div className="fs-top">
         <div className="fs-col">
           <div className="pd-kv">
             <span>지금 {ind.unit}</span>
-            <b>{num(totalUsers(s))}</b>
+            <b title={num(totalUsers(s))}>{totalUsers(s) >= 1e5 ? countShort(totalUsers(s)) : num(totalUsers(s))}</b>
           </div>
           <div className="pd-kv fs-appeal" tabIndex={0}>
             <span>매력도</span>
@@ -767,11 +869,26 @@ function Features({ s, v }: { s: GameState; v: View }) {
           </div>
         </div>
       </div>
+      {hasMvp(s) && (
+        <div className="fs-cats" data-testid="feature-cats">
+          {CAT_ORDER.filter((c) => all.some((f) => f.cat === c)).map((c) => {
+            const n = all.filter((f) => f.cat === c && featureLevel(s, f.id) > 0).length;
+            return (
+              <span key={c} className={`fs-cat ${n ? 'on' : ''}`} title={CAT_ROLE[c]}>
+                <span className={`cat ${c}`}>{CAT_NAME[c]}</span>
+                <b>{n}</b>/{all.filter((f) => f.cat === c).length}
+              </span>
+            );
+          })}
+          <span className="grow" />
+          <RoomNote s={s} />
+        </div>
+      )}
       {msg && <div className="warn">{msg}</div>}
       <div className="section-title">우리 제품 기능 {mine.length}개</div>
-      {mine.length ? <div className="fc-row">{mine.map(card)}</div> : <div className="tiny muted">아직 없습니다. 아래에서 만들 기능을 고르세요.</div>}
+      {mine.length ? groups(mine) : <div className="tiny muted">아직 없습니다. 아래에서 만들 기능을 고르세요.</div>}
       <div className="section-title">새로 만들 수 있는 기능 {can.length}개</div>
-      <div className="fc-row">{can.map(card)}</div>
+      {groups(can)}
       {locked.length > 0 && (
         <button className="btn ghost small" style={{ alignSelf: 'flex-start' }} onClick={() => setShowLocked((x) => !x)}>
           {showLocked ? '나중에 열리는 기능 접기' : `나중에 열리는 기능 ${locked.length}개 보기`}

@@ -8,6 +8,7 @@ import { openRound } from '../../core/funding';
 import { enterpriseThreshold, orderOf } from '../../core/orders';
 import { deptMembers } from '../../core/employees';
 import { deptOutput } from '../../core/staff';
+import { clockHour, inNight } from '../../core/night';
 import { fxTotals, hasMvp } from '../../core/product';
 import { delegates, acceptOuting, awayOuting, cancelOuting, dayName, declineOuting, hhmm, isFullDay, outingConflict, outingEffect, outingRange, outingTravel, outings, todayOutings } from '../../core/outings';
 import { useState } from 'react';
@@ -242,14 +243,44 @@ export function OutingOfferActions({ o, onErr }: { o: Outing; onErr: (e: string 
 export function contractPace(s: ReturnType<typeof useGame>) {
   const per = actionDef('contract').perSlot * efficiency(s, 'contract');
   let ceo = 0;
-  for (let i = 0; i < DATA.time.slotsPerDay; i++) for (const p of slotParts(s, i)) if (p.action === 'contract') ceo += p.w * per;
+  let ceoLeft = 0; // 오늘 아직 안 지난 칸(퇴근 뒤면 0)
+  for (let i = 0; i < DATA.time.slotsPerDay; i++)
+    for (const p of slotParts(s, i))
+      if (p.action === 'contract') {
+        ceo += p.w * per;
+        if (i >= s.slotsDone) ceoLeft += p.w * per;
+      }
   const ceoFull = DATA.time.slotsPerDay * per; // 대표가 외주를 주 업무로 할 때
   const devs = deptMembers(s, 'dev').length;
   const team = orderOf(s, 'dev') === 'dev_contract' ? deptOutput(s, 'dev') : 0;
-  return { ceo, ceoFull, team, devs, total: ceo + team };
+  return { ceo, ceoLeft, ceoFull, team, devs, total: ceo + team };
 }
 
 export const daysText = (d: number) => (d < 1 ? '오늘 안에' : `약 ${Math.ceil(d)}일`);
+
+const WORK_HOURS = DATA.time.workEndHour - DATA.time.workStartHour;
+
+// 근무 시간을 "2일 4시간"으로(근무 하루 = 9시간)
+const workTimeText = (h: number) => {
+  const t = Math.ceil(h - 1e-6);
+  return [Math.floor(t / WORK_HOURS) ? `${Math.floor(t / WORK_HOURS)}일` : '', t % WORK_HOURS ? `${t % WORK_HOURS}시간` : ''].filter(Boolean).join(' ');
+};
+
+// 외주 마감까지 남은 근무 시간(A-155). 마감은 날짜(s.day) 단위라 마감일 근무까지 쓸 수 있고, 퇴근 뒤 밤에는 줄지 않습니다.
+// "늦음"은 마감까지 할 수 있는 양으로 봅니다: 대표는 오늘 남은 칸 + 마감일까지 하루치씩, 개발팀은 하루 끝에 들어가므로 오늘 포함 마감일까지 하루치씩
+export function contractDue(s: ReturnType<typeof useGame>) {
+  const a = s.contracts?.active;
+  if (!a || a.deadline === null) return null;
+  const dl = a.deadline - s.day;
+  const today = inNight(s) ? 0 : Math.max(0, DATA.time.workEndHour - clockHour(s));
+  const hours = Math.max(0, dl * WORK_HOURS + today);
+  const pace = contractPace(s);
+  const capacity = pace.ceoLeft + pace.ceo * Math.max(0, dl) + pace.team * Math.max(0, dl + 1);
+  const overdue = dl < 0;
+  const late = overdue || (pace.total > 0 && a.work - a.done > capacity + 1e-6);
+  const text = overdue ? `마감 ${-dl}일 지남` : hours > 0 ? `마감까지 근무 ${workTimeText(hours)}` : '마감일 근무 끝남';
+  return { dl, hours, overdue, late, text, tip: '마감은 근무 시간(9~18시)만 셉니다. 퇴근 뒤 밤에는 줄지 않습니다.' };
+}
 
 export function ContractsCard() {
   const s = useGame();
@@ -263,7 +294,7 @@ export function ContractsCard() {
         <div className="section-title grow">외주 일감</div>
         {!!c?.completed && <span className="chip">완료 {c.completed}건</span>}
       </div>
-      <Help text="대표 주 업무 &quot;외주&quot;나 개발팀 &quot;외주 작업&quot; 지시로 일을 하면 끝냈을 때 대금이 들어옵니다. 그만큼 제품 개발은 늦어집니다. 마감을 넘기면 대금이 깎이고, 많이 넘기면 취소됩니다. 제때 끝낼수록 외주 평판이 올라 더 크고 비싼 일감이 들어옵니다." />
+      <Help text="대표 주 업무 &quot;외주&quot;나 개발팀 &quot;외주 작업&quot; 지시로 일을 하면 끝냈을 때 대금이 들어옵니다. 그만큼 제품 개발은 늦어집니다. 마감은 근무 시간으로 세서 퇴근 뒤 밤에는 줄지 않습니다. 마감을 넘기면 대금이 깎이고, 많이 넘기면 취소됩니다. 제때 끝낼수록 외주 평판이 올라 더 크고 비싼 일감이 들어옵니다." />
       {(() => {
         // A-144: 외주 평판 — 단계 이름과 다음 단계까지 막대만(점수·단가는 숨김)
         const t = trustLevel(s);
@@ -282,8 +313,8 @@ export function ContractsCard() {
         const pct = Math.min(100, (a.done / a.work) * 100);
         const left = Math.max(0, a.work - a.done);
         const eta = pace.total > 0 ? left / pace.total : null;
-        const dl = a.deadline - s.day;
-        const late = eta !== null && Math.ceil(eta) > dl;
+        const due = contractDue(s)!;
+        const late = due.late;
         const who = [pace.ceo > 0 ? '대표' : null, pace.team > 0 ? `개발팀 ${pace.devs}명` : null].filter(Boolean).join(' · ');
         return (
           <div className="ct-active" style={{ ['--ac' as string]: COLORS.contract }}>
@@ -291,7 +322,9 @@ export function ContractsCard() {
               <b className="grow">
                 {a.title} · {a.client}
               </b>
-              <span className={`chip ${s.day > a.deadline ? 'red' : dl <= 3 ? 'amber' : 'blue'}`}>{s.day > a.deadline ? `마감 ${s.day - a.deadline}일 지남` : `마감 ${dl}일 남음`}</span>
+              <span className={`chip ${due.overdue ? 'red' : due.dl <= 3 ? 'amber' : 'blue'}`} title={due.tip}>
+                {due.text}
+              </span>
             </div>
             <div className="ct-progress">
               <b>{Math.floor(pct)}%</b>
@@ -343,7 +376,7 @@ export function ContractsCard() {
                   {(o.tier ?? 0) >= 2 && <span className="chip amber">큰 일감</span>}
                 </div>
                 <div className="tiny muted">
-                  {o.client} · 기간 {o.days}일
+                  {o.client} · 기간 근무 {o.days}일
                 </div>
                 <div className={`tiny ${ok ? '' : 'warn'}`} title="대표가 하루 내내 외주만 할 때">
                   대표 혼자 {daysText(solo)} 걸림{ok ? '' : ' · 기간 안에 혼자는 어려움'}

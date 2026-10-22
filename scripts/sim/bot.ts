@@ -9,7 +9,7 @@ import { createPosting, offerJob } from '../../src/core/hiring';
 import { runwayMonths, lastRevenue, projectedMonthlyPayroll, debtBalance } from '../../src/core/finance';
 import { startRound, sendLetter, requestDecision, closeForOffer, acceptOffer, activeRound, fits, decisionProbability, selectableStages } from '../../src/core/funding';
 import { setOrder } from '../../src/core/orders';
-import { audience, campaignBlock, campaignCost, campaignDef, startCampaign } from '../../src/core/ads';
+import { audience, campaignBlock, campaignCost, campaignDef, marketers, startCampaign } from '../../src/core/ads';
 import { setAdBudget, launchMarket, launchBlock, totalUsers, shares, demand, revenuePerUser } from '../../src/core/market';
 import { moveOffice, moveBlock, seatsAvailable, furnitureItems, buyFurniture, buyFurnitureBlock } from '../../src/core/office';
 import { chooseModel, latestModels, setAdoption } from '../../src/core/aiadopt';
@@ -177,8 +177,12 @@ function opsStep(s: GameState) {
       setAdBudget(s, m, m === 'kr' ? b : b * 0.5);
       // 광고 캠페인(A-116): 출시 기념 한 번(돈이 넉넉할 때), 광고가 지치면 새 소재로
       if (!NOVICE && !campaignBlock(s, 'launch', m) && s.cash > campaignCost(s, campaignDef('launch')!, m) * 6) startCampaign(s, 'launch', m, audience(s) === 'b2b' ? 'feature' : 'story');
+      // A-157: 마케터가 있으면 광고 운영을 맡김(소재 교체도 팀이 함). 없으면 직접 소재를 바꿈
+      if (!NOVICE) s.company.adAuto = marketers(s) > 0;
       const fat = Object.values(s.markets[m].adFatigue ?? {});
-      if (!NOVICE && fat.length && Math.max(...fat.map((x) => x ?? 0)) > 0.5 && !campaignBlock(s, 'refresh', m)) startCampaign(s, 'refresh', m, 'feature');
+      if (!NOVICE && !s.company.adAuto && fat.length && Math.max(...fat.map((x) => x ?? 0)) > 0.5 && !campaignBlock(s, 'refresh', m)) startCampaign(s, 'refresh', m, 'feature');
+      // 규모로 열리는 캠페인(A-157): 돈이 넉넉하면(비용의 12배) 친구 초대·충성 고객·회사 컨퍼런스
+      if (!NOVICE) for (const id of ['referral', 'loyalty', 'conference']) if (!campaignBlock(s, id, m) && s.cash > campaignCost(s, campaignDef(id)!, m) * 12) startCampaign(s, id, m, audience(s) === 'b2b' ? 'feature' : 'story');
     }
   }
   // 해외 진출

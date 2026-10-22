@@ -66,6 +66,7 @@ Event:
 | `id` | `ev_` 접두어 고유 id |
 | `cat` | `staff` `product` `market` `finance` `investor` `legal` `pr` `ai` `economy` `personal` `competitor` `public` `office` |
 | `from` | 보낸 사람 표시. `"{target}"`(대상 직원), 또는 고정 문자열(예: "법무법인 바른길", "페이퍼뉴스 기자", "이사회") |
+| `outside` | `true`면 `staff`·`office` 이벤트라도 #전체가 아니라 외부 연락처로 옴(건물 관리인·건물주처럼 회사 밖 사람, A-150) |
 | `weight` | 상대 빈도(1이 보통, 0.3 드묾, 2 잦음) |
 | `cooldown` | 같은 이벤트 재등장 최소 간격(일). 보통 120~720 |
 | `once` | `true`면 판마다 한 번 |
@@ -279,3 +280,29 @@ Choice:
 | `warn` · `burnoutAt` · `healthAt` · `cardCooldown` | 비서 알림 문턱, 번아웃 카드·건강검진 카드 문턱(둘 다 `cond: {"flag": "ceo_tired_now"}`), 카드 사이 최소 일수 |
 
 사건 효과 키 `ceoEnergy`: 대표 컨디션 증감(번아웃·건강 카드에서 쉬는 선택지).
+
+## B2C 규모 (A-156)
+
+| 위치 · 키 | 뜻 |
+| --- | --- |
+| `industries.json` 산업 `tamMult` | 이 산업만 쓰는 해외 시장 잠재 고객 배수 `{jp, sea, us, eu}`(없으면 `markets.json` 시장 값). B2C(소비자 앱·커머스·핀테크)만 큼 |
+| `departments.json` → `capScale.b2c` `{from, perDecade}` | B2C 고객지원·인프라 필요 인원: `from`명까지는 사용자에 비례, 그 뒤로는 사용자 10배마다 `perDecade`명씩. B2B는 키가 없어 예전처럼 비례 |
+| `markets.json` → `scale.b2c` · `scale.b2b` | 규모 사다리(사용자 수). 처음 넘으면 뉴스·알림, 업무 창 대시보드에 위치 |
+| `markets.json` → `scale.room` `{near, full, over}` | 제품 여유 판정: 사용자 ÷ 받쳐 주는 고객 수(잠재 고객 × 점유율, 화면에 숫자 없음) |
+
+## 마케팅팀·광고 확장 `src/data/ads.json` (A-157)
+
+| 키 | 뜻 |
+| --- | --- |
+| 채널·캠페인 `unlock` `{b2c?, b2b?}` | 회사 최고 사용자 수가 이 값을 넘으면 열림. 그 갈래 키가 없으면 그 산업은 못 씀. 없으면 처음부터 열림 |
+| 캠페인 `prep` | 준비 기간(일). 실제 = prep ÷ (1 + `team.prepPer` × 마케터 수) 올림. 준비 중엔 효과 없음 |
+| 캠페인 `onStart` `{key, value, days, label}` | 준비가 끝나 시작할 때 거는 기간 효과(`viral` = 입소문 배율, `churn` = 이탈) |
+| 캠페인 `months` · `evenYears` | 이 달(1~12)에만, 짝수 해에만 할 수 있음 |
+| 캠페인 `perUser` `{b2c?, b2b?}` | 그 시장 사용자 1명(곳)당 더 드는 비용(혜택을 사람마다 주는 친구 초대·충성 고객) |
+| 캠페인 `cooldown` | 끝난 뒤 같은 시장에서 다시 하려면 기다릴 날(늘 켜 두는 게 이득이 되지 않게) |
+| `team.slotsBase` | 마케터 없이 돌릴 수 있는 채널 수. 마케터 1명마다 +1, 넘는 채널은 예산 작은 것부터 쉼 |
+| `team.steady` | 캠페인 결과 흔들림 × 1 ÷ (1 + steady × 마케터 수) |
+| `team.shiftBase` · `shiftPer` · `shiftMax` · `gap` | 맡기기: 매달 성과 가장 나쁜 채널 예산의 (shiftBase + shiftPer × 마케터 수, 최대 shiftMax)를 가장 좋은 채널로(차이가 gap배 넘을 때) |
+| `team.refreshAt` · `trial` · `awareValue` | 맡기기: 지침이 refreshAt 넘는 채널 소재 교체, 빈 일손이면 잘 맞는 새 채널에 총예산의 trial, 성과 = 데려온 고객 + 알린 사람 × awareValue |
+
+월초 고객 리포트(`src/core/marketing.ts`)는 지난달 들어온 길(스스로·입소문·영업·광고·캠페인)과 떠난 이유(원래 떠나는 고객·버그·가격·고객지원·기간 효과 이름·제품보다 많이 데려옴)를 마케팅팀 채널로, 마케터가 없으면 #전체에 비서가 짧게 보냅니다. 경기 탓 이탈은 "원래 떠나는 고객"에 넣어 말하지 않습니다(경기 문구는 뉴스로만).

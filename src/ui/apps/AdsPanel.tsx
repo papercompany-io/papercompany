@@ -1,22 +1,29 @@
 // 시장·광고 메뉴의 광고 탭(A-116): 왼쪽 회색 판 = 채널별 예산(궁합·지침 표시), 오른쪽 = 지난 30일 성과 · 캠페인
 // 효과량은 미리 보여 주지 않고, 써 본 결과(성과·캠페인 결과)로 배우게 합니다.
+// A-158: 마케팅팀 일손(동시에 돌리는 채널 수)·맡기기, 캠페인 준비 기간, 규모가 커지면 열리는 채널·캠페인 예고
 import { useState } from 'react';
 import { DATA, industry, market, MARKET_IDS } from '../../core/data';
 import {
   activeCampaigns,
   adMix,
+  adSlots,
   campaignBlock,
   campaignCost,
   campaignDef,
   campaignVerdict,
   channelsFor,
   fitLabel,
+  lockedByScale,
+  marketers,
+  prepDays,
+  runningChannels,
   seasonMult,
   seasonName,
   setChannelBudget,
   startCampaign,
 } from '../../core/ads';
-import { wonShort } from '../../core/format';
+import { countShort, wonShort } from '../../core/format';
+import { unitWord } from '../../core/market';
 import { act, useGame } from '../store';
 import { Help } from '../common';
 import { play } from '../sound';
@@ -38,6 +45,11 @@ export function Ads({ setMsg }: { setMsg: (m: string | null) => void }) {
   const step = Math.max(1e5, Math.round(Math.max(2e7, s.cash / 6) / 200 / 1e5) * 1e5);
   const season = seasonName(s);
   const sm = seasonMult(s);
+  const run = new Set(runningChannels(s, m));
+  const slots = adSlots(s);
+  const mk = marketers(s);
+  const onCount = Object.values(mix).filter((x) => x > 0).length;
+  const locked = lockedByScale(s);
   return (
     <div className="hire-layout">
       <section className="hire-form">
@@ -54,6 +66,29 @@ export function Ads({ setMsg }: { setMsg: (m: string | null) => void }) {
             ))}
           </div>
         )}
+        <div className="ad-crew" data-testid="ad-crew">
+          <div className="fb-row">
+            <span>
+              돌리는 채널 <Help text="광고 채널 하나를 돌리려면 일손이 하나 필요합니다. 대표 혼자서는 한 채널, 마케터 한 명마다 한 채널씩 더 돌립니다. 일손보다 많은 채널에 예산을 넣으면 예산이 작은 채널부터 쉽니다." />
+            </span>
+            <b>
+              {Math.min(onCount, slots)} / {slots}개 · 마케터 {mk}명
+            </b>
+          </div>
+          {mk > 0 ? (
+            <div className="seg ad-auto">
+              <button className={s.company.adAuto ? '' : 'on'} data-testid="ad-auto-off" onClick={() => act((g) => (g.company.adAuto = false))}>
+                직접 정하기
+              </button>
+              <button className={s.company.adAuto ? 'on' : ''} data-testid="ad-auto-on" onClick={() => act((g) => (g.company.adAuto = true))}>
+                마케팅팀에 맡기기
+              </button>
+            </div>
+          ) : (
+            <div className="tiny muted">마케터를 뽑으면 채널을 더 돌리고, 광고 운영을 맡길 수 있습니다.</div>
+          )}
+          {s.company.adAuto && mk > 0 && <div className="tiny muted">매달 초 마케팅팀이 성과가 나쁜 채널 예산을 좋은 채널로 옮기고, 지친 소재를 새로 만듭니다. 한 달 광고비 합계는 그대로입니다. 한 일은 마케팅팀 채널로 보고합니다.</div>}
+        </div>
         {season && (
           <div className={`ad-season ${sm >= 1 ? 'up' : 'down'}`}>
             지금은 <b>{season}</b> — 광고가 {sm >= 1 ? '더 잘' : '덜'} 통합니다.
@@ -64,20 +99,51 @@ export function Ads({ setMsg }: { setMsg: (m: string | null) => void }) {
             const fit = fitLabel(s, c.id);
             const fat = ms.adFatigue?.[c.id] ?? 0;
             const v = mix[c.id] ?? 0;
+            const resting = v > 0 && !run.has(c.id);
+            const noHands = v <= 0 && onCount >= slots;
             return (
-              <div key={c.id} className={`ad-ch ${v > 0 ? 'on' : ''}`}>
+              <div key={c.id} className={`ad-ch ${v > 0 ? 'on' : ''} ${resting ? 'rest' : ''}`}>
                 <div className="ad-ch-head">
                   <b>{c.name}</b>
                   {fit.text !== '보통' && <span className={`chip ${fit.tone}`}>{fit.text}</span>}
                   {fat >= 0.3 && <span className="chip amber">{fat >= 0.6 ? '많이 지침' : '조금 지침'}</span>}
+                  {resting && <span className="chip red">쉼 · 일손 모자람</span>}
                   <span className="ad-ch-v">{v ? `월 ${wonShort(v)}` : '안 함'}</span>
                 </div>
                 <div className="ad-ch-desc">{c.desc}</div>
-                <input type="range" className="inv-range" data-testid={`adch-${m}-${c.id}`} min={0} max={max} step={step} value={v} onChange={(e) => act((g) => setChannelBudget(g, m, c.id, Number(e.target.value)))} />
+                <input
+                  type="range"
+                  className="inv-range"
+                  data-testid={`adch-${m}-${c.id}`}
+                  min={0}
+                  max={max}
+                  step={step}
+                  value={v}
+                  disabled={noHands}
+                  title={noHands ? `지금은 채널 ${slots}개까지 돌릴 수 있습니다` : undefined}
+                  onChange={(e) => setMsg(act((g) => setChannelBudget(g, m, c.id, Number(e.target.value))) ?? null)}
+                />
               </div>
             );
           })}
         </div>
+        {locked.length > 0 && (
+          <div className="ad-locked" data-testid="ad-locked">
+            <div className="hf-label">더 크면 열리는 광고</div>
+            {locked.slice(0, 4).map((x) => (
+              <div key={x.name} className="fb-line">
+                <span>
+                  {x.name}
+                  {x.kind === 'campaign' && <em className="chip">캠페인</em>}
+                </span>
+                <b>
+                  {industry(s.company.industry).unit} {countShort(x.need)}
+                  {unitWord(s)}부터
+                </b>
+              </div>
+            ))}
+          </div>
+        )}
         <div className="fb-row big">
           <span>한 달 광고비 합계</span>
           <b>{wonShort(total)}</b>
@@ -137,31 +203,39 @@ function Campaigns({ m, setMsg }: { m: MarketId; setMsg: (m: string | null) => v
   const [tone, setTone] = useState<Record<string, string>>({});
   const unit = industry(s.company.industry).unit;
   const running = activeCampaigns(s, m);
-  const past = (s.campaigns ?? []).filter((c) => c.done && c.market === m && c.def !== 'refresh').slice(-3).reverse();
+  const past = (s.campaigns ?? []).filter((c) => c.done && c.market === m && (campaignDef(c.def)?.power ?? 0) > 0).slice(-3).reverse();
   return (
     <>
       {running.map((c) => {
         const def = campaignDef(c.def)!;
-        const frac = Math.min(1, (s.day - c.startDay) / Math.max(1, c.endDay - c.startDay));
+        // 준비 중(A-158)이면 준비 기간 막대, 시작했으면 진행 기간 막대
+        const prep = c.prepUntil !== undefined && s.day < c.prepUntil;
+        const from = prep ? c.startDay : (c.prepUntil ?? c.startDay);
+        const to = prep ? c.prepUntil! : c.endDay;
+        const frac = Math.min(1, (s.day - from) / Math.max(1, to - from));
         return (
-          <div key={c.id} className="post-card" style={{ ['--dc' as string]: 'var(--accent)' }}>
+          <div key={c.id} className="post-card" style={{ ['--dc' as string]: prep ? 'var(--caution)' : 'var(--accent)' }}>
             <div className="pc-head">
               <span className="pc-dot" />
               <b>{def.name}</b>
-              <span className="chip blue">진행 중</span>
-              <span className="pc-hired">D-{Math.max(0, c.endDay - s.day)}</span>
+              {prep ? <span className="chip amber">준비 중</span> : <span className="chip blue">진행 중</span>}
+              <span className="pc-hired">{prep ? `${Math.max(0, to - s.day)}일 뒤 시작` : `D-${Math.max(0, c.endDay - s.day)}`}</span>
             </div>
             <div className="pc-time">
               <i style={{ width: `${frac * 100}%` }} />
             </div>
-            <div className="pc-stats">
-              <span>
-                지금까지 {unit} <b>{Math.round(c.got).toLocaleString('ko-KR')}</b>
-              </span>
-              <span>
-                알린 정도 <b>+{(c.aware * 100).toFixed(1)}%p</b>
-              </span>
-            </div>
+            {def.power > 0 ? (
+              <div className="pc-stats">
+                <span>
+                  지금까지 {unit} <b>{Math.round(c.got).toLocaleString('ko-KR')}</b>
+                </span>
+                <span>
+                  알린 정도 <b>+{(c.aware * 100).toFixed(1)}%p</b>
+                </span>
+              </div>
+            ) : (
+              <div className="tiny muted">{def.desc}</div>
+            )}
           </div>
         );
       })}
@@ -169,8 +243,9 @@ function Campaigns({ m, setMsg }: { m: MarketId; setMsg: (m: string | null) => v
         if (running.some((c) => c.def === def.id)) return null;
         const block = campaignBlock(s, def.id, m);
         const isRefresh = !!(def as { refresh?: boolean }).refresh;
-        if (block && (block.includes('한 번만') || block.includes('단계'))) return null;
+        if (block && (block.includes('한 번만') || block.includes('단계') || block.startsWith('규모:') || block.includes('맞지 않는'))) return null;
         const t = tone[def.id] ?? AD.tones[0].id;
+        const prep = prepDays(s, def);
         return (
           <div key={def.id} className="post-card ad-cp">
             <div className="pc-head">
@@ -180,8 +255,9 @@ function Campaigns({ m, setMsg }: { m: MarketId; setMsg: (m: string | null) => v
             <div className="inv-desc">
               {def.desc}
               {def.days > 1 ? ` ${def.days}일 동안.` : ''}
+              {prep > 0 && <span className="tiny muted"> 준비 {prep}일{marketers(s) ? '' : '(마케터가 있으면 빨라짐)'}.</span>}
             </div>
-            {!isRefresh && (
+            {!isRefresh && def.power > 0 && (
               <>
                 <div className="hf-label">광고 문구</div>
                 <div className="seg ad-tones">

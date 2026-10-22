@@ -342,7 +342,7 @@ export interface MarketState {
   adBudget: number; // 월 광고 예산(원)
   peakShare: number;
   // 성장 분석(시장 메뉴): 최근 약 2주 평균 하루 획득·이탈과 점유율 상한(저장에 없을 수 있음)
-  flow?: { target: number; inbound: number; viral: number; sales: number; paid: number; lost: number };
+  flow?: { target: number; inbound: number; viral: number; sales: number; paid: number; lost: number; why?: Partial<Record<string, number>> }; // why = 떠나는 이유별 하루 평균(A-157)
   // 광고 채널(A-116): 채널별 월 예산(합은 adBudget), 피로 0~1, 성과(하루 평균, 약 30일 이동 평균). 없으면 예전 저장
   ads?: Partial<Record<string, number>>;
   adFatigue?: Partial<Record<string, number>>;
@@ -363,6 +363,8 @@ export interface Campaign {
   got: number; // 데려온 고객
   aware: number; // 올린 인지도(0~1)
   done: boolean;
+  prepUntil?: number; // A-157 이 날까지 준비(효과 없음). 없으면 예전 저장 — 바로 진행
+  live?: boolean; // A-157 준비를 마치고 시작함(시작 알림·기간 효과를 한 번만)
 }
 
 export interface Competitor {
@@ -508,7 +510,18 @@ export interface Company {
   placed?: PlacedItem[]; // 산 가구(A-87). gx·gy가 null이면 보관 중
   orderDay?: Partial<Record<DeptId, number>>; // 부서 지시를 마지막으로 바꾼 날(A-94: 잦은 변경은 반발)
   orderPushback?: { dept: DeptId; order: string; day: number } | null; // 팀이 거절한 지시(이틀 안에 다시 내리면 강행)
+  adAuto?: boolean; // A-157 광고 채널 예산을 마케팅팀에 맡김(매달 성과 보고 옮김·지친 소재 교체)
+  custMonth?: CustMonth; // A-157 이번 달 고객이 들고 난 길(월초 고객 리포트가 읽고 비움)
 }
+
+// 이번 달 고객 흐름(A-157): 어디서 왔고 왜 떠났나(모든 시장 합, 명)
+export interface CustMonth {
+  start: number; // 달이 시작할 때 사용자
+  gain: Partial<Record<GainWhy, number>>;
+  lost: Partial<Record<string, number>>; // LossWhy 또는 "mod:기간 효과 이름"
+}
+export type GainWhy = 'inbound' | 'viral' | 'sales' | 'ads' | 'campaign';
+export type LossWhy = 'natural' | 'bugs' | 'price' | 'cs' | 'excess';
 
 // 사무실에 놓은(또는 보관 중인) 가구 하나. gx·gy = 차지하는 칸의 왼쪽 위
 export interface PlacedItem {

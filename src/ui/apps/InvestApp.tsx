@@ -732,6 +732,66 @@ function EsopCard() {
   );
 }
 
+// 투자사 대화 아래 상태 줄(A-152): 메신저 투자사 채널의 입력창 자리. 라운드 · 이 투자사 상태 · 관심 · 보낸 레터, 다음 할 일 한 줄
+export function InvestorBar({ investorId, onPeek, onOpenInvest }: { investorId: string; onPeek: () => void; onOpenInvest: () => void }) {
+  const s = useGame();
+  const r = activeRound(s);
+  const inv = investor(investorId);
+  const t = r?.letters[investorId];
+  const st = r ? invStatus(r, investorId) : null;
+  const letters = DATA.funding.letters;
+  return (
+    <div className="mg-box inv-bar" data-testid="investor-bar">
+      <div className="mg-box-head">
+        <b>{inv.name}</b>
+        <span className="chip">{inv.kind}</span>
+        {st?.text && <span className={`chip ${st.tone}`}>{st.text}</span>}
+        <span className="grow" />
+        {r && (
+          <span className="inv-bar-round">
+            {stage(r.stage).name} 라운드 · {r.status === 'offer' ? '제안서 도착' : `마감 ${Math.max(0, r.endDay - s.day)}일 남음`}
+          </span>
+        )}
+      </div>
+      {r?.status === 'open' && (
+        <div className="inv-bar-stats">
+          <div className="emp-bar">
+            <span>관심</span>
+            <div className="meter">
+              <div style={{ width: `${t?.interest ?? 0}%` }} />
+            </div>
+            <b>{t?.interest ?? 0}</b>
+          </div>
+          <div className="inv-bar-letters" title="보낸 레터">
+            {letters.map((l) => (
+              <span key={l.id} className={t?.sent.includes(l.id) ? 'on' : ''}>
+                {t?.sent.includes(l.id) && <PxIcon id="check" size={11} />}
+                {l.name}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+      <div className="inv-bar-foot">
+        <span className="inv-bar-next">{investorNextStep(s, r ?? null, investorId)}</span>
+        <button className="btn small ghost" data-testid="invest-peek-btn" onClick={onPeek}>
+          투자 현황
+        </button>
+        <button className="btn small" data-testid="invest-bar-open" onClick={onOpenInvest}>
+          {r?.status === 'open' ? '투자 창에서 레터 보내기' : '투자 창 열기'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// 이 투자사와 다음에 할 일 한 문장(존댓말 보고체)
+function investorNextStep(s: GameState, r: Round | null, investorId: string): string {
+  const t = r?.letters[investorId];
+  // TODO(human)
+  return '';
+}
+
 // 투자 요약 팝업(A-124): 메신저에서 "투자 메뉴 열기"를 누르면 창을 바꾸지 않고 지금 라운드와 이 투자사 상태만 간단히 보여 줍니다.
 export function InvestPeek({ investorId, onOpenFull, onClose }: { investorId?: string; onOpenFull: () => void; onClose: () => void }) {
   const s = useGame();

@@ -95,9 +95,8 @@ export function hiringArrivals(s: GameState, upTo: number) {
       q.shift();
       if (p.status !== 'open' || waitingRoom(s, p) === 0) continue;
       const a = rollApplicant(s, p.dept, p.salaryLevel, p.id, p.level);
+      // A-154: 지원 알림은 보내지 않음 — 채용 앱 목록(지원자 수)과 비서 힌트에서만 확인
       s.applicants.push(a);
-      // 개발 공고는 지원자가 자주 몰려 알림을 보내지 않음 — 채용 앱 목록에서만 확인
-      if (p.dept !== 'dev') notify(s, `채용: ${a.name}님이 ${dept(p.dept).name} 공고에 지원했습니다(능력 ${a.grade} · 경력 ${a.years}년).`, 'info', 'hiring');
     }
   }
 }

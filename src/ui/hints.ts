@@ -55,7 +55,8 @@ export function nextHint(s: GameState, desktopOpenedOnce: boolean): string {
   const kr = s.markets.kr;
   if (kr.flow && kr.users >= kr.flow.target * 0.9 && kr.awareness < 0.1 && s.plHistory.length >= 2) {
     const hasMkt = s.employees.some((e) => e.dept === 'marketing');
-    return `고객이 점유율 상한(약 ${Math.round(kr.flow.target).toLocaleString('ko-KR')})에 막혀 있습니다. 인지도 ${(kr.awareness * 100).toFixed(1)}% — ${hasMkt ? '광고 예산을 늘리거나 디자인팀에 "브랜드 디자인"을 맡기세요' : '마케터를 뽑아 "콘텐츠·PR"을 맡기거나 광고 예산을 쓰세요'}. 시장·광고 메뉴 "성장 분석"에서 원인을 볼 수 있습니다.`;
+    // A-158: 받쳐 주는 고객 수는 숫자로 말하지 않음(규모 사다리·제품 여유 한 줄로)
+    return `고객이 지금 알려진 만큼은 거의 다 왔습니다. 인지도 ${(kr.awareness * 100).toFixed(1)}% — ${hasMkt ? '광고 예산을 늘리거나 디자인팀에 "브랜드 디자인"을 맡기세요' : '마케터를 뽑아 "콘텐츠·PR"을 맡기거나 광고 예산을 쓰세요'}. 업무 창 상태 탭에서 고객이 들고 나는 길과 떠나는 이유를 볼 수 있습니다.`;
   }
   if (isFull(s) && s.company.officeTier < 5) return '책상을 더 놓을 수 없습니다. 사무실 메뉴에서 더 큰 사무실로 옮기세요.';
   for (const d of DATA.depts.departments.map((x) => x.id as DeptId)) {

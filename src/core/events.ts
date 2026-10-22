@@ -43,6 +43,7 @@ export interface EventDef {
   id: string;
   cat: string;
   from: string;
+  outside?: boolean; // 사내 범주(office 등)라도 회사 밖 사람이 보냄 → 외부 연락처(A-150)
   weight?: number;
   cooldown?: number;
   once?: boolean;
@@ -374,7 +375,7 @@ export function trigger(s: GameState, forceId?: string, opts: { competitorId?: s
   }
   if (!choices.some((c) => c.enabled)) return null;
   const from = fill(s, ev.from, ctx);
-  const channelId = target && ev.from.includes('{target}') ? `dm-${target.id}` : ev.cat === 'staff' || ev.cat === 'office' ? 'all' : ensureNamedExternal(s, from);
+  const channelId = target && ev.from.includes('{target}') ? `dm-${target.id}` : (ev.cat === 'staff' || ev.cat === 'office') && !ev.outside ? 'all' : ensureNamedExternal(s, from);
   const id = nextId(s, 'd');
   const d: PendingDecision & { map: number[]; ctx: Ctx } = {
     id,

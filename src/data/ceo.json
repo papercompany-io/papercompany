@@ -83,7 +83,7 @@
   "approveBonus": 0.05,
   "approvePenalty": 0.2,
   "outings": {
-    "_note": "대표 외출(A-101): 대표는 평소 주 업무 하나만 하고(하루 칸 배분 없음), 투자자 미팅·컨퍼런스 같은 일은 메신저로 오는 초대를 수락해 1~3일 자리를 비우고 합니다. 외출 날은 하루 내내 그 일(action)을 하고, 끝나면 bonus. chance = 하루에 새 초대가 올 확률(round = 투자 라운드 중일 때). needsMvp = MVP가 있어야 오는 초대(데모데이·고객사 방문 A-119, 컨퍼런스 연사 A-121)",
+    "_note": "대표 외출(A-101): 대표는 평소 주 업무 하나만 하고(하루 칸 배분 없음), 투자자 미팅·컨퍼런스 같은 일은 메신저로 오는 초대를 수락해 1~3일 자리를 비우고 합니다. 외출 날은 하루 내내 그 일(action)을 하고, 끝나면 bonus. chance = 하루에 새 초대가 올 확률(round = 투자 라운드 중일 때, A-154로 절반쯤으로 낮춤). needsMvp = MVP가 있어야 오는 초대(데모데이·고객사 방문 A-119, 컨퍼런스 연사 A-121)",
     "maxOffers": 3,
     "_timeNote": "일정 시간·이동(A-127): 하루짜리 외출은 hours(시간) 동안만 자리를 비우고 나머지 시간은 주 업무. 오가는 이동 시간(travel, 편도)도 일을 못 하고, 겹침 판정에 들어감. 이동 시간은 회사 단계(company.stage)별 범위에서 30분 단위로 무작위: 차고·MVP 때는 1~2시간(대중교통·먼 약속), 스케일업 이후는 30분(기사·가까운 사무실). 여러 날 외출은 하루 내내",
     "travelByStage": [
@@ -118,8 +118,8 @@
           1
         ],
         "cost": 0,
-        "chance": 0.05,
-        "roundChance": 0.3,
+        "chance": 0.025,
+        "roundChance": 0.2,
         "bonus": {
           "ir": 2
         },
@@ -140,8 +140,8 @@
           2
         ],
         "cost": 300000,
-        "chance": 0.03,
-        "roundChance": 0.12,
+        "chance": 0.015,
+        "roundChance": 0.08,
         "needsMvp": true,
         "bonus": {
           "ir": 3,
@@ -161,7 +161,7 @@
           3
         ],
         "cost": 1500000,
-        "chance": 0.05,
+        "chance": 0.025,
         "bonus": {
           "network": 6
         },
@@ -184,7 +184,7 @@
           1
         ],
         "cost": 200000,
-        "chance": 0.07,
+        "chance": 0.035,
         "bonus": {
           "network": 2
         },
@@ -206,7 +206,7 @@
           2
         ],
         "cost": 100000,
-        "chance": 0.05,
+        "chance": 0.025,
         "needsMvp": true,
         "bonus": {
           "pipeline": 1

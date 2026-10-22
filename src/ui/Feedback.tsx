@@ -1,12 +1,12 @@
 // DT-04 알림 토스트, DC-01 긴급 결정 창, 축하 연출(색종이). 화면 피드백 묶음.
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { resolveDecision } from '../core/events';
+import { eventDef, resolveDecision } from '../core/events';
 import { wonShort } from '../core/format';
 import type { GameState, Notice, PendingDecision } from '../core/types';
 import { act } from './store';
 import { play } from './sound';
 import { PxIcon, type PxId } from './icons';
-import { COLORS as WORK_COLORS, contractPace, daysText } from './apps/ScheduleApp';
+import { COLORS as WORK_COLORS, contractDue, contractPace, daysText } from './apps/ScheduleApp';
 import './feedback.css';
 
 const ICON: Record<Notice['kind'], PxId> = { info: 'talk', good: 'check', bad: 'warn', urgent: 'siren', achievement: 'trophy', mission: 'star' };
@@ -65,9 +65,23 @@ export function Toasts({ s, enabled, onOpen }: { s: GameState; enabled: boolean;
   );
 }
 
+// 답장 선택지(A-152): 한 줄에 하나(이름 · 설명 / 오른쪽 비용), 기한이 지나면 고를 답에 "기본" 표시. 답한 뒤엔 내 답 + 결과
 export function DecisionView({ d, onDone }: { d: PendingDecision; onDone?: () => void }) {
   const [res, setRes] = useState<string | null>(null);
-  if (d.resolved) return <div className="ok">결과: {d.resolved.text}</div>;
+  if (d.resolved) {
+    const picked = d.choices[d.resolved.choice];
+    return (
+      <div className="dc-done">
+        <div className="dc-done-head">
+          <PxIcon id="check" size={14} />
+          <span>{d.resolved.auto ? '기한이 지나 기본 답으로 정해졌습니다' : '내 답'}</span>
+          {picked && <b>{picked.label}</b>}
+        </div>
+        <div className="dc-done-text">{d.resolved.text}</div>
+      </div>
+    );
+  }
+  const def = eventDef(d.eventId)?.default ?? d.choices.length - 1;
   return (
     <div className="decision" data-testid="decision">
       <div className="dc-choices">
@@ -86,12 +100,15 @@ export function DecisionView({ d, onDone }: { d: PendingDecision; onDone?: () =>
               }
             }}
           >
-            <span className="dc-label">
-              {c.label} {c.isNew && <span className="chip green">NEW</span>}
+            <span className="dc-main">
+              <span className="dc-label">
+                {c.label}
+                {c.isNew && <span className="chip green">NEW</span>}
+                {i === def && <span className="chip">기본</span>}
+              </span>
+              {!c.enabled && c.why ? <span className="dc-hint bad">{c.why}</span> : c.hint && <span className="dc-hint">{c.hint}</span>}
             </span>
-            {c.cost > 0 && <span className="dc-cost">비용 {wonShort(c.cost)}</span>}
-            {c.hint && <span className="dc-hint">{c.hint}</span>}
-            {!c.enabled && c.why && <span className="dc-hint bad">{c.why}</span>}
+            <span className={`dc-cost ${c.cost > 0 ? '' : 'free'}`}>{c.cost > 0 ? wonShort(c.cost) : '비용 없음'}</span>
           </button>
         ))}
       </div>
@@ -181,14 +198,16 @@ function ContractStackCard({ s, onOpen }: { s: GameState; onOpen: (app: string, 
   const pct = Math.min(100, (a.done / a.work) * 100);
   const pace = contractPace(s);
   const eta = pace.total > 0 ? Math.max(0, a.work - a.done) / pace.total : null;
-  const dl = a.deadline - s.day;
-  const late = s.day > a.deadline || (eta !== null && Math.ceil(eta) > dl);
+  const due = contractDue(s)!;
+  const late = due.late;
   return (
     <button className={`ss-card contract ${late ? 'late' : ''}`} data-testid="stack-contract" onClick={() => onOpen('product', 'contract')}>
       <div className="ss-head">
         <PxIcon id="case" size={16} />
         <b className="ss-from">외주 · {a.title}</b>
-        <span className={`ss-due ${late ? 'bad' : ''}`}>{dl < 0 ? `마감 ${-dl}일 지남` : `마감 ${dl}일 남음`}</span>
+        <span className={`ss-due ${late ? 'bad' : ''}`} title={due.tip}>
+          {due.text}
+        </span>
       </div>
       <div className="ss-progress">
         <b>{Math.floor(pct)}%</b>

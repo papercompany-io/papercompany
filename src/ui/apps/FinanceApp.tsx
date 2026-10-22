@@ -63,21 +63,36 @@ export function FinanceApp() {
   );
 }
 
-// Startup Company 예산 화면처럼: 왼쪽 빨간 판(나가는 돈), 오른쪽 초록 판(들어오는 돈), 아래 회색 판(통장)
+// Startup Company 예산 화면처럼: 위 달 고르기, 왼쪽 빨간 판(나가는 돈), 오른쪽 초록 판(들어오는 돈), 아래 회색 판(통장)
+// 이번 달은 지금까지 실제로 들어오고 나간 돈이 쌓이고, 지난 달은 정산된 값(A-153)
 function PLView() {
   const s = useGame();
   const cur: PLMonth = { ...currentPL(s), partial: true };
   const months: PLMonth[] = [...s.plHistory.slice(-5), cur];
+  const all: PLMonth[] = [...s.plHistory, cur]; // 달 고르기에는 지난 달 전부
   const [table, setTable] = useState(false);
+  const [pick, setPick] = useState<string | null>(null); // A-153 고른 달. 없으면 이번 달
+  const shownM = all.find((m) => m.month === pick) ?? cur;
+  const monthName = `${formatMonth(shownM.month)}${shownM.partial ? ' (진행 중)' : ''}`;
   const rw = runwayMonths(s);
-  const spent = cur.revenue - cur.netIncome;
+  const spent = shownM.revenue - shownM.netIncome;
   const debt = debtBalance(s);
   const lenders = [...new Set((s.loans ?? []).map((l) => l.lender))].join(', ');
   return (
     <div className="col">
+      <label className="fin-months">
+        <span>기간</span>
+        <select data-testid="fin-month" value={shownM.partial ? '' : shownM.month} onChange={(e) => setPick(e.target.value || null)}>
+          {[...all].reverse().map((m) => (
+            <option key={m.month} value={m.partial ? '' : m.month}>
+              {m.partial ? `이번 달 (${formatMonth(m.month)})` : formatMonth(m.month)}
+            </option>
+          ))}
+        </select>
+      </label>
       <div className="fin-budget">
-        <MoneyList tone="out" title={`나가는 돈 · ${formatMonth(cur.month)}`} items={costGroups(cur)} total={spent} empty="아직 나간 돈이 없습니다" />
-        <MoneyList tone="in" title={`들어오는 돈 · ${formatMonth(cur.month)}`} items={REVENUES.map(([label, f]) => ({ label, v: f(cur) }))} total={cur.revenue} empty="아직 번 돈이 없습니다" />
+        <MoneyList tone="out" title={`나가는 돈 · ${monthName}`} items={costGroups(shownM)} total={spent} empty={shownM.partial ? '아직 나간 돈이 없습니다' : '나간 돈이 없습니다'} />
+        <MoneyList tone="in" title={`들어오는 돈 · ${monthName}`} items={REVENUES.map(([label, f]) => ({ label, v: f(shownM) }))} total={shownM.revenue} empty={shownM.partial ? '아직 번 돈이 없습니다' : '들어온 돈이 없습니다'} />
       </div>
       <div className="fin-bank">
         <div className="fb-row">
@@ -106,12 +121,12 @@ function PLView() {
         </div>
         <div className="fb-row big">
           <span>
-            이번 달 {cur.netIncome < 0 ? '적자' : '흑자'}
-            <Help text="이번 달 손익 = 들어오는 돈 − 나가는 돈. 매월 1일(월급일)에 지난달을 정산합니다. 홍보비·광고비·이벤트 비용은 쓰는 날 바로 빠지고, 나머지는 정산일에 빠집니다." />
+            {shownM.partial ? '이번 달' : formatMonth(shownM.month)} {shownM.netIncome < 0 ? '적자' : '흑자'}
+            <Help text="손익 = 들어오는 돈 − 나가는 돈. 이번 달은 지금까지 실제로 쌓인 돈이고, 위 기간에서 지난 달을 고르면 정산된 결과를 봅니다. 매월 1일(월급일)에 지난달을 정산합니다. 홍보비·광고비·이벤트 비용은 쓰는 날 바로 빠지고, 나머지는 정산일에 빠집니다." />
           </span>
-          <b className={cur.netIncome < 0 ? 'fin-bad' : 'fin-good'}>
-            {cur.netIncome > 0 ? '+' : ''}
-            {man(cur.netIncome)}만원
+          <b className={shownM.netIncome < 0 ? 'fin-bad' : 'fin-good'}>
+            {shownM.netIncome > 0 ? '+' : ''}
+            {man(shownM.netIncome)}만원
           </b>
         </div>
       </div>

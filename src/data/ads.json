@@ -1,5 +1,5 @@
 {
-  "_note": "A-116 광고(사용자 지시 \"광고 기능을 많이 넣어줘\": 채널·성과 리포트·캠페인·피로/시즌). 수치 [예시값]. 채널: aware = 알리기(인지도) 몫, direct = 바로 데려오기 몫, knee = 이 채널에 한 달에 넣어도 덜 줄어드는 정도(시장 전체를 다 알리는 비용의 %), fit = 산업 궁합 배율, stage = 열리는 회사 단계. 실제 효과 = 하루 예산 ÷ (1 + 하루 예산 ÷ 무릎) × 궁합 × (1 − 피로×fatigue.max) × 시즌.",
+  "_note": "A-116 광고(사용자 지시 \"광고 기능을 많이 넣어줘\": 채널·성과 리포트·캠페인·피로/시즌). 수치 [예시값]. 채널: aware = 알리기(인지도) 몫, direct = 바로 데려오기 몫, knee = 이 채널에 한 달에 넣어도 덜 줄어드는 정도(시장 전체를 다 알리는 비용의 %), fit = 산업 궁합 배율, stage = 열리는 회사 단계. 실제 효과 = 하루 예산 ÷ (1 + 하루 예산 ÷ 무릎) × 궁합 × (1 − 피로×fatigue.max) × 시즌. A-157: unlock = 사용자(모든 시장 합, 회사 최고 기록) 규모로 열림 {b2c, b2b}(그 갈래 키가 없으면 그 산업은 못 씀). stage는 회사 단계 조건(둘 다 맞아야 열림)",
   "channels": [
     {
       "id": "search",
@@ -82,18 +82,102 @@
       }
     },
     {
+      "id": "webinar",
+      "name": "웨비나·업계 리포트",
+      "desc": "업계 담당자에게 쓸모 있는 자료와 강연으로 다가갑니다. 기업 고객이 직접 문의해 옵니다.",
+      "aware": 0.8,
+      "direct": 1.2,
+      "knee": 1.0,
+      "stage": 1,
+      "unlock": {
+        "b2c": 100000,
+        "b2b": 30
+      },
+      "fit": {
+        "saas": 1.45,
+        "consumer": 0.3,
+        "commerce": 0.4,
+        "fintech": 0.7,
+        "ai": 1.5
+      }
+    },
+    {
+      "id": "podcast",
+      "name": "팟캐스트·라디오",
+      "desc": "출퇴근길에 귀로 듣는 광고입니다. 꾸준히 알리고, 믿음이 가는 목소리라 돈·일에 쓰는 서비스에도 통합니다.",
+      "aware": 1.3,
+      "direct": 0.45,
+      "knee": 2.2,
+      "stage": 1,
+      "unlock": {
+        "b2c": 100000,
+        "b2b": 100
+      },
+      "fit": {
+        "saas": 1.1,
+        "consumer": 1.0,
+        "commerce": 0.95,
+        "fintech": 1.2,
+        "ai": 1.05
+      }
+    },
+    {
       "id": "outdoor",
       "name": "옥외·TV 광고",
       "desc": "지하철·버스·TV에 크게 겁니다. 아주 많이 알리지만 비쌉니다.",
       "aware": 2.3,
       "direct": 0.15,
       "knee": 8,
-      "stage": 3,
+      "stage": 1,
       "fit": {
         "saas": 0.55,
         "consumer": 1.2,
         "commerce": 1.15,
         "fintech": 1.2,
+        "ai": 0.5
+      },
+      "unlock": {
+        "b2c": 1000000,
+        "b2b": 1000
+      }
+    },
+    {
+      "id": "network",
+      "name": "대형 광고 네트워크",
+      "desc": "세계 곳곳의 앱·사이트에 한꺼번에 겁니다. 아주 큰 예산을 넣어도 잘 버팁니다.",
+      "aware": 1.0,
+      "direct": 1.3,
+      "knee": 10,
+      "stage": 1,
+      "unlock": {
+        "b2c": 10000000,
+        "b2b": 10000
+      },
+      "fit": {
+        "saas": 0.9,
+        "consumer": 1.2,
+        "commerce": 1.25,
+        "fintech": 1.1,
+        "ai": 0.9
+      }
+    },
+    {
+      "id": "sports",
+      "name": "스포츠 중계·국가대표 후원",
+      "desc": "온 나라가 보는 경기에 이름을 겁니다. 거의 모든 사람이 알게 되지만 바로 오는 사람은 적습니다.",
+      "aware": 3.0,
+      "direct": 0.15,
+      "knee": 22,
+      "stage": 1,
+      "unlock": {
+        "b2c": 100000000,
+        "b2b": 100000
+      },
+      "fit": {
+        "saas": 0.5,
+        "consumer": 1.25,
+        "commerce": 1.2,
+        "fintech": 1.3,
         "ai": 0.5
       }
     }
@@ -223,7 +307,8 @@
       "direct": 1.4,
       "power": 1.8,
       "stage": 1,
-      "once": true
+      "once": true,
+      "prep": 5
     },
     {
       "id": "refresh",
@@ -236,7 +321,8 @@
       "direct": 0,
       "power": 0,
       "stage": 1,
-      "refresh": true
+      "refresh": true,
+      "prep": 0
     },
     {
       "id": "discount",
@@ -250,7 +336,8 @@
       "power": 1.6,
       "stage": 1,
       "afterChurn": 0.12,
-      "afterDays": 45
+      "afterDays": 45,
+      "prep": 3
     },
     {
       "id": "influencer",
@@ -263,7 +350,8 @@
       "direct": 1.0,
       "power": 1.7,
       "stage": 1,
-      "riskP": 0.12
+      "riskP": 0.12,
+      "prep": 7
     },
     {
       "id": "brand",
@@ -275,7 +363,117 @@
       "aware": 2.2,
       "direct": 0.3,
       "power": 1.6,
-      "stage": 2
+      "stage": 2,
+      "prep": 10
+    },
+    {
+      "id": "referral",
+      "name": "친구 초대 보상",
+      "desc": "친구를 데려오면 둘 다 혜택을 받습니다. 한 달 동안 입소문이 크게 늘어납니다.",
+      "costPct": 0.15,
+      "minCost": 3000000,
+      "days": 30,
+      "aware": 0.2,
+      "direct": 0.6,
+      "power": 1.2,
+      "stage": 1,
+      "prep": 5,
+      "unlock": {
+        "b2c": 10000
+      },
+      "onStart": {
+        "key": "viral",
+        "value": 1.0,
+        "days": 30,
+        "label": "친구 초대 보상"
+      },
+      "perUser": {
+        "b2c": 120
+      },
+      "cooldown": 60
+    },
+    {
+      "id": "loyalty",
+      "name": "충성 고객 프로그램",
+      "desc": "오래 쓴 고객에게 혜택을 줍니다. 석 달 동안 덜 떠납니다.",
+      "costPct": 0.2,
+      "minCost": 5000000,
+      "days": 90,
+      "aware": 0,
+      "direct": 0,
+      "power": 0,
+      "stage": 1,
+      "prep": 10,
+      "unlock": {
+        "b2c": 100000,
+        "b2b": 100
+      },
+      "onStart": {
+        "key": "churn",
+        "value": -0.15,
+        "days": 90,
+        "label": "충성 고객 프로그램"
+      },
+      "perUser": {
+        "b2c": 300,
+        "b2b": 30000
+      },
+      "cooldown": 90
+    },
+    {
+      "id": "conference",
+      "name": "우리 회사 컨퍼런스",
+      "desc": "고객사와 업계 사람을 불러 직접 행사를 엽니다. 준비가 길고 비싸지만 문의가 몰려옵니다. 한 해에 한 번 열 수 있습니다.",
+      "costPct": 1.5,
+      "minCost": 100000000,
+      "days": 7,
+      "aware": 1.0,
+      "direct": 2.0,
+      "power": 1.3,
+      "stage": 1,
+      "prep": 21,
+      "unlock": {
+        "b2b": 1000
+      },
+      "cooldown": 365
+    },
+    {
+      "id": "star",
+      "name": "톱스타 광고 모델",
+      "desc": "모두가 아는 스타가 우리 서비스를 씁니다. 크게 알려지지만 비싸고, 가끔 구설에 오릅니다.",
+      "costPct": 0.8,
+      "minCost": 300000000,
+      "days": 45,
+      "aware": 3.0,
+      "direct": 0.6,
+      "power": 1.8,
+      "stage": 1,
+      "prep": 14,
+      "riskP": 0.08,
+      "unlock": {
+        "b2c": 1000000
+      }
+    },
+    {
+      "id": "worldcup",
+      "name": "세계 스포츠 대회 광고",
+      "desc": "월드컵·올림픽처럼 온 세계가 보는 대회에 겁니다. 대회가 열리는 해 6·7월에만 할 수 있습니다.",
+      "costPct": 1.2,
+      "minCost": 1000000000,
+      "days": 30,
+      "aware": 3.5,
+      "direct": 0.4,
+      "power": 2.0,
+      "stage": 1,
+      "prep": 20,
+      "unlock": {
+        "b2c": 10000000
+      },
+      "months": [
+        6,
+        7
+      ],
+      "evenYears": true
     }
   ],
   "campaignResult": {
@@ -283,5 +481,18 @@
     "hit": 1.5,
     "flop": 0.6,
     "riskRep": -1
+  },
+  "team": {
+    "_note": "A-157 마케팅팀 [예시값]. 동시에 돌릴 수 있는 광고 채널 수 = slotsBase + 마케터 수(넘는 채널은 예산이 작은 것부터 쉼). 캠페인 준비 기간 = prep ÷ (1 + prepPer × 마케터 수) 올림, 결과 흔들림(문구 spread) × 1 ÷ (1 + steady × 마케터 수). 맡기기(adAuto): 매달 채널마다 30일 성과(데려온 고객 + 알린 사람 × awareValue)를 쓴 돈으로 나눠, 가장 나쁜 채널 예산의 shiftBase + shiftPer × 마케터 수(최대 shiftMax)를 가장 좋은 채널로 옮김(둘 차이가 gap배 넘을 때). 돌리는 채널이 지침 refreshAt을 넘으면 소재를 새로 만들고(비용 냄), 빈 자리가 있으면 새로 열린 '잘 맞는' 채널에 전체의 trial만큼 시험 삼아 넣음. 총예산은 바꾸지 않음 캠페인 perUser {b2c, b2b} = 그 시장 사용자 1명(곳)당 더 드는 비용(혜택을 사람마다 주는 캠페인), cooldown = 끝난 뒤 다시 하려면 기다릴 날(늘 켜 두는 게 이득이 되지 않게)",
+    "slotsBase": 1,
+    "prepPer": 0.5,
+    "steady": 0.25,
+    "shiftBase": 0.1,
+    "shiftPer": 0.04,
+    "shiftMax": 0.3,
+    "gap": 1.3,
+    "refreshAt": 0.55,
+    "trial": 0.1,
+    "awareValue": 0.08
   }
 }

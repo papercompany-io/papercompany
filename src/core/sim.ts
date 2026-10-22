@@ -21,6 +21,7 @@ import { burningDay } from './burning';
 import { hiringArrivals, hiringDayEnd, startPendingHires } from './hiring';
 import { outingsDay } from './outings';
 import { marketDay, totalUsers } from './market';
+import { marketingMonth } from './marketing';
 import { pruneMods } from './mods';
 import { notify } from './notify';
 import { officeDay } from './office';
@@ -122,6 +123,7 @@ export function endDay(s: GameState) {
     const pl = closeMonth(s, totalUsers(s));
     s.company.profitStreak = pl.operatingProfit > 0 ? s.company.profitStreak + 1 : 0;
     competitorsMonth(s);
+    marketingMonth(s); // 월초 고객 리포트·광고 맡기기(A-157)
     staffMonth(s, dateOf(s.day).getUTCMonth() === 0);
     aiMonth(s);
     inboundOfferMonth(s);
