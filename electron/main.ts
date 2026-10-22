@@ -56,6 +56,40 @@ ipcMain.handle('profile:write', (_e, data: string) => {
   return true;
 });
 
+// 자유 입력 DM(A-139): OpenRouter Decisions(Jev) 호출은 키가 렌더러에 닿지 않게 메인 프로세스에서 합니다.
+// Jev는 질문의 선택지를 고르는 모델입니다(의도·업무·말투·주제). 답 문장은 게임이 대사 묶음으로 만듭니다.
+// 키는 사용자 데이터 폴더의 .env, 없으면 실행 폴더의 .env(OPENROUTER_API_KEY, OPENROUTER_MODEL). 없으면 null → 게임은 키워드 규칙으로 답합니다.
+function readEnv(): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const f of [path.join(process.cwd(), '.env'), path.join(saveDir(), '.env')]) {
+    try {
+      for (const line of fs.readFileSync(f, 'utf8').split(/\r?\n/)) {
+        const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*?)\s*$/);
+        if (m) out[m[1]] = m[2].replace(/^["']|["']$/g, '');
+      }
+    } catch {
+      /* 없으면 무시 */
+    }
+  }
+  return { ...out, ...(process.env.OPENROUTER_API_KEY ? { OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY } : {}) };
+}
+
+ipcMain.handle('jev:decide', async (_e, req: { questions: unknown; state: unknown }) => {
+  const env = readEnv();
+  if (!env.OPENROUTER_API_KEY) return null;
+  try {
+    const r = await fetch('https://openrouter.ai/api/alpha/decisions', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${env.OPENROUTER_API_KEY}`, 'Content-Type': 'application/json', 'X-Title': 'PaperCompany' },
+      body: JSON.stringify({ model: env.OPENROUTER_MODEL || 'typesafe/jev-1.14', questions: req.questions, state: req.state }),
+    });
+    if (!r.ok) return null;
+    return ((await r.json()) as { answers?: unknown }).answers ?? null;
+  } catch {
+    return null;
+  }
+});
+
 ipcMain.on('app:toggle-fullscreen', () => win?.setFullScreen(!win.isFullScreen()));
 ipcMain.on('app:quit', () => win?.close());
 

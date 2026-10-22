@@ -8,3 +8,7 @@ playtest/userdata*
 *.log
 .sim/
 playtest/dumps*
+
+# OpenRouter 키(A-139)
+.env
+.env.*

@@ -8,12 +8,14 @@ import { DATA, dept, ordersFor } from '../../core/data';
 import { dateOf } from '../../core/calendar';
 import { orderOf } from '../../core/orders';
 import { DM_ACTIONS, commandOrder, dmAction } from '../../core/reactions';
+import { answerSaid, postSaid } from '../../core/talk';
+import { readTalk } from '../talkJev';
 import { delegateAway, isFullDay, outingEffect, outingRange, outingTravel, outings } from '../../core/outings';
 import { OutingOfferActions } from './ScheduleApp';
 import { createGroup, markRead } from '../../core/messenger';
 import { deptMembers } from '../../core/employees';
 import { deptOutput, isSick } from '../../core/staff';
-import { act, useGame } from '../store';
+import { act, getGame, useGame } from '../store';
 import { DecisionView } from '../Feedback';
 import { InvestPeek } from './InvestApp';
 import { PixelAvatar } from '../office/Avatar';
@@ -370,13 +372,41 @@ export function MessengerApp({ initial, openInvest }: { initial?: string; openIn
 }
 
 // DM 보내기(A-94): 고른 말에 직원이 상태·회사 상황에 따라 다르게 답함. 답이 다 뜰 때까지(입력 중…) 잠금
+// 직접 쓰기(A-139): 쓴 문장의 뜻을 읽어 답함(근황·칭찬·분발·휴식으로 읽히면 버튼과 같은 효과)
 function DmActions({ empId, name, busy, onErr }: { empId: string; name: string; busy: boolean; onErr: (e: string | null) => void }) {
+  const [text, setText] = useState('');
+  const [waiting, setWaiting] = useState(false);
+  const send = async () => {
+    const said = text;
+    if (busy || waiting || !said.trim()) return;
+    const err = act((g) => postSaid(g, empId, said)) ?? null;
+    onErr(err);
+    if (err) return;
+    setText('');
+    setWaiting(true);
+    const g0 = getGame();
+    const read = g0 ? await readTalk(g0, empId, said) : null;
+    setWaiting(false);
+    act((g) => answerSaid(g, empId, said, read));
+  };
   return (
     <div className="mg-box">
       <div className="mg-box-head">
         <b>{name}님에게</b>
-        <span>상태와 회사 사정에 따라 답이 달라집니다. 같은 말을 자주 하면 효과가 줄어요.</span>
+        <span>{waiting ? `${name}님이 답을 쓰는 중…` : '직접 써도 됩니다. 일을 바꾸라고 하거나 칭찬·질책하면 기분과 업무에 반영됩니다.'}</span>
       </div>
+      <form
+        className="mg-write"
+        onSubmit={(ev) => {
+          ev.preventDefault();
+          send();
+        }}
+      >
+        <input data-testid="dm-input" value={text} maxLength={200} placeholder={`${name}님에게 메시지 쓰기`} onChange={(ev) => setText(ev.target.value)} />
+        <button className="btn small" data-testid="dm-send" type="submit" disabled={busy || waiting || !text.trim()}>
+          보내기
+        </button>
+      </form>
       <div className="mg-quick">
         {DM_ACTIONS.map((a) => (
           <button

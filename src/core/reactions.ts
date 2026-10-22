@@ -134,12 +134,13 @@ function worstGripe(s: GameState, e: Employee): string | null {
   return `${p.label} 쪽이 좀 아쉽습니다.`;
 }
 
-export function dmAction(s: GameState, empId: string, action: DmAction): string | null {
+// 자유 입력 DM(A-139): said = 대표가 직접 쓴 말(없으면 기본 문장, null이면 이미 올라가 있어 다시 올리지 않음). 효과·재사용 대기는 버튼과 같습니다
+export function dmAction(s: GameState, empId: string, action: DmAction, said?: string | null): string | null {
   const e = s.employees.find((x) => x.id === empId);
   if (!e) return '직원을 찾을 수 없습니다.';
   const def = DM_ACTIONS.find((a) => a.id === action)!;
   const ch = `dm-${e.id}`;
-  post(s, ch, ME, def.say, 'player');
+  if (said !== null) post(s, ch, ME, said ?? def.say, 'player');
   const say = (t: string) => post(s, ch, e.name, t, 'npc');
   const last = e.dmDay?.[action];
   const again = last !== undefined && s.day - last < def.cool;

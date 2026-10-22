@@ -886,6 +886,10 @@ input[type='checkbox'] { accent-color: var(--accent); width: 16px; height: 16px;
 .mg-chip { padding: 6px 14px; border-radius: var(--r-full); border: 1px solid var(--line-strong); background: var(--surface); color: var(--text-2); font-size: var(--fs-md); font-weight: 700; cursor: pointer; transition: background-color 120ms, border-color 120ms; }
 .mg-chip:hover:not(:disabled) { border-color: var(--c-blue-500); background: var(--surface-hover); color: var(--accent-text); }
 .mg-chip:disabled { opacity: 0.5; cursor: wait; }
+/* DM 직접 쓰기(A-139): 한 줄 입력 + 보내기 */
+.mg-write { display: flex; gap: 6px; }
+.mg-write input { flex: 1; min-width: 0; padding: 7px 10px; border: 1px solid var(--line-strong); border-radius: var(--r-sm); background: var(--surface); color: var(--text); font-size: var(--fs-md); }
+.mg-write input:focus { outline: none; border-color: var(--c-blue-500); }
 .mg-pick { display: flex; flex-direction: column; gap: 2px; max-height: 320px; overflow-y: auto; }
 .mg-pick-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: var(--r-sm); cursor: pointer; }
 .mg-pick-row:hover { background: var(--surface-hover); }
