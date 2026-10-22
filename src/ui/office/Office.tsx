@@ -1,4 +1,4 @@
-// OF-01 아이소메트릭 픽셀 사무실(캔버스) + OF-02 책상 배치(A-80) + OF-06 직원 클릭, DT-09 CEO 클릭 → 데스크탑.
+// OF-01 아이소메트릭 픽셀 사무실(캔버스) + OF-02 책상·가구 배치(A-80, A-87: 상점에서 시작) + OF-06 직원 클릭, DT-09 CEO 클릭 → 데스크탑.
 // Startup Company처럼 사무실이 화면을 채우는 탑뷰입니다. 끌어서 이동, 휠·버튼으로 확대·축소, 방향키로도 이동합니다.
 // 그림은 캔버스에 픽셀로 그리고, 이름표와 클릭 영역은 그 위에 DOM으로 겹칩니다(글자를 또렷하게, 테스트에서 클릭 가능하게).
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
@@ -6,12 +6,14 @@ import { DATA, dept } from '../../core/data';
 import { formatDate } from '../../core/calendar';
 import { orderLabel } from '../../core/orders';
 import { isSick } from '../../core/staff';
-import { currentTier, deskAt, desks, moveDesk, placeDesk, removeDesk, seatsAvailable } from '../../core/office';
+import { deskAt, furnitureAt, furnitureItems, itemSize, moveDesk, moveFurniture, nextRot, ownsFurniture, placeDesk, placeFurniture, removeDesk, rotateDesk, rotateFurniture, storeFurniture } from '../../core/office';
 import type { GameState } from '../../core/types';
 import { act, getGame, useGame } from '../store';
 import { wonShort } from '../../core/format';
 import { Pix } from './pixel';
-import { TH, TW, ZOOM_MAX, ZOOM_MIN, actors, clampCamera, defaultCamera, defaultZoom, drawOffice, makeView, setLayout, type Actor, type Camera, type EditState } from './scene';
+import { TH, TW, ZOOM_MAX, ZOOM_MIN, actors, clampCamera, defaultCamera, defaultZoom, drawOffice, editItem, makeView, setLayout, type Actor, type Camera, type EditState } from './scene';
+import { useEditRequests } from './placement';
+import { awayOuting } from '../../core/outings';
 import { play } from '../sound';
 import { PxIcon, bubbleIcon } from '../icons';
 import type { FloatFx } from '../Game';
@@ -45,6 +47,7 @@ export function Office({ onCeo, onEmployee, pulseCeo, keysEnabled, floats = [] }
   const cv = useRef<HTMLCanvasElement>(null);
   const hover = useRef<string | null>(null);
   const [mode, setMode] = useState<EditState['mode'] | null>(null);
+  const [modeItem, setModeItem] = useState<string | null>(null);
   const edit = useRef<EditState | null>(null);
   const [editMsg, setEditMsg] = useState<string | null>(null);
   const [size, setSize] = useState({ w: 1280, h: 800 });
@@ -127,22 +130,33 @@ export function Office({ onCeo, onEmployee, pulseCeo, keysEnabled, floats = [] }
     setCam(clampCamera({ x: wx - (fx - size.w / 2) / z, y: wy - (fy - size.h / 2) / z }));
   };
 
-  // 배치 모드 켜고 끄기(Esc로 끔)
-  const setEdit = (m: EditState['mode'] | null) => {
+  // 배치 모드 켜고 끄기(Esc로 끔). 상점 창에서 요청이 오면 그 모드로 들어갑니다.
+  const setEdit = (m: EditState['mode'] | null, item: string | null = null) => {
     setMode(m);
-    edit.current = m ? { mode: m, tile: null, pick: null } : null;
+    setModeItem(m === 'place' ? item : null);
+    edit.current = m ? { mode: m, item: m === 'place' ? item : null, tile: null, pick: null, rot: 0 } : null;
     setEditMsg(null);
+  };
+  useEditRequests((r) => setEdit(r.mode, r.item ?? null));
+  // 손에 든 물건 돌리기(A-128): 놓는 중이거나 옮기려고 집은 물건
+  const turnHeld = () => {
+    const e = edit.current;
+    if (!e || !(e.mode === 'place' || (e.mode === 'move' && e.pick))) return false;
+    e.rot = nextRot(e.rot);
+    play('click');
+    return true;
   };
   useEffect(() => {
     if (!mode) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setEdit(null);
+      if (e.key === 'r' || e.key === 'R' || e.key === 'ㄱ') turnHeld();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [mode]);
 
-  // 화면 좌표 → 바닥 칸(소수). 책상은 2×2칸이라 마우스가 책상 가운데에 오도록 왼쪽 위 칸을 잡습니다.
+  // 화면 좌표 → 바닥 칸(소수)
   const floorAt = (clientX: number, clientY: number) => {
     const r = wrap.current!.getBoundingClientRect();
     const wx = (clientX - r.left) / view.scale - view.ox;
@@ -151,32 +165,60 @@ export function Office({ onCeo, onEmployee, pulseCeo, keysEnabled, floats = [] }
     const b = (2 * wy) / TH;
     return { x: (a + b) / 2, y: (b - a) / 2 };
   };
+  // 손에 든 물건의 왼쪽 위 칸: 마우스가 물건 가운데에 오도록(책상 2×2, 가구는 크기대로)
+  const tileAt = (e: EditState, f: { x: number; y: number }) => {
+    const hand = editItem(getGame()!, e);
+    const { w, h } = hand ? itemSize(hand, e.rot) : { w: 1, h: 1 };
+    return { gx: Math.round(f.x - w / 2), gy: Math.round(f.y - h / 2) };
+  };
   const onEditMove = (clientX: number, clientY: number) => {
     const e = edit.current;
     if (!e) return;
-    const f = floorAt(clientX, clientY);
-    e.tile = { gx: Math.round(f.x - 1), gy: Math.round(f.y - 1) };
+    e.tile = tileAt(e, floorAt(clientX, clientY));
   };
   const onEditClick = (clientX: number, clientY: number) => {
     const e = edit.current;
     if (!e) return;
     const f = floorAt(clientX, clientY);
-    const tile = { gx: Math.round(f.x - 1), gy: Math.round(f.y - 1) };
+    const tile = tileAt(e, f);
+    const g0 = getGame()!;
     let err: string | null = null;
-    if (e.mode === 'place') err = act((g) => placeDesk(g, tile.gx, tile.gy)) ?? null;
-    else if (e.mode === 'remove') {
-      const d = deskAt(getGame()!, f.x, f.y);
-      err = d ? (act((g) => removeDesk(g, d.id)) ?? null) : '치울 책상을 누르세요.';
+    let done = false;
+    if (e.mode === 'place') {
+      if (e.item === 'desk') err = act((g) => placeDesk(g, tile.gx, tile.gy, e.rot)) ?? null; // 책상은 여러 개 이어서 놓음
+      else if (e.item) {
+        err = act((g) => placeFurniture(g, e.item!, tile.gx, tile.gy, e.rot)) ?? null;
+        done = !err; // 가구는 하나씩: 놓으면 배치 끝
+      }
+    } else if (e.mode === 'remove') {
+      const d = deskAt(g0, f.x, f.y);
+      const it = d ? null : furnitureAt(g0, f.x, f.y);
+      if (d) err = act((g) => removeDesk(g, d.id)) ?? null;
+      else if (it) err = act((g) => storeFurniture(g, it.id)) ?? null;
+      else err = '치울 책상이나 가구를 누르세요.';
+    } else if (e.mode === 'rotate') {
+      const d = deskAt(g0, f.x, f.y);
+      const it = d ? null : furnitureAt(g0, f.x, f.y);
+      if (d) err = act((g) => rotateDesk(g, d.id)) ?? null;
+      else if (it) err = act((g) => rotateFurniture(g, it.id)) ?? null;
+      else err = '돌릴 책상이나 가구를 누르세요.';
     } else if (!e.pick) {
-      const d = deskAt(getGame()!, f.x, f.y);
-      if (d) e.pick = d.id;
-      else err = '옮길 책상을 누르세요.';
+      const d = deskAt(g0, f.x, f.y);
+      const it = d ? null : furnitureAt(g0, f.x, f.y);
+      if (d) e.pick = { kind: 'desk', id: d.id };
+      else if (it) e.pick = { kind: 'furn', id: it.id };
+      else err = '옮길 책상이나 가구를 누르세요.';
+      e.rot = (d ? d.rot : it?.rot) ?? 0;
+      if (e.pick) e.tile = tileAt(e, f);
     } else {
-      err = act((g) => moveDesk(g, e.pick!, tile.gx, tile.gy)) ?? null;
+      const pick = e.pick;
+      const rot = e.rot;
+      err = act((g) => (pick.kind === 'desk' ? moveDesk(g, pick.id, tile.gx, tile.gy, rot) : moveFurniture(g, pick.id, tile.gx, tile.gy, rot))) ?? null;
       if (!err) e.pick = null;
     }
     setEditMsg(err);
     play(err ? 'fail' : 'click');
+    if (done) setEdit(null);
   };
 
   if (!s) return null;
@@ -230,7 +272,7 @@ export function Office({ onCeo, onEmployee, pulseCeo, keysEnabled, floats = [] }
             key={`hit-${a.id}`}
             className="actor-hit"
             data-testid={a.kind === 'ceo' ? 'ceo' : `emp-${a.id}`}
-            title={a.kind === 'ceo' ? '대표 일정' : '직원 정보'}
+            title={a.kind === 'ceo' ? 'CEO 개인 일정' : '직원 정보'}
             style={{ left: a.box[0] * sc, top: a.box[1] * sc, width: a.box[2] * sc, height: a.box[3] * sc }}
             onClick={() => click(a)}
             onMouseEnter={() => (hover.current = a.id)}
@@ -249,9 +291,15 @@ export function Office({ onCeo, onEmployee, pulseCeo, keysEnabled, floats = [] }
         );
       })}
 
-      <DeskPanel s={s} mode={mode} msg={editMsg} onMode={(m) => setEdit(mode === m ? null : m)} />
+      {mode && <PlaceBar s={s} mode={mode} item={modeItem} msg={editMsg} onMode={(m) => setEdit(m)} onTurn={() => turnHeld() || setEditMsg('먼저 책상이나 가구를 집으세요. "돌리기"를 고르면 놓인 물건을 눌러 바로 돌립니다.')} onDone={() => setEdit(null)} />}
 
       <div className="cam-tools" onPointerDown={(e) => e.stopPropagation()}>
+        {/* 배치 수정(A-128): 상점을 거치지 않고 놓인 책상·가구를 바로 옮기기·돌리기·치우기 */}
+        {!mode && (
+          <button className="round-btn wide" data-testid="edit-open" title="놓인 책상·가구 옮기기·돌리기·치우기" onClick={() => setEdit('move')}>
+            배치 수정
+          </button>
+        )}
         <button className="round-btn" data-testid="zoom-in" title="확대" onClick={() => zoomTo(scale + 1)} disabled={scale >= ZOOM_MAX}>
           +
         </button>
@@ -275,36 +323,59 @@ export function Office({ onCeo, onEmployee, pulseCeo, keysEnabled, floats = [] }
   );
 }
 
-// 왼쪽 아래: 사무실 이름·책상 수와 책상 배치 도구(놓기·옮기기·치우기)
-function DeskPanel({ s, mode, msg, onMode }: { s: GameState; mode: EditState['mode'] | null; msg: string | null; onMode: (m: EditState['mode']) => void }) {
-  const all = desks(s);
-  const used = all.filter((d) => d.occupant !== null).length;
-  const room = seatsAvailable(s) - (all.length - used);
-  const tip: Record<EditState['mode'], string> = {
-    place: `빈 바닥을 눌러 책상을 놓습니다(개당 ${wonShort(DATA.furniture.deskPrice)}).`,
-    move: '책상을 누른 다음 옮길 자리를 누르세요. 앉은 사람도 같이 옮겨 갑니다.',
-    remove: '빈 책상을 누르면 치웁니다(절반 값에 처분).',
-  };
+// 배치 중에만 뜨는 아래 가운데 막대: 지금 하는 일·안내(또는 안 되는 이유)·모드 바꾸기·끝내기. 배치는 상점에서 시작합니다(A-87).
+function PlaceBar({ s, mode, item, msg, onMode, onTurn, onDone }: { s: GameState; mode: EditState['mode']; item: string | null; msg: string | null; onMode: (m: EditState['mode']) => void; onTurn: () => void; onDone: () => void }) {
+  const def = item && item !== 'desk' ? furnitureItems().find((x) => x.id === item) : null;
+  const stored = !!def && ownsFurniture(s, def.id);
+  const title =
+    mode === 'place'
+      ? item === 'desk'
+        ? `책상 놓기 · 개당 ${wonShort(DATA.furniture.deskPrice)}`
+        : `${def?.name ?? '가구'} ${stored ? '꺼내 놓기' : `놓기 · ${wonShort(def?.price ?? 0)}`}`
+      : mode === 'move'
+        ? '옮기기'
+        : mode === 'rotate'
+          ? '돌리기'
+          : '치우기';
+  const tip =
+    mode === 'place'
+      ? item === 'desk'
+        ? '빈 바닥을 눌러 책상을 놓습니다. 여러 개 이어서 놓을 수 있어요. R 키로 방향을 돌립니다.'
+        : '빈 바닥을 눌러 놓습니다. 가구는 회의실·라운지 같은 방 안에도 놓을 수 있어요. R 키로 방향을 돌립니다.'
+      : mode === 'move'
+        ? '책상이나 가구를 누른 다음 옮길 자리를 누르세요. 집은 동안 R 키로 돌립니다. 책상에 앉은 사람도 같이 옮겨 갑니다.'
+        : mode === 'rotate'
+          ? '책상이나 가구를 누를 때마다 시계 방향으로 90° 돕니다. 자리가 모자라면 옮긴 뒤 돌리세요.'
+          : '빈 책상은 절반 값에 처분하고, 가구는 보관함으로 넣습니다(상점에서 다시 놓기).';
   return (
-    <div className="desk-panel" data-testid="desk-panel" onPointerDown={(e) => e.stopPropagation()} onPointerUp={(e) => e.stopPropagation()}>
-      <div className="dp-row">
-        <b className="dp-name">{currentTier(s).name}</b>
-        <span className="dp-count" data-testid="desk-count">
-          책상 {used}/{all.length} · 빈 바닥 {room}
-        </span>
+    <div className="place-bar" data-testid="place-bar" onPointerDown={(e) => e.stopPropagation()} onPointerUp={(e) => e.stopPropagation()}>
+      <div className="pb-text">
+        <b className="pb-title">{title}</b>
+        <span className={`pb-tip ${msg ? 'bad' : ''}`}>{msg ?? tip}</span>
       </div>
-      <div className="dp-tools">
-        <button className={`dp-btn ${mode === 'place' ? 'on' : ''}`} data-testid="desk-place" onClick={() => onMode('place')}>
-          책상 놓기
-        </button>
-        <button className={`dp-btn ${mode === 'move' ? 'on' : ''}`} data-testid="desk-move" disabled={!all.length} onClick={() => onMode('move')}>
-          옮기기
-        </button>
-        <button className={`dp-btn ${mode === 'remove' ? 'on' : ''}`} data-testid="desk-remove" disabled={!all.length} onClick={() => onMode('remove')}>
-          치우기
+      <div className="pb-tools">
+        {mode !== 'place' && (
+          <>
+            <button className={`btn small ${mode === 'move' ? '' : 'ghost'}`} data-testid="edit-move" onClick={() => onMode('move')}>
+              옮기기
+            </button>
+            <button className={`btn small ${mode === 'rotate' ? '' : 'ghost'}`} data-testid="edit-rotate" onClick={() => onMode('rotate')}>
+              돌리기
+            </button>
+            <button className={`btn small ${mode === 'remove' ? '' : 'ghost'}`} data-testid="edit-remove" onClick={() => onMode('remove')}>
+              치우기
+            </button>
+          </>
+        )}
+        {(mode === 'place' || mode === 'move') && (
+          <button className="btn small ghost" data-testid="edit-turn" title="손에 든 물건 돌리기" onClick={onTurn}>
+            ↻ <kbd>R</kbd>
+          </button>
+        )}
+        <button className="btn small green" data-testid="edit-done" onClick={onDone}>
+          완료 <kbd>Esc</kbd>
         </button>
       </div>
-      {mode && <div className={`dp-tip ${msg ? 'bad' : ''}`}>{msg ?? `${tip[mode]} Esc로 끝내기`}</div>}
     </div>
   );
 }
@@ -316,7 +387,7 @@ function NameTag({ a, s, sc, pulse, onClick }: { a: Actor; s: GameState; sc: num
       <div className={`nametag ceo ${pulse ? 'pulse' : ''}`} style={style} onClick={onClick} data-testid="ceo-tag">
         {pulse && <div className="tag-arrow">클릭!</div>}
         <div className="tag-name">나 · 대표</div>
-        <div className="tag-sub">내 일정</div>
+        <div className="tag-sub">{awayOuting(s) ? `외출 중 · ${awayOuting(s)!.title}` : 'CEO 개인 일정'}</div>
       </div>
     );
   }

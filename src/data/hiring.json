@@ -70,10 +70,10 @@
     "C": 0.8
   },
   "gradeSalary": {
-    "S": 1.3,
-    "A": 1.15,
-    "B": 1.0,
-    "C": 0.9
+    "S": 2.0,
+    "A": 1.3,
+    "B": 1.15,
+    "C": 0.67
   },
   "gradeYears": {
     "S": [
@@ -108,5 +108,53 @@
     "F": 2.0,
     "G": 2.0
   },
-  "networkArrivalBonusPer100": 0.3
+  "networkArrivalBonusPer100": 0.3,
+  "nego": {
+    "_note": "연봉 협상(A-89, A-90). 제안 가치 = 월급 + 사이닝 보너스/12. 희망 월급 이상이면 수락, floor 이상이면 차이의 counterKeep만큼 남긴 역제안, insult 미만이면 화냄. 인내심은 100%에서 시작해 제안마다 dropBase + (1 - 비율) × dropPerGap만큼 줄고, 이전보다 낮게 부르면 lowerPenalty 더. 0%면 떠남",
+    "patience": 100,
+    "floorMin": 0.86,
+    "floorMax": 0.95,
+    "insult": 0.75,
+    "counterKeep": 0.6,
+    "bonusMonths": 12,
+    "dropBase": 15,
+    "dropPerGap": 150,
+    "lowerPenalty": 15
+  },
+  "careerLevels": [
+    {
+      "id": "junior",
+      "name": "초급",
+      "gradeWeights": [
+        100,
+        0,
+        0,
+        0
+      ],
+      "arrivalMult": 1.3
+    },
+    {
+      "id": "mid",
+      "name": "중급",
+      "gradeWeights": [
+        0,
+        60,
+        40,
+        0
+      ],
+      "arrivalMult": 1.0
+    },
+    {
+      "id": "senior",
+      "name": "고급",
+      "gradeWeights": [
+        0,
+        0,
+        40,
+        60
+      ],
+      "arrivalMult": 0.6
+    }
+  ],
+  "_careerNote": "공고 등급(A-91, A-92): 지원자 능력 분포(grades 순서 C,B,A,S 가중치)와 지원자 수 배율. 개발자 기준 희망 월급 초급 약 300만, 중급 500~600만, 고급 최대 900만 이상(gradeSalary × 재능에 따라 0.95~1.08)"
 }

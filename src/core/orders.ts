@@ -5,7 +5,7 @@ import { deptMembers } from './employees';
 import { addMod, mod } from './mods';
 import { news, notify, float } from './notify';
 import { post, teamChannelId } from './messenger';
-import { applyWork, appeal, fixBugs, fxTotals, hasMvp } from './product';
+import { applyWork, appeal, fixBugs, fxTotals, hasMvp, insightDay } from './product';
 import { deptCoverage, launchedMarkets, totalUsers, type DayPush } from './market';
 import { nextId } from './ids';
 import { ceoSalesToday } from './ceo';
@@ -110,6 +110,8 @@ export function ordersDay(s: GameState): DayPush & { outputs: Record<DeptId, num
   s.company.culture += (cultureTarget - s.company.culture) * 0.02;
   // 고객지원: 의견 수집
   if (out.cs > 0 && orderOf(s, 'cs') === 'cs_feedback') s.product.appealBonus += out.cs * 0.0025;
+  // 고객 인사이트(A-115): 쓰는 사람이 많을수록, 의견 수집을 맡길수록 쌓입니다
+  insightDay(s, totalUsers(s), orderOf(s, 'cs') === 'cs_feedback' ? out.cs : 0);
   // 인프라: 안정성
   if (out.infra > 0 && orderOf(s, 'infra') === 'infra_reliability') fixBugs(s, out.infra * 0.6, 'infra');
   // 재무법무: 상장 준비

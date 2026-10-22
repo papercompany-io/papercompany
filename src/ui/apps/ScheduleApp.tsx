@@ -1,90 +1,135 @@
-// F14 일정 메뉴: CA-01 하루 행동 칸 배분, CA-02 스펙 효율, CA-03 조직이 생긴 뒤 대표 행동(경영 모드)
+// F14 일정 메뉴(A-101): 하루 칸 배분 없이, 대표는 주 업무 하나를 하루 내내 합니다(실무: 개발·외주·영업, 경영: 대기업 영업·결재).
+// 투자자 미팅·컨퍼런스·네트워킹·고객사 방문은 메신저로 오는 초대를 수락해 1~3일 자리를 비우는 외출. 여기서도 수락·거절·취소
+// A-127: 하루짜리 약속은 시각·이동 시간이 있고, 겹치면 기존 일정을 취소하고 받거나 거절
 import { DATA } from '../../core/data';
-import { actionDef, allocTotal, approveMultiplier, approveNeed, daySchedule, efficiency, executiveBlock, modeActions, setAlloc, setCeoMode } from '../../core/ceo';
+import { actionDef, approveMultiplier, approveNeed, ceoWork, efficiency, executiveBlock, setCeoMode, setCeoWork, workChoices } from '../../core/ceo';
 import { acceptContract, contractsOpen, dropContract } from '../../core/contracts';
 import { openRound } from '../../core/funding';
 import { enterpriseThreshold } from '../../core/orders';
 import { fxTotals, hasMvp } from '../../core/product';
+import { acceptOuting, awayOuting, cancelOuting, dayName, declineOuting, hhmm, isFullDay, outingConflict, outingEffect, outingRange, outingTravel, outings, todayOutings } from '../../core/outings';
+import { useState } from 'react';
 import { act, useGame } from '../store';
 import { Money, Help } from '../common';
-import type { ActionId } from '../../core/types';
+import type { ActionId, Outing } from '../../core/types';
 import './apps.css';
 
+// TODO(human): 디자인 시스템 토큰(var(--c-*) / var(--positive) …)으로 활동 색을 다시 정하기.
+//   흰 글자가 올라가므로 대비 3:1 이상이어야 함 — 지금 network(#3fbf7f)·sales(#f2a33a)는 약 2.3:1.
 const COLORS: Record<ActionId, string> = { dev: '#4f8df5', contract: '#2bb3a8', sales: '#f2a33a', ir: '#e5484d', network: '#3fbf7f', enterprise: '#b5651d', approve: '#6b5bd6' };
+
+// 주 업무 설명(하루 내내 했을 때)
+const WORK_DESC: Partial<Record<ActionId, string>> = {
+  dev: '로드맵 기능을 직접 만듭니다.',
+  contract: '받은 외주 일감을 합니다(없으면 제품 개발).',
+  sales: '직접 고객을 찾아 첫 고객을 모읍니다. 접대비가 듭니다.',
+  enterprise: '대기업 계약을 따러 다닙니다. 접대비가 큽니다.',
+  approve: '쌓인 결재를 처리해 전 직원 출력이 떨어지지 않게 합니다.',
+};
+
+const KIND_ACTION: Record<Outing['kind'], ActionId> = { ir: 'ir', network: 'network', sales: 'sales' };
 
 export function ScheduleApp() {
   const s = useGame();
-  const sched = daySchedule(s);
-  const actions = modeActions(s);
-  const total = allocTotal(Object.fromEntries(actions.map((a) => [a, s.ceoAlloc[a]])) as Record<ActionId, number>);
-  const slots = DATA.time.slotsPerDay;
-  const round = openRound(s);
+  const [err, setErr] = useState<string | null>(null);
   const exec = s.company.ceoMode === 'executive';
   const execErr = executiveBlock(s);
+  const out = awayOuting(s);
+  const later = !out ? todayOutings(s).find((o) => !isFullDay(o)) : undefined; // 오늘 나중에 나갈 약속
+  const work = ceoWork(s);
+  const list = outings(s);
+  const offers = list.filter((o) => o.status === 'offer').sort((a, b) => a.startDay - b.startDay);
+  const booked = list.filter((o) => o.status === 'booked').sort((a, b) => a.startDay - b.startDay);
+  const run = (f: Parameters<typeof act>[0]) => setErr((act(f) as string | null | undefined) ?? null);
   return (
-    <div className="col">
-      <div className="row">
-        <div className="grow row" style={{ gap: 6 }}>
-          <b>하루 {slots}칸</b>
-          <Help text={`하루 ${slots}칸을 나눠 쓰세요. 배분은 다음 날에도 이어지고, 한 칸이 근무 1시간처럼 차례로 실행됩니다.${exec ? ' 경영 모드: 실무는 조직이 맡고 대표는 큰일에 집중합니다.' : ''}`} />
-        </div>
+    <div className="col sched">
+      <div className="sched-top">
+        {/* 지금 대표가 하는 일 */}
+        <section className={`sched-now ${out ? 'away' : ''}`} style={{ ['--ac' as string]: COLORS[out ? KIND_ACTION[out.kind] : work] }}>
+          <span className="sn-label">지금</span>
+          {out ? (
+            <>
+              <b>외출 중 · {out.title}</b>
+              <span>
+                {out.host} · {out.days > 1 ? `${out.days}일 중 ${s.day - out.startDay + 1}일째 · ` : ''}
+                {isFullDay(out) ? `${dayName(out.startDay + out.days)} 복귀` : `${hhmm(out.startHour! + out.hours! + (out.travel ?? 0))}쯤 복귀`}
+              </span>
+            </>
+          ) : (
+            <>
+              <b>책상에서 {actionDef(work).name} 중</b>
+              <span>{later ? `오늘 ${hhmm(later.startHour!)} ${later.title} 약속이 있습니다(${outingTravel(later) ?? '이동 없음'}).` : WORK_DESC[work]}</span>
+            </>
+          )}
+        </section>
         <div className="seg">
-          <button className={!exec ? 'on' : ''} data-testid="mode-founder" onClick={() => act((g) => setCeoMode(g, 'founder'))}>
+          <button className={!exec ? 'on' : ''} data-testid="mode-founder" onClick={() => run((g) => setCeoMode(g, 'founder'))}>
             실무 모드
           </button>
-          <button className={exec ? 'on' : ''} data-testid="mode-executive" disabled={!!execErr} title={execErr ?? ''} onClick={() => act((g) => setCeoMode(g, 'executive'))}>
+          <button className={exec ? 'on' : ''} data-testid="mode-executive" disabled={!!execErr} title={execErr ?? ''} onClick={() => run((g) => setCeoMode(g, 'executive'))}>
             경영 모드
           </button>
         </div>
       </div>
-      {execErr && !exec && <div className="tiny muted">경영 모드: {execErr}</div>}
-      <div className="card">
-        <div className="section-title">오늘 일정 (09:00~18:00)</div>
-        <div className="timeline">
-          {sched.map((slot, i) => (
-            <div key={i} className={`slot ${i < s.slotsDone ? 'done' : ''} ${i === s.slotsDone ? 'now' : ''}`} data-testid={`slot-${i}`} style={{ background: slot.action ? COLORS[slot.action] : '#d5dbe7' }}>
-              <span className="slot-hour">{String(9 + i).padStart(2, '0')}시</span>
-              <span>{slot.action ? actionDef(slot.action).name : '비어 있음'}</span>
-              {slot.locked && <span className="slot-lock">라운드</span>}
-            </div>
-          ))}
-        </div>
-        {round && <div className="warn">투자 라운드 진행 중: 앞 {DATA.funding.lockedSlots}칸이 투자자 미팅에 묶여 다른 일이 밀립니다. 라운드가 끝나면 풀립니다.</div>}
-      </div>
-      <div className="alloc-grid">
-        {actions.map((a) => {
-          const def = actionDef(a);
-          const eff = efficiency(s, a);
+      {err && <div className="err">{err}</div>}
+
+      <div className="section-title">주 업무</div>
+      <div className="work-grid">
+        {workChoices(s).map((a) => {
+          const blocked = a === 'sales' && !hasMvp(s) ? 'MVP 전에는 팔 제품이 없습니다.' : null;
           return (
-            <div key={a} className="card alloc" style={{ borderTop: `4px solid ${COLORS[a]}` }}>
-              <div className="row">
-                <b>{def.name}</b>
-                <div className="grow" />
-                <span className="chip blue" title="창업자 스펙·레거시에 따른 효율">×{eff.toFixed(2)}</span>
+            <button
+              key={a}
+              className={`work-tile ${work === a ? 'on' : ''}`}
+              style={{ ['--ac' as string]: COLORS[a] }}
+              data-testid={`work-${a}`}
+              disabled={!!blocked}
+              title={blocked ?? ''}
+              onClick={() => run((g) => setCeoWork(g, a))}
+            >
+              <div className="wt-head">
+                <b>{actionDef(a).name}</b>
+                <span className="chip blue" title="창업자 스펙·레거시에 따른 효율">×{efficiency(s, a).toFixed(2)}</span>
               </div>
-              <div className="tiny muted">{def.desc}</div>
-              <div className="row stepper">
-                <button className="btn small ghost" data-testid={`alloc-${a}-minus`} disabled={s.ceoAlloc[a] === 0} onClick={() => act((g) => setAlloc(g, a, g.ceoAlloc[a] - 1))}>
-                  −
-                </button>
-                <b className="num" data-testid={`alloc-${a}`}>
-                  {s.ceoAlloc[a]}칸
-                </b>
-                <button className="btn small ghost" data-testid={`alloc-${a}-plus`} disabled={total >= slots} onClick={() => act((g) => setAlloc(g, a, g.ceoAlloc[a] + 1))}>
-                  +
-                </button>
-              </div>
-              <div className="tiny">오늘 실행 {s.todayLog[a]}칸</div>
-              {a === 'sales' && !hasMvp(s) && <div className="tiny warn">MVP 전에는 팔 제품이 없어 효과가 없습니다.</div>}
-              {a === 'enterprise' && !fxTotals(s).enterprise && <div className="tiny warn">대기업용 기능이 없어 계약이 성사되지 않습니다(제품 메뉴).</div>}
-            </div>
+              <span className="wt-desc">{blocked ?? WORK_DESC[a]}</span>
+              {a === 'enterprise' && !fxTotals(s).enterprise && <span className="wt-warn">대기업용 기능이 없어 계약이 성사되지 않습니다.</span>}
+            </button>
           );
         })}
       </div>
-      <ContractsCard />
-      <div className="tiny muted">
-        배분 {total}/{slots}칸{total < slots ? ` · ${slots - total}칸이 비어 있습니다.` : ''}
+
+      <div className="sched-lists">
+        <section>
+          <div className="section-title">
+            초대 {offers.length}
+            {openRound(s) && <span className="chip amber" style={{ marginLeft: 8 }}>투자 라운드 중 · 투자 미팅 초대가 자주 옴</span>}
+          </div>
+          {offers.length === 0 && <div className="empty-note">아직 받은 초대가 없습니다. 투자자·행사·고객사 초대는 메신저로 옵니다.</div>}
+          {offers.map((o) => (
+            <OutingCard key={o.id} o={o}>
+              <OutingOfferActions o={o} onErr={setErr} />
+            </OutingCard>
+          ))}
+        </section>
+        <section>
+          <div className="section-title">잡힌 외출 {booked.length}</div>
+          {booked.length === 0 && <div className="empty-note">잡힌 외출이 없습니다. 평소처럼 주 업무를 합니다.</div>}
+          {booked.map((o) => (
+            <OutingCard key={o.id} o={o}>
+              {s.day < o.startDay ? (
+                <button className="btn small ghost" onClick={() => run((g) => cancelOuting(g, o.id))} title="비용은 돌려받지 못하고, 상대가 서운해합니다">
+                  취소
+                </button>
+              ) : (
+                <span className="chip green">진행 중</span>
+              )}
+            </OutingCard>
+          ))}
+        </section>
       </div>
+
+      <ContractsCard />
+
       <div className="stats">
         <div className="stat">
           <div className="stat-label">IR 점수(투자 확률)</div>
@@ -102,14 +147,65 @@ export function ScheduleApp() {
         </div>
         {exec && (
           <div className="stat">
-            <div className="stat-label">결재(하루 필요 {approveNeed(s).toFixed(1)}칸)</div>
+            <div className="stat-label">결재(직원 {s.employees.length}명 · 하루 {approveNeed(s).toFixed(1)}만큼 쌓임)</div>
             <div className="stat-value" style={{ color: approveMultiplier(s) < 1 ? 'var(--red)' : 'var(--green-d)' }}>
               전 직원 출력 ×{approveMultiplier(s).toFixed(2)}
             </div>
           </div>
         )}
       </div>
+      {execErr && !exec && <div className="tiny muted">경영 모드: {execErr}</div>}
     </div>
+  );
+}
+
+function OutingCard({ o, children }: { o: Outing; children: React.ReactNode }) {
+  return (
+    <div className="outing-card" style={{ ['--ac' as string]: COLORS[KIND_ACTION[o.kind]] }}>
+      <div className="oc-head">
+        <span className="oc-dot" />
+        <b>{o.title}</b>
+        <span className="oc-host">{o.host}</span>
+      </div>
+      <div className="oc-meta">
+        <span>{outingRange(o)}</span>
+        {outingTravel(o) && <span>{outingTravel(o)}</span>}
+        <span>{outingEffect(o)}</span>
+        <span>비용 {o.cost ? `${(o.cost / 1e4).toLocaleString()}만원` : '없음'}</span>
+      </div>
+      <div className="oc-actions">{children}</div>
+    </div>
+  );
+}
+
+// 초대 수락·거절(A-127): 이동 시간까지 따져 겹치는 일정이 있으면 "기존 일정 취소하고 수락" 또는 "거절". 메신저 초대 카드도 같이 씀
+export function OutingOfferActions({ o, onErr }: { o: Outing; onErr: (e: string | null) => void }) {
+  const s = useGame();
+  const c = outingConflict(s, o);
+  const started = !!c && s.day >= c.startDay;
+  const run = (f: Parameters<typeof act>[0]) => onErr((act(f) as string | null | undefined) ?? null);
+  return (
+    <>
+      {c && (
+        <div className="oc-conflict" data-testid={`outing-conflict-${o.id}`}>
+          {outingRange(c)} "{c.title}" 일정과 겹칩니다(이동 시간 포함).{started ? ' 이미 시작한 일정이라 바꿀 수 없습니다.' : ''}
+        </div>
+      )}
+      {c ? (
+        !started && (
+          <button className="btn small" data-testid={`outing-replace-${o.id}`} title="취소한 일정의 비용은 돌려받지 못하고, 상대가 서운해합니다" onClick={() => run((g) => acceptOuting(g, o.id, true))}>
+            기존 일정 취소하고 수락
+          </button>
+        )
+      ) : (
+        <button className="btn small green" data-testid={`outing-accept-${o.id}`} onClick={() => run((g) => acceptOuting(g, o.id))}>
+          수락
+        </button>
+      )}
+      <button className="btn small ghost" data-testid={`outing-decline-${o.id}`} onClick={() => run((g) => declineOuting(g, o.id))}>
+        {c ? '새 초대 거절' : '거절'}
+      </button>
+    </>
   );
 }
 
@@ -125,7 +221,7 @@ function ContractsCard() {
         <div className="section-title grow">외주 일감</div>
         {!!c?.completed && <span className="chip">완료 {c.completed}건</span>}
       </div>
-      <Help text="대표 &quot;외주&quot; 칸이나 개발팀 &quot;외주 작업&quot; 지시로 작업량을 채우면 대금이 들어옵니다. 그만큼 제품 개발은 늦어집니다. 마감을 넘기면 대금이 깎이고, 많이 넘기면 취소됩니다." />
+      <Help text="대표 주 업무 &quot;외주&quot;나 개발팀 &quot;외주 작업&quot; 지시로 작업량을 채우면 대금이 들어옵니다. 그만큼 제품 개발은 늦어집니다. 마감을 넘기면 대금이 깎이고, 많이 넘기면 취소됩니다." />
       {a && a.deadline !== null && (
         <div className="card col" style={{ borderTop: `4px solid ${COLORS.contract}` }}>
           <div className="row">
@@ -146,7 +242,7 @@ function ContractsCard() {
               포기
             </button>
           </div>
-          {s.ceoAlloc.contract === 0 && <div className="tiny warn">대표 "외주" 칸이 0칸입니다. 개발팀이 맡지 않으면 진행되지 않습니다.</div>}
+          {ceoWork(s) !== 'contract' && s.company.orders.dev !== 'dev_contract' && <div className="tiny warn">대표 주 업무가 "외주"가 아니고 개발팀도 맡지 않아 진행되지 않습니다.</div>}
         </div>
       )}
       {!!c?.offers.length && (

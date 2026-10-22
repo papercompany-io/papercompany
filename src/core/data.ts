@@ -25,6 +25,7 @@ import career from '../data/career.json';
 import missions from '../data/missions.json';
 import achievements from '../data/achievements.json';
 import publicData from '../data/public.json';
+import ads from '../data/ads.json';
 import type { DeptId, Grade, IndustryId, MarketId, StageId } from './types';
 
 export const DATA = {
@@ -53,6 +54,7 @@ export const DATA = {
   missions,
   achievements,
   public: publicData,
+  ads,
 };
 
 export type SpecEffects = {
@@ -139,6 +141,9 @@ export interface IndustryDef {
   name: string;
   unit: string;
   desc: string;
+  friends: number;
+  friendsPerNet: number;
+  needsBilling?: boolean; // 결제 기능을 만들어야 구독·거래 매출이 생김(A-111)
   tam: number;
   adoption: { a0: number; a1: number; mid: number; k: number };
   price: number;
@@ -201,6 +206,7 @@ export interface FeatureFx {
   infra?: number;
   stability?: number;
   enterprise?: boolean;
+  billing?: boolean; // 결제 기능(A-111): needsBilling 산업은 이게 있어야 돈을 받음
   market?: MarketId;
   bugs?: number;
   ai?: boolean;
@@ -221,6 +227,8 @@ export interface FeatureDef {
 }
 
 const FEATURES = featuresData.industries as unknown as Record<IndustryId, FeatureDef[]>;
+// A-115 기능 착수 조건(고객 인사이트)·유지보수·복잡도 수치
+export const FEATURE_RULES = featuresData.rules;
 
 export function featuresOf(ind: IndustryId): FeatureDef[] {
   return FEATURES[ind];

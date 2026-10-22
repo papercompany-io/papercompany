@@ -1,6 +1,6 @@
 // F02 창업 셋업(FS-01, TM-01, TM-02, CO-01, CO-02, EQ-01)으로 새 커리어·새 회사를 만듭니다.
 // 커리어의 두 번째 회사부터는 같은 상태에서 회사 부분만 새로 만들고, 날짜·명성·자산·업적은 이어집니다.
-import { DATA, dept, industry, officeTier } from './data';
+import { DATA, dept, FEATURE_RULES, industry, officeTier } from './data';
 import { dayOfYear } from './calendar';
 import { seedCompetitors } from './competitors';
 import { startPhase } from './economy';
@@ -9,10 +9,11 @@ import { book, newAccrual } from './finance';
 import { createWorkspace, onEmployeeJoined } from './messenger';
 import { legacyFx } from './career';
 import { buildSeats, takeDesk } from './office';
+import { seedMvpRoadmap } from './product';
 import { rollTraits } from './hiring';
-import { startSkill } from './staff';
+import { rollTalent, startSkill } from './staff';
 import { updateStoredValuation } from './valuation';
-import type { ActionId, Career, Company, DeptId, Employee, GameState, Grade, IndustryId, MarketId, MarketState, Profile } from './types';
+import type { ActionId, Career, Company, DeptId, Employee, GameState, Grade, IndustryId, MarketId, MarketState, Profile, ServiceInfo } from './types';
 
 export interface SetupChoices {
   picks: Record<string, string>;
@@ -23,6 +24,7 @@ export interface SetupChoices {
   wantsAngel: boolean;
   seed: number;
   industry: IndustryId;
+  service?: ServiceInfo;
   founderName?: string;
   challenge?: string | null;
   invest?: number; // 개인 자산에서 넣는 돈(두 번째 회사부터)
@@ -82,14 +84,15 @@ function emptyMarkets(): Record<MarketId, MarketState> {
   return m;
 }
 
-function newCompanyRecord(name: string, ind: IndustryId, day: number): Company {
+function newCompanyRecord(name: string, ind: IndustryId, day: number, service?: ServiceInfo): Company {
   return {
     name: name.trim(),
+    service: service && { ...service, field: service.field.trim(), name: service.name.trim() },
     industry: ind,
     startDay: day,
     stage: 0,
     officeTier: 0,
-    furniture: [],
+    placed: [],
     movingUntil: null,
     workPolicy: 'normal',
     welfare: [],
@@ -180,14 +183,14 @@ function setupCompany(s: GameState, c: SetupChoices, owned: Record<string, strin
   Object.assign(s, {
     msInDay: 0,
     slotsDone: 0,
-    company: newCompanyRecord(c.companyName, ind.id, s.day),
+    company: newCompanyRecord(c.companyName, ind.id, s.day, c.service),
     founder: { picks: { ...c.picks }, creditsLeft: specLeft },
     wantsAngelOnStart: c.wantsAngel,
     cash: 0,
     ledger: [],
     accrual: newAccrual(s.day, 0),
     plHistory: [],
-    product: { features: {}, roadmap: [], bugs: 0, debt: 0, polish: 0, appealBonus: 0, priceTier: 'standard', launchedDay: null, shipped: [] },
+    product: { features: {}, roadmap: [], bugs: 0, debt: 0, polish: 0, appealBonus: 0, insight: FEATURE_RULES.insight.start, payInsight: 0, priceTier: 'standard', launchedDay: null, shipped: [] },
     markets: emptyMarkets(),
     competitors: [],
     enterprise: [],
@@ -251,6 +254,7 @@ function setupCompany(s: GameState, c: SetupChoices, owned: Record<string, strin
   s.company.peakEmployees = s.employees.length;
   recordEquity(s, '창업');
   updateStoredValuation(s);
+  seedMvpRoadmap(s);
 }
 
 function makeEmployee(s: GameState, name: string, d: DeptId, grade: Grade, salary: number, kind: Employee['kind'], seatId: string, years: number): Employee {
@@ -267,6 +271,7 @@ function makeEmployee(s: GameState, name: string, d: DeptId, grade: Grade, salar
     kind,
     traits: rollTraits(s).filter((t) => t !== 'hothead'),
     skill: startSkill(s, grade, years),
+    talent: rollTalent(s),
     sat: 82,
     health: 88,
     lead: false,

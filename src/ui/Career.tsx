@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { DATA, industry } from '../core/data';
 import { careerStats, endingFor, founderAge, legacyEarned, mustRetire, pathSummary } from '../core/career';
-import { formatDate } from '../core/calendar';
+import { formatDate, yearOf } from '../core/calendar';
 import { pct, won, wonCompact, wonShort } from '../core/format';
 import { STAGE_NAMES } from '../core/progress';
 import type { CompanyResult, GameState } from '../core/types';
@@ -179,43 +179,103 @@ export function Career({ s, onNext, onRetire }: { s: GameState; onNext: () => vo
   );
 }
 
+// 엔딩(A-114): 어두운 한 장 — 위 엔딩 이름·글, 납작한 요약 줄, 아래 "걸어온 길"(회사를 시간 순 세로 길로, 대표작 표시).
+const END_KIND: Record<string, { label: string; chip: string }> = {
+  sale: { label: '매각', chip: 'green' },
+  ipo_exit: { label: '상장', chip: 'blue' },
+  bankrupt: { label: '파산', chip: 'red' },
+  fired: { label: '해임', chip: 'red' },
+  retired_ceo: { label: '은퇴', chip: 'amber' },
+};
+
+// 걸어온 길에서 "대표작"으로 표시할 회사의 번호(없으면 -1).
+function signatureIndex(cs: CompanyResult[]): number {
+  // TODO(human)
+  let best = -1;
+  cs.forEach((c, i) => {
+    if (c.amount > 0 && (best < 0 || c.amount > cs[best].amount)) best = i;
+  });
+  return best;
+}
+
 export function Ending({ s, onHome }: { s: GameState; onHome: () => void }) {
   const e = endingFor(s);
-  const st = careerStats(s);
+  const cs = s.career.companies;
+  const sig = signatureIndex(cs);
+  const count = (k: string) => cs.filter((c) => c.kind === k).length;
+  const outcomes = (['sale', 'ipo_exit', 'bankrupt', 'fired', 'retired_ceo'] as const)
+    .filter((k) => count(k) > 0)
+    .map((k) => `${END_KIND[k].label} ${count(k)}`)
+    .join(' · ');
   return (
     <div className="result-screen ending">
-      <div className="result-window">
-        <div className="ending-body">
-          <div className="ending-tag">엔딩</div>
+      <div className="end-wrap">
+        <header className="end-hero">
+          <div className="end-kicker">
+            {s.career.founderName}의 커리어 · {s.career.startAge}세에 시작해 {Math.floor(founderAge(s))}세에 은퇴
+          </div>
           <div className="ending-title" data-testid="ending-title">
             {e.name}
           </div>
           <div className="ending-text">{e.text}</div>
-          <div className="career-stats big">
-            <div>
-              <span>최종 개인 자산</span>
-              <b>
-                <span className="money" title={won(s.career.wealth)}>{wonCompact(s.career.wealth)}</span>
-              </b>
-            </div>
-            <div>
-              <span>세운 회사</span>
-              <b>{s.career.companies.length}</b>
-            </div>
-            <div>
-              <span>Exit / 상장 / 파산</span>
-              <b>
-                {st.exits} / {st.ipos} / {st.bankruptcies}
-              </b>
-            </div>
-            <div>
-              <span>업적</span>
-              <b>
-                {s.career.achievements.length} / {DATA.achievements.achievements.length}
-              </b>
-            </div>
+        </header>
+
+        <div className="end-sum">
+          <div className="end-cell main">
+            <span>남긴 개인 자산</span>
+            <b className="money" title={won(s.career.wealth)}>
+              {wonCompact(s.career.wealth)}
+            </b>
           </div>
-          <button className="btn big" data-testid="ending-home" onClick={onHome}>
+          <div className="end-cell">
+            <span>세운 회사</span>
+            <b>{cs.length}곳</b>
+            {outcomes && <i>{outcomes}</i>}
+          </div>
+          <div className="end-cell">
+            <span>모은 업적</span>
+            <b>{s.career.achievements.length}개</b>
+            <i>전체 {DATA.achievements.achievements.length}개 중</i>
+          </div>
+        </div>
+
+        <section className="end-road-wrap">
+          <div className="end-sec">걸어온 길</div>
+          {cs.length === 0 ? (
+            <div className="end-empty">끝까지 마친 회사가 없습니다.</div>
+          ) : (
+            <ol className="end-road">
+              {cs.map((c, i) => {
+                const k = END_KIND[c.kind];
+                return (
+                  <li key={i} className={`end-step ${k.chip}${i === sig ? ' sig' : ''}`}>
+                    <span className="end-year">
+                      {yearOf(c.startDay)}–{yearOf(c.day)}
+                    </span>
+                    <span className="end-dot" />
+                    <div className="end-co">
+                      <div className="end-co-head">
+                        <b>{c.companyName}</b>
+                        <span className={`chip ${k.chip}`}>{k.label}</span>
+                        {i === sig && <span className="end-sig">대표작</span>}
+                      </div>
+                      <div className="end-co-sub">
+                        {industry(c.industry).name} · 가장 컸을 때 직원 {c.peakEmployees}명 · 회사 몸값 {wonShort(c.maxValuation)}
+                      </div>
+                    </div>
+                    <div className="end-co-amt">
+                      <span>내 몫</span>
+                      <b className={c.amount > 0 ? '' : 'zero'}>{c.amount > 0 ? wonShort(c.amount) : '없음'}</b>
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
+          )}
+        </section>
+
+        <div className="end-foot">
+          <button className="btn big gold" data-testid="ending-home" onClick={onHome}>
             명예의 전당으로
           </button>
         </div>

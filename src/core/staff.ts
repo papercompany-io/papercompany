@@ -86,7 +86,7 @@ export function output(s: GameState, e: Employee, cache?: Map<DeptId, ReturnType
   if ((e.dept === 'sales' || e.dept === 'marketing') && hasTrait(e, 'social')) tf += 0.2;
   const moving = s.company.movingUntil !== null ? 0.4 : 1;
   const ai = aiMultiplier(s, e);
-  return gradeOutput(e.grade) * skillF * satF * healthF * policy * wf * tf * li.span * (1 + li.bonus) * ai * approveMultiplier(s) * (1 + mod(s, 'output')) * moving;
+  return gradeOutput(e.grade) * (e.talent ?? 1) * skillF * satF * healthF * policy * wf * tf * li.span * (1 + li.bonus) * ai * approveMultiplier(s) * (1 + mod(s, 'output')) * moving;
 }
 
 export function deptOutput(s: GameState, d: DeptId): number {
@@ -268,6 +268,32 @@ export function avgSat(s: GameState): number {
 
 export function avgHealth(s: GameState): number {
   return s.employees.length ? s.employees.reduce((a, e) => a + e.health, 0) / s.employees.length : 80;
+}
+
+// 개발 속도(A-89, Startup Company식 %): 능력 등급 배율 × 숙련 × 개인 재능. 100% = B등급 보통 숙련(50)·재능 1.
+// 재능이 사람마다 연속값이라 속도가 1% 단위로 다 다릅니다. 만족·건강 같은 그날 상태는 뺀 기본 속도
+export function speedOf(g: Grade, skill: number, talent = 1): number {
+  return Math.round(gradeOutput(g) * (0.7 + (skill / 100) * 0.6) * talent * 100);
+}
+
+// 숙련을 끝까지(100) 올렸을 때의 속도
+export function maxSpeedOf(g: Grade, talent = 1): number {
+  return speedOf(g, 100, talent);
+}
+
+export function employeeSpeed(e: Employee): number {
+  return speedOf(e.grade, e.skill, e.talent ?? 1);
+}
+
+// 재능 배율: 0.88~1.12 연속값(소수 셋째 자리)
+export function rollTalent(s: GameState): number {
+  return Math.round((0.88 + rand(s) * 0.24) * 1000) / 1000;
+}
+
+// 숙련을 모를 때(창업 후보 등) 보통 숙련으로 본 속도
+export function typicalSpeed(g: Grade, years: number): number {
+  const base = { C: 25, B: 40, A: 55, S: 70 }[g];
+  return speedOf(g, Math.min(95, base + Math.min(15, years * 1.5) + 4));
 }
 
 export function startSkill(s: GameState, g: Grade, years: number): number {

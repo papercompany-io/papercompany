@@ -1,5 +1,5 @@
 {
-  "_note": "FR-10 투자사 목록(가상 이름), 성향 [예시값]",
+  "_note": "FR-10 투자사 목록(가상 이름), 성향 [예시값] · likes: 가장 반기는 레터(A-109, 맞으면 관심이 크게 오름) · dislikes: 반기지 않는 레터(A-110, 보내면 관심이 조금 깎임)",
   "investors": [
     {
       "id": "inv_sunbae",
@@ -10,7 +10,9 @@
         "preseed"
       ],
       "soloAverse": false,
-      "desc": "엑싯 경험 창업자 출신. 사람을 보고 투자합니다."
+      "desc": "엑싯 경험 창업자 출신. 사람을 보고 투자합니다.",
+      "likes": "intro",
+      "dislikes": "proposal"
     },
     {
       "id": "inv_spark",
@@ -22,7 +24,9 @@
         "seed"
       ],
       "soloAverse": true,
-      "desc": "여러 엔젤이 함께 투자합니다. 단독 투자를 꺼립니다."
+      "desc": "여러 엔젤이 함께 투자합니다. 단독 투자를 꺼립니다.",
+      "likes": "club",
+      "dislikes": "proposal"
     },
     {
       "id": "inv_blueseed",
@@ -33,7 +37,9 @@
         "seed"
       ],
       "soloAverse": true,
-      "desc": "시드 전문. 클럽딜을 선호합니다."
+      "desc": "시드 전문. 클럽딜을 선호합니다.",
+      "likes": "club",
+      "dislikes": "intro"
     },
     {
       "id": "inv_hangang",
@@ -44,7 +50,9 @@
         "A"
       ],
       "soloAverse": true,
-      "desc": "제품과 고객 지표를 꼼꼼히 봅니다."
+      "desc": "제품과 고객 지표를 꼼꼼히 봅니다.",
+      "likes": "material",
+      "dislikes": "intro"
     },
     {
       "id": "inv_nextstep",
@@ -55,7 +63,9 @@
         "A"
       ],
       "soloAverse": false,
-      "desc": "빠르게 결정합니다."
+      "desc": "빠르게 결정합니다. 군더더기 없이 조건부터 듣고 싶어 합니다.",
+      "likes": "proposal",
+      "dislikes": "material"
     },
     {
       "id": "inv_aurora",
@@ -67,7 +77,9 @@
         "C"
       ],
       "soloAverse": false,
-      "desc": "매출 성장률을 중시합니다."
+      "desc": "매출 성장률을 중시합니다.",
+      "likes": "material",
+      "dislikes": "club"
     },
     {
       "id": "inv_titan",
@@ -79,7 +91,9 @@
         "D"
       ],
       "soloAverse": true,
-      "desc": "큰 라운드를 공동으로 이끕니다."
+      "desc": "큰 라운드를 다른 투자사와 공동으로 이끕니다.",
+      "likes": "club",
+      "dislikes": "proposal"
     },
     {
       "id": "inv_wave",
@@ -93,7 +107,9 @@
         "G"
       ],
       "soloAverse": false,
-      "desc": "상장 전 대형 투자."
+      "desc": "상장 전 대형 투자. 숫자로 증명된 회사만 봅니다.",
+      "likes": "material",
+      "dislikes": "intro"
     },
     {
       "id": "inv_corp",
@@ -105,7 +121,9 @@
         "C"
       ],
       "soloAverse": false,
-      "desc": "대기업 계열 투자사. 사업 제휴를 함께 봅니다."
+      "desc": "대기업 계열 투자사. 사업 제휴를 함께 봅니다.",
+      "likes": "intro",
+      "dislikes": "club"
     },
     {
       "id": "inv_silver",
@@ -118,7 +136,9 @@
         "F"
       ],
       "soloAverse": true,
-      "desc": "해외 진출 기업을 선호합니다."
+      "desc": "해외 진출 기업을 선호합니다. 창업자의 비전을 중요하게 봅니다.",
+      "likes": "intro",
+      "dislikes": "proposal"
     },
     {
       "id": "inv_north",
@@ -130,7 +150,9 @@
         "G"
       ],
       "soloAverse": false,
-      "desc": "상장 직전 기업에 크게 투자합니다."
+      "desc": "상장 직전 기업에 크게 투자합니다. 조건이 분명한 제안을 좋아합니다.",
+      "likes": "proposal",
+      "dislikes": "material"
     },
     {
       "id": "inv_sovereign",
@@ -141,7 +163,9 @@
         "G"
       ],
       "soloAverse": true,
-      "desc": "초대형 라운드에만 참여합니다."
+      "desc": "초대형 라운드에만, 여러 곳과 함께 참여합니다.",
+      "likes": "club",
+      "dislikes": "intro"
     }
   ]
 }

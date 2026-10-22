@@ -1,5 +1,5 @@
 // F10 재무 메뉴: FN-01 보유 자금·장부, FN-02 비용, FN-03 손익(DEC-030 순서), VL-01 기업가치
-import { paydayForecast } from '../../core/forecast';
+// 화면 짜임은 채용 메뉴(A-88)를 따름: 왼쪽 회색 판(이번 달·요약 줄·막대), 오른쪽 카드 목록(월별 기록)
 import { useState } from 'react';
 import { formatDate, formatMonth } from '../../core/calendar';
 import { currentPL, runwayMonths } from '../../core/finance';
@@ -8,53 +8,207 @@ import { computeValuation } from '../../core/valuation';
 import { useGame } from '../store';
 import { Money, Tabs, Help } from '../common';
 import type { MonthPL } from '../../core/types';
-import { Spark } from './StockApp';
 import './apps.css';
 
+type PLMonth = Omit<MonthPL, 'cashAfter'> & { cashAfter?: number; partial?: boolean };
+type Line = [string, (m: PLMonth) => number];
+
+const REVENUES: Line[] = [
+  ['구독·유료', (m) => m.revSub],
+  ['광고', (m) => m.revAd],
+  ['거래 수수료', (m) => m.revTake],
+  ['대기업 계약', (m) => m.revEnt],
+];
+
+const COSTS: Line[] = [
+  ['부가가치세', (m) => m.vat],
+  ['월급', (m) => m.salary],
+  ['4대보험', (m) => m.insurance],
+  ['퇴직연금', (m) => m.pension],
+  ['접대비·업무추진비', (m) => m.entertainment],
+  ['채용 홍보비', (m) => m.recruiting],
+  ['광고비', (m) => m.ads],
+  ['인프라(클라우드)', (m) => m.infra],
+  ['월세', (m) => m.rent],
+  ['복지비', (m) => m.welfare],
+  ['AI 도구 구독', (m) => m.ai],
+  ['기타(이벤트·진출·인수·위로금)', (m) => m.other],
+  ['법인세', (m) => m.tax],
+];
+
+// 비용 막대를 몇 갈래로 묶어 보여 줄지. 13줄을 다 그리면 왼쪽 판이 표처럼 빽빽해짐
+function costGroups(m: PLMonth): { label: string; v: number }[] {
+  // TODO(human)
+  return COSTS.map(([label, f]) => ({ label, v: f(m) }));
+}
+
 export function FinanceApp() {
-  const s = useGame();
   const [tab, setTab] = useState<'pl' | 'cash' | 'value'>('pl');
-  const rw = runwayMonths(s);
-  const fc = paydayForecast(s);
   return (
-    <div className="col">
-      <div className="stats">
-        <div className="stat">
-          <div className="stat-label">보유 자금</div>
-          <div className="stat-value">
-            <Money v={s.cash} testId="fin-cash" />
-          </div>
-        </div>
-        <div className="stat">
-          <div className="stat-label">런웨이(최근 소진 기준)</div>
-          <div className="stat-value">{rw === null ? '흑자' : rw > 120 ? '10년 이상' : `${rw.toFixed(1)}개월`}</div>
-        </div>
-        <div className="stat">
-          <div className="stat-label">기업가치(지금 산정, 투자·Exit 기준)</div>
-          <div className="stat-value">
-            <Money v={computeValuation(s).value} />
-          </div>
-        </div>
-        <div className="stat">
-          <div className="stat-label">다음 월급일(매월 1일) 정산 뒤 예상 자금</div>
-          <div className="stat-value">
-            <Money v={fc.cashAfter} testId="fin-forecast" />
-          </div>
-          <div className="tiny muted">자금 0 이하로 월급일을 넘기면 파산합니다</div>
-        </div>
-      </div>
+    <div className="col fin">
       <Tabs
         tabs={[
-          { id: 'pl', label: '손익' },
-          { id: 'cash', label: '자금 장부' },
+          { id: 'pl', label: '이번 달' },
+          { id: 'cash', label: '거래 내역' },
           { id: 'value', label: '기업가치' },
         ]}
         value={tab}
         onChange={setTab}
       />
-      {tab === 'pl' && <PLTable />}
-      {tab === 'cash' && (
-        <table className="t">
+      {tab === 'pl' && <PLView />}
+      {tab === 'cash' && <LedgerView />}
+      {tab === 'value' && <ValueView />}
+    </div>
+  );
+}
+
+// Startup Company 예산 화면처럼: 왼쪽 빨간 판(나가는 돈), 오른쪽 초록 판(들어오는 돈), 아래 회색 판(통장)
+function PLView() {
+  const s = useGame();
+  const cur: PLMonth = { ...currentPL(s), partial: true };
+  const months: PLMonth[] = [...s.plHistory.slice(-5), cur];
+  const [table, setTable] = useState(false);
+  const rw = runwayMonths(s);
+  const spent = cur.revenue - cur.netIncome;
+  return (
+    <div className="col">
+      <div className="fin-budget">
+        <MoneyList tone="out" title={`나가는 돈 · ${formatMonth(cur.month)}`} items={costGroups(cur)} total={spent} empty="아직 나간 돈이 없습니다" />
+        <MoneyList tone="in" title={`들어오는 돈 · ${formatMonth(cur.month)}`} items={REVENUES.map(([label, f]) => ({ label, v: f(cur) }))} total={cur.revenue} empty="아직 번 돈이 없습니다" />
+      </div>
+      <div className="fin-bank">
+        <div className="fb-row">
+          <span>통장 잔고</span>
+          <b>
+            <Money v={s.cash} testId="fin-cash" />
+          </b>
+        </div>
+        <div className="fb-row" title="최근 3개월 동안 돈이 줄어든 속도로 계산합니다">
+          <span>이대로 버틸 수 있는 기간</span>
+          <b className={rw !== null && rw < 3 ? 'fin-bad' : ''}>{rw === null ? '계속(흑자)' : rw > 120 ? '10년 넘게' : `${rw.toFixed(1)}개월`}</b>
+        </div>
+        <div className="fb-row big">
+          <span>
+            이번 달 {cur.netIncome < 0 ? '적자' : '흑자'}
+            <Help text="이번 달 손익 = 들어오는 돈 − 나가는 돈. 매월 1일(월급일)에 지난달을 정산합니다. 홍보비·광고비·이벤트 비용은 쓰는 날 바로 빠지고, 나머지는 정산일에 빠집니다." />
+          </span>
+          <b className={cur.netIncome < 0 ? 'fin-bad' : 'fin-good'}>
+            {cur.netIncome > 0 ? '+' : ''}
+            {man(cur.netIncome)}만원
+          </b>
+        </div>
+      </div>
+      <button className="btn small ghost fin-more" onClick={() => setTable((t) => !t)}>
+        {table ? '지난 달 손익표 접기' : '지난 달 손익표 보기'}
+      </button>
+      {table && <PLTable months={months} />}
+    </div>
+  );
+}
+
+// 금액 목록 판: 이름 왼쪽·금액 오른쪽, 0원 줄은 빼고 맨 아래 합계
+function MoneyList({ tone, title, items, total, empty }: { tone: 'in' | 'out'; title: string; items: { label: string; v: number }[]; total: number; empty: string }) {
+  const shown = items.filter((x) => Math.round(x.v / 1e4) !== 0);
+  return (
+    <section className={`fb-panel ${tone}`}>
+      <div className="fb-head">{title}</div>
+      <div className="fb-lines">
+        {shown.length === 0 && <div className="fb-empty">{empty}</div>}
+        {shown.map((x) => (
+          <div key={x.label} className="fb-line">
+            <span>{x.label}</span>
+            <b>{man(x.v)}만원</b>
+          </div>
+        ))}
+      </div>
+      <div className="fb-line fb-total">
+        <span>합계</span>
+        <b>{man(total)}만원</b>
+      </div>
+    </section>
+  );
+}
+
+function PLTable({ months }: { months: PLMonth[] }) {
+  const rows: [string, (m: PLMonth) => number, string?][] = [
+    ['총매출', (m) => m.revenue, 'strong'],
+    ...REVENUES.map(([l, f]): [string, (m: PLMonth) => number] => [`  ${l}`, f]),
+    ...COSTS.filter(([l]) => l !== '법인세').map(([l, f]): [string, (m: PLMonth) => number] => [`− ${l}`, (m) => -f(m)]),
+    ['영업비용 합계', (m) => -m.opex, 'sub'],
+    ['= 영업이익', (m) => m.operatingProfit, 'strong'],
+    ['− 법인세', (m) => -m.tax],
+    ['= 순이익(손익)', (m) => m.netIncome, 'total'],
+    ['투자금 유입', (m) => m.investment],
+    ['월초 자금', (m) => m.cashBefore],
+  ];
+  return (
+    <table className="t pl" data-testid="pl-table">
+      <thead>
+        <tr>
+          <th className="muted">단위: 만원</th>
+          {months.map((m) => (
+            <th key={m.month} className="r">
+              {formatMonth(m.month)}
+              {m.partial ? ' (진행 중)' : ''}
+            </th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {rows.filter(([, f, cls]) => cls === 'strong' || cls === 'total' || months.some((m) => Math.round(f(m) || 0) !== 0)).map(([label, f, cls]) => (
+          <tr key={label} className={cls === 'total' ? 'total' : ''}>
+            <td className={cls === 'strong' || cls === 'total' ? 'b' : cls === 'sub' ? 'muted' : ''}>{label}</td>
+            {months.map((m) => (
+              <td key={m.month} className="r num">
+                {man(f(m) || 0)}
+              </td>
+            ))}
+          </tr>
+        ))}
+        <tr>
+          <td>월말 자금(정산 후)</td>
+          {months.map((m) => (
+            <td key={m.month} className="r num">
+              {m.cashAfter !== undefined ? man(m.cashAfter) : '-'}
+            </td>
+          ))}
+        </tr>
+        <tr>
+          <td>월말 고객 수</td>
+          {months.map((m) => (
+            <td key={m.month} className="r num">
+              {m.partial ? '-' : m.usersEnd.toLocaleString('ko-KR')}
+            </td>
+          ))}
+        </tr>
+      </tbody>
+    </table>
+  );
+}
+
+// 자금 장부: 채용 지원자 거르기처럼 버튼 묶음으로 들어온 돈·나간 돈 거르기
+function LedgerView() {
+  const s = useGame();
+  const [filter, setFilter] = useState<'all' | 'in' | 'out'>('all');
+  const recent = s.ledger.slice(-40).reverse();
+  const shown = filter === 'all' ? recent : recent.filter((l) => (filter === 'in' ? l.amount > 0 : l.amount < 0));
+  return (
+    <div className="col">
+      <div className="seg applicant-filter">
+        <button className={filter === 'all' ? 'on' : ''} onClick={() => setFilter('all')}>
+          전체 {recent.length}
+        </button>
+        <button className={filter === 'in' ? 'on' : ''} onClick={() => setFilter('in')}>
+          들어온 돈 {recent.filter((l) => l.amount > 0).length}
+        </button>
+        <button className={filter === 'out' ? 'on' : ''} onClick={() => setFilter('out')}>
+          나간 돈 {recent.filter((l) => l.amount < 0).length}
+        </button>
+      </div>
+      {shown.length === 0 ? (
+        <div className="empty-note">아직 기록이 없습니다.</div>
+      ) : (
+        <table className="t fin-ledger">
           <thead>
             <tr>
               <th>날짜</th>
@@ -64,116 +218,23 @@ export function FinanceApp() {
             </tr>
           </thead>
           <tbody>
-            {s.ledger
-              .slice(-40)
-              .reverse()
-              .map((l, i) => (
-                <tr key={i}>
-                  <td>{formatDate(l.day)}</td>
-                  <td>{l.item}</td>
-                  <td className="r">
-                    <Money v={l.amount} />
-                  </td>
-                  <td className="r num">{wonShort(l.balance)}</td>
-                </tr>
-              ))}
+            {shown.map((l, i) => (
+              <tr key={i}>
+                <td className="muted">{formatDate(l.day)}</td>
+                <td>
+                  <span className={`fin-dot ${l.amount < 0 ? 'out' : 'in'}`} />
+                  {l.item}
+                </td>
+                <td className={`r num ${l.amount < 0 ? 'fin-bad' : 'fin-good'}`}>
+                  {l.amount > 0 ? '+' : ''}
+                  {wonShort(l.amount)}
+                </td>
+                <td className="r num">{wonShort(l.balance)}</td>
+              </tr>
+            ))}
           </tbody>
         </table>
       )}
-      {tab === 'value' && <ValueView />}
-    </div>
-  );
-}
-
-function PLTable() {
-  const s = useGame();
-  const cur = currentPL(s);
-  const months: (Omit<MonthPL, 'cashAfter'> & { cashAfter?: number; partial?: boolean })[] = [...s.plHistory.slice(-5), { ...cur, partial: true }];
-  const [chart, setChart] = useState(false);
-  const rows: [string, (m: (typeof months)[number]) => number, string?][] = [
-    ['총매출', (m) => m.revenue, 'strong'],
-    ['  구독·유료', (m) => m.revSub],
-    ['  광고', (m) => m.revAd],
-    ['  거래 수수료', (m) => m.revTake],
-    ['  대기업 계약', (m) => m.revEnt],
-    ['− 부가가치세', (m) => -m.vat],
-    ['− 월급', (m) => -m.salary],
-    ['− 4대보험(회사 부담)', (m) => -m.insurance],
-    ['− 퇴직연금(회사 부담)', (m) => -m.pension],
-    ['− 접대비·업무추진비', (m) => -m.entertainment],
-    ['− 채용 홍보비', (m) => -m.recruiting],
-    ['− 광고비', (m) => -m.ads],
-    ['− 인프라(클라우드)', (m) => -m.infra],
-    ['− 월세', (m) => -m.rent],
-    ['− 복지비', (m) => -m.welfare],
-    ['− AI 도구 구독', (m) => -m.ai],
-    ['− 기타(이벤트·진출·인수·위로금)', (m) => -m.other],
-    ['영업비용 합계', (m) => -m.opex, 'sub'],
-    ['= 영업이익', (m) => m.operatingProfit, 'strong'],
-    ['− 법인세', (m) => -m.tax],
-    ['= 순이익(손익)', (m) => m.netIncome, 'total'],
-    ['투자금 유입', (m) => m.investment],
-    ['월초 자금', (m) => m.cashBefore],
-  ];
-  return (
-    <div className="col">
-      <div className="row">
-        <Help text="손익 = 총매출 − 부가가치세 − 영업비용 − 법인세. 매월 1일(월급일)에 지난달을 정산합니다. 홍보비·광고비·이벤트 비용은 쓰는 날 바로 빠지고, 나머지는 정산일에 빠집니다." />
-        <button className="btn small ghost" onClick={() => setChart((c) => !c)}>
-          {chart ? '표 보기' : '추이 그래프'}
-        </button>
-      </div>
-      {chart && (
-        <div className="card col">
-          <b className="tiny">월 매출(최근 {Math.min(36, s.plHistory.length)}개월)</b>
-          <Spark points={s.plHistory.slice(-36).map((m) => m.revenue)} h={90} />
-          <b className="tiny">월 순이익</b>
-          <Spark points={s.plHistory.slice(-36).map((m) => m.netIncome)} h={90} />
-          <b className="tiny">월말 자금</b>
-          <Spark points={s.plHistory.slice(-36).map((m) => m.cashAfter)} h={90} />
-        </div>
-      )}
-      <table className="t pl" data-testid="pl-table">
-        <thead>
-          <tr>
-            <th className="muted">단위: 만원</th>
-            {months.map((m) => (
-              <th key={m.month} className="r">
-                {formatMonth(m.month)}
-                {m.partial ? ' (진행 중)' : ''}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.filter(([, f, cls]) => cls === 'strong' || cls === 'total' || months.some((m) => Math.round(f(m) || 0) !== 0)).map(([label, f, cls]) => (
-            <tr key={label} className={cls === 'total' ? 'total' : ''}>
-              <td className={cls === 'strong' || cls === 'total' ? 'b' : cls === 'sub' ? 'muted' : ''}>{label}</td>
-              {months.map((m) => (
-                <td key={m.month} className="r num">
-                  {man(f(m) || 0)}
-                </td>
-              ))}
-            </tr>
-          ))}
-          <tr>
-            <td>월말 자금(정산 후)</td>
-            {months.map((m) => (
-              <td key={m.month} className="r num">
-                {m.cashAfter !== undefined ? man(m.cashAfter) : '-'}
-              </td>
-            ))}
-          </tr>
-          <tr>
-            <td>월말 고객 수</td>
-            {months.map((m) => (
-              <td key={m.month} className="r num">
-                {m.partial ? '-' : m.usersEnd.toLocaleString('ko-KR')}
-              </td>
-            ))}
-          </tr>
-        </tbody>
-      </table>
     </div>
   );
 }
@@ -183,45 +244,39 @@ function ValueView() {
   const v = computeValuation(s);
   const methodName = { scorecard: '매출 전: 스코어카드(또는 사용자 기반)', revenue: '매출 발생 뒤: 연 환산 매출 × 매출 배수(또는 사용자 기반)', profit: '흑자 지속: 영업이익 × 이익 배수', market: '상장사: 시가총액' }[v.method];
   return (
-    <div className="card col">
-      <div className="row">
-        <b>지금 산정한 기업가치</b>
+    <section className="hire-form">
+      <div className="hf-title">
+        지금 산정한 기업가치
+        <Help text={`계산법: ${methodName}. HUD의 기업가치는 매월 1일 정산과 투자 수락 때 갱신한 값이고, 투자 라운드와 Exit은 이 화면처럼 그때그때 다시 산정합니다.`} />
+      </div>
+      <div className="fin-big">
         <Money v={v.value} testId="value-now" />
       </div>
-      <div className="tiny">계산법: {methodName}</div>
-      <table className="t">
-        <tbody>
-          <tr>
-            <th>사업가치</th>
-            <td className="r num">{wonShort(v.business)}</td>
-          </tr>
-          <tr>
-            <th>+ 보유 자금</th>
-            <td className="r num">{wonShort(v.cash)}</td>
-          </tr>
-          {v.penalty && (
-            <tr>
-              <th>× Exit 실패 여파</th>
-              <td className="r">0.8</td>
-            </tr>
-          )}
-          <tr className="total">
-            <th>기업가치</th>
-            <td className="r num">{wonShort(v.value)}</td>
-          </tr>
-        </tbody>
-      </table>
-      {v.detail.map((d) => (
-        <div key={d} className="tiny muted">
-          {d}
+      <div className="hf-summary">
+        <div className="hf-sum">
+          <span>사업가치</span>
+          <b>{wonShort(v.business)}</b>
         </div>
-      ))}
-      <Help text="HUD의 기업가치는 매월 1일 정산과 투자 수락 때 갱신한 값이고, 투자 라운드와 Exit은 이 화면처럼 그때그때 다시 산정합니다." />
-    </div>
+        <span className="fin-op">+</span>
+        <div className="hf-sum">
+          <span>보유 자금</span>
+          <b>{wonShort(v.cash)}</b>
+        </div>
+        {v.penalty && (
+          <>
+            <span className="fin-op">×</span>
+            <div className="hf-sum">
+              <span>Exit 실패 여파</span>
+              <b className="fin-bad">0.8</b>
+            </div>
+          </>
+        )}
+      </div>
+    </section>
   );
 }
 
-// 손익표는 만원 단위(표가 덜 빽빽하게)
+// 손익은 만원 단위(표가 덜 빽빽하게)
 function man(v: number): string {
   return Math.round(v / 1e4).toLocaleString('ko-KR');
 }

@@ -9,25 +9,40 @@ import { legacyFx } from './career';
 import { deptUnlocked } from './employees';
 import { float, notify } from './notify';
 import { pick, poisson, rand, randInt, weighted } from './rng';
-import { marketSalary, startSkill, welfareApply, welfareQuality } from './staff';
-import type { Applicant, DeptId, Employee, GameState, Grade, Posting } from './types';
+import { marketSalary, rollTalent, startSkill, welfareApply, welfareQuality } from './staff';
+import type { Applicant, DeptId, Employee, GameState, Grade, NegoMsg, Posting } from './types';
 
 const H = DATA.hiring;
 
+// 공고 인원·기간(A-89): 기본은 무제한(인원 0 = 무제한, 마감일 NO_END = 직접 마감할 때까지). 봇은 정해서 올릴 수 있음
+export const NO_END = 999999;
+
 export interface PostingInput {
   dept: DeptId;
-  headcount: number;
-  salaryLevel: string;
-  durationDays: number;
+  headcount?: number;
+  salaryLevel?: string;
+  level?: string;
+  durationDays?: number;
   promo: string;
 }
 
-export function postingWarnings(s: GameState, d: DeptId, headcount: number): string[] {
-  void d;
+export function careerLevel(id: string | undefined) {
+  return H.careerLevels.find((l) => l.id === id);
+}
+
+export function postingFull(p: Posting): boolean {
+  return p.headcount > 0 && p.hired >= p.headcount;
+}
+
+export function postingOpenEnded(p: Posting): boolean {
+  return p.endDay >= NO_END;
+}
+
+export function postingWarnings(s: GameState): string[] {
   const free = seatsAvailable(s);
   const out: string[] = [];
-  if (free === 0) out.push('사무실에 책상을 더 놓을 자리가 없습니다. 책상 배치를 바꾸거나 더 큰 사무실로 옮기세요.');
-  else if (free < headcount) out.push(`책상을 ${free}개 더 놓을 수 있습니다. ${free}명까지만 뽑을 수 있습니다.`);
+  if (free === 0) out.push('사무실에 책상을 더 놓을 자리가 없습니다. 상점에서 책상을 놓거나 더 큰 사무실로 옮기세요.');
+  else if (free <= 2) out.push(`책상을 ${free}개 더 놓을 수 있습니다. ${free}명까지만 뽑을 수 있습니다.`);
   return out;
 }
 
@@ -35,20 +50,63 @@ export function createPosting(s: GameState, input: PostingInput): string | null 
   if (s.ended) return '회사가 끝났습니다.';
   if (!deptUnlocked(s, input.dept)) return `${dept(input.dept).name} 부서는 회사 단계 ${dept(input.dept).stage}부터 둘 수 있습니다.`;
   if (seatsAvailable(s) === 0) return '사무실에 책상을 더 놓을 자리가 없습니다.';
-  if (input.headcount < 1 || input.headcount > H.maxHeadcountPerPosting) return `인원은 1~${H.maxHeadcountPerPosting}명입니다.`;
+  const headcount = input.headcount ?? 0;
+  if (headcount < 0 || headcount > H.maxHeadcountPerPosting) return `인원은 1~${H.maxHeadcountPerPosting}명(0 = 무제한)입니다.`;
   const promo = H.promos.find((p) => p.id === input.promo);
   if (!promo) return '홍보 수준을 고르세요.';
   if (promo.cost > s.cash) return '홍보비를 낼 자금이 부족합니다.';
-  if (!H.durations.includes(input.durationDays)) return '공고 기간을 고르세요.';
-  const p: Posting = { id: nextId(s, 'p'), dept: input.dept, headcount: input.headcount, salaryLevel: input.salaryLevel, durationDays: input.durationDays, promo: input.promo, startDay: s.day, endDay: s.day + input.durationDays, status: 'open', hired: 0 };
+  if (input.durationDays !== undefined && !H.durations.includes(input.durationDays)) return '공고 기간을 고르세요.';
+  const days = input.durationDays ?? 0;
+    if (input.level !== undefined && !careerLevel(input.level)) return '등급을 고르세요.';
+  const p: Posting = { id: nextId(s, 'p'), dept: input.dept, headcount, salaryLevel: input.salaryLevel ?? 'normal', level: input.level, durationDays: days, promo: input.promo, startDay: s.day, endDay: days ? s.day + days : NO_END, status: 'open', hired: 0 };
   s.postings.push(p);
   spendNow(s, `채용 홍보비(${dept(input.dept).name} 공고)`, promo.cost, 'recruiting');
+  // 오늘 남은 시간에도 지원자가 올 수 있음(남은 시간만큼의 비율로)
+  scheduleArrivals(s, p, s.msInDay);
+  s.events.push({ type: 'needsTime', what: '채용 공고' }); // A-126
   return null;
+}
+
+// 지원자는 아침에 몰려오지 않고 하루 중 아무 때나 한 명씩 들어옵니다.
+// 하루 몇 명 올지(포아송)와 각자의 도착 시각을 정해 공고에 줄 세웁니다. from 이후 시간만 씀(공고를 낮에 올린 경우)
+function scheduleArrivals(s: GameState, p: Posting, from = 0) {
+  const dayMs = DATA.time.dayMs;
+  const left = Math.max(0, dayMs - from);
+  const n = poisson(s, (arrivalRate(s, p) * left) / dayMs);
+  const times: number[] = [];
+  for (let i = 0; i < n; i++) times.push(from + rand(s) * left);
+  p.incoming = times.sort((a, b) => a - b);
+}
+
+// 한 공고에 기다리는 지원자는 모집 인원 × 6 + 4명까지, 인원 무제한 공고는 10명까지(A-68): 고를 만큼은 오되 목록이 수백 명으로 쌓이지 않게
+function waitingRoom(s: GameState, p: Posting): number {
+  const waitingHere = s.applicants.filter((a) => a.postingId === p.id && a.status === 'waiting').length;
+  const cap = p.headcount > 0 ? (p.headcount - p.hired) * 6 + 4 : 10;
+  return Math.max(0, cap - waitingHere);
+}
+
+// 지금 시각(하루 안 ms)까지 도착할 차례인 지원자를 들여보냅니다. 시간이 흐를 때마다 부릅니다.
+export function hiringArrivals(s: GameState, upTo: number) {
+  for (const p of s.postings) {
+    const q = p.incoming;
+    if (!q || !q.length) continue;
+    while (q.length && q[0] <= upTo) {
+      q.shift();
+      if (p.status !== 'open' || waitingRoom(s, p) === 0) continue;
+      const a = rollApplicant(s, p.dept, p.salaryLevel, p.id, p.level);
+      s.applicants.push(a);
+      // 개발 공고는 지원자가 자주 몰려 알림을 보내지 않음 — 채용 앱 목록에서만 확인
+      if (p.dept !== 'dev') notify(s, `채용: ${a.name}님이 ${dept(p.dept).name} 공고에 지원했습니다(능력 ${a.grade} · 경력 ${a.years}년).`, 'info', 'hiring');
+    }
+  }
 }
 
 export function closePosting(s: GameState, id: string) {
   const p = s.postings.find((x) => x.id === id);
-  if (p) p.status = 'closed';
+  if (!p) return;
+  p.status = 'closed';
+  p.incoming = [];
+  if (postingOpenEnded(p)) p.endDay = s.day; // 지난 공고 정리(60일 뒤) 기준
 }
 
 function makeName(s: GameState): string {
@@ -77,20 +135,27 @@ export function applicantQualityBonus(s: GameState, levelShift: number): number 
   return (specEffects(s.founder.picks).applicantQuality + levelShift * 10 + welfareQuality(s) + legacyFx(s, 'applicantQuality') + Math.min(10, s.career.rep / 5)) / 100;
 }
 
-export function rollApplicant(s: GameState, d: DeptId, levelId: string, postingId: string): Applicant {
+export function rollApplicant(s: GameState, d: DeptId, levelId: string, postingId: string, careerId?: string): Applicant {
   const level = H.salaryLevels.find((l) => l.id === levelId) ?? H.salaryLevels[1];
   const qb = applicantQualityBonus(s, level.qualityShift);
-  const w = H.gradeWeights;
-  const weights = [Math.max(1, w[0] * (1 - qb)), w[1], w[2] * (1 + 2 * qb), w[3] * (1 + 2 * qb)];
+  const career = careerLevel(careerId);
+  const w = career ? career.gradeWeights : H.gradeWeights;
+  const weights = [w[0] ? Math.max(1, w[0] * (1 - qb)) : 0, w[1], w[2] * (1 + 2 * qb), w[3] * (1 + 2 * qb)];
   const grade = weighted(s, H.grades as Grade[], weights);
   const [y0, y1] = (H.gradeYears as Record<Grade, number[]>)[grade];
-  const base = marketSalary(s, d, grade) * level.salaryMult;
+  const years = randInt(s, y0, y1);
+  // 희망 월급: 능력별 시장 월급 × 재능에 따라 0.95~1.08(재능이 높을수록 더 원함, A-92)
+  const talent = rollTalent(s);
+  const base = marketSalary(s, d, grade) * level.salaryMult * (0.95 + ((talent - 0.88) / 0.24) * 0.13);
   return {
     id: nextId(s, 'a'),
     postingId,
     name: makeName(s),
     dept: d,
-    years: randInt(s, y0, y1),
+    years,
+    skill: startSkill(s, grade, years),
+    talent,
+    level: career?.id,
     desiredSalary: Math.round(base / 10000) * 10000,
     grade,
     traits: rollTraits(s),
@@ -118,27 +183,23 @@ export function arrivalRate(s: GameState, p: Posting): number {
   const promo = H.promos.find((x) => x.id === p.promo) ?? H.promos[0];
   const net = 1 + Math.min(0.6, (s.networkPoints / 100) * H.networkArrivalBonusPer100); // 인맥 효과는 +60%까지(A-68)
   const brand = 1 + Math.min(1.5, s.company.peakUsers > 0 ? Math.log10(1 + s.company.peakUsers) / 6 : 0) + Math.min(0.5, s.career.rep / 100);
-  return H.baseArrivalPerDay * level.arrivalMult * promo.arrivalMult * stageMult(s) * net * brand * (1 + welfareApply(s)) * econ(s, 'apply') * hrBoost(s);
+  return H.baseArrivalPerDay * level.arrivalMult * (careerLevel(p.level)?.arrivalMult ?? 1) * promo.arrivalMult * stageMult(s) * net * brand * (1 + welfareApply(s)) * econ(s, 'apply') * hrBoost(s);
 }
 
 export function hiringDayEnd(s: GameState) {
+  // 어제 줄 서 있던 지원자 중 아직 못 들어온 사람(시간을 건너뛴 경우 등)은 모두 들여보냄
+  hiringArrivals(s, Infinity);
   for (const a of s.applicants) if (a.status === 'waiting' && s.day >= a.leaveDay) a.status = 'left';
   // 오래된 지원자 기록은 정리(저장 크기)
   s.applicants = s.applicants.filter((a) => a.status === 'waiting' || s.day - a.arrivedDay < 30);
   for (const p of s.postings) {
     if (p.status !== 'open') continue;
-    if (s.day >= p.endDay || p.hired >= p.headcount) {
+    if (s.day >= p.endDay || postingFull(p)) {
       p.status = 'closed';
+      p.incoming = [];
       continue;
     }
-    // 한 공고에 기다리는 지원자는 모집 인원 × 6 + 4명까지(A-68): 고를 만큼은 오되 목록이 수백 명으로 쌓이지 않게
-    const waitingHere = s.applicants.filter((a) => a.postingId === p.id && a.status === 'waiting').length;
-    const room = Math.max(0, (p.headcount - p.hired) * 6 + 4 - waitingHere);
-    const n = Math.min(room, poisson(s, arrivalRate(s, p)));
-    if (n > 0) {
-      addApplicants(s, p, n);
-      notify(s, `채용: ${dept(p.dept).name} 공고에 지원자 ${n}명이 들어왔습니다(${H.applicantStayDays}일 동안 기다림).`, 'info', 'hiring');
-    }
+    scheduleArrivals(s, p);
   }
   s.postings = s.postings.filter((p) => p.status === 'open' || s.day - p.endDay < 60);
   autoHireDay(s);
@@ -150,30 +211,115 @@ export function hireWarning(s: GameState, salary: number): string | null {
   return null;
 }
 
-export function offerJob(s: GameState, applicantId: string, lowball: boolean): { ok: boolean; message: string } {
-  const a = s.applicants.find((x) => x.id === applicantId);
-  if (!a || a.status !== 'waiting') return { ok: false, message: '지원자를 찾을 수 없습니다.' };
+function hireBlock(s: GameState, a: Applicant | undefined): string | null {
+  if (!a || a.status !== 'waiting') return '지원자를 찾을 수 없습니다.';
   const p = s.postings.find((x) => x.id === a.postingId);
-  if (p && p.hired >= p.headcount) return { ok: false, message: '이 공고의 모집 인원을 모두 채웠습니다.' };
-  if (seatsAvailable(s) === 0) return { ok: false, message: '사무실에 책상을 더 놓을 자리가 없습니다.' };
-  const salary = lowball ? Math.round((a.desiredSalary * H.lowballRate) / 10000) * 10000 : a.desiredSalary;
-  if (lowball && rand(s) < H.lowballRejectChance) {
-    a.status = 'rejected';
-    return { ok: false, message: `${a.name}님이 월급 ${(salary / 1e4).toLocaleString('ko-KR')}만원 제안을 거절했습니다.` };
-  }
+  if (p && postingFull(p)) return '이 공고의 모집 인원을 모두 채웠습니다.';
+  if (seatsAvailable(s) === 0) return '사무실에 책상을 더 놓을 자리가 없습니다.';
+  return null;
+}
+
+// 채용 확정: 공고 채용 수 +1, 사이닝 보너스는 바로 지급, 내일 출근
+function hire(s: GameState, a: Applicant, salary: number, bonus: number): string {
+  const p = s.postings.find((x) => x.id === a.postingId);
   a.status = 'hired';
   if (p) {
     p.hired += 1;
-    if (p.hired >= p.headcount) p.status = 'closed';
+    if (postingFull(p)) p.status = 'closed';
   }
+  if (bonus > 0) spendNow(s, `사이닝 보너스(${a.name})`, bonus, 'recruiting');
   reserve(s, a, salary);
-  return { ok: true, message: `${a.name}님이 월급 ${(salary / 1e4).toLocaleString('ko-KR')}만원에 입사를 수락했습니다. 내일 출근합니다.` };
+  return `${a.name}님이 월급 ${man(salary)}${bonus ? `·보너스 ${man(bonus)}` : ''}에 입사를 수락했습니다. 내일 출근합니다.`;
+}
+
+const man = (v: number) => `${Math.round(v / 1e4).toLocaleString('ko-KR')}만원`;
+const round10 = (v: number) => Math.max(10e4, Math.round(v / 1e5) * 1e5);
+
+// 희망 월급 그대로 바로 채용(봇·자동 플레이용). lowball이면 10% 낮게 제안하고 일정 확률로 거절
+export function offerJob(s: GameState, applicantId: string, lowball: boolean): { ok: boolean; message: string } {
+  const a = s.applicants.find((x) => x.id === applicantId);
+  const err = hireBlock(s, a);
+  if (err) return { ok: false, message: err };
+  const salary = lowball ? Math.round((a!.desiredSalary * H.lowballRate) / 10000) * 10000 : a!.desiredSalary;
+  if (lowball && rand(s) < H.lowballRejectChance) {
+    a!.status = 'rejected';
+    return { ok: false, message: `${a!.name}님이 월급 ${man(salary)} 제안을 거절했습니다.` };
+  }
+  return { ok: true, message: hire(s, a!, salary, 0) };
+}
+
+// 협상 시작 상태: 인내심, 숨은 최저선. 첫 제안을 기다리는 말 한마디
+export function negotiation(s: GameState, a: Applicant) {
+  const N = H.nego;
+  return (a.nego ??= {
+    log: [{ from: 'them', text: `${a.name}님이 첫 제안을 기다립니다.` }],
+    patience: N.patience,
+    floor: N.floorMin + rand(s) * (N.floorMax - N.floorMin),
+    revealed: false,
+    counter: null,
+  });
+}
+
+// 연봉 협상(A-89): 제안 가치 = 월급 + 보너스/12를 희망 월급과 비교.
+//  ≥ 희망: 수락 · ≥ 최저선: 차이를 조금 줄인 역제안 · 그 아래: 기대치를 밝힘(아주 낮으면 화냄)
+//  수락이 아니면 인내심(%)이 기대와의 차이만큼 줄고, 이전보다 낮게 부르면 더. 0%면 떠남
+export function negotiate(s: GameState, applicantId: string, salary: number, bonus: number): { ok: boolean; hired: boolean; message: string } {
+  const a = s.applicants.find((x) => x.id === applicantId);
+  const err = hireBlock(s, a);
+  if (err) return { ok: false, hired: false, message: err };
+  if (salary <= 0) return { ok: false, hired: false, message: '월급을 정하세요.' };
+  if (bonus > s.cash) return { ok: false, hired: false, message: '사이닝 보너스를 낼 자금이 부족합니다.' };
+  const N = H.nego;
+  const n = negotiation(s, a!);
+  const say = (m: NegoMsg) => n.log.push(m);
+  const value = salary + bonus / N.bonusMonths;
+  const want = a!.desiredSalary;
+  const prev = [...n.log].reverse().find((m) => m.from === 'me');
+  say({ from: 'me', text: '', salary, bonus });
+  n.revealed = true;
+  if (value >= want) {
+    say({ from: 'them', text: '좋아요, 함께하겠습니다!', mood: 'happy' });
+    return { ok: true, hired: true, message: hire(s, a!, salary, bonus) };
+  }
+  const ratio = value / want;
+  // 인내심(%): 기대와 멀수록 많이 깎임. 이전보다 낮게 부르면 더
+  let drop = N.dropBase + (1 - ratio) * N.dropPerGap;
+  if (prev && value < (prev.salary ?? 0) + (prev.bonus ?? 0) / N.bonusMonths) drop += N.lowerPenalty;
+  n.patience = Math.max(0, Math.round(n.patience - drop));
+  if (n.patience <= 0) {
+    a!.status = 'rejected';
+    n.counter = null;
+    say({ from: 'them', text: '더 이야기해도 맞지 않을 것 같네요. 다른 곳을 알아보겠습니다.', mood: 'angry' });
+    return { ok: true, hired: false, message: `${a!.name}님이 협상을 끝내고 떠났습니다.` };
+  }
+  // 역제안: 보너스는 그대로 두고 월급으로 맞춤
+  const target = ratio >= n.floor ? want - (want - value) * (1 - N.counterKeep) : want;
+  const cs = round10(target - bonus / N.bonusMonths);
+  n.counter = { salary: cs, bonus };
+  if (ratio >= n.floor) say({ from: 'them', text: `조금만 더 맞춰 주시면 좋겠어요. 월 ${man(cs)}이면 함께하고 싶어요.`, salary: cs, bonus, mood: 'ok' });
+  else if (ratio >= N.insult) say({ from: 'them', text: `기대보다 낮네요. 월 ${man(cs)}은 받아야 합니다.`, salary: cs, bonus, mood: 'ok' });
+  else say({ from: 'them', text: `너무 낮은 제안이에요. 적어도 월 ${man(cs)}은 생각하고 왔습니다.`, salary: cs, bonus, mood: 'angry' });
+  return { ok: true, hired: false, message: '' };
+}
+
+// 지원자의 마지막 역제안을 그대로 받아들여 채용
+export function acceptCounter(s: GameState, applicantId: string): { ok: boolean; message: string } {
+  const a = s.applicants.find((x) => x.id === applicantId);
+  const err = hireBlock(s, a);
+  if (err) return { ok: false, message: err };
+  const c = a!.nego?.counter;
+  if (!c) return { ok: false, message: '받아들일 역제안이 없습니다.' };
+  if (c.bonus > s.cash) return { ok: false, message: '사이닝 보너스를 낼 자금이 부족합니다.' };
+  a!.nego!.log.push({ from: 'me', text: '그 조건으로 하시죠.', salary: c.salary, bonus: c.bonus });
+  a!.nego!.log.push({ from: 'them', text: '감사합니다! 내일부터 출근하겠습니다.', mood: 'happy' });
+  a!.nego!.counter = null;
+  return { ok: true, message: hire(s, a!, c.salary, c.bonus) };
 }
 
 function reserve(s: GameState, a: Applicant, salary: number) {
   const seat = takeDesk(s)!;
   seat.occupant = `pending:${a.id}`;
-  s.pendingHires.push({ applicantId: a.id, name: a.name, dept: a.dept, grade: a.grade, years: a.years, salary, traits: a.traits, startDay: s.day + 1 });
+  s.pendingHires.push({ applicantId: a.id, name: a.name, dept: a.dept, grade: a.grade, years: a.years, salary, traits: a.traits, startDay: s.day + 1, skill: a.skill, talent: a.talent });
   s.events.push({ type: 'autosave', reason: '채용 확정' });
 }
 
@@ -198,7 +344,8 @@ export function startPendingHires(s: GameState) {
       seatId: seat ? seat.id : null,
       kind: 'staff',
       traits: h.traits,
-      skill: startSkill(s, h.grade, h.years),
+      skill: h.skill ?? startSkill(s, h.grade, h.years),
+      talent: h.talent,
       sat: 72,
       health: 85,
       lead: false,

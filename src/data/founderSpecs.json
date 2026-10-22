@@ -1,6 +1,6 @@
 {
-  "_note": "FS-02 카탈로그(DEC-037). 가격·효과 모두 [예시값]. 효과 키: investorMeeting/applicantQuality/sales/dev/enterpriseSales/networking/allActions(%), earlyRound(hard|ok|big), teamScore(기업가치 팀 점수 가산)",
-  "budget": 1000,
+  "_note": "FS-02 카탈로그(DEC-037). 가격·효과 모두 [예시값]. 효과 키: investorMeeting/applicantQuality/sales/dev/enterpriseSales/networking/allActions(%), earlyRound(hard|ok|big), teamScore(기업가치 팀 점수 가산). budget 1000→600(A-123): 1000이면 명문대+빅테크+투자 유치 경험을 한 번에 사서 출발이 너무 쉬움. 600이면 큰 항목 하나 + 작은 항목 하나",
+  "budget": 600,
   "categories": [
     { "id": "edu", "name": "학력", "items": [
       { "id": "edu_hs", "name": "고졸(기본)", "price": 0, "effects": {} },

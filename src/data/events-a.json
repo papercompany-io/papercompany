@@ -1725,7 +1725,8 @@
       "cooldown": 150,
       "cond": {
         "empMin": 1,
-        "stageMax": 3
+        "stageMax": 3,
+        "marketsMin": 1
       },
       "target": "staff",
       "texts": [
@@ -2793,7 +2794,8 @@
           "consumer",
           "commerce",
           "fintech"
-        ]
+        ],
+        "marketsMin": 1
       },
       "texts": [
         "앱 업데이트가 심사에서 거절됐습니다. 결제 정책 위반이라는 사유입니다.",
@@ -2902,7 +2904,8 @@
       "cond": {
         "stageMin": 1,
         "empMin": 3,
-        "dept": "dev"
+        "dept": "dev",
+        "marketsMin": 1
       },
       "target": "dev",
       "texts": [
@@ -3087,7 +3090,8 @@
       "weight": 1.5,
       "cooldown": 120,
       "cond": {
-        "stageMax": 1
+        "stageMax": 1,
+        "mvp": true
       },
       "texts": [
         "베타 테스터 피드백이 모였습니다. \"쓰기 어렵다\"는 의견이 절반입니다.",
@@ -4490,7 +4494,8 @@
       "cooldown": 365,
       "once": true,
       "cond": {
-        "stageMax": 1
+        "stageMax": 1,
+        "marketsMin": 1
       },
       "texts": [
         "소개받은 회사에서 연락이 왔습니다. 우리 서비스를 써 보고 싶은데 맞춤 기능을 원합니다.",
@@ -4558,7 +4563,9 @@
       "weight": 1,
       "cooldown": 240,
       "cond": {
-        "stageMin": 2
+        "stageMin": 2,
+        "marketsMin": 1,
+        "usersMin": 1000
       },
       "texts": [
         "안녕하세요, 페이퍼뉴스 김기자입니다. 주목받는 스타트업 대표 인터뷰를 기획 중인데 응해 주실 수 있을까요?",
@@ -4988,7 +4995,8 @@
       "weight": 1,
       "cooldown": 240,
       "cond": {
-        "stageMin": 2
+        "stageMin": 2,
+        "marketsMin": 1
       },
       "texts": [
         "창업 팟캐스트 \"창업은 처음이라\" 출연을 제안드립니다. 대표님 이야기를 듣고 싶습니다.",
@@ -6224,7 +6232,8 @@
       "cooldown": 365,
       "once": true,
       "cond": {
-        "stageMin": 1
+        "stageMin": 1,
+        "marketsMin": 1
       },
       "texts": [
         "귀사가 사용하는 서비스명이 당사 의뢰인의 등록상표와 유사합니다. 사용 중지를 요청합니다.",

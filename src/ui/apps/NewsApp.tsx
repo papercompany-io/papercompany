@@ -1,5 +1,5 @@
 // UX-13 페이퍼뉴스: 경제·경쟁사·AI·우리 회사 소식
-import { useState } from 'react';
+// 신문처럼: 제호 · 맨 위 머리기사(가장 최근 소식) · 아래는 날짜별 묶음
 import { formatDate } from '../../core/calendar';
 import { useGame } from '../store';
 import type { NewsItem } from '../../core/types';
@@ -9,35 +9,38 @@ const KIND: Record<NewsItem['kind'], string> = { economy: '경제', competitor: 
 
 export function NewsApp() {
   const s = useGame();
-  const [f, setF] = useState<NewsItem['kind'] | 'all'>('all');
-  const list = [...s.news].reverse().filter((n) => f === 'all' || n.kind === f);
+  const [top, ...rest] = [...s.news].reverse();
+  const days: { day: number; items: NewsItem[] }[] = [];
+  for (const n of rest) {
+    const last = days[days.length - 1];
+    if (last && last.day === n.day) last.items.push(n);
+    else days.push({ day: n.day, items: [n] });
+  }
   return (
-    <div className="col">
-      <div className="row">
-        <b style={{ fontFamily: 'var(--pixel)', fontSize: 20 }}>페이퍼뉴스</b>
-        <span className="tiny muted">경기: {s.economy.phase === 'boom' ? '호황' : s.economy.phase === 'recession' ? '불황' : '보통'}</span>
-        <span className="grow" />
-        <div className="seg">
-          <button className={f === 'all' ? 'on' : ''} onClick={() => setF('all')}>
-            전체
-          </button>
-          {(Object.keys(KIND) as NewsItem['kind'][]).map((k) => (
-            <button key={k} className={f === k ? 'on' : ''} onClick={() => setF(k)}>
-              {KIND[k]}
-            </button>
+    <div className="col news">
+      <header className="news-mast">
+        <b>페이퍼뉴스</b>
+        <span>{formatDate(s.day)}</span>
+      </header>
+      {!top && <div className="empty-note">아직 소식이 없습니다.</div>}
+      {top && (
+        <article className="news-top">
+          <span className={`news-kind ${top.kind}`}>{KIND[top.kind]}</span>
+          <h2>{top.text}</h2>
+          <span className="news-date">{formatDate(top.day)}</span>
+        </article>
+      )}
+      {days.map((d) => (
+        <section key={d.day} className="news-day">
+          <div className="news-day-head">{formatDate(d.day)}</div>
+          {d.items.map((n, i) => (
+            <div key={i} className="news-item">
+              <span className={`news-kind ${n.kind}`}>{KIND[n.kind]}</span>
+              <span>{n.text}</span>
+            </div>
           ))}
-        </div>
-      </div>
-      <div>
-        {list.map((n, i) => (
-          <div key={i} className="news-item">
-            <span className={`news-kind ${n.kind}`}>{KIND[n.kind]}</span>
-            <span className="grow">{n.text}</span>
-            <span className="tiny muted">{formatDate(n.day)}</span>
-          </div>
-        ))}
-        {list.length === 0 && <div className="muted">아직 소식이 없습니다.</div>}
-      </div>
+        </section>
+      ))}
     </div>
   );
 }

@@ -10,7 +10,7 @@ export function getChannel(s: GameState, id: string): Channel | undefined {
 export function post(s: GameState, channelId: string, from: string, text: string, kind: Message['kind'] = 'npc', decisionId?: string) {
   const ch = getChannel(s, channelId) ?? getChannel(s, 'all');
   if (!ch) return;
-  ch.messages.push({ id: nextId(s, 'm'), day: s.day, from, text, kind, decisionId });
+  ch.messages.push({ id: nextId(s, 'm'), day: s.day, at: Math.round(s.msInDay), from, text, kind, decisionId });
   if (kind !== 'player') ch.unread += 1;
   if (ch.messages.length > 120) ch.messages.splice(0, ch.messages.length - 120);
 }

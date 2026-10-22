@@ -11,7 +11,7 @@ import { news, notify } from './notify';
 import { coreFeatures, featureLevel, hasMvp } from './product';
 import { totalUsers } from './market';
 import { legacyFx } from './career';
-import { rand } from './rng';
+import { rand, randInt } from './rng';
 import { computeValuation, revenueGrowth, updateStoredValuation } from './valuation';
 import type { GameState, LetterThread, Offer, Round, StageId } from './types';
 
@@ -104,6 +104,7 @@ export function startRound(s: GameState, id: StageId, room: number, instrument: 
     offer: null,
     closedDay: null,
   });
+  s.events.push({ type: 'needsTime', what: '투자 라운드' }); // A-126
   return null;
 }
 
@@ -119,24 +120,80 @@ export function fits(investorId: string, id: StageId): boolean {
   return (investor(investorId).stages as string[]).includes(id);
 }
 
-function replyFor(s: GameState, r: Round, investorId: string, letterId: string): string {
+// A-109 레터 효과: 투자사마다 반기는 레터가 다르고(B), 자료·소개 레터는 회사의 실제 지표·창업자 명성을 따릅니다(D).
+// 그냥 다 보낸다고 관심이 오르지 않게: 평범한 레터는 조금, 반기지 않는 레터와 나쁜 지표는 오히려 깎습니다.
+const LIKE_HINT: Record<string, string> = {
+  intro: '저희는 창업자가 어떤 사람인지를 가장 궁금해합니다.',
+  proposal: '저희는 구체적인 조건부터 듣는 걸 좋아합니다.',
+  material: '저희는 숫자(고객·매출·품질)로 판단합니다.',
+  club: '저희는 함께할 다른 투자사가 있는지를 중요하게 봅니다.',
+};
+
+// 자료 레터 점수: MVP가 없으면 0, 있으면 고객 수·매출 성장·버그로 −20~30
+export function materialScore(s: GameState): { v: number; good: string | null; bad: string | null } {
+  const M = FD.letterFx.material;
+  if (!hasMvp(s)) return { v: 0, good: null, bad: '아직 보여 줄 제품이 없음' };
+  const users = Math.min(M.usersCap, Math.log10(totalUsers(s) + 1) * M.usersPerLog10);
+  const g = revenueGrowth(s);
+  const growth = g === null ? 0 : g >= 0.15 ? M.growthGood : g >= 0.08 ? M.growthOk : g >= 0.03 ? M.growthSlow : g < 0 ? M.growthBad : 0;
+  const bugs = s.product.bugs > 75 ? M.bugsHigh : s.product.bugs > 50 ? M.bugsMid : 0;
+  const v = Math.round(Math.max(M.min, Math.min(M.max, M.base + users + growth + bugs)));
+  const parts: [string, number][] = [
+    ['고객 반응', users - 4],
+    ['매출 성장', growth],
+    ['제품 품질', bugs === 0 ? 2 : bugs],
+  ];
+  const best = parts.slice().sort((x, y) => y[1] - x[1])[0];
+  const worst = parts.slice().sort((x, y) => x[1] - y[1])[0];
+  return { v, good: best[1] > 3 ? best[0] : null, bad: worst[1] < 0 ? worst[0] : null };
+}
+
+export function letterGain(s: GameState, r: Round, investorId: string, letterId: string, askId?: string): number {
+  const F = FD.letterFx;
+  const def = FD.letters.find((l) => l.id === letterId)!;
+  let v = def.interest;
+  if (letterId === 'intro') v += Math.min(F.repCap, Math.floor(s.career.rep / 4) * F.repPer4);
+  if (letterId === 'proposal') v = (F.proposalByAsk as Record<string, number>)[askId ?? 'as_is'] ?? v;
+  if (letterId === 'material') v = materialScore(s).v;
+  // 좋아하는 레터는 좋든 나쁘든 크게 받아들입니다(지표를 보는 곳은 나쁜 숫자에 더 실망)
+  if (investor(investorId).likes === letterId) v *= F.likedMult;
+  // 반기지 않는 레터는 관심을 조금 깎습니다(A-110): 아무거나 다 보내는 것보다 골라 보내는 게 낫게
+  if (investor(investorId).dislikes === letterId) v = F.dislikedPenalty;
+  if (!fits(investorId, r.stage)) v *= F.misfitMult;
+  return Math.round(v);
+}
+
+function replyFor(s: GameState, r: Round, investorId: string, letterId: string, gain: number): string {
   const inv = investor(investorId);
   const stName = stage(r.stage).name;
   if (!fits(investorId, r.stage)) {
     const pref = inv.stages.map((x) => stage(x as StageId).name).join('·');
     return `연락 감사합니다. 다만 저희는 주로 ${pref} 단계에 투자해서, 이번 ${stName} 라운드는 맞지 않을 수 있습니다.`;
   }
-  switch (letterId) {
-    case 'intro':
-      return `${s.company.name} 소개 잘 받았습니다. 관심 있게 보고 있겠습니다.`;
-    case 'proposal':
-      return `제안하신 조건(룸 ${(r.room * 100).toFixed(1)}%) 검토하겠습니다. 투자 결정을 요청하시면 답을 드리겠습니다.`;
-    case 'material':
-      return hasMvp(s) ? '제품과 지표 자료 잘 봤습니다. 고객 반응이 인상적이네요.' : '자료 감사합니다. 제품이 나오면 더 잘 판단할 수 있을 것 같습니다.';
-    case 'club':
-      return inv.soloAverse ? '좋습니다. 저희는 단독 투자보다 여러 곳이 함께하는 클럽딜을 선호합니다.' : '공동 투자 구조도 괜찮습니다.';
+  const liked = inv.likes === letterId;
+  if (inv.dislikes === letterId) {
+    const why = { intro: '소개보다는 다른 이야기를 듣고 싶었습니다.', proposal: '이야기도 나누기 전에 조건부터 받으니 조금 당황스럽네요.', material: '긴 자료는 저희 방식이 아닙니다.', club: '저희는 다른 곳과 엮이는 걸 그리 좋아하지 않습니다.' }[letterId] ?? '';
+    return `${why} ${LIKE_HINT[inv.likes] ?? ''}`.trim();
   }
-  return '감사합니다.';
+  if (letterId === 'material') {
+    const m = materialScore(s);
+    if (!hasMvp(s)) return `자료 감사합니다. 다만 아직 제품이 없어 판단하기 어렵습니다. ${liked ? '제품과 고객이 생기면 꼭 다시 보여 주세요.' : ''}`.trim();
+    if (gain < 0) return `자료 잘 봤습니다. 솔직히 ${m.bad ?? '지표'} 쪽이 걱정됩니다.`;
+    const head = liked ? `기다리던 자료입니다! ${m.good ? `${m.good}이 인상적이네요.` : '숫자를 잘 봤습니다.'}` : `자료 잘 받았습니다.${m.good ? ` ${m.good}이 괜찮네요.` : ''}`;
+    return `${head}${m.bad ? ` ${m.bad}은 조금 더 지켜보겠습니다.` : ''}`;
+  }
+  if (liked) {
+    switch (letterId) {
+      case 'intro':
+        return `${s.company.name} 이야기 정말 반갑게 읽었습니다. 창업자를 꼭 한번 뵙고 싶네요.`;
+      case 'proposal':
+        return `조건(지분 ${(r.room * 100).toFixed(1)}%)을 분명하게 주셔서 좋습니다. 투자 결정을 요청하시면 빠르게 답을 드리겠습니다.`;
+      case 'club':
+        return '좋습니다! 여러 곳이 함께하는 구조라면 저희도 훨씬 편하게 참여할 수 있습니다.';
+    }
+  }
+  const base = { intro: `${s.company.name} 소개 잘 받았습니다.`, proposal: `제안하신 조건(지분 ${(r.room * 100).toFixed(1)}%) 검토하겠습니다.`, club: '공동 투자 구조도 괜찮습니다.' }[letterId] ?? '감사합니다.';
+  return `${base} ${LIKE_HINT[inv.likes] ?? ''}`.trim();
 }
 
 // FR-10 레터 보내기(선택지 입력, DEC-032)
@@ -148,8 +205,8 @@ export function sendLetter(s: GameState, roundId: string, investorId: string, le
   const t = thread(s, r, investorId);
   if (t.decision) return '이미 투자 결정을 받은 투자사입니다.';
   if (t.sent.includes(letterId)) return '이번 라운드에 이미 보낸 레터입니다.';
-  const inc = def.interest + (letterId === 'material' && hasMvp(s) ? (def as { mvpBonus?: number }).mvpBonus ?? 0 : 0);
-  t.interest = Math.min(100, t.interest + inc);
+  const inc = letterGain(s, r, investorId, letterId, askId);
+  t.interest = Math.max(0, Math.min(100, t.interest + inc));
   t.sent.push(letterId);
   let body = `[${def.name}] `;
   const st = stage(r.stage).name;
@@ -163,7 +220,8 @@ export function sendLetter(s: GameState, roundId: string, investorId: string, le
   else if (letterId === 'club') body += '이번 라운드는 여러 투자사와 함께하는 클럽딜로 만들려고 합니다.';
   const ch = ensureExternal(s, investorId);
   post(s, ch, '나(대표)', body, 'player');
-  t.pendingReplies.push({ day: s.day + FD.replyDelayDays, text: replyFor(s, r, investorId, letterId) });
+  t.pendingReplies.push({ day: s.day + FD.replyDelayDays, text: replyFor(s, r, investorId, letterId, inc) });
+  s.events.push({ type: 'needsTime', what: '투자사 레터' }); // A-126
   return null;
 }
 
@@ -239,28 +297,53 @@ export function decisionProbability(s: GameState, r: Round, investorId: string):
   return { p, factors };
 }
 
-// FR-07 투자 결정 요청 → 판정
+// 결정을 기다리는 투자사(A-125). 한 번에 한 곳만 요청할 수 있습니다.
+export function pendingDecision(r: Round): LetterThread | undefined {
+  return Object.values(r.letters).find((t) => t.decision === 'pending');
+}
+
+// FR-07 투자 결정 요청 → 판정. A-125: 답은 2~5일 뒤 메신저로 옵니다(요청한 날의 확률로 정해 두고, 그날 알림)
 export function requestDecision(s: GameState, roundId: string, investorId: string): string | null {
   const r = getRound(s, roundId);
   if (!r || r.status !== 'open') return '열린 라운드가 없습니다.';
   if (r.leadId) return '이미 리드 투자사가 정해졌습니다. 다른 곳에는 공동 투자를 제안하세요.';
   const t = r.letters[investorId];
   if (!t || t.sent.length === 0) return '먼저 레터를 보내 이야기를 시작하세요.';
+  if (t.decision === 'pending') return '이미 검토 중입니다. 답을 기다리세요.';
   if (t.decision) return '이미 답을 받은 투자사입니다.';
+  const wait = pendingDecision(r);
+  if (wait) return `${investor(wait.investorId).name}의 답을 기다리는 중입니다. 답을 받은 뒤 요청하세요.`;
   const { p } = decisionProbability(s, r, investorId);
   t.decisionP = p;
   const ch = ensureExternal(s, investorId);
   const inv = investor(investorId);
   post(s, ch, '나(대표)', '[투자 결정 요청] 이번 라운드 투자 여부를 결정해 주실 수 있을까요?', 'player');
-  if (rand(s) < p) {
+  const [a, b] = FD.decisionDelayDays;
+  t.decision = 'pending';
+  t.decisionYes = rand(s) < p;
+  t.decisionDue = Math.max(s.day, Math.min(r.endDay, s.day + randInt(s, a, b)));
+  post(s, ch, inv.name, '내부 투자심의위원회에서 검토해 보겠습니다. 며칠 안에 답을 드리겠습니다.', 'npc');
+  s.events.push({ type: 'needsTime', what: '투자 결정 요청' }); // A-126
+  return null;
+}
+
+// 기다리던 결정이 도착(하루 끝)
+function resolveDecision(s: GameState, r: Round, t: LetterThread) {
+  const ch = ensureExternal(s, t.investorId);
+  const inv = investor(t.investorId);
+  const yes = !!t.decisionYes && !r.leadId;
+  t.decisionDue = undefined;
+  t.decisionYes = undefined;
+  if (yes) {
     t.decision = 'committed';
-    r.leadId = investorId;
+    r.leadId = t.investorId;
     post(s, ch, inv.name, `투자하기로 결정했습니다. 저희가 리드를 맡겠습니다. 다른 투자사와 함께하셔도 좋습니다.`, 'npc');
+    notify(s, `${inv.name}: 투자하기로 결정했습니다. 리드 투자사가 정해졌습니다.`, 'good', 'invest');
   } else {
     t.decision = 'declined';
     post(s, ch, inv.name, '검토 끝에 이번에는 투자하지 않기로 했습니다. 다음 기회에 다시 이야기 나누면 좋겠습니다.', 'npc');
+    notify(s, `${inv.name}: 이번에는 투자하지 않기로 했습니다. 다른 투자사에 결정을 요청해 보세요.`, 'bad', 'messenger', ch);
   }
-  return null;
 }
 
 export function coInvestProbability(s: GameState, r: Round, investorId: string): number {
@@ -292,6 +375,7 @@ export function askCoInvest(s: GameState, roundId: string, investorId: string): 
   } else {
     t.coInvest = 'declined';
     post(s, ch, investor(investorId).name, '이번에는 참여가 어렵겠습니다.', 'npc');
+    notify(s, `${investor(investorId).name}: 공동 투자에 참여하지 않기로 했습니다.`, 'bad', 'messenger', ch);
   }
   return null;
 }
@@ -421,6 +505,7 @@ export function roundDayEnd(s: GameState) {
     const due = t.pendingReplies.filter((x) => x.day <= s.day);
     t.pendingReplies = t.pendingReplies.filter((x) => x.day > s.day);
     for (const d of due) post(s, ensureExternal(s, t.investorId), investor(t.investorId).name, d.text, 'npc');
+    if (t.decision === 'pending' && (t.decisionDue ?? 0) <= s.day) resolveDecision(s, r, t);
   }
   // 마감 경고: 리드가 없으면 10일·3일 전에 알립니다(레터만 보내고 결정 요청을 잊는 일이 잦음).
   const left = r.endDay - s.day;

@@ -1,9 +1,22 @@
 {
+  "rules": {
+    "_note": "A-115 기능 착수 조건·대가 [예시값]. insight = 고객 인사이트(사용자가 쓰면서 쌓임, 고객지원 '의견 수집'이면 더), pay = 지불 의사 인사이트(돈을 내는 고객에게서만 쌓임). 기능을 로드맵에 넣는(착수) 순간 작업량 × rate[분류]만큼 씀(수익화는 pay, 나머지는 insight, 핵심·첫 결제 기능은 무료), 빼면 돌려받음. unit = 산업별 사용자 몇 명을 1로 셀지. upkeep = 만든 코드베이스 W가 개발 출력에서 maxShare × W/(W+half)만큼 유지보수로 빠짐. complexity = 만든 기능 레벨 합이 base + UX 완성도 × perPolish를 넘으면 넘은 레벨당 perLevel씩 매력도가 깎임(최대 max)",
+    "insight": {
+      "unit": { "saas": 1, "ai": 1, "consumer": 100, "commerce": 60, "fintech": 60 },
+      "userK": 0.5,
+      "payK": 0.1,
+      "csK": 0.3,
+      "rate": { "growth": 0.5, "retention": 0.5, "infra": 0.3, "platform": 0.6, "enterprise": 0.6, "global": 0.5, "ai": 0.6, "monetize": 3 },
+      "start": 30
+    },
+    "upkeep": { "maxShare": 0.45, "half": 3000 },
+    "complexity": { "base": 15, "perPolish": 100, "perLevel": 0.01, "max": 0.3 }
+  },
   "industries": {
     "saas": [
       {"id":"saas_workspace","name":"팀 워크스페이스","desc":"팀이 함께 쓰는 작업 공간을 열어 첫 고객사를 받을 수 있습니다.","cat":"core","dev":30,"design":10,"levels":1,"req":[],"year":2027,"stage":0,"fx":{"appeal":6}},
       {"id":"saas_tasks","name":"업무 보드","desc":"할 일을 카드로 관리하는 보드를 제공해 제품 매력도를 높입니다.","cat":"core","dev":25,"design":12,"levels":1,"req":[],"year":2027,"stage":0,"fx":{"appeal":6}},
-      {"id":"saas_billing","name":"구독 결제","desc":"카드 정기결제를 붙여 고객사에서 구독료를 받을 수 있습니다.","cat":"core","dev":15,"design":5,"levels":1,"req":[],"year":2027,"stage":0,"fx":{"appeal":4,"arpu":0.05}},
+      {"id":"saas_billing","name":"구독 결제","desc":"카드 정기결제를 붙여야 고객사에서 구독료를 받을 수 있습니다. 없으면 무료로만 씁니다.","cat":"monetize","dev":15,"design":5,"levels":1,"req":[],"year":2027,"stage":0,"fx":{"appeal":4,"arpu":0.05,"billing":true}},
       {"id":"saas_invite","name":"팀원 초대","desc":"고객사 직원이 동료를 초대하게 해 입소문 유입을 늘립니다.","cat":"growth","dev":30,"design":15,"levels":3,"req":["saas_workspace"],"year":2027,"stage":0,"fx":{"viral":0.012,"conv":0.03}},
       {"id":"saas_quick_import","name":"빠른 데이터 이관","desc":"경쟁 도구의 데이터를 바로 가져오게 해 가입이 늘지만 급하게 만들어 버그가 붙습니다.","cat":"growth","dev":40,"design":10,"levels":1,"req":["saas_workspace"],"year":2027,"stage":0,"fx":{"conv":0.06,"bugs":10}},
       {"id":"saas_onboarding","name":"온보딩 가이드","desc":"첫 사용 흐름을 안내해 체험 고객사의 전환을 높이고 초기 이탈을 줄입니다.","cat":"growth","dev":40,"design":40,"levels":2,"req":["saas_tasks"],"year":2027,"stage":0,"fx":{"conv":0.06,"churn":-0.03}},
@@ -81,7 +94,7 @@
     "commerce": [
       {"id":"commerce_catalog","name":"상품 목록","desc":"상품을 등록하고 둘러보는 화면으로 첫 판매를 시작할 수 있습니다.","cat":"core","dev":25,"design":20,"levels":1,"req":[],"year":2027,"stage":0,"fx":{"appeal":6}},
       {"id":"commerce_cart","name":"장바구니·주문","desc":"여러 상품을 담아 한 번에 주문하게 해 구매 경험을 완성합니다.","cat":"core","dev":25,"design":10,"levels":1,"req":[],"year":2027,"stage":0,"fx":{"appeal":5}},
-      {"id":"commerce_pg","name":"결제 연동","desc":"카드·계좌 결제를 붙여 거래액을 만들 수 있습니다.","cat":"core","dev":15,"design":5,"levels":1,"req":[],"year":2027,"stage":0,"fx":{"appeal":4,"gmv":0.05}},
+      {"id":"commerce_pg","name":"결제 연동","desc":"카드·계좌 결제를 붙여야 거래가 일어나고 수수료를 받을 수 있습니다.","cat":"monetize","dev":15,"design":5,"levels":1,"req":[],"year":2027,"stage":0,"fx":{"appeal":4,"gmv":0.05,"billing":true}},
       {"id":"commerce_search","name":"상품 검색","desc":"원하는 상품을 빨리 찾게 해 가입과 거래액을 늘립니다.","cat":"growth","dev":50,"design":15,"levels":3,"req":["commerce_catalog"],"year":2027,"stage":0,"fx":{"conv":0.05,"gmv":0.05}},
       {"id":"commerce_coupon","name":"쿠폰·할인","desc":"첫 구매 쿠폰으로 가입을 늘리지만 급하게 만들어 버그가 붙습니다.","cat":"growth","dev":40,"design":20,"levels":1,"req":["commerce_cart"],"year":2027,"stage":0,"fx":{"conv":0.06,"bugs":6}},
       {"id":"commerce_review","name":"상품 리뷰","desc":"구매 후기를 쌓아 신규 구매자의 신뢰와 입소문을 높입니다.","cat":"growth","dev":50,"design":30,"levels":2,"req":["commerce_cart"],"year":2027,"stage":0,"fx":{"conv":0.04,"viral":0.01}},
@@ -160,7 +173,7 @@
     "ai": [
       {"id":"ai_api","name":"모델 API","desc":"우리 모델을 API로 호출하게 해 첫 고객사를 받을 수 있습니다.","cat":"core","dev":35,"design":5,"levels":1,"req":[],"year":2027,"stage":0,"fx":{"appeal":7}},
       {"id":"ai_playground","name":"플레이그라운드","desc":"코드 없이 모델을 시험해 보게 해 고객사를 끌어옵니다.","cat":"core","dev":20,"design":20,"levels":1,"req":[],"year":2027,"stage":0,"fx":{"appeal":5}},
-      {"id":"ai_usage_billing","name":"토큰 과금","desc":"쓴 만큼 과금하는 결제를 붙여 매출을 만들 수 있습니다.","cat":"core","dev":15,"design":5,"levels":1,"req":[],"year":2027,"stage":0,"fx":{"appeal":4,"arpu":0.05}},
+      {"id":"ai_usage_billing","name":"토큰 과금","desc":"쓴 만큼 과금하는 결제를 붙여야 매출이 생깁니다. 없으면 무료 체험만 됩니다.","cat":"monetize","dev":15,"design":5,"levels":1,"req":[],"year":2027,"stage":0,"fx":{"appeal":4,"arpu":0.05,"billing":true}},
       {"id":"ai_docs","name":"개발자 문서","desc":"예제가 풍부한 문서로 개발사의 도입 속도를 높입니다.","cat":"growth","dev":40,"design":30,"levels":2,"req":["ai_api"],"year":2027,"stage":0,"fx":{"conv":0.05}},
       {"id":"ai_free_credit","name":"무료 크레딧","desc":"가입 즉시 크레딧을 줘 도입을 늘리지만 급히 만들어 버그가 붙습니다.","cat":"growth","dev":30,"design":10,"levels":1,"req":["ai_usage_billing"],"year":2027,"stage":0,"fx":{"conv":0.08,"bugs":6}},
       {"id":"ai_sdk","name":"다언어 SDK","desc":"여러 언어용 SDK를 내 개발사의 도입과 입소문을 늘립니다.","cat":"growth","dev":100,"design":20,"levels":3,"req":["ai_docs"],"year":2027,"stage":1,"fx":{"conv":0.05,"viral":0.01}},

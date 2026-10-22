@@ -1,20 +1,221 @@
 {
   "_note": "CA-01 하루 행동 칸(초기), CA-03 조직이 생긴 뒤 대표 행동(시리즈 B부터, DEC-027·DEC-033). 1칸당 효과 [예시값](A-28)",
   "actions": [
-    { "id": "dev", "name": "개발", "desc": "로드맵 기능에 작업량 +0.125/칸", "perSlot": 0.125, "specKey": "dev", "mode": "founder" },
-    { "id": "contract", "name": "외주", "desc": "받은 외주 일감에 작업량 +0.125/칸(끝내면 대금)", "perSlot": 0.125, "specKey": "dev", "mode": "founder" },
-    { "id": "sales", "name": "영업", "desc": "MVP 이후 고객 획득 속도↑, 접대비 3만원/칸", "perSlot": 1, "specKey": "sales", "mode": "founder" },
-    { "id": "ir", "name": "투자자 미팅", "desc": "IR 점수 +0.5/칸(투자 성공 확률)", "perSlot": 0.5, "specKey": "investorMeeting", "mode": "both" },
-    { "id": "network", "name": "네트워킹", "desc": "네트워크 점수 +0.5/칸(채용·투자·대기업 영업), 업무추진비 3만원/칸", "perSlot": 0.5, "specKey": "networking", "mode": "both" },
-    { "id": "enterprise", "name": "대기업 영업", "desc": "대기업 계약 파이프라인 +1/칸, 접대비 30만원/칸", "perSlot": 1, "specKey": "enterpriseSales", "mode": "executive" },
-    { "id": "approve", "name": "결재", "desc": "결재가 밀리지 않으면 전 직원 출력↑, 밀리면 출력↓", "perSlot": 1, "specKey": "allActions", "mode": "executive" }
+    {
+      "id": "dev",
+      "name": "개발",
+      "desc": "로드맵 기능에 작업량 +0.125/칸",
+      "perSlot": 0.125,
+      "specKey": "dev",
+      "mode": "founder"
+    },
+    {
+      "id": "contract",
+      "name": "외주",
+      "desc": "받은 외주 일감에 작업량 +0.125/칸(끝내면 대금)",
+      "perSlot": 0.125,
+      "specKey": "dev",
+      "mode": "founder"
+    },
+    {
+      "id": "sales",
+      "name": "영업",
+      "desc": "MVP 이후 고객 획득 속도↑, 접대비 3만원/칸",
+      "perSlot": 1,
+      "specKey": "sales",
+      "mode": "founder"
+    },
+    {
+      "id": "ir",
+      "name": "투자자 미팅",
+      "desc": "IR 점수 +0.5/칸(투자 성공 확률)",
+      "perSlot": 0.5,
+      "specKey": "investorMeeting",
+      "mode": "both"
+    },
+    {
+      "id": "network",
+      "name": "네트워킹",
+      "desc": "네트워크 점수 +0.5/칸(채용·투자·대기업 영업), 업무추진비 3만원/칸",
+      "perSlot": 0.5,
+      "specKey": "networking",
+      "mode": "both"
+    },
+    {
+      "id": "enterprise",
+      "name": "대기업 영업",
+      "desc": "대기업 계약 파이프라인 +1/칸, 접대비 30만원/칸",
+      "perSlot": 1,
+      "specKey": "enterpriseSales",
+      "mode": "executive"
+    },
+    {
+      "id": "approve",
+      "name": "결재",
+      "desc": "결재가 밀리지 않으면 전 직원 출력↑, 밀리면 출력↓",
+      "perSlot": 1,
+      "specKey": "allActions",
+      "mode": "executive"
+    }
   ],
-  "defaultAlloc": { "dev": 4, "contract": 0, "sales": 0, "ir": 2, "network": 2, "enterprise": 0, "approve": 0 },
-  "executiveAlloc": { "dev": 0, "contract": 0, "sales": 0, "ir": 2, "network": 2, "enterprise": 2, "approve": 2 },
+  "defaultAlloc": {
+    "dev": 4,
+    "contract": 0,
+    "sales": 0,
+    "ir": 2,
+    "network": 2,
+    "enterprise": 0,
+    "approve": 0
+  },
+  "executiveAlloc": {
+    "dev": 0,
+    "contract": 0,
+    "sales": 0,
+    "ir": 2,
+    "network": 2,
+    "enterprise": 2,
+    "approve": 2
+  },
   "salesEntertainment": 30000,
   "networkEntertainment": 30000,
   "enterpriseEntertainment": 300000,
   "approvePerEmployees": 25,
   "approveBonus": 0.05,
-  "approvePenalty": 0.2
+  "approvePenalty": 0.2,
+  "outings": {
+    "_note": "대표 외출(A-101): 대표는 평소 주 업무 하나만 하고(하루 칸 배분 없음), 투자자 미팅·컨퍼런스 같은 일은 메신저로 오는 초대를 수락해 1~3일 자리를 비우고 합니다. 외출 날은 하루 내내 그 일(action)을 하고, 끝나면 bonus. chance = 하루에 새 초대가 올 확률(round = 투자 라운드 중일 때). needsMvp = MVP가 있어야 오는 초대(데모데이·고객사 방문 A-119, 컨퍼런스 연사 A-121)",
+    "maxOffers": 3,
+    "_timeNote": "일정 시간·이동(A-127): 하루짜리 외출은 hours(시간) 동안만 자리를 비우고 나머지 시간은 주 업무. 오가는 이동 시간(travel, 편도)도 일을 못 하고, 겹침 판정에 들어감. 이동 시간은 회사 단계(company.stage)별 범위에서 30분 단위로 무작위: 차고·MVP 때는 1~2시간(대중교통·먼 약속), 스케일업 이후는 30분(기사·가까운 사무실). 여러 날 외출은 하루 내내",
+    "travelByStage": [
+      [1, 2],
+      [1, 2],
+      [1, 1.5],
+      [0.5, 1],
+      [0.5, 0.5],
+      [0.5, 0.5]
+    ],
+    "meetingStart": [10, 17],
+    "leadDays": [
+      1,
+      4
+    ],
+    "templates": [
+      {
+        "id": "ir_meeting",
+        "hours": [
+          1,
+          2
+        ],
+        "kind": "ir",
+        "action": "ir",
+        "title": "투자 미팅",
+        "days": [
+          1,
+          1
+        ],
+        "cost": 0,
+        "chance": 0.05,
+        "roundChance": 0.3,
+        "bonus": {
+          "ir": 2
+        },
+        "host": "investor",
+        "text": "대표님, 회사 이야기를 직접 듣고 싶습니다. {date}에 미팅 가능하실까요?"
+      },
+      {
+        "id": "ir_pitch",
+        "hours": [
+          3,
+          4
+        ],
+        "kind": "ir",
+        "action": "ir",
+        "title": "데모데이 피칭",
+        "days": [
+          1,
+          2
+        ],
+        "cost": 300000,
+        "chance": 0.03,
+        "roundChance": 0.12,
+        "needsMvp": true,
+        "bonus": {
+          "ir": 3,
+          "network": 2
+        },
+        "host": "스타트업 데모데이 사무국",
+        "text": "{date}부터 {days}일 데모데이에 피칭 팀으로 초대합니다. 참가비 {cost}."
+      },
+      {
+        "id": "conference",
+        "kind": "network",
+        "action": "network",
+        "title": "스타트업 컨퍼런스",
+        "days": [
+          2,
+          3
+        ],
+        "cost": 1500000,
+        "chance": 0.05,
+        "bonus": {
+          "network": 6
+        },
+        "host": "넥스트 스타트업 컨퍼런스",
+        "text": "{date}부터 {days}일 열리는 컨퍼런스에 연사·참가자로 모시고 싶습니다. 등록비·출장비 {cost}.",
+        "needsMvp": true
+      },
+      {
+        "id": "meetup",
+        "hours": [
+          2,
+          3
+        ],
+        "kind": "network",
+        "action": "network",
+        "title": "업계 네트워킹 모임",
+        "days": [
+          1,
+          1
+        ],
+        "cost": 200000,
+        "chance": 0.07,
+        "bonus": {
+          "network": 2
+        },
+        "host": "창업자 모임",
+        "text": "{date} 저녁 창업자 모임이 있어요. 오실래요? 회비 {cost}."
+      },
+      {
+        "id": "customer",
+        "hours": [
+          2,
+          3
+        ],
+        "kind": "sales",
+        "action": "sales",
+        "title": "고객사 방문",
+        "days": [
+          1,
+          2
+        ],
+        "cost": 100000,
+        "chance": 0.05,
+        "needsMvp": true,
+        "bonus": {
+          "pipeline": 1
+        },
+        "host": "customer",
+        "text": "{date}에 저희 회사로 와서 제품 소개 한번 해 주실 수 있을까요?"
+      }
+    ]
+  },
+  "founderWork": [
+    "dev",
+    "contract",
+    "sales"
+  ],
+  "executiveWork": [
+    "enterprise",
+    "approve"
+  ]
 }

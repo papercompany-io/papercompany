@@ -87,31 +87,32 @@
   "roundDays": 30,
   "lockedSlots": 4,
   "replyDelayDays": 1,
+  "_decisionNote": "투자 결정 요청(A-125): 요청하면 바로 답하지 않고 decisionDelayDays(2~5일) 뒤 답이 옵니다. 그동안 다른 투자사에 결정을 요청할 수 없습니다(한 번에 한 곳). 답이 라운드 마감을 넘기지는 않습니다",
+  "decisionDelayDays": [2, 5],
   "letters": [
     {
       "id": "intro",
       "name": "회사 소개",
-      "desc": "회사와 창업자를 소개합니다.",
-      "interest": 15
+      "desc": "회사와 창업자를 소개합니다. 창업자 명성이 높을수록 잘 통합니다.",
+      "interest": 8
     },
     {
       "id": "proposal",
       "name": "투자 제안",
-      "desc": "이번 라운드 룸과 희망 기업가치를 제안합니다.",
-      "interest": 20
+      "desc": "이번 라운드 지분과 희망 회사 가치를 제안합니다. 높게 부를수록 덜 반깁니다.",
+      "interest": 10
     },
     {
       "id": "material",
       "name": "추가 자료 보내기",
-      "desc": "제품과 지표 자료를 보냅니다(MVP가 있으면 효과가 큼).",
-      "interest": 10,
-      "mvpBonus": 10
+      "desc": "제품과 지표 자료를 보냅니다. 고객·매출 성장·제품 품질이 좋을수록 잘 통하고, 나쁘면 오히려 깎입니다.",
+      "interest": 0
     },
     {
       "id": "club",
       "name": "공동 투자 의향 밝히기",
       "desc": "다른 투자사와 함께하는 클럽딜을 만들겠다고 알립니다.",
-      "interest": 10
+      "interest": 6
     }
   ],
   "valuationAsks": [
@@ -181,5 +182,31 @@
     "commerce": 300,
     "fintech": 300
   },
-  "downRoundSat": -8
+  "downRoundSat": -8,
+  "letterFx": {
+    "_note": "A-109 레터 효과: 좋아하는 레터 배율, 안 맞는 단계 배율, 희망 가치별 제안 레터 효과, 자료 레터 지표 점수, 반기지 않는 레터 감점(A-110)",
+    "likedMult": 2.5,
+    "misfitMult": 0.5,
+    "repPer4": 1,
+    "repCap": 8,
+    "proposalByAsk": {
+      "as_is": 10,
+      "high": 4,
+      "low": 14
+    },
+    "material": {
+      "base": 6,
+      "usersPerLog10": 3,
+      "usersCap": 10,
+      "growthGood": 10,
+      "growthOk": 6,
+      "growthSlow": 3,
+      "growthBad": -8,
+      "bugsMid": -6,
+      "bugsHigh": -12,
+      "min": -20,
+      "max": 30
+    },
+    "dislikedPenalty": -6
+  }
 }

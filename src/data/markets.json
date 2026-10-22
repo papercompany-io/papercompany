@@ -1,5 +1,5 @@
 {
-  "_note": "v2 시장(Claude 제안, [예시값]). tamMult = 국내 대비 잠재 고객 배수, arpu = 객단가 배수, entry = 진출 비용(원), comp = 경쟁 강도(경쟁사 인지도 배수), adCost = 인지도 1을 얻는 데 필요한 잠재 고객 1명당 광고비 배수. adCost = 광고비 배수(산업 adCost × 이 값). local = 현지 기업·대체재 몫(경쟁사 평균 매력도 기준 배수), foreign = 해외 시장 자연 유입 배수",
+  "_note": "v2 시장(Claude 제안, [예시값]). tamMult = 국내 대비 잠재 고객 배수, arpu = 객단가 배수, entry = 진출 비용(원), comp = 경쟁 강도(경쟁사 인지도 배수), adCost = 인지도 1을 얻는 데 필요한 잠재 고객 1명당 광고비 배수. adCost = 광고비 배수(산업 adCost × 이 값). local = 현지 기업·대체재 몫(경쟁사 평균 매력도 기준 배수), foreign = 해외 시장 자연 유입 배수, discoveryAwareness = 이 인지도가 되기 전까지 스스로 찾아오는 고객이 비례해 적음(아무도 모르는 서비스는 검색되지 않음, A-95), discoveryUsers = 쓰는 사람이 이만큼 쌓이면 순위·검색에 걸려 인지도와 상관없이 스스로 찾아옴(제곱근으로 차오름), userAwareness = 인지도 하한 = 사용자/잠재 고객 × 이 배수(쓰는 사람과 그 주변은 압니다)",
   "markets": [
     {
       "id": "kr",
@@ -57,7 +57,7 @@
       "local": 6.0
     }
   ],
-  "awarenessDecayPerDay": 0.002,
+  "discoveryAwareness": 0.03, "discoveryUsers": 20000, "userAwareness": 3, "awarenessDecayPerDay": 0.002,
   "shareExponent": 1.6,
   "foreign": 0.2
 }

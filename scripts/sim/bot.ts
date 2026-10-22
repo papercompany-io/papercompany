@@ -9,6 +9,7 @@ import { createPosting, offerJob } from '../../src/core/hiring';
 import { runwayMonths, lastRevenue, projectedMonthlyPayroll } from '../../src/core/finance';
 import { startRound, sendLetter, requestDecision, closeForOffer, acceptOffer, activeRound, fits, decisionProbability, selectableStages } from '../../src/core/funding';
 import { setOrder } from '../../src/core/orders';
+import { audience, campaignBlock, campaignCost, campaignDef, startCampaign } from '../../src/core/ads';
 import { setAdBudget, launchMarket, launchBlock, totalUsers, shares, demand, revenuePerUser } from '../../src/core/market';
 import { moveOffice, moveBlock, seatsAvailable, furnitureItems, buyFurniture, buyFurnitureBlock } from '../../src/core/office';
 import { chooseModel, latestModels, setAdoption } from '../../src/core/aiadopt';
@@ -16,7 +17,8 @@ import { promoteLead, leadInfo, avgSat } from '../../src/core/staff';
 import { resolveDecision } from '../../src/core/events';
 import { startExit, acceptSale, declineSale, annualRevenue, exitBlocked } from '../../src/core/exit';
 import { sellShares, resign } from '../../src/core/public';
-import { setCeoMode, executiveBlock, setAlloc } from '../../src/core/ceo';
+import { setCeoMode, executiveBlock, setCeoWork } from '../../src/core/ceo';
+import { acceptOuting, outings } from '../../src/core/outings';
 import { acceptContract } from '../../src/core/contracts';
 import { createEsop } from '../../src/core/equity';
 import { emptyProfile, retire, endingFor, founderAge } from '../../src/core/career';
@@ -39,8 +41,9 @@ function planRoadmap(s: GameState) {
     const av = availableFeatures(s);
     if (!av.length) return;
     av.sort((a, b) => {
-      const pa = CAT_PRI[a.cat] + (a.cat === 'infra' && s.product.bugs > 25 ? -3 : 0) + (a.dev + a.design) / 400 + (s.product.features[a.id] ?? 0) * 1.5;
-      const pb = CAT_PRI[b.cat] + (b.cat === 'infra' && s.product.bugs > 25 ? -3 : 0) + (b.dev + b.design) / 400 + (s.product.features[b.id] ?? 0) * 1.5;
+      // 결제 기능(A-111)은 MVP 바로 다음: 이게 없으면 매출이 0
+      const pa = CAT_PRI[a.cat] + (a.fx.billing ? -1.5 : 0) + (a.cat === 'infra' && s.product.bugs > 25 ? -3 : 0) + (a.dev + a.design) / 400 + (s.product.features[a.id] ?? 0) * 1.5;
+      const pb = CAT_PRI[b.cat] + (b.fx.billing ? -1.5 : 0) + (b.cat === 'infra' && s.product.bugs > 25 ? -3 : 0) + (b.dev + b.design) / 400 + (s.product.features[b.id] ?? 0) * 1.5;
       return pa - pb;
     });
     if (addToRoadmap(s, av[0].id)) return;
@@ -148,6 +151,10 @@ function opsStep(s: GameState) {
       const good = ltv > ind.cac * 1.5;
       const b = NOVICE ? (rw !== null && rw < 3 ? 0 : Math.min(1e7, s.cash / 20)) : rw !== null && rw < 6 ? 0 : good ? Math.min(s.cash / 18, Math.max(3e6, rev * 0.5)) : Math.min(rev * 0.08, s.cash / 30);
       setAdBudget(s, m, m === 'kr' ? b : b * 0.5);
+      // 광고 캠페인(A-116): 출시 기념 한 번(돈이 넉넉할 때), 광고가 지치면 새 소재로
+      if (!NOVICE && !campaignBlock(s, 'launch', m) && s.cash > campaignCost(s, campaignDef('launch')!, m) * 6) startCampaign(s, 'launch', m, audience(s) === 'b2b' ? 'feature' : 'story');
+      const fat = Object.values(s.markets[m].adFatigue ?? {});
+      if (!NOVICE && fat.length && Math.max(...fat.map((x) => x ?? 0)) > 0.5 && !campaignBlock(s, 'refresh', m)) startCampaign(s, 'refresh', m, 'feature');
     }
   }
   // 해외 진출
@@ -185,23 +192,13 @@ function opsStep(s: GameState) {
     // 외주(A-79): 돈이 빠듯하면 가장 짧은 일감을 받아 2칸을 씁니다.
     const ct = s.contracts;
     if (ct && !ct.active && ct.offers.length && s.cash < 25000000) acceptContract(s, [...ct.offers].sort((a, b) => a.work - b.work)[0].id);
-    const cslots = s.contracts?.active ? 2 : 0;
-    setAlloc(s, 'contract', 0);
-    if (!hasMvp(s)) {
-      setAlloc(s, 'sales', 0);
-      setAlloc(s, 'ir', 1);
-      setAlloc(s, 'network', 1);
-      setAlloc(s, 'dev', 6 - cslots);
-    } else {
-      setAlloc(s, 'dev', 2);
-      setAlloc(s, 'sales', 4 - cslots);
-    }
-    setAlloc(s, 'contract', cslots);
+    // 실무 모드(A-101): 기본 업무 하나 + 초대받은 외출(투자 미팅·네트워킹·고객사 방문)은 겹치지 않고 돈이 되면 수락
+    setCeoWork(s, s.contracts?.active && s.cash < 25000000 ? 'contract' : hasMvp(s) ? 'sales' : 'dev');
+    for (const o of outings(s).filter((x) => x.status === 'offer')) if (o.cost * 20 < s.cash) acceptOuting(s, o.id);
   } else {
-    const need = Math.ceil(s.employees.length / DATA.ceo.approvePerEmployees);
-    setAlloc(s, 'enterprise', 0);
-    setAlloc(s, 'approve', Math.min(6, need + 1));
-    setAlloc(s, 'enterprise', Math.max(0, 8 - Math.min(6, need + 1) - 2));
+    // 경영 모드(A-101): 결재가 밀리면 결재, 아니면 대기업 영업. 외출 초대는 실무 모드와 같이 수락
+    setCeoWork(s, s.company.approveBalance < 0 ? 'approve' : 'enterprise');
+    for (const o of outings(s).filter((x) => x.status === 'offer')) if (o.cost * 20 < s.cash) acceptOuting(s, o.id);
   }
   // ESOP
   if (!NOVICE && s.company.stage >= 2 && !s.flags.includes('esop') && s.fundingStage && stageIndex(s.fundingStage) >= stageIndex('A')) createEsop(s, 0.08);

@@ -1,24 +1,26 @@
 // 게임 화면: DT-09 사무실 메인 화면 + 위 막대(DT-05 회사·자금·시계·배속) + 왼쪽 메뉴·앱 창(DT-02/03) + 알림(DT-04)·목표·긴급 결정 창.
-// 배치는 Startup Company를 따릅니다(A-83): 화면 전체 사무실, 위 가로 막대, 왼쪽 세로 메뉴, 메뉴를 누르면 가운데 창, 왼쪽 아래 배치 도구.
+// 배치는 Startup Company를 따릅니다(A-83): 화면 전체 사무실, 위 가로 막대, 왼쪽 세로 메뉴, 메뉴를 누르면 가운데 창. 책상·가구 배치는 상점에서 시작(A-87).
+import { ProductCard } from './apps/ProductApp';
 import { paydayForecast } from '../core/forecast';
 import { useEffect, useRef, useState } from 'react';
 import { advance, isRunning, setSpeed } from '../core/sim';
 import { clockOf, dateOf, formatDate } from '../core/calendar';
 import { founderPct } from '../core/equity';
-import { DATA, industry } from '../core/data';
+import { DATA, industry, market, MARKET_IDS } from '../core/data';
 import { currentPL, runwayMonths } from '../core/finance';
 import { computeValuation } from '../core/valuation';
 import { coreFeatures, featureLevel, hasMvp, quality } from '../core/product';
 import { totalUsers } from '../core/market';
+import { marketRanking, myRank, overallRanking } from '../core/ranking';
 import { activeMissions, missionProgress, STAGE_NAMES } from '../core/progress';
 import { founderAge } from '../core/career';
-import { act, getGame, touch, useGame } from './store';
-import { AppPanel, Sidebar, type AppId } from './Desktop';
-import { saveNow } from './autosave';
+import { act, getGame, timeHold, touch, useGame } from './store';
+import { AppPanel, Sidebar, defaultBox, type AppId, type WinBox } from './Desktop';
 import { Office } from './office/Office';
 import { EmployeeModal } from './EmployeeModal';
 import { DevPanel } from './DevPanel';
 import { Money, useTween } from './common';
+import { ServiceLogo } from './logo';
 import { nextHint } from './hints';
 import { requestAutosave } from './autosave';
 import { pct } from '../core/format';
@@ -46,16 +48,41 @@ export interface FloatFx {
   born: number;
 }
 
+// 열린 앱 창(A-124): 여러 개를 띄우고, z가 클수록 앞. nonce는 이미 열린 창을 다른 인자(채널 등)로 다시 열 때 내용을 새로 그리려고 씀
+interface Win {
+  app: AppId;
+  arg?: string;
+  box: WinBox;
+  z: number;
+  nonce: number;
+}
+
 export function Game({ continued, notice, clearNotice, onEnded }: Props) {
   const s = useGame();
   const settings = useSettings();
-  const [panel, setPanel] = useState<{ app: AppId; arg?: string } | null>(null);
+  const [wins, setWins] = useState<Win[]>([]);
+  const zTop = useRef(0);
+  const front = wins.length ? wins.reduce((a, b) => (a.z > b.z ? a : b)) : null;
+  // 창 열기: 이미 열려 있으면 앞으로(인자가 있으면 그 내용으로), 없으면 새 창
+  const showApp = (app: AppId, arg?: string) =>
+    setWins((ws) => {
+      const z = ++zTop.current;
+      const i = ws.findIndex((w) => w.app === app);
+      if (i < 0) return [...ws, { app, arg, z, nonce: 0, box: defaultBox(ws.length) }];
+      const n = [...ws];
+      n[i] = arg === undefined ? { ...n[i], z } : { ...n[i], arg, z, nonce: n[i].nonce + 1 };
+      return n;
+    });
+  const closeApp = (app: AppId) => setWins((ws) => ws.filter((w) => w.app !== app));
   const [openedOnce, setOpenedOnce] = useState(continued);
   const [empModal, setEmpModal] = useState<string | null>(null);
   const [dev, setDev] = useState(false);
   const [urgentId, setUrgentId] = useState<string | null>(null);
   const [floats, setFloats] = useState<FloatFx[]>([]);
   const [confetti, setConfetti] = useState(0);
+  // 멈춘 채로 공고·투자를 시작하면 묻는 팝업(A-126). 같은 멈춤 동안 "그대로 두기"를 고르면 다시 묻지 않음
+  const [waitAsk, setWaitAsk] = useState<string | null>(null);
+  const waitDismissed = useRef(false);
   const lastTouch = useRef(0);
   const fid = useRef(0);
 
@@ -73,7 +100,7 @@ export function Game({ continued, notice, clearNotice, onEnded }: Props) {
       const g = getGame();
       const dt = now - last;
       last = now;
-      if (g && isRunning(g)) {
+      if (g && isRunning(g) && !timeHold.nego) {
         const day = g.day;
         advance(g, dt);
         const important = g.day !== day || g.events.length > 0 || !isRunning(g);
@@ -94,7 +121,8 @@ export function Game({ continued, notice, clearNotice, onEnded }: Props) {
     const evs = s.events.splice(0);
     const sounds = new Set<string>();
     for (const e of evs) {
-      if (e.type === 'offerReady') setPanel({ app: 'invest' });
+      if (e.type === 'offerReady') showApp('invest');
+      if (e.type === 'needsTime' && !isRunning(s) && !s.ended && !waitDismissed.current) setWaitAsk(e.what);
       if (e.type === 'autosave') requestAutosave(e.reason);
       if (e.type === 'exitResult' || e.type === 'bankrupt' || e.type === 'companyEnded') requestAutosave('판 종료');
       if (e.type === 'sfx') sounds.add(e.sound);
@@ -118,6 +146,13 @@ export function Game({ continued, notice, clearNotice, onEnded }: Props) {
     for (const snd of sounds) play(snd as Sfx);
   });
 
+  const running = !!s && isRunning(s);
+  useEffect(() => {
+    if (!running) return;
+    waitDismissed.current = false;
+    setWaitAsk(null);
+  }, [running]);
+
   useEffect(() => {
     if (s?.ended) {
       const t = setTimeout(onEnded, 900);
@@ -129,7 +164,7 @@ export function Game({ continued, notice, clearNotice, onEnded }: Props) {
   useEffect(() => {
     if (s?.wantsAngelOnStart) {
       act((g) => (g.wantsAngelOnStart = false));
-      setPanel({ app: 'invest', arg: 'angel' });
+      showApp('invest', 'angel');
       setOpenedOnce(true);
     }
   }, [s?.wantsAngelOnStart]);
@@ -148,8 +183,9 @@ export function Game({ continued, notice, clearNotice, onEnded }: Props) {
       } else if (e.key === '1' || e.key === '2' || e.key === '3') {
         act((g) => setSpeed(g, [1, 2, 4][Number(e.key) - 1]));
       } else if (e.key === 'Escape') {
+        // 맨 앞 창부터 하나씩 닫음
         setEmpModal(null);
-        setPanel(null);
+        setWins((ws) => (ws.length ? ws.filter((w) => w !== ws.reduce((a, b) => (a.z > b.z ? a : b))) : ws));
       }
     };
     window.addEventListener('keydown', onKey);
@@ -159,13 +195,14 @@ export function Game({ continued, notice, clearNotice, onEnded }: Props) {
   if (!s) return null;
 
   const openDesktop = (app: AppId, arg?: string) => {
-    setPanel({ app, arg });
+    showApp(app, arg);
     setOpenedOnce(true);
     play('open');
   };
+  // 왼쪽 메뉴: 맨 앞 창이면 닫고, 뒤에 열려 있으면 앞으로, 없으면 열기
   const toggleApp = (app: AppId) => {
-    if (panel?.app === app) {
-      setPanel(null);
+    if (front?.app === app) {
+      closeApp(app);
       play('close');
     } else openDesktop(app);
   };
@@ -175,33 +212,53 @@ export function Game({ continued, notice, clearNotice, onEnded }: Props) {
   return (
     <div className="game">
       <main className="stage">
-        <Office onCeo={() => openDesktop('schedule')} onEmployee={(id) => setEmpModal(id)} pulseCeo={!openedOnce} keysEnabled={!panel && !empModal} floats={floats} />
+        <Office onCeo={() => openDesktop('schedule')} onEmployee={(id) => setEmpModal(id)} pulseCeo={!openedOnce} keysEnabled={!wins.length && !empModal} floats={floats} />
         <TopBar s={s} />
-        <Sidebar app={panel?.app ?? null} onOpen={toggleApp} />
-        {panel && (
+        <Sidebar app={front?.app ?? null} open={wins.map((w) => w.app)} onOpen={toggleApp} />
+        {/* 창 층(A-124): 창끼리 순서는 이 안에서만 바뀌어 알림(토스트)보다 위로 올라가지 않음 */}
+        <div className="win-layer">
+        {wins.map((w) => (
           <AppPanel
-            app={panel.app}
-            arg={panel.arg}
+            key={`${w.app}-${w.nonce}`}
+            app={w.app}
+            arg={w.arg}
+            box={w.box}
+            z={wins.filter((x) => x.z < w.z).length}
+            focused={w === front}
+            onFocus={() => w !== front && showApp(w.app)}
+            onBox={(box) => setWins((ws) => ws.map((x) => (x.app === w.app ? { ...x, box } : x)))}
             setApp={(app, arg) => {
-              setPanel({ app, arg });
+              showApp(app, arg);
               play('open');
             }}
             onClose={() => {
-              setPanel(null);
+              closeApp(w.app);
               play('close');
             }}
           />
-        )}
-        <div className={`hint ${s.pauseReason || paydayForecast(s).cashAfter <= 0 ? 'urgent' : ''}`} data-testid="hint">
-          <span className="hint-tag">{s.pauseReason && !s.ended ? '일시정지' : '다음 할 일'}</span>
-          <span>{nextHint(s, openedOnce)}</span>
-          {s.pauseReason && !s.ended && (
-            <button className="btn small green" data-testid="pause-resume" onClick={() => act((g) => setSpeed(g, g.speed || 1))}>
-              ▶ 계속
-            </button>
-          )}
+        ))}
         </div>
-        {!panel && <Missions s={s} onOpen={(a) => openDesktop(a)} />}
+        {s.pauseReason && !s.ended ? (
+          // 일시정지는 위험이 아니라 "멈춤": 빨강 대신 흰 카드 + 주황(배속 버튼과 같은 색)
+          <div className="hint paused" data-testid="hint">
+            <span className="hint-pause-ic">
+              <PauseIcon />
+            </span>
+            <div className="hint-body">
+              <b className="hint-title">일시정지</b>
+              <span>{s.pauseReason}</span>
+            </div>
+            <button className="btn green" data-testid="pause-resume" onClick={() => act((g) => setSpeed(g, g.speed || 1))}>
+              ▶ 계속 <kbd>Space</kbd>
+            </button>
+          </div>
+        ) : (
+          <div className={`hint ${paydayForecast(s).cashAfter <= 0 ? 'urgent' : ''}`} data-testid="hint">
+            <span className="hint-tag">다음 할 일</span>
+            <span>{nextHint(s, openedOnce)}</span>
+          </div>
+        )}
+        {!wins.length && <SideCards s={s} onOpen={(a) => openDesktop(a)} />}
         <Toasts s={s} enabled={settings.toasts} onOpen={(app, arg) => openDesktop(app as AppId, arg)} />
         {notice && (
           <div className="notice">
@@ -225,7 +282,53 @@ export function Game({ continued, notice, clearNotice, onEnded }: Props) {
         />
       )}
       {empModal && <EmployeeModal id={empModal} onClose={() => setEmpModal(null)} />}
+      {waitAsk && (
+        <WaitTimeModal
+          what={waitAsk}
+          onResume={() => {
+            act((g) => setSpeed(g, g.speed || settingsSpeed()));
+            setWaitAsk(null);
+          }}
+          onStay={() => {
+            waitDismissed.current = true;
+            setWaitAsk(null);
+          }}
+        />
+      )}
       {dev && <DevPanel onClose={() => setDev(false)} />}
+    </div>
+  );
+}
+
+// 받침이 있으면 "은", 없으면 "는"
+function eunNeun(word: string): string {
+  const c = word.charCodeAt(word.length - 1) - 0xac00;
+  return c >= 0 && c < 11172 && c % 28 !== 0 ? '은' : '는';
+}
+
+// 시간이 멈춰 있는데 시간이 흘러야 진행되는 일을 시작했을 때(A-126)
+function WaitTimeModal({ what, onResume, onStay }: { what: string; onResume: () => void; onStay: () => void }) {
+  const why = what === '채용 공고' ? '지원자는 하루 중 한 명씩 들어옵니다.' : '투자사 답장은 하루 이상 걸립니다.';
+  return (
+    <div className="modal-bg" onClick={onStay}>
+      <div className="modal wait-modal" data-testid="wait-time" onClick={(e) => e.stopPropagation()}>
+        <b className="wait-title">
+          <PauseIcon /> 시간이 멈춰 있습니다
+        </b>
+        <p>
+          {what}
+          {eunNeun(what)} 시간이 흘러야 진행됩니다. {why}
+        </p>
+        <div className="row">
+          <div className="grow" />
+          <button className="btn small ghost" data-testid="wait-stay" onClick={onStay}>
+            멈춘 채로 두기
+          </button>
+          <button className="btn small green" data-testid="wait-resume" onClick={onResume}>
+            ▶ 시간 흐르게 하기
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -242,67 +345,69 @@ function TopBar({ s }: { s: GameState }) {
   const rw = runwayMonths(s);
   const net = currentPL(s).netIncome;
   const cashShown = useTween(s.cash);
-  const [saved, setSaved] = useState<string | null>(null);
   const cores = coreFeatures(s);
   const coreDone = cores.filter((f) => featureLevel(s, f.id) >= 1).length;
   return (
     <header className="topbar" data-testid="hud" onPointerDown={(e) => e.stopPropagation()}>
-      <div className="tb-co">
-        <div className="cc-logo">{[...s.company.name][0]}</div>
-        <div>
-          <div className="tb-name">{s.company.name}</div>
-          <div className="tb-sub">
-            단계 {s.company.stage} {STAGE_NAMES[s.company.stage]} · {industry(s.company.industry).name}
+      {/* 왼쪽 카드(한 줄): 자금 · 기업가치 · 고객 */}
+      <div className="hud-card hud-main">
+        <div className="tb-row">
+          <div className="tb-stats">
+            <div className="tb-stat cash" title={`회사 자금 · 이번 달 손익 ${net >= 0 ? '흑자' : '적자'}`}>
+              <PxIcon id="coin" size={18} />
+              <div>
+                <Money v={Math.round(cashShown)} testId="hud-cash" />
+                <span className={net >= 0 ? 'up' : 'down'}>{net >= 0 ? '▲' : '▼'}</span>
+                <small className={fc.cashAfter <= 0 || (rw !== null && rw < 3) ? 'bad' : ''}>런웨이 {rw === null ? '흑자' : rw > 120 ? '10년+' : `${rw.toFixed(1)}개월`}</small>
+              </div>
+            </div>
+            <div className="tb-stat" title={s.public ? '시가총액' : '기업가치'}>
+              <PxIcon id="chart" size={18} />
+              <div>
+                <span data-testid="hud-valuation">
+                  <Money v={computeValuation(s).value} />
+                </span>
+                <small data-testid="hud-equity">내 지분 {founderPct(s) >= 0.9995 ? '100%' : pct(founderPct(s))}</small>
+              </div>
+            </div>
+            <div className="tb-stat" title={`${industry(s.company.industry).unit} 수`}>
+              <PxIcon id="users" size={18} />
+              <div>
+                <span data-testid="hud-users">{Math.floor(totalUsers(s)).toLocaleString('ko-KR')}</span>
+                <small>{hasMvp(s) ? `품질 ${quality(s)}점` : `핵심 기능 ${coreDone}/${cores.length}`}</small>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-      <div className="tb-stats">
-        <div className="tb-stat cash" title={`회사 자금 · 이번 달 손익 ${net >= 0 ? '흑자' : '적자'}`}>
-          <PxIcon id="coin" size={20} />
-          <div>
-            <Money v={Math.round(cashShown)} testId="hud-cash" />
-            <span className={net >= 0 ? 'up' : 'down'}>{net >= 0 ? '▲' : '▼'}</span>
-            <small className={fc.cashAfter <= 0 || (rw !== null && rw < 3) ? 'bad' : ''}>런웨이 {rw === null ? '흑자' : rw > 120 ? '10년+' : `${rw.toFixed(1)}개월`}</small>
-          </div>
-        </div>
-        <div className="tb-stat" title={s.public ? '시가총액' : '기업가치'}>
-          <PxIcon id="chart" size={20} />
-          <div>
-            <span data-testid="hud-valuation">
-              <Money v={computeValuation(s).value} />
-            </span>
-            <small data-testid="hud-equity">내 지분 {founderPct(s) >= 0.9995 ? '100%' : pct(founderPct(s))}</small>
-          </div>
-        </div>
-        <div className="tb-stat" title={`${industry(s.company.industry).unit} 수`}>
-          <PxIcon id="users" size={20} />
-          <div>
-            <span data-testid="hud-users">{Math.floor(totalUsers(s)).toLocaleString('ko-KR')}</span>
-            <small>{hasMvp(s) ? `품질 ${quality(s)}점` : `핵심 기능 ${coreDone}/${cores.length}`}</small>
-          </div>
-        </div>
-        <div className="tb-stat" title="직원">
-          <PxIcon id="case" size={20} />
-          <div>
+      {/* 오른쪽 카드(시간): 윗줄 날짜 · 경기 · 대표 나이(카드 테두리는 하루 진행), 아랫줄 시각 · 배속 */}
+      <div className="hud-card hud-time" data-testid="hud-time">
+        {/* 하루 진행: 카드 테두리가 위 왼쪽에서 시계 방향으로 차오름 */}
+        <svg className="hud-ring" aria-hidden>
+          <rect className="ring-track" pathLength={100} />
+          <rect className="ring-fill" pathLength={100} strokeDasharray={`${(frac * 100).toFixed(2)} 100`} />
+        </svg>
+        <div className="tb-row tb-row1">
+          <div className="tb-date" data-testid="hud-date">
             <span>
-              {s.employees.length}명{s.pendingHires.length > 0 && <small> +{s.pendingHires.length}</small>}
+              {formatDate(s.day)} ({WEEK[d.getUTCDay()]})
             </span>
-            <small>월급일 D-{fc.daysLeft}</small>
+            <span className={`hud-econ ${s.economy.phase}`} title="경기">
+              {s.economy.phase === 'boom' ? '호황' : s.economy.phase === 'recession' ? '불황' : '보통'}
+            </span>
+          </div>
+          <div className="tb-age">
+            {/* 운영일(A-123): 창업한 날이 D+1 */}
+            <span className="tb-dday" data-testid="hud-dday" title="창업한 날부터 센 운영일">
+              D+{s.day - s.company.startDay + 1}
+            </span>
+            대표 <b>{Math.floor(founderAge(s))}</b>세
           </div>
         </div>
-      </div>
-      <div className="tb-time">
-        <div className="tb-date" data-testid="hud-date">
-          <span>
-            {formatDate(s.day)} ({WEEK[d.getUTCDay()]})
+        <div className="tb-row tb-row2">
+          <span className="tb-clock" title="현재 시각">
+            {clockOf(s.msInDay)}
           </span>
-          <span className="tb-clock">{clockOf(s.msInDay)}</span>
-          <span className={`hud-econ ${s.economy.phase}`} title="경기">
-            {s.economy.phase === 'boom' ? '호황' : s.economy.phase === 'recession' ? '불황' : '보통'}
-          </span>
-          <span className="tb-age">대표 {Math.floor(founderAge(s))}세</span>
-        </div>
-        <div className="tb-controls">
           <div className="hud-speed">
             {[0, 1, 2, 4].map((sp) => (
               <button
@@ -319,61 +424,70 @@ function TopBar({ s }: { s: GameState }) {
               </button>
             ))}
           </div>
-          <button
-            className="tb-save"
-            data-testid="save-button"
-            title={saved ?? '저장'}
-            onClick={async () => {
-              const ok = await saveNow('수동 저장');
-              setSaved(ok ? '저장함' : '실패');
-              setTimeout(() => setSaved(null), 1500);
-            }}
-          >
-            {saved ?? '저장'}
-          </button>
         </div>
-      </div>
-      <div className="tb-progress">
-        <div style={{ width: `${frac * 100}%` }} />
       </div>
     </header>
   );
 }
 
 // 오른쪽 위: 지금 단계의 목표(튜토리얼·마일스톤)
-function Missions({ s, onOpen }: { s: GameState; onOpen: (a: AppId) => void }) {
-  const ms = activeMissions(s);
-  const [open, setOpen] = useState(true);
+function SideCards({ s, onOpen }: { s: GameState; onOpen: (a: AppId) => void }) {
+  const next = activeMissions(s)[0];
+  const p = next ? missionProgress(s, next) : 1;
   return (
-    <aside className={`missions ${open ? '' : 'closed'}`} data-testid="missions">
-      <button className="ms-head" onClick={() => setOpen((o) => !o)}>
-        <span className="ms-stage">단계 {s.company.stage}</span>
-        <b>{STAGE_NAMES[s.company.stage]}</b>
-        <span className="ms-toggle">{open ? '–' : '+'}</span>
-      </button>
-      {open && (
-        <div className="ms-list">
-          {ms.map((m, i) => {
-            const p = missionProgress(s, m);
-            return (
-              <div key={m.id} className="ms-item" title={m.guide}>
-                <div className="row">
-                  <b className="grow">{m.name}</b>
-                  <span className="tiny muted">{Math.round(p * 100)}%</span>
-                </div>
-                <div className="ms-bar">
-                  <div style={{ width: `${p * 100}%` }} />
-                </div>
-                {i === 0 && <div className="tiny muted">{m.guide}</div>}
-              </div>
-            );
-          })}
-          <button className="btn small ghost" onClick={() => onOpen('career')}>
-            전체 목표
-          </button>
+    <aside className="side-cards" onPointerDown={(e) => e.stopPropagation()}>
+      {/* 회사 정보: 로고 + 이름 */}
+      <div className="co-card" data-testid="company-card">
+        <div className="co-name">
+          <ServiceLogo service={s.company.service} fallback={s.company.name} size={16} />
+          <b>{s.company.name}</b>
         </div>
-      )}
+      </div>
+      {/* 제품 카드: 출시 전 MVP 진행, 출시 후 순위·품질·사용자 */}
+      <ProductCard onOpen={() => onOpen('product')} />
+      {/* 다음 마일스톤: 누르면 전체 목표 */}
+      <button className="ms-card" data-testid="missions" onClick={() => onOpen('career')}>
+        <span className="ms-label">다음 목표</span>
+        <b className="ms-title">{next ? next.name : '모든 목표를 달성했습니다'}</b>
+        {next && <span className="ms-desc">{next.guide}</span>}
+        {next && (
+          <span className="ms-meter" aria-label={`${Math.round(p * 100)}%`}>
+            <i style={{ width: `${p * 100}%` }} />
+          </span>
+        )}
+      </button>
+      <RankCard s={s} onOpen={() => onOpen('ranking')} />
     </aside>
+  );
+}
+
+// 오른쪽 아래: 시장 랭킹 요약(누르면 시장 랭킹 창). 가장 고객이 많은 시장의 순위를 보여 줍니다.
+function RankCard({ s, onOpen }: { s: GameState; onOpen: () => void }) {
+  const launched = MARKET_IDS.filter((m) => s.markets[m].launched);
+  const all = overallRanking(s);
+  const mine = myRank(all);
+  const best = launched.length ? launched.map((m) => ({ m, r: myRank(marketRanking(s, m)) })).filter((x) => x.r).sort((a, b) => b.r!.users - a.r!.users)[0] : undefined;
+  const list = best ? marketRanking(s, best.m) : all;
+  const head = list.slice(0, 3);
+  return (
+    <button className="ms-card rank-card" data-testid="rank-card" onClick={onOpen}>
+      <span className="ms-label">{best ? `${market(best.m).name} 시장 순위` : '시장 순위'}</span>
+      {mine && best?.r ? (
+        <b className="ms-title">
+          {best.r.rank}위<span className="rank-of"> / {list.length}곳</span>
+        </b>
+      ) : (
+        <b className="ms-title">출시 후 순위가 매겨집니다</b>
+      )}
+      <span className="rank-mini">
+        {head.map((r) => (
+          <span key={r.id} className={`rank-line ${r.me ? 'me' : ''}`}>
+            <i>{r.rank}</i>
+            <span>{r.name}</span>
+          </span>
+        ))}
+      </span>
+    </button>
   );
 }
 

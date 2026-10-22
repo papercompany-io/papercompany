@@ -1,5 +1,6 @@
-// 사무실 평면(OF-01/02): 방(대표실·회의실·라운지·탕비실)과 가구 자리, 책상을 놓을 수 없는 곳.
-// 화면(scene.ts)과 책상 배치 규칙(office.ts)이 같은 평면을 씁니다.
+// 사무실 평면(OF-01/02): 방(대표실·회의실·라운지·탕비실), 책상·가구를 놓을 수 없는 곳, 가구 기본 자리.
+// 화면(scene.ts)과 배치 규칙(office.ts)이 같은 평면을 씁니다.
+// 가구는 플레이어가 상점에서 사서 직접 놓습니다(A-87). 평면의 가구 자리(defaults)는 예전 저장 이전·사무실 이사 때 처음 놓을 자리로만 씁니다.
 import { officeTier } from './data';
 
 export interface Rect {
@@ -34,10 +35,18 @@ export interface FloorPlan {
   board: [number, number] | null;
   winX: [number, number][];
   winY: [number, number][];
-  decor: DecorSpot[];
+  decor: DecorSpot[]; // 늘 그리는 소품(건물 밖 나무·벤치·가로등)
+  defaults: { item: string; x: number; y: number }[]; // 가구 기본 자리(타일 왼쪽 위). 이전·이사 때만 씀
   glass: [number, number, number, number][];
-  blocked: Rect[]; // 책상을 놓을 수 없는 곳(방·가구 자리·출입문 앞·대표 책상)
+  fixed: Rect[]; // 무엇도 놓을 수 없는 곳(출입문 앞·대표 책상·대표실·유리벽)
+  blocked: Rect[]; // 책상을 놓을 수 없는 곳 = fixed + 방(회의실·라운지·탕비실은 가구 자리)
 }
+
+// 가구(furniture.json id) → 그 가구를 그리는 소품. 예전 평면의 가구 자리를 가구로 바꿀 때 씁니다.
+export const KIND_ITEM: Partial<Record<DecorKind, string>> = {
+  plant: 'plant', bigPlant: 'plant', cooler: 'cooler', printer: 'printer', meeting: 'meeting', lounge: 'lounge',
+  cafeTable: 'cafe', pingpong: 'pingpong', kitchen: 'kitchen', vending: 'vending', treadmill: 'gym', stage: 'stage',
+};
 
 // 가구 자리가 차지하는 바닥(타일). 건물 밖(나무·벤치·가로등)은 바닥 밖이라 없습니다.
 const FOOT: Partial<Record<DecorKind, [number, number, number, number]>> = {
@@ -95,8 +104,7 @@ function build(tierId: number): FloorPlan {
     add(0.6, doorY + 1.6, 'cooler');
     add(W - 2.2, 0.6, 'printer');
     outside(add, W, H, false);
-    for (const d of decor) footprint(d, blocked);
-    return { id: tierId, W, H, home, exec: null, meeting: null, lounge: null, loungeLeft: false, kitchen: null, doorY, board, winX, winY, decor, glass: [], blocked };
+    return finish({ id: tierId, W, H, home, exec: null, meeting: null, lounge: null, loungeLeft: false, kitchen: null, doorY, board, winX, winY, decor, defaults: [], glass: [], fixed: [...blocked], blocked });
   }
 
   const exec: Rect = { x0: W - 5.4, y0: 0, x1: W, y1: 4.8 };
@@ -111,6 +119,9 @@ function build(tierId: number): FloorPlan {
   ];
   if (meeting) glass.push([meeting.x0, 0, meeting.x0, meeting.y1], [meeting.x0, meeting.y1, meeting.x0 + 1.8, meeting.y1], [meeting.x0 + 3.0, meeting.y1, meeting.x1, meeting.y1], [meeting.x1, exec.y1, meeting.x1, meeting.y1]);
   blocked.push({ ...exec, y1: exec.y1 + 0.8 });
+  // 유리벽은 얇은 막대로 막습니다(가구가 벽을 뚫고 놓이지 않게)
+  for (const [x0, y0, x1, y1] of glass) blocked.push({ x0: Math.min(x0, x1) - 0.15, y0: Math.min(y0, y1) - 0.15, x1: Math.max(x0, x1) + 0.15, y1: Math.max(y0, y1) + 0.15 });
+  const fixed = [...blocked];
   if (meeting) blocked.push({ ...meeting, y1: meeting.y1 + 0.8 });
   if (lounge) blocked.push(lounge);
   if (kitchen) blocked.push(kitchen);
@@ -164,8 +175,24 @@ function build(tierId: number): FloorPlan {
     add(kitchen.x0 + 1.0, kitchen.y0 + 2.1, 'diningTable', 1);
   }
   outside(add, W, H, true);
-  for (const d of decor) footprint(d, blocked);
-  return { id: tierId, W, H, home, exec, meeting, lounge, loungeLeft, kitchen, doorY, board, winX, winY, decor, glass, blocked };
+  return finish({ id: tierId, W, H, home, exec, meeting, lounge, loungeLeft, kitchen, doorY, board, winX, winY, decor, defaults: [], glass, fixed, blocked });
+}
+
+// 가구 자리였던 소품은 평면에서 빼고, 가구마다 첫 자리를 기본 자리(그 가구 크기의 왼쪽 위 칸)로 남깁니다.
+function finish(p: FloorPlan): FloorPlan {
+  const keep: DecorSpot[] = [];
+  for (const d of p.decor) {
+    const item = KIND_ITEM[d.kind];
+    if (!item) {
+      if (!(d.kind in FOOT)) keep.push(d); // 건물 밖 소품만 남김(빈백·식탁·덤벨은 가구의 일부라 버림)
+      continue;
+    }
+    if (p.defaults.some((x) => x.item === item)) continue;
+    const f = FOOT[d.kind]!;
+    p.defaults.push({ item, x: Math.max(0, Math.floor(d.x + f[0] + 0.01)), y: Math.max(0, Math.floor(d.y + f[1] + 0.01)) });
+  }
+  p.decor = keep;
+  return p;
 }
 
 function outside(add: (x: number, y: number, kind: DecorKind) => void, W: number, H: number, full: boolean) {
@@ -175,11 +202,6 @@ function outside(add: (x: number, y: number, kind: DecorKind) => void, W: number
   if (!full) return;
   for (let x = 5; x < W - 2; x += 7.5) add(x, H + 1.3, 'bench');
   for (let y = 6; y < H; y += 7.5) add(W + 1.6, y, 'lamp');
-}
-
-function footprint(d: DecorSpot, out: Rect[]) {
-  const f = FOOT[d.kind];
-  if (f) out.push({ x0: d.x + f[0], y0: d.y + f[1], x1: d.x + f[2], y1: d.y + f[3] });
 }
 
 export function overlaps(a: Rect, b: Rect): boolean {

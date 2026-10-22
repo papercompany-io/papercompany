@@ -1,10 +1,14 @@
-// OF-07 사무실 메뉴: 가구(A-78) + 이전(DEC-020, 단계별 넓이·보증금·월세). 책상은 사무실 화면에서 직접 놓습니다(A-80).
+// OF-07 사무실 메뉴: 이전(DEC-020, 단계별 넓이·보증금·월세). 책상·가구는 상점에서 사서 직접 놓습니다(A-87).
+// 화면 짜임(A-104): 위 회색 판(지금 사무실 · 책상 칸), 아래 매물 카드(몇 명 앉나 · 보증금·월세 · 이사 버튼)
 import { useState } from 'react';
-import { DATA, OFFICE_TIERS } from '../../core/data';
-import { buyFurniture, buyFurnitureBlock, currentTier, deskCapacity, desks, furnitureFits, furnitureItems, moveBlock, moveOffice, officeComfort, ownsFurniture, seatsAvailable } from '../../core/office';
+import { OFFICE_TIERS } from '../../core/data';
+import { currentTier, deskCapacity, desks, moveBlock, moveOffice, officeComfort, seatsAvailable } from '../../core/office';
+import { wonShort } from '../../core/format';
 import { act, useGame } from '../store';
-import { Money, Help } from '../common';
+import { Help } from '../common';
 import './apps.css';
+
+const ROOM: Record<string, string> = { lounge_small: '작은 휴게실', lounge: '휴게실', meeting: '회의실', meeting2: '회의실', kitchen: '탕비실', pingpong: '탁구대', gym: '헬스장', auditorium: '강당' };
 
 export function OfficeApp() {
   const s = useGame();
@@ -12,106 +16,105 @@ export function OfficeApp() {
   const [msg, setMsg] = useState<string | null>(null);
   const all = desks(s);
   const used = all.filter((x) => x.occupant !== null).length;
+  const room = seatsAvailable(s) - (all.length - used);
+  const cap = deskCapacity(cur.id);
   return (
-    <div className="col">
-      <div className="kpi">
-        <div className="stat">
-          <div className="stat-label">지금 사무실</div>
-          <div className="stat-value">{cur.name}</div>
-        </div>
-        <div className="stat">
-          <div className="stat-label">책상(앉은 사람/전체) · 더 놓을 자리</div>
-          <div className="stat-value">
-            {used}/{all.length} · {seatsAvailable(s) - (all.length - used)}
+    <div className="col of">
+      <section className="of-now">
+        <div className="of-now-body">
+          <div className="hf-label">지금 사무실</div>
+          <div className="of-now-name">{cur.name}</div>
+          <div className="of-now-desc">{cur.desc}</div>
+          <div className="of-seats" aria-label={`책상 ${all.length}개 중 ${used}개에 사람이 앉음, 더 놓을 수 있는 책상 ${room}개`}>
+            {Array.from({ length: Math.min(cap, 50) }, (_, i) => (
+              <i key={i} className={i < used ? 'sat' : i < all.length ? 'empty' : ''} />
+            ))}
+            {cap > 50 && <span>+{cap - 50}</span>}
+          </div>
+          <div className="of-legend">
+            <span>
+              <i className="sat" />
+              앉은 책상 {used}
+            </span>
+            <span>
+              <i className="empty" />
+              빈 책상 {all.length - used}
+            </span>
+            <span>
+              <i />더 놓을 자리 {room}
+            </span>
           </div>
         </div>
-        <div className="stat">
-          <div className="stat-label">월세</div>
-          <div className="stat-value">
-            <Money v={cur.rent} />
+        <div className="of-now-nums">
+          <div className="fb-row">
+            <span>월세</span>
+            <b>{wonShort(cur.rent)}</b>
+          </div>
+          <div className="fb-row">
+            <span>쾌적도</span>
+            <b>+{officeComfort(s)}</b>
+          </div>
+          <div className="fb-row">
+            <span>책상 최대</span>
+            <b>{cap}개</b>
           </div>
         </div>
-        <div className="stat">
-          <div className="stat-label">쾌적도(만족도)</div>
-          <div className="stat-value">+{officeComfort(s)}</div>
-        </div>
-      </div>
+      </section>
       {s.company.movingUntil !== null && <div className="warn">이사 중입니다. 며칠 동안 일이 느려집니다.</div>}
       {msg && <div className="warn">{msg}</div>}
-      <div className="section-title">가구 들여놓기</div>
-      <div className="tiny muted">
-        책상은 사무실 화면 왼쪽 아래 "책상 놓기"로 원하는 자리에 놓습니다(개당 <Money v={DATA.furniture.deskPrice} />). 빈 책상 없이 사람을 뽑으면 빈 자리에 하나 사서 놓습니다. 가구는 쾌적도(만족·건강)를 올립니다.
+
+      <div className="hf-title of-title">
+        사무실 옮기기
+        <Help text="이전하면 지금 보증금을 돌려받고 새 보증금을 냅니다. 책상·가구는 들고 가서 새 사무실 빈 자리에 차례로 놓입니다(놓을 곳이 없는 가구는 보관함으로). 배치는 상점에서 다시 바꿀 수 있습니다." />
       </div>
-      <div className="furn-grid">
-        {furnitureItems().map((it) => {
-          const own = ownsFurniture(s, it.id);
-          const fits = furnitureFits(s, it);
-          const block = buyFurnitureBlock(s, it.id);
-          return (
-            <div key={it.id} className={`card furn ${own ? 'own' : ''} ${!fits ? 'nofit' : ''}`}>
-              <div className="row">
-                <b className="grow">{it.name}</b>
-                <span className="chip green">쾌적 +{it.comfort}</span>
-              </div>
-              <div className="tiny muted">{it.desc}</div>
-              {own ? (
-                <span className="chip blue" style={{ alignSelf: 'flex-start' }}>
-                  {fits ? '놓여 있음' : '보관 중(이 사무실엔 공간 없음)'}
-                </span>
-              ) : (
-                <button className="btn small" data-testid={`buy-${it.id}`} disabled={!!block} title={block ?? ''} onClick={() => setMsg(act((g) => buyFurniture(g, it.id)) ?? null)}>
-                  <Money v={it.price} /> 사기
-                </button>
-              )}
-              {!own && !fits && <div className="tiny muted">더 큰 사무실에서 놓을 수 있음</div>}
-            </div>
-          );
-        })}
-      </div>
-      <div className="section-title">사무실 옮기기</div>
-      <div className="col">
+      <div className="of-grid">
         {OFFICE_TIERS.map((t) => {
           const block = moveBlock(s, t.id);
           const here = t.id === s.company.officeTier;
           return (
-            <div key={t.id} className="card col" style={here ? { borderColor: 'var(--blue)', borderWidth: 2 } : undefined}>
-              <div className="row">
-                <b style={{ fontSize: 16 }}>
-                  {t.name}
-                </b>
-                {here && <span className="chip blue">지금 사무실</span>}
-                <span className="grow" />
-                <span className="tiny">
-                  보증금 <Money v={t.deposit} /> · 월세 <Money v={t.rent} />
-                </span>
-                {!here && (
+            <div key={t.id} className={`of-card ${here ? 'here' : ''} ${!here && block ? 'blocked' : ''}`}>
+              {here && <span className="of-here">지금 여기</span>}
+              <div className="of-name">{t.name}</div>
+              <div className="of-cap">
+                <b>{deskCapacity(t.id)}명</b>까지 앉을 수 있어요
+              </div>
+              <div className="of-tags">
+                {t.comfort > 0 && <span>쾌적도 +{t.comfort}</span>}
+                {[...new Set(t.rooms.map((r) => ROOM[r] ?? r))].map((r) => (
+                  <span key={r}>{r}</span>
+                ))}
+              </div>
+              <div className="of-money">
+                <div className="fb-line">
+                  <span>보증금</span>
+                  <b>{t.deposit ? wonShort(t.deposit) : '없음'}</b>
+                </div>
+                <div className="fb-line">
+                  <span>월세</span>
+                  <b>{wonShort(t.rent)}</b>
+                </div>
+              </div>
+              {!here &&
+                (block ? (
+                  <div className="of-block" title={block}>
+                    {block.includes('자금') ? `돈이 모자랍니다 · 필요 ${wonShort(t.deposit - cur.deposit + t.rent)}` : block}
+                  </div>
+                ) : (
                   <button
                     className="btn small"
                     data-testid={`move-${t.id}`}
-                    disabled={!!block}
-                    title={block ?? ''}
                     onClick={() => {
                       const err = act((g) => moveOffice(g, t.id));
                       setMsg(err ?? null);
                     }}
                   >
-                    이전하기
+                    이사하기
                   </button>
-                )}
-              </div>
-              <div className="tiny muted">{t.desc}</div>
-              <div className="row tiny" style={{ gap: 6 }}>
-                <span className="chip">
-                  바닥 {t.size.w}×{t.size.h}칸
-                </span>
-                <span className="chip">책상 최대 {deskCapacity(t.id)}개</span>
-              </div>
-              {!here && block && <div className="tiny muted">{block}</div>}
+                ))}
             </div>
           );
         })}
       </div>
-      <Help text="이전하면 지금 보증금을 돌려받고 새 보증금을 냅니다. 책상·가구는 들고 가고, 책상은 새 사무실 빈 자리에 차례로 놓입니다(배치는 다시 바꿀 수 있음)." />
     </div>
   );
 }

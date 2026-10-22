@@ -1,0 +1,287 @@
+{
+  "_note": "A-116 광고(사용자 지시 \"광고 기능을 많이 넣어줘\": 채널·성과 리포트·캠페인·피로/시즌). 수치 [예시값]. 채널: aware = 알리기(인지도) 몫, direct = 바로 데려오기 몫, knee = 이 채널에 한 달에 넣어도 덜 줄어드는 정도(시장 전체를 다 알리는 비용의 %), fit = 산업 궁합 배율, stage = 열리는 회사 단계. 실제 효과 = 하루 예산 ÷ (1 + 하루 예산 ÷ 무릎) × 궁합 × (1 − 피로×fatigue.max) × 시즌.",
+  "channels": [
+    {
+      "id": "search",
+      "name": "검색 광고",
+      "desc": "찾는 사람 앞에 바로 뜹니다. 바로 데려오는 힘이 세지만 금방 한계에 닿습니다.",
+      "aware": 0.3,
+      "direct": 1.6,
+      "knee": 0.8,
+      "stage": 1,
+      "fit": {
+        "saas": 1.25,
+        "consumer": 0.9,
+        "commerce": 1.3,
+        "fintech": 1.05,
+        "ai": 1.15
+      }
+    },
+    {
+      "id": "sns",
+      "name": "SNS 광고",
+      "desc": "관심사로 골라 보여 줍니다. 알리기와 데려오기를 고루 합니다.",
+      "aware": 0.9,
+      "direct": 1.0,
+      "knee": 1.6,
+      "stage": 1,
+      "fit": {
+        "saas": 0.65,
+        "consumer": 1.35,
+        "commerce": 1.2,
+        "fintech": 1.1,
+        "ai": 0.7
+      }
+    },
+    {
+      "id": "video",
+      "name": "영상 광고",
+      "desc": "영상으로 이야기를 들려줍니다. 많이 알리지만 바로 오는 사람은 적습니다.",
+      "aware": 1.7,
+      "direct": 0.35,
+      "knee": 3.0,
+      "stage": 1,
+      "fit": {
+        "saas": 0.7,
+        "consumer": 1.2,
+        "commerce": 1.05,
+        "fintech": 1.0,
+        "ai": 0.85
+      }
+    },
+    {
+      "id": "influencer",
+      "name": "인플루언서",
+      "desc": "유명한 사람이 대신 써 보고 말해 줍니다. 젊은 고객에게 잘 통합니다.",
+      "aware": 1.1,
+      "direct": 0.9,
+      "knee": 1.2,
+      "stage": 1,
+      "fit": {
+        "saas": 0.4,
+        "consumer": 1.45,
+        "commerce": 1.35,
+        "fintech": 0.8,
+        "ai": 0.55
+      }
+    },
+    {
+      "id": "expo",
+      "name": "박람회·컨퍼런스",
+      "desc": "업계 사람들을 직접 만납니다. 기업 고객에게 잘 통합니다.",
+      "aware": 0.6,
+      "direct": 0.9,
+      "knee": 1.0,
+      "stage": 1,
+      "fit": {
+        "saas": 1.5,
+        "consumer": 0.3,
+        "commerce": 0.4,
+        "fintech": 0.6,
+        "ai": 1.45
+      }
+    },
+    {
+      "id": "outdoor",
+      "name": "옥외·TV 광고",
+      "desc": "지하철·버스·TV에 크게 겁니다. 아주 많이 알리지만 비쌉니다.",
+      "aware": 2.3,
+      "direct": 0.15,
+      "knee": 8,
+      "stage": 3,
+      "fit": {
+        "saas": 0.55,
+        "consumer": 1.2,
+        "commerce": 1.15,
+        "fintech": 1.2,
+        "ai": 0.5
+      }
+    }
+  ],
+  "defaultMix": {
+    "_note": "예전 저장·봇·한 번에 정하기: 총예산을 이 비율로 나눔",
+    "saas": {
+      "search": 0.5,
+      "expo": 0.3,
+      "sns": 0.2
+    },
+    "consumer": {
+      "sns": 0.45,
+      "search": 0.2,
+      "influencer": 0.2,
+      "video": 0.15
+    },
+    "commerce": {
+      "search": 0.4,
+      "sns": 0.35,
+      "influencer": 0.25
+    },
+    "fintech": {
+      "sns": 0.4,
+      "search": 0.35,
+      "video": 0.25
+    },
+    "ai": {
+      "search": 0.45,
+      "expo": 0.4,
+      "sns": 0.15
+    }
+  },
+  "fatigue": {
+    "_note": "같은 채널을 오래 세게 돌리면 지침. 하루 gain × min(1, 예산/무릎)만큼 쌓이고, 쉬면 recover씩 풀림. 효과 × (1 − max × 피로)",
+    "gain": 0.006,
+    "recover": 0.02,
+    "max": 0.5
+  },
+  "audience": {
+    "saas": "b2b",
+    "ai": "b2b",
+    "consumer": "b2c",
+    "commerce": "b2c",
+    "fintech": "b2c"
+  },
+  "seasons": {
+    "_note": "달(1~12)별 광고 효과 배율. 없으면 1",
+    "b2c": {
+      "1": 0.85,
+      "7": 1.1,
+      "8": 1.1,
+      "11": 1.25,
+      "12": 1.35
+    },
+    "b2b": {
+      "1": 0.9,
+      "3": 1.25,
+      "8": 0.85,
+      "9": 1.1,
+      "12": 0.8
+    }
+  },
+  "seasonNames": {
+    "b2c": {
+      "1": "새해 지갑이 닫힘",
+      "7": "여름휴가 철",
+      "8": "여름휴가 철",
+      "11": "연말 쇼핑 철",
+      "12": "연말 쇼핑 철"
+    },
+    "b2b": {
+      "1": "새해 예산 확정 전",
+      "3": "새해 예산 집행 철",
+      "8": "여름휴가로 결정이 느림",
+      "9": "하반기 도입 철",
+      "12": "연말이라 결정이 미뤄짐"
+    }
+  },
+  "tones": [
+    {
+      "id": "feature",
+      "name": "기능을 강조",
+      "fit": {
+        "b2b": 1.3,
+        "b2c": 0.9
+      },
+      "spread": 0.35
+    },
+    {
+      "id": "story",
+      "name": "감성·이야기",
+      "fit": {
+        "b2b": 0.8,
+        "b2c": 1.25
+      },
+      "spread": 0.45
+    },
+    {
+      "id": "humor",
+      "name": "재미·밈",
+      "fit": {
+        "b2b": 0.6,
+        "b2c": 1.3
+      },
+      "spread": 0.95
+    },
+    {
+      "id": "price",
+      "name": "가격·혜택",
+      "fit": {
+        "b2b": 1.05,
+        "b2c": 1.1
+      },
+      "spread": 0.3
+    }
+  ],
+  "campaigns": [
+    {
+      "id": "launch",
+      "name": "출시 기념 이벤트",
+      "desc": "출시를 크게 알리고 첫 고객을 모읍니다. 회사마다 한 번만.",
+      "costPct": 0.2,
+      "minCost": 3000000,
+      "days": 14,
+      "aware": 1.2,
+      "direct": 1.4,
+      "power": 1.8,
+      "stage": 1,
+      "once": true
+    },
+    {
+      "id": "refresh",
+      "name": "광고 소재 새로 만들기",
+      "desc": "지친 광고를 새 그림·문구로 바꿔 피로를 풉니다.",
+      "costPct": 0.03,
+      "minCost": 1000000,
+      "days": 1,
+      "aware": 0,
+      "direct": 0,
+      "power": 0,
+      "stage": 1,
+      "refresh": true
+    },
+    {
+      "id": "discount",
+      "name": "할인 프로모션",
+      "desc": "첫 달 할인으로 많이 데려옵니다. 끝나면 일부가 떠납니다.",
+      "costPct": 0.25,
+      "minCost": 3000000,
+      "days": 14,
+      "aware": 0.5,
+      "direct": 2.2,
+      "power": 1.6,
+      "stage": 1,
+      "afterChurn": 0.12,
+      "afterDays": 45
+    },
+    {
+      "id": "influencer",
+      "name": "인플루언서 협업",
+      "desc": "유명인과 함께 만듭니다. 대박이 나기도, 논란이 나기도 합니다.",
+      "costPct": 0.3,
+      "minCost": 5000000,
+      "days": 21,
+      "aware": 1.6,
+      "direct": 1.0,
+      "power": 1.7,
+      "stage": 1,
+      "riskP": 0.12
+    },
+    {
+      "id": "brand",
+      "name": "브랜드 영상 캠페인",
+      "desc": "한 달 동안 회사 이야기를 크게 알립니다.",
+      "costPct": 0.6,
+      "minCost": 10000000,
+      "days": 30,
+      "aware": 2.2,
+      "direct": 0.3,
+      "power": 1.6,
+      "stage": 2
+    }
+  ],
+  "campaignResult": {
+    "_note": "결과 배율 = 문구 궁합 × (1 + spread × (난수×2 − 1)). 이 이상이면 대박, 이 아래면 실패",
+    "hit": 1.5,
+    "flop": 0.6,
+    "riskRep": -1
+  }
+}

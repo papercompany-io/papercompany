@@ -1,5 +1,6 @@
 // DT-07 저장 어댑터: Electron은 사용자 데이터 폴더의 파일, 웹은 localStorage(A-29).
-import { migrateSeats } from '../core/office';
+import { migrateFurniture, migrateSeats } from '../core/office';
+import { seedMvpRoadmap } from '../core/product';
 import type { GameState, Profile } from '../core/types';
 import { emptyProfile } from '../core/career';
 
@@ -67,6 +68,10 @@ function parse(text: string | null): GameState | null {
       s.todayLog.contract ??= 0;
       // 예전 저장 보정: 부서 구역 좌석 → 자유 배치 책상(A-80)
       migrateSeats(s);
+      // 예전 저장 보정: 평면에 고정된 가구 → 직접 놓는 가구(A-87)
+      migrateFurniture(s);
+      // 예전 저장 보정: 창업 직후 비어 있던 로드맵에 MVP 핵심 기능(A-95)
+      if (!s.ended && s.product.launchedDay === null && s.product.roadmap.length === 0 && Object.keys(s.product.features).length === 0) seedMvpRoadmap(s);
       return s;
     }
   } catch {

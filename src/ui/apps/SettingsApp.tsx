@@ -1,4 +1,5 @@
 // DT-08 설정·종료: 음량, 효과, 알림, 긴급 자동 일시정지, 기본 배속, 전체 화면, 단축키 안내, 저장 후 종료
+// 화면 짜임(A-106): 회색 판 묶음마다 "이름 왼쪽 · 조작 오른쪽" 줄. 켜고 끄는 건 스위치
 import { useState } from 'react';
 import { setMuted, setVolume, soundSettings, play } from '../sound';
 import { setSettings, useSettings } from '../meta';
@@ -6,113 +7,130 @@ import { saveNow } from '../autosave';
 import { toggleFullscreen, isElectron } from '../../platform/save';
 import './apps.css';
 
+function Switch({ on, onChange, label }: { on: boolean; onChange: (v: boolean) => void; label: string }) {
+  return (
+    <button type="button" role="switch" aria-checked={on} aria-label={label} className={`set-switch ${on ? 'on' : ''}`} onClick={() => onChange(!on)}>
+      <i />
+    </button>
+  );
+}
+
+function Row({ title, sub, children }: { title: string; sub?: string; children: React.ReactNode }) {
+  return (
+    <div className="set-row">
+      <div className="set-text">
+        <b>{title}</b>
+        {sub && <span>{sub}</span>}
+      </div>
+      <div className="set-ctrl">{children}</div>
+    </div>
+  );
+}
+
 export function SettingsApp() {
   const st = useSettings();
   const [snd, setSnd] = useState(soundSettings());
   const [msg, setMsg] = useState<string | null>(null);
   return (
-    <div className="col" style={{ maxWidth: 640 }}>
-      <div className="section-title">소리</div>
-      <div className="row">
-        <span style={{ width: 120 }}>효과음 음량</span>
-        <input
-          type="range"
-          className="grow"
-          data-testid="volume"
-          min={0}
-          max={1}
-          step={0.05}
-          value={snd.volume}
-          onChange={(e) => {
-            setVolume(Number(e.target.value));
-            setSnd(soundSettings());
-            play('click');
-          }}
-        />
-        <span className="num" style={{ width: 40 }}>
-          {Math.round(snd.volume * 100)}
-        </span>
-        <label className="row tiny">
+    <div className="col set">
+      <section className="set-group">
+        <div className="hf-title">소리</div>
+        <Row title="효과음 음량">
           <input
-            type="checkbox"
-            checked={snd.muted}
+            type="range"
+            data-testid="volume"
+            min={0}
+            max={1}
+            step={0.05}
+            value={snd.volume}
+            disabled={snd.muted}
             onChange={(e) => {
-              setMuted(e.target.checked);
+              setVolume(Number(e.target.value));
+              setSnd(soundSettings());
+              play('click');
+            }}
+          />
+          <span className="set-num">{Math.round(snd.volume * 100)}</span>
+        </Row>
+        <Row title="음소거">
+          <Switch
+            label="음소거"
+            on={snd.muted}
+            onChange={(v) => {
+              setMuted(v);
               setSnd(soundSettings());
             }}
           />
-          음소거
-        </label>
-      </div>
-      <div className="section-title">게임</div>
-      <label className="row">
-        <input type="checkbox" checked={st.autoPauseUrgent} onChange={(e) => setSettings({ autoPauseUrgent: e.target.checked })} />
-        긴급 알림(장애·인수 제안·투자 제안서 등)이 오면 시간을 자동으로 멈춤. 꺼도 파산 경고는 멈춥니다.
-      </label>
-      <label className="row">
-        <input type="checkbox" checked={st.toasts} onChange={(e) => setSettings({ toasts: e.target.checked })} />
-        오른쪽 아래 알림 토스트 보이기
-      </label>
-      <label className="row">
-        <input type="checkbox" checked={st.animations} onChange={(e) => setSettings({ animations: e.target.checked })} />
-        축하 연출·떠오르는 숫자 보이기
-      </label>
-      <div className="row">
-        <span style={{ width: 160 }}>스페이스로 다시 시작할 배속</span>
-        <div className="seg">
-          {[1, 2, 4].map((v) => (
-            <button key={v} className={st.defaultSpeed === v ? 'on' : ''} onClick={() => setSettings({ defaultSpeed: v })}>
-              {v}배속
-            </button>
-          ))}
-        </div>
-      </div>
-      <div className="section-title">화면</div>
-      <div className="row">
-        <button className="btn ghost" onClick={toggleFullscreen}>
-          전체 화면 켜기/끄기
-        </button>
-      </div>
-      <div className="section-title">단축키</div>
-      <table className="t">
-        <tbody>
-          <tr>
-            <td>스페이스</td>
-            <td>일시정지 / 계속</td>
-          </tr>
-          <tr>
-            <td>1 · 2 · 3</td>
-            <td>1배속 · 2배속 · 4배속</td>
-          </tr>
-          <tr>
-            <td>Tab</td>
-            <td>대표 컴퓨터 열기 / 닫기</td>
-          </tr>
-          <tr>
-            <td>Esc</td>
-            <td>앱 → 바탕화면 → 사무실</td>
-          </tr>
-          <tr>
-            <td>방향키 · 끌기 · 휠</td>
-            <td>사무실 카메라 이동 · 확대</td>
-          </tr>
-        </tbody>
-      </table>
-      <div className="section-title">시스템 종료</div>
-      <div className="row">
-        <button
-          className="btn red"
-          data-testid="quit"
-          onClick={async () => {
-            const ok = await saveNow('종료');
-            setMsg(ok ? '저장했습니다.' : '저장하지 못했습니다.');
-            if (ok && isElectron()) window.pcSave?.quit?.();
-          }}
-        >
-          저장하고 {isElectron() ? '종료' : '저장만'}
-        </button>
-        {msg && <span className="tiny">{msg}</span>}
-      </div>
+        </Row>
+      </section>
+
+      <section className="set-group">
+        <div className="hf-title">게임</div>
+        <Row title="급한 일이 생기면 멈추기" sub="장애·인수 제안·투자 제안서가 오면 시간을 멈춥니다. 꺼도 파산 경고는 멈춥니다.">
+          <Switch label="급한 일이 생기면 멈추기" on={st.autoPauseUrgent} onChange={(v) => setSettings({ autoPauseUrgent: v })} />
+        </Row>
+        <Row title="알림 카드 보이기" sub="오른쪽 아래에 새 소식을 띄웁니다.">
+          <Switch label="알림 카드 보이기" on={st.toasts} onChange={(v) => setSettings({ toasts: v })} />
+        </Row>
+        <Row title="축하 연출 보이기" sub="종이 꽃가루와 떠오르는 숫자.">
+          <Switch label="축하 연출 보이기" on={st.animations} onChange={(v) => setSettings({ animations: v })} />
+        </Row>
+        <Row title="스페이스로 다시 시작할 빠르기">
+          <div className="seg">
+            {[1, 2, 4].map((v) => (
+              <button key={v} className={st.defaultSpeed === v ? 'on' : ''} onClick={() => setSettings({ defaultSpeed: v })}>
+                {v}배속
+              </button>
+            ))}
+          </div>
+        </Row>
+      </section>
+
+      <section className="set-group">
+        <div className="hf-title">화면</div>
+        <Row title="전체 화면">
+          <button className="btn small ghost" onClick={toggleFullscreen}>
+            켜기 / 끄기
+          </button>
+        </Row>
+      </section>
+
+      <section className="set-group">
+        <div className="hf-title">단축키</div>
+        {(
+          [
+            [['Space'], '멈춤 / 계속'],
+            [['1', '2', '3'], '1배속 · 2배속 · 4배속'],
+            [['Esc'], '열린 창 닫기'],
+            [['방향키'], '사무실 둘러보기 (끌기·휠로도 움직이고 확대)'],
+          ] as [string[], string][]
+        ).map(([keys, what]) => (
+          <div key={what} className="set-row">
+            <div className="set-keys">
+              {keys.map((k) => (
+                <kbd key={k}>{k}</kbd>
+              ))}
+            </div>
+            <span className="set-what">{what}</span>
+          </div>
+        ))}
+      </section>
+
+      <section className="set-group">
+        <Row title={isElectron() ? '저장하고 끝내기' : '지금 저장하기'} sub={msg ?? '게임은 자동으로도 저장됩니다.'}>
+          <button
+            className={`btn ${isElectron() ? 'red' : ''}`}
+            data-testid="quit"
+            onClick={async () => {
+              const ok = await saveNow('종료');
+              setMsg(ok ? '저장했습니다.' : '저장하지 못했습니다.');
+              if (ok && isElectron()) window.pcSave?.quit?.();
+            }}
+          >
+            {isElectron() ? '저장하고 종료' : '저장'}
+          </button>
+        </Row>
+      </section>
     </div>
   );
 }

@@ -15,7 +15,8 @@ import { monthKey } from './calendar';
 import { founderAge, finishCompany } from './career';
 import { founderPct } from './equity';
 import { roundDayEnd } from './funding';
-import { hiringDayEnd, startPendingHires } from './hiring';
+import { hiringArrivals, hiringDayEnd, startPendingHires } from './hiring';
+import { outingsDay } from './outings';
 import { marketDay, totalUsers } from './market';
 import { pruneMods } from './mods';
 import { notify } from './notify';
@@ -53,6 +54,7 @@ export function advance(s: GameState, realMs: number) {
     const step = Math.min(ms, target - s.msInDay);
     s.msInDay += step;
     ms -= step;
+    hiringArrivals(s, s.msInDay);
     if (s.slotsDone < T.slotsPerDay && s.msInDay >= slotEnd(s.slotsDone) - 1e-6) {
       runSlot(s, s.slotsDone);
       s.slotsDone += 1;
@@ -71,9 +73,11 @@ export function runDay(s: GameState) {
 }
 
 export function endDay(s: GameState) {
+  const revBefore = revenueSoFar(s);
   const push = ordersDay(s);
   marketDay(s, push);
   accrueDay(s);
+  logDaily(s, revenueSoFar(s) - revBefore);
   aiDay(s);
   ceoDayEnd(s);
   s.day += 1;
@@ -82,6 +86,7 @@ export function endDay(s: GameState) {
   s.todayLog = { dev: 0, contract: 0, sales: 0, ir: 0, network: 0, enterprise: 0, approve: 0 };
   staffDay(s);
   hiringDayEnd(s);
+  outingsDay(s);
   roundDayEnd(s);
   exitDayEnd(s);
   if (s.ended) return;
@@ -115,6 +120,18 @@ export function endDay(s: GameState) {
     if (s.ended) return;
   }
   s.events.push({ type: 'autosave', reason: '날짜 변경' });
+}
+
+function revenueSoFar(s: GameState): number {
+  const a = s.accrual;
+  return a.revSub + a.revAd + a.revTake + a.revEnt;
+}
+
+// 제품 상태 그래프용 하루 기록(사용자·매출), 최근 90일만
+function logDaily(s: GameState, rev: number) {
+  const d = (s.product.daily ??= []);
+  d.push({ day: s.day, users: Math.round(totalUsers(s)), rev: Math.round(rev) });
+  if (d.length > 90) d.splice(0, d.length - 90);
 }
 
 // 은퇴 나이(65세): 회사를 정리합니다(상장사는 사임, 비상장은 지분을 넘김).

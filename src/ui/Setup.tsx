@@ -5,10 +5,12 @@ import { defaultPicks, specBudget, specCost, validateCompanyName, type SetupChoi
 import { legacyUnlocked } from '../core/career';
 import { makeSeed } from '../core/rng';
 import { pct, wonShort } from '../core/format';
-import type { IndustryId } from '../core/types';
+import type { Grade, IndustryId } from '../core/types';
+import { typicalSpeed } from '../core/staff';
 import { useProfile } from './meta';
 import { play } from './sound';
 import { PixelAvatar } from './office/Avatar';
+import { LOGO_COLORS, LOGO_MARKS, ServiceLogo, defaultLogo } from './logo';
 import './setup.css';
 
 const EFFECT_LABEL: Record<string, string> = {
@@ -63,7 +65,9 @@ export function Setup({ mode, wealth = 0, legacy, challenge: careerChallenge = n
   const [equity, setEquity] = useState(0.2);
   const [engineerId, setEngineerId] = useState<string | null>(null);
   const [name, setName] = useState('');
-  const [seed, setSeed] = useState<number>(initialSeed);
+  const [serviceName, setServiceName] = useState('');
+  const [logo, setLogo] = useState(defaultLogo);
+  const [seed] = useState<number>(initialSeed);
   const [teamMsg, setTeamMsg] = useState<string | null>(null);
 
   const budget = specBudget(lg);
@@ -73,6 +77,7 @@ export function Setup({ mode, wealth = 0, legacy, challenge: careerChallenge = n
   const left = budget - spent;
   const fx = useMemo(() => specEffects(picks), [picks]);
   const nameErr = validateCompanyName(name);
+  const service = { field: INDUSTRIES.find((x) => x.id === industry)!.name, name: serviceName.trim() || name.trim() || '우리 서비스', logo };
   const cof = DATA.candidates.cofounders.find((c) => c.id === cofounderId);
 
   const steps = ['창업자', '산업', '창업자 스펙', '창업 팀', '회사 이름', '첫 행보'];
@@ -89,7 +94,7 @@ export function Setup({ mode, wealth = 0, legacy, challenge: careerChallenge = n
 
   const finish = (wantsAngel: boolean) => {
     play('success');
-    onDone({ picks, cofounderId: solo ? null : cofounderId, cofounderEquity: cofounderId ? equity : 0, engineerId: solo ? null : engineerId, companyName: name, wantsAngel, seed, industry, founderName, challenge, invest });
+    onDone({ picks, cofounderId: solo ? null : cofounderId, cofounderEquity: cofounderId ? equity : 0, engineerId: solo ? null : engineerId, companyName: name, wantsAngel, seed, industry, service, founderName, challenge, invest });
   };
 
   return (
@@ -113,15 +118,16 @@ export function Setup({ mode, wealth = 0, legacy, challenge: careerChallenge = n
             <div className="tiny muted">2027년, 30세. 빈 원룸에서 책상 하나, 혼자 시작합니다. 제품을 만들고 사람을 뽑고 가구를 들이며 회사를 키우세요. 65세에 은퇴할 때까지 여러 회사를 세우며 커리어를 쌓습니다. 회사가 끝나면(매각·상장·파산) 다음 회사를 세울 수 있습니다.</div>
             <div className="section-title">도전 모드(선택)</div>
             <div className="cands">
-              <button className={`cand ${challenge === null ? 'sel' : ''}`} data-testid="challenge-none" onClick={() => setChallenge(null)}>
+              <button className={`cand challenge ${challenge === null ? 'sel' : ''}`} data-testid="challenge-none" onClick={() => setChallenge(null)}>
                 <div className="cand-name">일반</div>
                 <div className="tiny muted">기본 커리어</div>
+                <div className="diff" style={{ color: '#3f9a5a' }}>난이도 쉬움</div>
               </button>
-              {DATA.career.challenges.map((c) => (
-                <button key={c.id} className={`cand ${challenge === c.id ? 'sel' : ''}`} data-testid={`challenge-${c.id}`} onClick={() => setChallenge(c.id)}>
+              {[...DATA.career.challenges].sort((a, b) => a.legacyMult - b.legacyMult).map((c) => (
+                <button key={c.id} className={`cand challenge ${challenge === c.id ? 'sel' : ''}`} data-testid={`challenge-${c.id}`} onClick={() => setChallenge(c.id)}>
                   <div className="cand-name">{c.name}</div>
                   <div className="tiny muted">{c.desc}</div>
-                  <div className="tiny">레거시 점수 ×{c.legacyMult}</div>
+                  <div className="diff" style={c.legacyMult > 1.3 ? { color: 'var(--red)' } : { color: '#2c6fa8' }}>난이도 {c.legacyMult <= 1.3 ? '보통' : c.legacyMult <= 1.4 ? '어려움' : '매우 어려움'}</div>
                 </button>
               ))}
             </div>
@@ -158,6 +164,37 @@ export function Setup({ mode, wealth = 0, legacy, challenge: careerChallenge = n
                   </button>
                 );
               })}
+            </div>
+            <div className="service-card">
+              <div className="service-preview">
+                <ServiceLogo service={service} fallback={service.name} size={72} />
+                <div className="service-preview-name">{service.name}</div>
+                <div className="tiny muted">{service.field}</div>
+              </div>
+              <div className="service-form">
+                <label className="service-row">
+                  <span>서비스 이름</span>
+                  <input data-testid="service-name" placeholder="비우면 회사 이름을 씁니다" value={serviceName} maxLength={16} onChange={(e) => setServiceName(e.target.value)} />
+                </label>
+                <div className="service-row">
+                  <span>로고</span>
+                  <div className="logo-marks">
+                    {LOGO_MARKS.map((m) => (
+                      <button key={m} className={`logo-pick ${logo.mark === m ? 'sel' : ''}`} data-testid={`logo-${m}`} onClick={() => setLogo({ ...logo, mark: m })}>
+                        <ServiceLogo service={{ ...service, logo: { mark: m, color: logo.color } }} fallback="" size={34} />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="service-row">
+                  <span>색</span>
+                  <div className="logo-colors">
+                    {LOGO_COLORS.map((c) => (
+                      <button key={c} className={`logo-color ${logo.color === c ? 'sel' : ''}`} style={{ background: c }} aria-label={c} onClick={() => setLogo({ ...logo, color: c })} />
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
             <div className="row" style={{ justifyContent: 'space-between' }}>
               {mode === 'new' ? (
@@ -258,7 +295,7 @@ export function Setup({ mode, wealth = 0, legacy, challenge: careerChallenge = n
                 <button key={c.id} disabled={solo} className={`cand ${cofounderId === c.id ? 'sel' : ''}`} data-testid={`cof-${c.id}`} onClick={() => { setCofounderId(c.id); setTeamMsg(null); }}>
                   <div className="cand-name">{c.name}</div>
                   <div className="tiny">
-                    {DATA.depts.departments.find((d) => d.id === c.dept)!.name} · 능력 {c.grade} · 월급 {(c.salary / 1e4).toLocaleString()}만원
+                    {DATA.depts.departments.find((d) => d.id === c.dept)!.name} · 속도 약 {typicalSpeed(c.grade as Grade, 7)}% · 월급 {(c.salary / 1e4).toLocaleString()}만원
                   </div>
                   <div className="tiny muted">{c.desc}</div>
                   <div className="tiny">최소 요구 지분 {pct(c.minEquity, 0)}</div>
@@ -293,7 +330,7 @@ export function Setup({ mode, wealth = 0, legacy, challenge: careerChallenge = n
                 <button key={c.id} disabled={solo} className={`cand ${engineerId === c.id ? 'sel' : ''}`} data-testid={`eng-${c.id}`} onClick={() => setEngineerId(c.id)}>
                   <div className="cand-name">{c.name}</div>
                   <div className="tiny">
-                    개발 · 능력 {c.grade} · 월급 {(c.salary / 1e4).toLocaleString()}만원
+                    개발 · 속도 약 {typicalSpeed(c.grade as Grade, 5)}% · 월급 {(c.salary / 1e4).toLocaleString()}만원
                   </div>
                   <div className="tiny muted">{c.desc}</div>
                 </button>
@@ -354,11 +391,6 @@ export function Setup({ mode, wealth = 0, legacy, challenge: careerChallenge = n
                 <b>투자 없이 시작한다</b>
                 <span className="tiny muted">자본금으로 제품과 매출부터 만듭니다. 투자는 나중에 언제든 열 수 있습니다.</span>
               </button>
-            </div>
-            <div className="row tiny muted">
-              난수 시드
-              <input data-testid="seed" className="seed" value={seed} onChange={(e) => /^\d*$/.test(e.target.value) && setSeed(Number(e.target.value || 0))} />
-              <span>같은 시드면 같은 결과가 나옵니다.</span>
             </div>
             <button className="btn ghost" style={{ alignSelf: 'flex-start' }} onClick={() => setStep(4)}>
               이전

@@ -18,6 +18,9 @@ export function setGame(s: GameState | null) {
   emit();
 }
 
+// 채용 협상 창이 열려 있는 동안 게임 시간을 멈추는 화면 쪽 표시(저장되지 않음, A-118)
+export const timeHold = { nego: false };
+
 export function getGame(): GameState | null {
   return current;
 }

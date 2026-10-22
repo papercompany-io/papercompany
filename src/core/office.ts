@@ -4,7 +4,7 @@ import { spendNow, book } from './finance';
 import { news, notify } from './notify';
 import { nextId } from './ids';
 import { floorPlan, overlaps, type Rect } from './officeLayout';
-import type { GameState, Seat } from './types';
+import type { GameState, PlacedItem, Rot, Seat } from './types';
 
 // 책상(A-80): 부서 구역 없이 플레이어가 빈 바닥 아무 데나 책상을 놓습니다. 어느 직무든 빈 책상에 앉습니다.
 // 처음엔 대표 책상만 있습니다. 사람을 뽑을 때 빈 책상이 없으면 빈 자리에 하나 사서 놓습니다(나중에 옮기거나 치울 수 있음).
@@ -38,6 +38,7 @@ export function deskFits(s: GameState, gx: number, gy: number, ignore?: string, 
   const ex = s.seats.find((x) => x.zone === 'exec');
   if (ex && ex.occupant !== null && overlaps(r, deskRect(t.exec.x, t.exec.y))) return '다른 책상과 겹칩니다.';
   for (const d of desks(s)) if (d.id !== ignore && d.gx !== undefined && overlaps(r, deskRect(d.gx, d.gy!))) return '다른 책상과 겹칩니다.';
+  if (placedOn(s).some((p) => overlaps(r, itemRect(p)))) return '가구와 겹칩니다.';
   return null;
 }
 
@@ -56,6 +57,7 @@ function occGrid(s: GameState, tierId: number) {
   const ex = s.seats.find((x) => x.zone === 'exec');
   if (ex && ex.occupant !== null) mark(deskRect(t.exec.x, t.exec.y));
   for (const d of s.seats) if (d.zone === 'desk' && d.gx !== undefined) mark(deskRect(d.gx, d.gy!));
+  for (const p of placedOn(s)) mark(itemRect(p));
   return { g, W, H, mark };
 }
 
@@ -75,7 +77,7 @@ export function findDeskSpot(s: GameState, tierId = s.company.officeTier): { gx:
 const roomCache = new Map<string, number>();
 function roomLeft(s: GameState, tierId: number, limit: number): number {
   if (limit <= 0) return 0;
-  const key = `${tierId}|${limit}|${s.seats.map((d) => (d.zone === 'desk' ? `${d.gx},${d.gy}` : d.zone === 'exec' && d.occupant ? 'x' : '')).join(';')}`;
+  const key = `${tierId}|${limit}|${s.seats.map((d) => (d.zone === 'desk' ? `${d.gx},${d.gy}` : d.zone === 'exec' && d.occupant ? 'x' : '')).join(';')}|${placedOn(s).map((p) => `${p.item}${p.gx},${p.gy}`).join(';')}`;
   const hit = roomCache.get(key);
   if (hit !== undefined) return hit;
   const o = occGrid(s, tierId);
@@ -107,8 +109,8 @@ export function seatsAvailable(s: GameState): number {
   return freeDesks(s).length + roomLeft(s, s.company.officeTier, currentTier(s).maxDesks - desks(s).length);
 }
 
-function newDesk(s: GameState, gx: number, gy: number): Seat {
-  const seat: Seat = { id: nextId(s, 'desk'), zone: 'desk', occupant: null, bought: true, gx, gy };
+function newDesk(s: GameState, gx: number, gy: number, rot: Rot = 0): Seat {
+  const seat: Seat = { id: nextId(s, 'desk'), zone: 'desk', occupant: null, bought: true, gx, gy, ...(rot ? { rot } : {}) };
   s.seats.push(seat);
   return seat;
 }
@@ -125,25 +127,51 @@ export function takeDesk(s: GameState): Seat | null {
 }
 
 // 플레이어 배치: 책상 사서 놓기, 옮기기(앉은 사람도 같이), 빈 책상 치우기(절반 값에 처분)
-export function placeDesk(s: GameState, gx: number, gy: number): string | null {
+export function placeDesk(s: GameState, gx: number, gy: number, rot: Rot = 0): string | null {
   if (s.company.movingUntil !== null) return '이사 중에는 배치를 바꿀 수 없습니다.';
   const err = deskFits(s, gx, gy);
   if (err) return err;
   if (desks(s).length >= currentTier(s).maxDesks) return `이 사무실에는 책상을 ${currentTier(s).maxDesks}개까지만 놓을 수 있습니다. 더 큰 사무실로 옮기세요.`;
   if (s.cash < DATA.furniture.deskPrice) return '자금이 부족합니다.';
   spendNow(s, '책상·PC 구입', DATA.furniture.deskPrice, 'other');
-  newDesk(s, gx, gy);
+  newDesk(s, gx, gy, rot);
   s.events.push({ type: 'sfx', sound: 'coin' });
   return null;
 }
 
-export function moveDesk(s: GameState, id: string, gx: number, gy: number): string | null {
+export function moveDesk(s: GameState, id: string, gx: number, gy: number, rot?: Rot): string | null {
   const d = desks(s).find((x) => x.id === id);
   if (!d) return '책상을 찾을 수 없습니다.';
   const err = deskFits(s, gx, gy, id);
   if (err) return err;
   d.gx = gx;
   d.gy = gy;
+  if (rot !== undefined) d.rot = rot;
+  return null;
+}
+
+// 돌리기(A-128): 시계 방향 90°. 책상은 2×2라 자리가 그대로이고, 앉은 사람이 보는 방향만 바뀝니다.
+// 가구는 가로·세로가 바뀌므로 같은 왼쪽 위 칸에서 돌린 크기가 들어가야 합니다.
+export function nextRot(r: Rot | undefined): Rot {
+  return (((r ?? 0) + 1) % 4) as Rot;
+}
+
+export function rotateDesk(s: GameState, id: string): string | null {
+  if (s.company.movingUntil !== null) return '이사 중에는 배치를 바꿀 수 없습니다.';
+  const d = desks(s).find((x) => x.id === id);
+  if (!d) return '돌릴 수 있는 책상이 아닙니다.';
+  d.rot = nextRot(d.rot);
+  return null;
+}
+
+export function rotateFurniture(s: GameState, placedId: string): string | null {
+  if (s.company.movingUntil !== null) return '이사 중에는 배치를 바꿀 수 없습니다.';
+  const p = placedItems(s).find((x) => x.id === placedId);
+  if (!p || p.gx === null || p.gy === null) return '가구를 찾을 수 없습니다.';
+  const rot = nextRot(p.rot);
+  const err = furnitureSpotFits(s, p.item, p.gx, p.gy, p.id, s.company.officeTier, rot);
+  if (err) return `돌리면 자리가 모자랍니다: ${err} 옮긴 뒤 돌려 보세요.`;
+  p.rot = rot;
   return null;
 }
 
@@ -177,13 +205,29 @@ export function migrateSeats(s: GameState) {
   }
 }
 
-type FurnitureItem = (typeof DATA.furniture.items)[number] & { room?: string; minTier?: number };
+type FurnitureItem = (typeof DATA.furniture.items)[number] & { room?: string; minTier?: number; size: number[] };
 
 export function furnitureItems(): FurnitureItem[] {
   return DATA.furniture.items as FurnitureItem[];
 }
 
-// 이 사무실에 놓을 자리가 있는가(라운지·회의실·탕비실 등은 그 공간이 있는 사무실에서만)
+function itemDef(id: string): FurnitureItem | undefined {
+  return furnitureItems().find((x) => x.id === id);
+}
+
+// 가구가 차지하는 칸(가로×세로). 책상은 2×2. 홀수 번 돌리면 가로·세로가 바뀜(A-128)
+export function itemSize(id: string, rot: Rot = 0): { w: number; h: number } {
+  if (id === 'desk') return { w: 2, h: 2 };
+  const sz = itemDef(id)?.size ?? [1, 1];
+  return rot % 2 ? { w: sz[1], h: sz[0] } : { w: sz[0], h: sz[1] };
+}
+
+export function itemRect(p: { item: string; gx: number | null; gy: number | null; rot?: Rot }): Rect {
+  const { w, h } = itemSize(p.item, p.rot ?? 0);
+  return { x0: p.gx!, y0: p.gy!, x1: p.gx! + w, y1: p.gy! + h };
+}
+
+// 이 사무실에서 살 수 있는가(라운지·회의실·탕비실 등은 그 공간이 있는 사무실에서만, 카페 테이블 등은 일정 넓이부터)
 export function furnitureFits(s: GameState, it: FurnitureItem): boolean {
   const t = currentTier(s);
   if (it.minTier !== undefined && t.id < it.minTier) return false;
@@ -192,36 +236,135 @@ export function furnitureFits(s: GameState, it: FurnitureItem): boolean {
   return t.rooms.includes(it.room);
 }
 
+export function placedItems(s: GameState): PlacedItem[] {
+  return s.company.placed ?? [];
+}
+
+// 지금 사무실 바닥에 놓인 가구
+export function placedOn(s: GameState): PlacedItem[] {
+  return placedItems(s).filter((p) => p.gx !== null && p.gy !== null);
+}
+
 export function ownsFurniture(s: GameState, id: string): boolean {
-  return s.company.furniture ? s.company.furniture.includes(id) : true;
+  return placedItems(s).some((p) => p.item === id);
+}
+
+// 이 칸(왼쪽 위)에 가구를 놓을 수 있는가: 바닥 안, 출입문·대표 자리·유리벽·책상·다른 가구와 겹치지 않게. ignore는 옮기는 중인 가구
+export function furnitureSpotFits(s: GameState, item: string, gx: number, gy: number, ignore?: string, tierId = s.company.officeTier, rot: Rot = 0): string | null {
+  const t = officeTier(tierId);
+  const { w, h } = itemSize(item, rot);
+  if (!Number.isInteger(gx) || !Number.isInteger(gy)) return '칸에 맞춰 놓으세요.';
+  if (gx < 0 || gy < 0 || gx + w > t.size.w || gy + h > t.size.h) return '사무실 바닥 안에 놓으세요.';
+  const r: Rect = { x0: gx, y0: gy, x1: gx + w, y1: gy + h };
+  if (floorPlan(tierId).fixed.some((b) => overlaps(r, b))) return '출입문·대표 자리·벽과 겹칩니다.';
+  const ex = s.seats.find((x) => x.zone === 'exec');
+  if (ex && ex.occupant !== null && overlaps(r, deskRect(t.exec.x, t.exec.y))) return '책상과 겹칩니다.';
+  for (const d of desks(s)) if (d.gx !== undefined && overlaps(r, deskRect(d.gx, d.gy!))) return '책상과 겹칩니다.';
+  for (const p of placedOn(s)) if (p.id !== ignore && overlaps(r, itemRect(p))) return '다른 가구와 겹칩니다.';
+  return null;
+}
+
+// 가구 놓을 빈 칸 찾기: 이 사무실의 기본 자리 먼저, 없으면 위쪽·왼쪽부터
+export function findFurnitureSpot(s: GameState, item: string, tierId = s.company.officeTier): { gx: number; gy: number } | null {
+  const def = floorPlan(tierId).defaults.find((d) => d.item === item);
+  if (def && !furnitureSpotFits(s, item, def.x, def.y, undefined, tierId)) return { gx: def.x, gy: def.y };
+  const t = officeTier(tierId);
+  for (let gy = 0; gy < t.size.h; gy++) for (let gx = 0; gx < t.size.w; gx++) if (!furnitureSpotFits(s, item, gx, gy, undefined, tierId)) return { gx, gy };
+  return null;
 }
 
 export function buyFurnitureBlock(s: GameState, id: string): string | null {
-  const it = furnitureItems().find((x) => x.id === id);
+  const it = itemDef(id);
   if (!it) return '없는 가구입니다.';
   if (ownsFurniture(s, id)) return '이미 있습니다.';
-  if (!furnitureFits(s, it)) return '지금 사무실에는 놓을 공간이 없습니다. 더 큰 사무실로 옮기세요.';
+  if (!furnitureFits(s, it)) return '지금 사무실에서는 살 수 없습니다. 더 큰 사무실로 옮기세요.';
   if (s.cash < it.price) return '자금이 부족합니다.';
   return null;
 }
 
-export function buyFurniture(s: GameState, id: string): string | null {
-  const err = buyFurnitureBlock(s, id);
-  if (err) return err;
-  const it = furnitureItems().find((x) => x.id === id)!;
+// 상점에서 고른 칸에 놓기: 아직 없으면 사서 놓고, 보관 중이면 꺼내 놓습니다.
+export function placeFurniture(s: GameState, id: string, gx: number, gy: number, rot: Rot = 0): string | null {
+  if (s.company.movingUntil !== null) return '이사 중에는 배치를 바꿀 수 없습니다.';
+  const stored = placedItems(s).find((p) => p.item === id && p.gx === null);
+  if (!stored) {
+    const err = buyFurnitureBlock(s, id);
+    if (err) return err;
+  }
+  const fit = furnitureSpotFits(s, id, gx, gy, undefined, s.company.officeTier, rot);
+  if (fit) return fit;
+  if (stored) {
+    stored.gx = gx;
+    stored.gy = gy;
+    stored.rot = rot;
+    return null;
+  }
+  const it = itemDef(id)!;
   spendNow(s, `가구 구입: ${it.name}`, it.price, 'other');
-  (s.company.furniture ??= []).push(id);
-  notify(s, `${it.name}을(를) 들여놓았습니다. 사무실 쾌적도 +${it.comfort}`, 'good', 'office');
+  (s.company.placed ??= []).push({ id: nextId(s, 'furn'), item: id, gx, gy, ...(rot ? { rot } : {}) });
+  notify(s, `${it.name}을(를) 들여놓았습니다. 사무실 쾌적도 +${it.comfort}`, 'good', 'shop');
   s.events.push({ type: 'sfx', sound: 'coin' });
   return null;
 }
 
-// 사무실 쾌적도: 산 가구 중 지금 사무실에 놓인 것의 합(예전 저장은 사무실 등급 기본값)
+// 자동으로 사서 빈 자리에 놓기(자동 플레이·시뮬레이션용)
+export function buyFurniture(s: GameState, id: string): string | null {
+  const err = buyFurnitureBlock(s, id);
+  if (err) return err;
+  const p = findFurnitureSpot(s, id);
+  if (!p) return '놓을 빈 바닥이 없습니다.';
+  return placeFurniture(s, id, p.gx, p.gy);
+}
+
+export function moveFurniture(s: GameState, placedId: string, gx: number, gy: number, rot?: Rot): string | null {
+  if (s.company.movingUntil !== null) return '이사 중에는 배치를 바꿀 수 없습니다.';
+  const p = placedItems(s).find((x) => x.id === placedId);
+  if (!p) return '가구를 찾을 수 없습니다.';
+  const r = rot ?? p.rot ?? 0;
+  const err = furnitureSpotFits(s, p.item, gx, gy, p.id, s.company.officeTier, r);
+  if (err) return err;
+  p.gx = gx;
+  p.gy = gy;
+  p.rot = r;
+  return null;
+}
+
+// 치우기: 가구는 보관함으로(값은 그대로, 나중에 상점에서 다시 놓음)
+export function storeFurniture(s: GameState, placedId: string): string | null {
+  const p = placedItems(s).find((x) => x.id === placedId);
+  if (!p) return '가구를 찾을 수 없습니다.';
+  p.gx = null;
+  p.gy = null;
+  return null;
+}
+
+export function furnitureAt(s: GameState, x: number, y: number): PlacedItem | null {
+  return placedOn(s).find((p) => {
+    const r = itemRect(p);
+    return x >= r.x0 && x < r.x1 && y >= r.y0 && y < r.y1;
+  }) ?? null;
+}
+
+// 사무실 쾌적도: 지금 사무실 바닥에 놓인 가구의 합(그 사무실에서 쓸 수 있는 것만)
 export function officeComfort(s: GameState): number {
-  if (!s.company.furniture) return currentTier(s).comfort;
-  return furnitureItems()
-    .filter((it) => s.company.furniture!.includes(it.id) && furnitureFits(s, it))
-    .reduce((a, it) => a + it.comfort, 0);
+  if (!s.company.placed) return currentTier(s).comfort;
+  return placedOn(s).reduce((a, p) => {
+    const it = itemDef(p.item);
+    return a + (it && furnitureFits(s, it) ? it.comfort : 0);
+  }, 0);
+}
+
+// 예전 저장(A-78: 산 가구 id만 있고 자리는 평면이 정함) → 가구를 평면의 기본 자리에 놓습니다.
+// furniture가 아예 없는 더 예전 저장은 그 사무실에서 살 수 있는 가구를 다 가진 것으로 봅니다.
+export function migrateFurniture(s: GameState) {
+  if (s.company.placed) return;
+  const owned = s.company.furniture ?? furnitureItems().filter((it) => furnitureFits(s, it)).map((it) => it.id);
+  s.company.placed = [];
+  for (const id of owned) {
+    if (!itemDef(id)) continue;
+    const p = findFurnitureSpot(s, id);
+    s.company.placed.push({ id: nextId(s, 'furn'), item: id, gx: p?.gx ?? null, gy: p?.gy ?? null });
+  }
+  delete s.company.furniture;
 }
 
 // 좌석 위치(타일 좌표): 대표·임원 자리는 사무실마다 정해져 있고, 책상은 놓은 곳
@@ -268,6 +411,13 @@ export function moveOffice(s: GameState, tierId: number): string | null {
     ex.bought = true;
     cof.seatId = ex.id;
   }
+  // 가구는 책상을 다 놓은 뒤에 놓습니다(옛 사무실 좌표가 새 책상 자리를 막지 않게 먼저 비움)
+  const items = placedItems(s);
+  for (const p of items) {
+    p.gx = null;
+    p.gy = null;
+    p.rot = undefined; // 새 사무실에서는 기본 방향으로 다시 놓음(A-128)
+  }
   const order = [...oldDesks.filter((d) => d.occupant !== null), ...oldDesks.filter((d) => d.occupant === null)];
   let sold = 0;
   for (const d of order) {
@@ -281,6 +431,16 @@ export function moveOffice(s: GameState, tierId: number): string | null {
     if (e) e.seatId = d.id;
   }
   if (sold) book(s, `남는 책상 ${sold}개 처분`, Math.round((sold * DATA.furniture.deskPrice) / 2));
+  // 가구도 들고 가서 새 사무실 기본 자리(없으면 빈 바닥)에 놓습니다. 놓을 곳이 없으면 보관함으로.
+  for (const p of items) {
+    const it = itemDef(p.item);
+    if (!it || !furnitureFits(s, it)) continue;
+    const spot = findFurnitureSpot(s, p.item);
+    if (spot) {
+      p.gx = spot.gx;
+      p.gy = spot.gy;
+    }
+  }
   notify(s, `${t.name}(으)로 이사를 시작합니다. ${DATA.offices.moveDays}일 동안 일이 조금 느려집니다.`, 'good', 'office');
   news(s, `[오피스] ${s.company.name}, ${t.name}(으)로 이전`, 'company');
   s.events.push({ type: 'moved' });

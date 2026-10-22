@@ -1,5 +1,5 @@
 {
-  "_note": "가구(A-78): 책상은 사람을 뽑을 때 자동으로 사고, 나머지는 사무실 메뉴에서 사서 놓습니다. room = 지금 사무실에 그 공간이 있어야 놓을 수 있음. comfort = 사무실 쾌적도(만족·건강)",
+  "_note": "가구(A-78, A-87): 상점에서 사서 사무실 빈 바닥에 직접 놓습니다(놓기·옮기기·보관). size = 차지하는 바닥 칸(가로×세로). room·minTier = 지금 사무실에 그 공간·넓이가 있어야 살 수 있음. comfort = 놓여 있을 때 사무실 쾌적도(만족·건강). cat = 상점 분류(furn 가구·equip 장비·decor 장식·facility 시설)",
   "deskPrice": 1500000,
   "items": [
     {
@@ -7,21 +7,27 @@
       "name": "화분",
       "desc": "사무실 곳곳에 초록을 둡니다.",
       "price": 300000,
-      "comfort": 1
+      "comfort": 1,
+      "size": [1, 1],
+      "cat": "decor"
     },
     {
       "id": "cooler",
       "name": "정수기",
       "desc": "시원한 물 한 잔.",
       "price": 500000,
-      "comfort": 1
+      "comfort": 1,
+      "size": [1, 1],
+      "cat": "equip"
     },
     {
       "id": "printer",
       "name": "복합기",
       "desc": "서류 출력·스캔.",
       "price": 1200000,
-      "comfort": 1
+      "comfort": 1,
+      "size": [1, 1],
+      "cat": "equip"
     },
     {
       "id": "cafe",
@@ -29,7 +35,9 @@
       "desc": "열린 공간에 앉아 이야기할 자리.",
       "price": 3000000,
       "comfort": 2,
-      "minTier": 1
+      "minTier": 1,
+      "size": [2, 2],
+      "cat": "furn"
     },
     {
       "id": "lounge",
@@ -37,7 +45,9 @@
       "desc": "쉬는 공간의 소파와 빈백.",
       "price": 4000000,
       "comfort": 3,
-      "room": "lounge"
+      "room": "lounge",
+      "size": [2, 2],
+      "cat": "furn"
     },
     {
       "id": "meeting",
@@ -45,7 +55,9 @@
       "desc": "큰 회의 테이블과 화면.",
       "price": 6000000,
       "comfort": 2,
-      "room": "meeting"
+      "room": "meeting",
+      "size": [3, 3],
+      "cat": "furn"
     },
     {
       "id": "pingpong",
@@ -53,7 +65,9 @@
       "desc": "점심시간의 승부.",
       "price": 3000000,
       "comfort": 3,
-      "room": "pingpong"
+      "room": "pingpong",
+      "size": [3, 2],
+      "cat": "facility"
     },
     {
       "id": "kitchen",
@@ -61,7 +75,9 @@
       "desc": "커피 머신·냉장고·식탁.",
       "price": 10000000,
       "comfort": 4,
-      "room": "kitchen"
+      "room": "kitchen",
+      "size": [4, 1],
+      "cat": "facility"
     },
     {
       "id": "vending",
@@ -69,7 +85,9 @@
       "desc": "간식과 음료.",
       "price": 2000000,
       "comfort": 1,
-      "room": "kitchen"
+      "room": "kitchen",
+      "size": [1, 1],
+      "cat": "equip"
     },
     {
       "id": "gym",
@@ -77,7 +95,9 @@
       "desc": "러닝머신과 덤벨.",
       "price": 30000000,
       "comfort": 5,
-      "room": "gym"
+      "room": "gym",
+      "size": [4, 2],
+      "cat": "facility"
     },
     {
       "id": "stage",
@@ -85,7 +105,9 @@
       "desc": "전사 행사와 발표.",
       "price": 80000000,
       "comfort": 4,
-      "room": "auditorium"
+      "room": "auditorium",
+      "size": [5, 6],
+      "cat": "facility"
     }
   ]
 }

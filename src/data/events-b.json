@@ -1057,7 +1057,8 @@
       "cooldown": 180,
       "cond": {
         "stageMax": 2,
-        "noFlag": "vc_followup"
+        "noFlag": "vc_followup",
+        "mvp": true
       },
       "texts": [
         "안녕하세요, 해솔파트너스 심사역입니다. {company} 이야기를 들었는데 커피 한잔하실 수 있을까요?",
@@ -1823,7 +1824,8 @@
       "cond": {
         "stageMin": 1,
         "stageMax": 3,
-        "noFlag": "toxic_clause"
+        "noFlag": "toxic_clause",
+        "roundOpen": true
       },
       "texts": [
         "투자 계약서 초안입니다. 13조(동반매도청구권)와 19조(2배 청산우선권)는 표준 조건이니 그대로 서명해 주시면 됩니다.",
@@ -2319,7 +2321,8 @@
       "cooldown": 240,
       "cond": {
         "aiMin": 0.2,
-        "stageMin": 2
+        "stageMin": 2,
+        "marketsMin": 1
       },
       "texts": [
         "직원들이 고객 데이터를 외부 AI 챗봇에 그대로 붙여 넣고 있는 것이 확인됐습니다.",
@@ -3371,7 +3374,8 @@
       "cooldown": 240,
       "cond": {
         "economy": "recession",
-        "stageMin": 2
+        "stageMin": 2,
+        "marketsMin": 1
       },
       "texts": [
         "두 분기 연속 역성장이 확인됐습니다. 고객사들이 IT 예산을 줄이고 있다고 합니다.",
@@ -3567,7 +3571,8 @@
       "weight": 1,
       "cooldown": 300,
       "cond": {
-        "stageMin": 2
+        "stageMin": 2,
+        "marketsMin": 1
       },
       "texts": [
         "전력 요금과 반도체 가격 상승으로 클라우드 요금이 다음 달부터 18% 오릅니다.",
@@ -4163,7 +4168,8 @@
       "cond": {
         "competitor": true,
         "stageMin": 1,
-        "stageMax": 2
+        "stageMax": 2,
+        "marketsMin": 1
       },
       "texts": [
         "{competitor}가 첫 3개월 무료 행사를 시작했습니다. 우리 고객들이 문의하고 있습니다.",
@@ -4743,7 +4749,8 @@
       "cooldown": 360,
       "cond": {
         "competitor": true,
-        "stageMin": 2
+        "stageMin": 2,
+        "marketsMin": 1
       },
       "texts": [
         "{competitor}가 두 달째 월급을 못 줬다는 소문입니다. 폐업이 임박했다는 얘기도 돕니다.",
@@ -4847,7 +4854,8 @@
       "cooldown": 240,
       "cond": {
         "competitor": true,
-        "stageMin": 2
+        "stageMin": 2,
+        "usersMin": 1000
       },
       "texts": [
         "{competitor}가 \"아직도 느린 앱 쓰세요?\"라며 우리를 저격하는 광고를 냈습니다.",
@@ -5085,7 +5093,8 @@
         "competitor": true,
         "stageMin": 2,
         "stageMax": 4,
-        "noFlag": "merger_talks"
+        "noFlag": "merger_talks",
+        "usersMin": 3000
       },
       "texts": [
         "{competitor} 대표입니다. 우리끼리 싸우다 둘 다 지칩니다. 합병을 진지하게 이야기해 보시죠.",
@@ -5268,7 +5277,8 @@
           "commerce"
         ],
         "stageMin": 1,
-        "stageMax": 2
+        "stageMax": 2,
+        "marketsMin": 1
       },
       "texts": [
         "{competitor}가 수수료 0% 조건으로 우리 입점 셀러들을 빼 가고 있습니다. 상위 셀러 몇이 벌써 옮겼습니다.",

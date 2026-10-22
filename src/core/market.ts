@@ -7,7 +7,8 @@ import { econ } from './economy';
 import { spendNow } from './finance';
 import { mod } from './mods';
 import { news, notify } from './notify';
-import { appeal, fxTotals, hasMvp, type FxTotals } from './product';
+import { appeal, canCharge, fxTotals, hasMvp, type FxTotals } from './product';
+import { adDay, campaignDay, endCampaigns, fullInform, recordAdStats, recordCampaigns, setTotalAdBudget } from './ads';
 import type { GameState, MarketId } from './types';
 
 const M = DATA.markets;
@@ -62,9 +63,11 @@ export function revenuePerUser(s: GameState, m: MarketId, fx: FxTotals = fxTotal
   const pt = priceTierDef(s.product.priceTier);
   const arpuM = market(m).arpu * (1 + mod(s, 'price'));
   const payShare = Math.min(1, ind.payBase + fx.pay);
-  const sub = ind.price * pt.price * (1 + fx.arpu) * payShare * arpuM;
+  // 결제 기능 전(A-111)에는 무료로만 쓰므로 구독·거래 수수료가 없습니다. 광고는 결제와 상관없음
+  const charge = canCharge(s, fx) ? 1 : 0;
+  const sub = ind.price * pt.price * (1 + fx.arpu) * payShare * arpuM * charge;
   const ad = (ind.adBase + fx.ad) * arpuM;
-  const take = ind.gmv * (1 + fx.gmv) * (ind.takeBase + fx.take) * Math.sqrt(pt.price) * arpuM;
+  const take = ind.gmv * (1 + fx.gmv) * (ind.takeBase + fx.take) * Math.sqrt(pt.price) * arpuM * charge;
   return { sub, ad, take, total: sub + ad + take, payShare };
 }
 
@@ -101,6 +104,7 @@ export interface DayPush {
 // 하루 시장 처리: 인지도, 획득, 이탈, 매출 누적
 export function marketDay(s: GameState, push: DayPush) {
   if (!hasMvp(s)) return;
+  endCampaigns(s);
   const ind = industry(s.company.industry);
   const fx = fxTotals(s);
   const pt = priceTierDef(s.product.priceTier);
@@ -115,19 +119,20 @@ export function marketDay(s: GameState, push: DayPush) {
     if (!ms.launched) continue;
     const md = market(m);
     const D = demand(s, m);
-    // 광고 예산(하루치) → 인지도
-    const daily = ms.adBudget / 30;
-    if (daily > 0) {
-      if (s.cash > daily) {
-        spendNow(s, '', daily, 'ads', true);
-        const gain = ((daily * mktEff) / (ind.tam * md.tamMult * ind.adCost * md.adCost)) * (1 - ms.awareness);
-        ms.awareness += gain;
-      }
-    }
+    // 광고(A-116): 채널별 예산·캠페인 → 알리기 몫은 인지도, 바로 데려오기 몫은 광고 고객
+    const ad = adDay(s, m);
+    const cp = campaignDay(s, m);
+    const full = fullInform(s, m);
+    const awAd = ((ad.aware * mktEff) / full) * (1 - ms.awareness);
+    const awCp = (cp.aware / full) * (1 - ms.awareness);
+    ms.awareness += awAd + awCp;
+    let gotAd = 0;
+    let gotCp = 0;
     const word = ind.viral * (1 + fx.viral * 10) * Math.sqrt(Math.min(1, ms.users / Math.max(1, D))) * 0.02;
     ms.awareness += (push.contentAwareness / Math.sqrt(md.tamMult) + word) * (1 - ms.awareness);
     ms.awareness -= ms.awareness * M.awarenessDecayPerDay;
-    ms.awareness = Math.max(0, Math.min(1, ms.awareness + 0));
+    // 쓰는 사람은 이미 알고, 주변에도 말합니다(A-95): 인지도는 사용자 비중의 일정 배수 아래로 내려가지 않습니다.
+    ms.awareness = Math.max(0, Math.min(1, Math.max(ms.awareness, (ms.users / Math.max(1, D)) * M.userAwareness)));
     const sh = shares(s, m).player;
     ms.peakShare = Math.max(ms.peakShare, sh);
     const target = D * sh;
@@ -137,19 +142,28 @@ export function marketDay(s: GameState, push: DayPush) {
       const gap = target - ms.users;
       const acqM = econ(s, 'acq') * (1 + mod(s, 'acq'));
       const foreign = m === 'kr' ? 1 : M.foreign;
-      const inbound = gap * ind.baseAcq * (1 + fx.conv) * foreign;
+      // 아무도 모르는 서비스는 검색되지 않습니다(A-95). 인지도가 오르거나, 쓰는 사람이 쌓여 순위·검색에 걸리면 스스로 찾아옵니다.
+      const found = Math.min(1, Math.max(ms.awareness / M.discoveryAwareness, Math.sqrt(ms.users / M.discoveryUsers)));
+      const inbound = gap * ind.baseAcq * (1 + fx.conv) * foreign * found;
       const viral = ((ms.users * ind.viral * (1 + fx.viral * 10)) / 30) * Math.min(1, gap / Math.max(1, D)) * foreign;
       const sales = push.salesPush * ind.salesPer * (m === 'kr' ? 1 : 0.6) * Math.min(2, Math.max(0.3, appeal(s) / 25));
       const cac = ind.cac * md.arpu * (1 + 3 * sh) / Math.min(2.5, mktEff);
       // 광고로 사는 고객은 하루 수요의 0.1%에서 포화(돈을 더 써도 덜 늘어남)
       const cap = D * 0.001;
-      const paid = daily > 0 && s.cash > daily ? cap * (1 - Math.exp(-daily / cac / Math.max(1, cap))) : 0;
+      const paidAd = ad.direct > 0 ? cap * (1 - Math.exp(-ad.direct / cac / Math.max(1, cap))) : 0;
+      // 캠페인은 짧게 몰아서: 상한을 두 배로
+      const paidCp = cp.direct > 0 ? 2 * cap * (1 - Math.exp(-cp.direct / cac / Math.max(1, 2 * cap))) : 0;
+      const paid = paidAd + paidCp;
       const raw = (inbound + viral + sales + paid) * acqM;
       const got = Math.min(gap * 0.05, raw);
       const k = raw > 0 ? got / raw : 0;
       Object.assign(day, { inbound: inbound * acqM * k, viral: viral * acqM * k, sales: sales * acqM * k, paid: paid * acqM * k });
       ms.users += got;
+      gotAd = paidAd * acqM * k;
+      gotCp = paidCp * acqM * k;
     }
+    recordAdStats(s, m, ad.parts, gotAd, awAd);
+    recordCampaigns(cp.list, gotCp, awCp);
     // 이탈
     const bugF = 1 + s.product.bugs / 45;
     const churnM = ind.churnM * pt.churn * Math.max(0.3, 1 + fx.churn + csFx + mod(s, 'churn') - 0.04 * Math.pow(push.retention, 0.6)) * bugF * econ(s, 'churn');
@@ -202,6 +216,7 @@ export function launchMarket(s: GameState, m: MarketId): string | null {
   return null;
 }
 
+// 총예산 한 번에(봇·예전 호출): 채널 비율대로 나눔(A-116)
 export function setAdBudget(s: GameState, m: MarketId, monthly: number) {
-  s.markets[m].adBudget = Math.max(0, Math.round(monthly / 100000) * 100000);
+  setTotalAdBudget(s, m, monthly);
 }

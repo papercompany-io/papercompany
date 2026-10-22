@@ -4,6 +4,7 @@ import { openRound } from './funding';
 import { legacyFx } from './career';
 import { applyWork, hasMvp } from './product';
 import { hasActiveContract, workOnContract } from './contracts';
+import { busyWindow, isFullDay, outingTpl, todayOutings } from './outings';
 import type { ActionId, GameState } from './types';
 
 const C = DATA.ceo;
@@ -30,16 +31,61 @@ export function allocTotal(alloc: Record<ActionId, number>): number {
   return (Object.keys(alloc) as ActionId[]).reduce((sum, k) => sum + alloc[k], 0);
 }
 
-// FR-13 라운드 중에는 앞 4칸이 투자자 미팅으로 묶입니다(A-16, DEC-041).
-export function daySchedule(s: GameState): { action: ActionId | null; locked: boolean }[] {
-  const n = DATA.time.slotsPerDay;
-  const own: ActionId[] = [];
-  for (const k of modeActions(s)) for (let i = 0; i < s.ceoAlloc[k]; i++) own.push(k);
-  const out: { action: ActionId | null; locked: boolean }[] = [];
-  const locked = openRound(s) ? DATA.funding.lockedSlots : 0;
-  for (let i = 0; i < locked; i++) out.push({ action: 'ir', locked: true });
-  for (let i = 0; out.length < n; i++) out.push({ action: own[i] ?? null, locked: false });
-  return out;
+// 대표 하루(A-101): 칸 배분 없이 주 업무 하나를 하루 내내 합니다. 외출 날은 하루 내내 그 외출의 일(투자자 미팅·네트워킹·영업).
+// (내부적으로는 하루를 시간 단위로 나눠 조금씩 실행해, 작업량이 하루 동안 고르게 쌓입니다. 화면에는 칸이 없습니다)
+export function workChoices(s: GameState): ActionId[] {
+  return (s.company.ceoMode === 'executive' ? C.executiveWork : C.founderWork) as ActionId[];
+}
+
+export function ceoWork(s: GameState): ActionId {
+  const w = s.ceoWork;
+  const choices = workChoices(s);
+  return w && choices.includes(w) ? w : choices[0];
+}
+
+// 한 칸(근무 1시간)을 무엇으로 채우는가(A-127). 하루짜리 외출은 약속 시간만 그 일, 오가는 이동 시간은 아무 일도 못 하고, 나머지는 주 업무.
+// w = 그 칸에서 차지하는 비율(30분 이동이면 0.5)
+export interface SlotPart {
+  action: ActionId;
+  w: number;
+  outing?: string;
+}
+
+export function slotParts(s: GameState, index: number): SlotPart[] {
+  const work = ceoWork(s);
+  const list = todayOutings(s);
+  if (!list.length) return [{ action: work, w: 1 }];
+  const full = list.find(isFullDay);
+  if (full) return [{ action: outingTpl(full.tpl).action as ActionId, w: 1, outing: full.title }];
+  const h0 = DATA.time.workStartHour + index;
+  const cover = (a: number, b: number) => Math.max(0, Math.min(h0 + 1, b) - Math.max(h0, a));
+  const parts: SlotPart[] = [];
+  let away = 0;
+  for (const o of list) {
+    const meet = cover(o.startHour!, o.startHour! + o.hours!);
+    if (meet > 0) parts.push({ action: outingTpl(o.tpl).action as ActionId, w: meet, outing: o.title });
+    away += cover(...busyWindow(o));
+  }
+  if (away < 1) parts.push({ action: work, w: 1 - away });
+  return parts;
+}
+
+// 하루 칸 목록(화면용): 칸마다 가장 많이 차지하는 일
+export function daySchedule(s: GameState): { action: ActionId | null; locked: boolean; outing?: string }[] {
+  return Array.from({ length: DATA.time.slotsPerDay }, (_, i) => {
+    const parts = slotParts(s, i);
+    const top = parts.reduce<SlotPart | null>((a, b) => (!a || b.w > a.w ? b : a), null);
+    const used = parts.reduce((a, p) => a + p.w, 0);
+    if (!top || used < 0.5) return { action: null, locked: true }; // 이동 중
+    return { action: top.action, locked: !!top.outing, outing: top.outing };
+  });
+}
+
+export function setCeoWork(s: GameState, w: ActionId): string | null {
+  if (!workChoices(s).includes(w)) return '지금 모드에서 고를 수 있는 일이 아닙니다.';
+  if (w === 'sales' && !hasMvp(s)) return 'MVP 전에는 팔 제품이 없습니다.';
+  s.ceoWork = w;
+  return null;
 }
 
 export function setAlloc(s: GameState, id: ActionId, value: number): string | null {
@@ -66,10 +112,11 @@ export function setCeoMode(s: GameState, mode: 'founder' | 'executive'): string 
   s.company.ceoMode = mode;
   const def = (mode === 'executive' ? C.executiveAlloc : C.defaultAlloc) as Record<ActionId, number>;
   s.ceoAlloc = { ...def };
+  s.ceoWork = workChoices(s)[0];
   return null;
 }
 
-// 결재(CA-03, OQ-045 [Claude 제안] A-44): 직원 25명당 하루 1칸이 필요. 남으면 출력 +5%, 밀리면 최대 -20%
+// 결재(CA-03, OQ-045 [Claude 제안] A-44): 직원이 많을수록 결재가 쌓임(25명당 하루 1시간어치). 대표가 결재를 주 업무로 하면 줄고, 남으면 출력 +5%, 밀리면 최대 -20%
 export function approveNeed(s: GameState): number {
   return s.company.ceoMode === 'executive' ? s.employees.length / C.approvePerEmployees : 0;
 }
@@ -81,13 +128,14 @@ export function approveMultiplier(s: GameState): number {
   return 1 - Math.min(C.approvePenalty, -b * 0.02);
 }
 
-// 한 칸(근무 1시간) 실행
+// 한 칸(근무 1시간) 실행: 칸 안의 일마다 차지한 비율만큼(A-127)
 export function runSlot(s: GameState, index: number) {
-  const slot = daySchedule(s)[index];
-  if (!slot || !slot.action) return;
-  const a = slot.action;
+  for (const p of slotParts(s, index)) runAction(s, p.action, p.w);
+}
+
+function runAction(s: GameState, a: ActionId, w: number) {
   const eff = efficiency(s, a);
-  const per = actionDef(a).perSlot;
+  const per = actionDef(a).perSlot * w;
   switch (a) {
     case 'dev':
       applyWork(s, per * eff, 'dev', true, s.company.workPolicy === 'crunch' ? 1.3 : 1);
@@ -99,24 +147,32 @@ export function runSlot(s: GameState, index: number) {
       break;
     case 'sales':
       if (!hasMvp(s)) return; // MVP 전에는 팔 제품이 없습니다(A-13).
-      s.accrual.entertainment += C.salesEntertainment;
+      s.accrual.entertainment += C.salesEntertainment * w;
       break;
     case 'ir':
       s.irPoints += per * eff;
       break;
     case 'network':
       s.networkPoints += per * eff;
-      s.accrual.entertainment += C.networkEntertainment;
+      s.accrual.entertainment += C.networkEntertainment * w;
       break;
     case 'enterprise':
       s.entPipeline += per * eff * (1 + Math.min(1, s.networkPoints / 400));
-      s.accrual.entertainment += C.enterpriseEntertainment;
+      s.accrual.entertainment += C.enterpriseEntertainment * w;
       break;
     case 'approve':
-      s.company.approveBalance += eff;
+      s.company.approveBalance += eff * w;
       break;
   }
-  s.todayLog[a] += 1;
+  s.todayLog[a] += w;
+}
+
+// 대표가 하루에 제품에 넣는 개발 작업량(개발 칸 + 외주가 없을 때의 외주 칸). 제품 화면의 예상 일수에 씁니다.
+export function ceoDevPerDay(s: GameState): number {
+  let slots = 0;
+  for (let i = 0; i < DATA.time.slotsPerDay; i++)
+    for (const p of slotParts(s, i)) if (p.action === 'dev' || (p.action === 'contract' && !hasActiveContract(s))) slots += p.w;
+  return slots * actionDef('dev').perSlot * efficiency(s, 'dev');
 }
 
 // 하루 끝: 결재 필요량 차감, 오늘 대표 영업량(세일즈 출력에 더함)

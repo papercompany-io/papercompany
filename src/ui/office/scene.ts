@@ -2,9 +2,10 @@
 // Startup Company처럼 사무실이 화면을 채우는 탑뷰입니다. 카메라(가운데 오는 월드 좌표)와 정수 배율로 화면을 정하고,
 // 타일 1칸 = 가로 24 × 세로 12 아트 픽셀(2:1 아이소메트릭)을 정수배로 키워 그립니다.
 import { DATA, dept, officeTier } from '../../core/data';
-import { deskFits, ownsFurniture, seatGrid } from '../../core/office';
+import { deskFits, furnitureSpotFits, itemSize, placedOn, seatGrid } from '../../core/office';
+import { awayOuting } from '../../core/outings';
 import { floorPlan, type DecorKind, type Rect } from '../../core/officeLayout';
-import type { Employee, GameState, Seat } from '../../core/types';
+import type { Employee, GameState, Rot, Seat } from '../../core/types';
 import { Pix, hex, mix, shade, type Col, type Pt } from './pixel';
 import { SPRITES, SPRITE_H, SPRITE_W, hashStr, lookFor } from './sprites';
 
@@ -59,6 +60,85 @@ export interface View {
   scale: number;
   ox: number;
   oy: number;
+  rot?: Turn; // 돌린 가구·책상을 그릴 때만(A-128)
+}
+
+// 돌리기(A-128): 바닥 점을 (cx, cy) 둘레로 시계 방향 90°×n
+interface Turn {
+  cx: number;
+  cy: number;
+  n: Rot;
+}
+
+function turnPt(r: Turn, x: number, y: number): [number, number] {
+  const dx = x - r.cx;
+  const dy = y - r.cy;
+  if (r.n === 1) return [r.cx - dy, r.cy + dx];
+  if (r.n === 2) return [r.cx - dx, r.cy - dy];
+  if (r.n === 3) return [r.cx + dy, r.cy - dx];
+  return [x, y];
+}
+
+// 돌린 물건 그리기(A-128): 원래 방향에서 뒤→앞 순서로 짠 그리기 순서가 돌리면 틀어지므로, 상자마다(뒤따르는 무늬·사람 포함) 모아 두었다가
+// 바닥에서 뒤에 있는 상자부터, 겹치면 낮은 상자부터 다시 그립니다.
+type Box3 = [number, number, number, number, number, number]; // x0 y0 x1 y1 z0 z1
+class RecPix extends Pix {
+  private groups: { b: Box3; ops: ((g: Pix) => void)[] }[] = [];
+  constructor() {
+    super(1, 1);
+  }
+  group(x0: number, y0: number, x1: number, y1: number, z0: number, z1: number) {
+    this.groups.push({ b: [x0, y0, x1, y1, z0, z1], ops: [] });
+  }
+  private add(op: (g: Pix) => void) {
+    if (!this.groups.length) this.group(0, 0, 0, 0, 0, 0);
+    this.groups[this.groups.length - 1].ops.push(op);
+  }
+  px(x: number, y: number, c: Col) {
+    this.add((g) => g.px(x, y, c));
+  }
+  rect(x: number, y: number, w: number, h: number, c: Col) {
+    this.add((g) => g.rect(x, y, w, h, c));
+  }
+  poly(pts: Pt[], c: Col) {
+    this.add((g) => g.poly(pts, c));
+  }
+  line(p: Pt, q: Pt, c: Col) {
+    this.add((g) => g.line(p, q, c));
+  }
+  sprite(x: number, y: number, rows: string[], pal: Record<string, Col>, flip = false) {
+    this.add((g) => g.sprite(x, y, rows, pal, flip));
+  }
+  spriteOutline(x: number, y: number, rows: string[], c: Col) {
+    this.add((g) => g.spriteOutline(x, y, rows, c));
+  }
+  replay(g: Pix) {
+    const e = 0.01;
+    const before = (a: Box3, b: Box3) => {
+      const overlap = a[0] < b[2] - e && b[0] < a[2] - e && a[1] < b[3] - e && b[1] < a[3] - e;
+      if (overlap) return a[4] < b[4] - e || (Math.abs(a[4] - b[4]) <= e && a[5] < b[5] - e);
+      const ab = a[2] <= b[0] + e || a[3] <= b[1] + e;
+      const ba = b[2] <= a[0] + e || b[3] <= a[1] + e;
+      if (ab && !ba) return true;
+      if (ba && !ab) return false;
+      return a[0] + a[2] + a[1] + a[3] < b[0] + b[2] + b[1] + b[3];
+    };
+    const left = [...this.groups];
+    while (left.length) {
+      let i = left.findIndex((x) => !left.some((y) => y !== x && before(y.b, x.b)));
+      if (i < 0) i = 0; // 순환이면 남은 것 중 먼저 기록된 것
+      for (const op of left[i].ops) op(g);
+      left.splice(i, 1);
+    }
+  }
+}
+
+// 그리기 함수를 돌린 방향으로 실행: (cx, cy) 둘레로 n번 돌려 기록했다가 순서를 맞춰 그림
+function drawTurned(ctx: DrawCtx, cx: number, cy: number, n: Rot, draw: (c: DrawCtx) => void) {
+  if (!n) return draw(ctx);
+  const rec = new RecPix();
+  draw({ ...ctx, g: rec, v: { ...ctx.v, rot: { cx, cy, n } } });
+  rec.replay(ctx.g);
 }
 
 // 화면 가운데에 오는 월드 좌표(아트 픽셀, 바닥 원점 기준)
@@ -103,6 +183,7 @@ export function clampCamera(c: Camera): Camera {
 }
 
 export function P(v: View, gx: number, gy: number, z = 0): Pt {
+  if (v.rot) [gx, gy] = turnPt(v.rot, gx, gy);
   return [v.ox + ((gx - gy) * TW) / 2, v.oy + ((gx + gy) * TH) / 2 - z];
 }
 
@@ -120,6 +201,17 @@ interface BoxCols {
 }
 
 function box(g: Pix, v: View, x: number, y: number, z: number, w: number, d: number, h: number, c: BoxCols) {
+  if (v.rot) {
+    // 돌린 상자도 바닥과 나란한 상자: 돌린 두 모서리로 새 상자를 만들어 그림(보이는 면이 맞게)
+    const a = turnPt(v.rot, x, y);
+    const b = turnPt(v.rot, x + w, y + d);
+    const x0 = Math.min(a[0], b[0]);
+    const y0 = Math.min(a[1], b[1]);
+    const x1 = Math.max(a[0], b[0]);
+    const y1 = Math.max(a[1], b[1]);
+    if (g instanceof RecPix) g.group(x0, y0, x1, y1, z, z + h);
+    return box(g, { ...v, rot: undefined }, x0, y0, z, x1 - x0, y1 - y0, h, c);
+  }
   const p = (a: number, b: number, cz: number) => P(v, a, b, cz);
   g.poly([p(x, y + d, z), p(x + w, y + d, z), p(x + w, y + d, z + h), p(x, y + d, z + h)], c.left);
   g.poly([p(x + w, y, z), p(x + w, y + d, z), p(x + w, y + d, z + h), p(x + w, y, z + h)], c.right);
@@ -201,7 +293,14 @@ function frontSeat(seat: Seat) {
 
 function anchor(v: View, seat: Seat): Pt {
   const { gx, gy } = seatPos(seat);
-  const a = frontSeat(seat) ? P(v, gx + 1, gy + 0.6, 7) : P(v, gx + 1, gy + 1.3, 7);
+  const base = v.rot ? { ...v, rot: undefined } : v;
+  if (frontSeat(seat)) {
+    const a = P(base, gx + 1, gy + 0.6, 7);
+    return [Math.round(a[0]), Math.round(a[1])];
+  }
+  // 돌린 책상(A-128): 앉은 자리도 책상 가운데 둘레로 같이 돎
+  const [ax, ay] = turnPt({ cx: gx + 1, cy: gy + 1, n: seat.rot ?? 0 }, gx + 1, gy + 1.3);
+  const a = P(base, ax, ay, 7);
   return [Math.round(a[0]), Math.round(a[1])];
 }
 
@@ -219,11 +318,21 @@ export function actors(s: GameState, v: View): Actor[] {
 }
 
 // ── 장면 그리기 ──
-// 책상 배치 모드(A-80): 놓기·옮기기·치우기. tile은 마우스가 가리키는 책상 왼쪽 위 칸, pick은 옮기려고 집은 책상.
+// 배치 모드(A-80, A-87): 놓기·옮기기·치우기. item은 놓을 물건('desk' 또는 가구 id),
+// tile은 마우스가 가리키는 물건의 왼쪽 위 칸, pick은 옮기려고 집은 책상·가구.
 export interface EditState {
-  mode: 'place' | 'move' | 'remove';
+  mode: 'place' | 'move' | 'remove' | 'rotate';
+  item: string | null;
   tile: { gx: number; gy: number } | null;
-  pick: string | null;
+  pick: { kind: 'desk' | 'furn'; id: string } | null;
+  rot: Rot; // 손에 든 물건의 방향(A-128, R 키로 돌림)
+}
+
+// 지금 손에 든 물건(놓는 중이거나 집어 든 것)의 가구 id. 책상은 'desk'
+export function editItem(s: GameState, e: EditState): string | null {
+  if (e.mode === 'place') return e.item;
+  if (e.mode === 'move' && e.pick) return e.pick.kind === 'desk' ? 'desk' : (placedOn(s).find((p) => p.id === e.pick!.id)?.item ?? null);
+  return null;
 }
 
 interface DrawCtx {
@@ -243,18 +352,26 @@ export function drawOffice(g: Pix, v: View, s: GameState, t: number, hover: stri
   if (edit) drawEditFloor(ctx, edit);
   drawWalls(ctx);
   const items: { key: number; draw: () => void }[] = [];
+  const held = edit?.mode === 'move' && edit.tile ? edit.pick : null; // 집어 든 것은 원래 자리 대신 마우스 자리에 그림
   for (const seat of s.seats) {
     if (seat.bought === false && seat.occupant === null) continue; // 임원 자리처럼 아직 책상이 없는 자리는 빈 바닥
-    if (edit?.mode === 'move' && edit.pick === seat.id && edit.tile) continue; // 집어 든 책상은 마우스 자리에 그림
+    if (held?.kind === 'desk' && held.id === seat.id) continue;
     const p = seatPos(seat);
     items.push({ key: p.gx + p.gy + 1, draw: () => drawSeat(ctx, seat, p.gx, p.gy) });
   }
-  if (edit && edit.tile && (edit.mode === 'place' || (edit.mode === 'move' && edit.pick))) {
-    const { gx, gy } = edit.tile;
-    const ghost: Seat = edit.mode === 'move' ? { ...s.seats.find((x) => x.id === edit.pick)!, gx, gy } : { id: 'ghost', zone: 'desk', occupant: null, gx, gy };
-    items.push({ key: gx + gy + 1, draw: () => drawSeat(ctx, ghost, gx, gy) });
+  for (const p of placedOn(s)) {
+    if (held?.kind === 'furn' && held.id === p.id) continue;
+    items.push({ key: itemKey(p.item, p.gx!, p.gy!, p.rot ?? 0), draw: () => drawItem(ctx, p.item, p.gx!, p.gy!, p.rot ?? 0) });
   }
-  for (const d of L.decor) if (!d.item || ownsFurniture(s, d.item)) items.push({ key: d.x + d.y + (d.k ?? 0), draw: () => d.draw(ctx, d.x, d.y) });
+  const hand = edit && edit.tile ? editItem(s, edit) : null;
+  if (edit && edit.tile && hand) {
+    const { gx, gy } = edit.tile;
+    if (hand === 'desk') {
+      const ghost: Seat = held ? { ...s.seats.find((x) => x.id === held.id)!, gx, gy, rot: edit!.rot } : { id: 'ghost', zone: 'desk', occupant: null, gx, gy, rot: edit!.rot };
+      items.push({ key: gx + gy + 1, draw: () => drawSeat(ctx, ghost, gx, gy) });
+    } else items.push({ key: itemKey(hand, gx, gy, edit!.rot), draw: () => drawItem(ctx, hand, gx, gy, edit!.rot) });
+  }
+  for (const d of L.decor) items.push({ key: d.x + d.y + (d.k ?? 0), draw: () => d.draw(ctx, d.x, d.y) });
   for (const w of L.glass) {
     // 긴 유리벽은 1칸씩 잘라 앞뒤 순서를 맞춥니다.
     const len = Math.hypot(w[2] - w[0], w[3] - w[1]);
@@ -269,16 +386,195 @@ export function drawOffice(g: Pix, v: View, s: GameState, t: number, hover: stri
   for (const it of items) it.draw();
 }
 
-// 건물 밖: 도로 → 잔디 → 보도 → 건물 바닥(빈 하늘색 배경 대신 Startup Company처럼 주변을 채웁니다)
-function drawGround({ g, v }: DrawCtx) {
+// ── 바깥 거리(A-122) ── 사무실 대지를 가운데 두고 4칸 도로로 나뉜 블록이 바둑판처럼 이어집니다.
+// 뒤쪽 블록은 높은 오피스 빌딩, 앞쪽 블록은 사무실을 가리지 않게 낮은 상가·공원·주차장입니다.
+const ROAD = 4;
+const BLOCK = 16;
+const BLOCKS = 3; // 사무실 대지 둘레로 몇 블록까지 그릴지
+const FRONT_MAX_H = 26; // 앞쪽 블록 건물 높이 상한(사무실 바닥과 겹치지 않게)
+
+// i번째 블록이 한 축에서 차지하는 범위. 0은 사무실 대지, size는 그 축의 사무실 크기
+function lotSpan(i: number, size: number): [number, number] {
+  if (i === 0) return [-7, size + 7];
+  if (i > 0) {
+    const s = size + 7 + ROAD + (i - 1) * (BLOCK + ROAD);
+    return [s, s + BLOCK];
+  }
+  const e = -7 - ROAD + (i + 1) * (BLOCK + ROAD);
+  return [e - BLOCK, e];
+}
+
+// 블록 사이 도로 가운데 좌표들
+function roadCenters(size: number): number[] {
+  const out: number[] = [];
+  for (let i = -BLOCKS; i < BLOCKS; i++) out.push(lotSpan(i, size)[1] + ROAD / 2);
+  return out;
+}
+
+// 창문 하나에 불이 켜졌는지. seed는 창문마다 고정된 0~1 값, frac은 하루 진행(0 출근 ~ 1 퇴근 무렵)
+function windowLit(seed: number, frac: number): boolean {
+  // TODO(human)
+  return false;
+}
+
+function rnd(...n: number[]): number {
+  let h = 2166136261;
+  for (const k of n) h = Math.imul(h ^ Math.round(k * 16), 16777619);
+  // 작은 정수 입력도 고르게 퍼지도록 섞기(murmur3 마무리)
+  h = Math.imul(h ^ (h >>> 16), 0x85ebca6b);
+  h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35);
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+}
+
+type BldKind = 'tower' | 'mid' | 'shop';
+interface Bld {
+  id: number;
+  x: number;
+  y: number;
+  w: number;
+  d: number;
+  h: number;
+  kind: BldKind;
+  base: string;
+}
+
+const BLD_COLS: Record<BldKind, string[]> = {
+  tower: ['#7d93b3', '#6b7f99', '#8aa4c4', '#5f6f86'],
+  mid: ['#cfd3da', '#d9c9ac', '#b9775c', '#e6e1d6', '#a9b3a0'],
+  shop: ['#e8dcc4', '#d8c2a0', '#c9ced6', '#e3cfc6'],
+};
+const AWNINGS = ['#d9453b', '#3f8cff', '#2fbf71', '#f0a020'];
+
+function drawGround({ g, v, s, t }: DrawCtx) {
   g.clear(C.asphalt);
-  // 차선
+  const frac = Math.min(1, s.msInDay / DATA.time.dayMs);
+  const sky = skyColor(frac);
+  const cxs = roadCenters(FW);
+  const cys = roadCenters(FH);
+  const [ax0] = lotSpan(-BLOCKS, FW);
+  const [, ax1] = lotSpan(BLOCKS, FW);
+  const [ay0] = lotSpan(-BLOCKS, FH);
+  const [, ay1] = lotSpan(BLOCKS, FH);
+
+  // 차선(점선)과 교차로 횡단보도
   const lane = hex('#e9e4d4');
-  for (let k = -10; k < FW + 16; k += 2) g.line(P(v, k, FH + 9), P(v, k + 1, FH + 9), lane);
-  for (let k = -10; k < FH + 16; k += 2) g.line(P(v, FW + 9, k), P(v, FW + 9, k + 1), lane);
-  rect(g, v, -7, -7, FW + 7, FH + 7, C.grass);
-  for (let i = -7; i < FW + 7; i++)
-    for (let j = -7; j < FH + 7; j++) {
+  for (const cy of cys) for (let k = ax0; k < ax1; k += 2) g.line(P(v, k, cy), P(v, k + 1, cy), lane);
+  for (const cx of cxs) for (let k = ay0; k < ay1; k += 2) g.line(P(v, cx, k), P(v, cx, k + 1), lane);
+  const zebra = hex('#e9e4d4', 220);
+  for (const cx of cxs)
+    for (const cy of cys) {
+      rect(g, v, cx - 2, cy - 2, cx + 2, cy + 2, C.asphalt);
+      for (let k = 0; k < 5; k++) {
+        const o = -1.7 + k * 0.75;
+        for (const side of [-1, 1]) {
+          const a = side < 0 ? cx - 3.1 : cx + 2.2;
+          rect(g, v, a, cy + o, a + 0.9, cy + o + 0.35, zebra);
+          const b = side < 0 ? cy - 3.1 : cy + 2.2;
+          rect(g, v, cx + o, b, cx + o + 0.35, b + 0.9, zebra);
+        }
+      }
+    }
+
+  // 블록 바닥(보도·대지)과 그 위에 세울 것(빌딩·나무·가로등) 모으기
+  const things: { key: number; draw: () => void }[] = [];
+  for (let i = -BLOCKS; i <= BLOCKS; i++)
+    for (let j = -BLOCKS; j <= BLOCKS; j++) {
+      if (i === 0 && j === 0) continue;
+      const [x0, x1] = lotSpan(i, FW);
+      const [y0, y1] = lotSpan(j, FH);
+      // 화면 밖 블록은 건너뜀(빌딩 높이만큼 위로 여유)
+      if (P(v, x0, y1)[0] > v.artW || P(v, x1, y0)[0] < 0 || P(v, x1, y1)[1] < 0 || P(v, x0, y0)[1] - 130 > v.artH) continue;
+      const front = i > 0 || j > 0;
+      rect(g, v, x0, y0, x1, y1, C.walk);
+      outline(g, v, x0, y0, x1, y1, C.walkLine);
+      const ix0 = x0 + 1.2;
+      const ix1 = x1 - 1.2;
+      const iy0 = y0 + 1.2;
+      const iy1 = y1 - 1.2;
+      const nx = Math.max(1, Math.round((ix1 - ix0) / 8));
+      const ny = Math.max(1, Math.round((iy1 - iy0) / 8));
+      const cw = (ix1 - ix0) / nx;
+      const ch = (iy1 - iy0) / ny;
+      for (let a = 0; a < nx; a++)
+        for (let b = 0; b < ny; b++) {
+          const lx = ix0 + a * cw;
+          const ly = iy0 + b * ch;
+          const r = rnd(i, j, a, b);
+          const id = (i + 10) * 10007 + (j + 10) * 101 + a * 11 + b;
+          const far = Math.max(Math.abs(i), Math.abs(j));
+          if (r < 0.16) {
+            // 작은 공원
+            rect(g, v, lx + 0.2, ly + 0.2, lx + cw - 0.2, ly + ch - 0.2, C.grass);
+            for (let k = 0; k < 4; k++) {
+              const tx = lx + 1 + rnd(id, k, 1) * (cw - 2);
+              const ty = ly + 1 + rnd(id, k, 2) * (ch - 2);
+              things.push({ key: tx + ty, draw: () => drawTree(g, v, tx, ty) });
+            }
+            continue;
+          }
+          if (front && r < 0.34) {
+            // 주차장
+            rect(g, v, lx + 0.2, ly + 0.2, lx + cw - 0.2, ly + ch - 0.2, hex('#5a5d63'));
+            for (let u = lx + 1; u < lx + cw - 0.5; u += 1.2) g.line(P(v, u, ly + 0.6), P(v, u, ly + 2.2), lane);
+            continue;
+          }
+          rect(g, v, lx + 0.2, ly + 0.2, lx + cw - 0.2, ly + ch - 0.2, hex('#c3c6cc'));
+          const kind: BldKind = front ? 'shop' : r > 0.62 ? 'tower' : 'mid';
+          const pal = BLD_COLS[kind];
+          const r2 = rnd(id, 7);
+          const h = front
+            ? 14 + Math.floor(r2 * (FRONT_MAX_H - 13))
+            : kind === 'tower'
+              ? 72 + Math.floor(r2 * 40) + far * 8
+              : 34 + Math.floor(r2 * 30) + far * 4;
+          const bld: Bld = { id, x: lx + 0.6, y: ly + 0.6, w: cw - 1.2, d: ch - 1.2, h, kind, base: pal[Math.floor(rnd(id, 3) * pal.length)] };
+          // 빌딩 그림자(오른쪽 아래로)
+          rect(g, v, bld.x + 0.4, bld.y + bld.d, bld.x + bld.w + 0.4, bld.y + bld.d + 0.8, hex('#000000', 40));
+          things.push({ key: bld.x + bld.w / 2 + bld.y + bld.d / 2, draw: () => drawBuilding(g, v, bld, sky, frac) });
+        }
+      // 보도 가로수와 모퉁이 가로등
+      for (let k = x0 + 1.5; k < x1 - 1; k += 3.5) {
+        if (rnd(i, j, k * 10) < 0.35) continue;
+        const ty = y1 - 0.6;
+        things.push({ key: k + ty, draw: () => drawTree(g, v, k, ty) });
+      }
+      for (let k = y0 + 1.5; k < y1 - 1; k += 3.5) {
+        if (rnd(j, i, k * 10) < 0.35) continue;
+        const tx = x1 - 0.6;
+        things.push({ key: tx + k, draw: () => drawTree(g, v, tx, k) });
+      }
+      things.push({ key: x1 + y1 - 1, draw: () => drawLamp(g, v, x1 - 0.5, y1 - 0.5, frac) });
+    }
+
+  // 도로를 달리는 차(두 차선, 서로 반대 방향)
+  const carCols = ['#e5484d', '#3f8cff', '#f2f2ee', '#2a2f3a', '#f0a020', '#2fbf71'];
+  cys.forEach((cy, r) => {
+    for (const ln of [-1, 1]) {
+      const sp = 1.4 + rnd(r, ln, 9);
+      const span = ax1 - ax0;
+      const pos = ax0 + ((((rnd(r, ln) * span + (ln * t * sp) / 1000) % span) + span) % span);
+      const gy = cy + (ln < 0 ? -1.4 : 0.6);
+      const col = carCols[(r * 2 + (ln > 0 ? 1 : 0)) % carCols.length];
+      things.push({ key: pos + 0.8 + gy + 0.4, draw: () => drawCar(g, v, pos, gy, true, col) });
+    }
+  });
+  cxs.forEach((cx, r) => {
+    for (const ln of [-1, 1]) {
+      const sp = 1.4 + rnd(r, ln, 19);
+      const span = ay1 - ay0;
+      const pos = ay0 + ((((rnd(r, ln, 5) * span + (ln * t * sp) / 1000) % span) + span) % span);
+      const gx = cx + (ln < 0 ? 0.6 : -1.4);
+      const col = carCols[(r * 2 + 3 + (ln > 0 ? 1 : 0)) % carCols.length];
+      things.push({ key: gx + 0.4 + pos + 0.8, draw: () => drawCar(g, v, gx, pos, false, col) });
+    }
+  });
+
+  // 사무실 대지: 보도 테두리 → 잔디
+  rect(g, v, -7, -7, FW + 7, FH + 7, C.walk);
+  outline(g, v, -7, -7, FW + 7, FH + 7, C.walkLine);
+  rect(g, v, -5.8, -5.8, FW + 5.8, FH + 5.8, C.grass);
+  for (let i = -6; i < FW + 6; i++)
+    for (let j = -6; j < FH + 6; j++) {
       const h = hashStr(`${i},${j}`);
       if (h % 3 !== 0) continue;
       const p = P(v, i + ((h >>> 4) % 10) / 10, j + ((h >>> 8) % 10) / 10);
@@ -290,6 +586,95 @@ function drawGround({ g, v }: DrawCtx) {
   for (let j = -2; j <= FH + 2; j++) g.line(P(v, -2.4, j), P(v, FW + 2.4, j), C.walkLine);
   // 건물 그림자
   g.poly([P(v, 0.4, FH, -7), P(v, FW + 0.6, FH, -7), P(v, FW + 0.6, FH + 0.9, -7), P(v, 0.4, FH + 0.9, -7)], hex('#000000', 40));
+  // 대지 모퉁이 가로수
+  for (const [tx, ty] of [[-6.3, FH + 6.3], [FW + 6.3, -6.3], [FW + 6.3, FH + 6.3], [-6.3, -6.3]]) things.push({ key: tx + ty, draw: () => drawTree(g, v, tx, ty) });
+
+  // 서 있는 것은 뒤(gx+gy 작은 쪽)부터 그려 앞이 뒤를 가립니다.
+  things.sort((a, b) => a.key - b.key);
+  for (const it of things) it.draw();
+}
+
+// 바깥 빌딩: 상자 + 층마다 창문 줄 + 옥상 설비. 상가는 1층에 차양
+function drawBuilding(g: Pix, v: View, b: Bld, sky: Col, frac: number) {
+  const c = cols(b.base);
+  box(g, v, b.x, b.y, 0, b.w, b.d, b.h, { ...c, line: shade(hex(b.base), 0.55) });
+  const glass = b.kind === 'tower' ? mix(sky, hex('#24324a'), 0.35) : mix(sky, hex('#3a4a63'), 0.5);
+  const lit = hex('#ffd77a');
+  const floor = b.kind === 'tower' ? 7 : 8;
+  const ww = b.kind === 'tower' ? 0.75 : 0.5;
+  const wh = b.kind === 'tower' ? 5 : 4;
+  const z0 = b.kind === 'shop' ? 13 : 5;
+  const faces: [(u: number, z: number) => Pt, number, number][] = [
+    [(u, z) => P(v, b.x + u, b.y + b.d, z), b.w, 0], // 왼쪽 아래를 보는 면
+    [(u, z) => P(v, b.x + b.w, b.y + u, z), b.d, 1], // 오른쪽 아래를 보는 면
+  ];
+  for (const [q, len, f] of faces) {
+    let row = 0;
+    for (let z = z0; z + wh <= b.h - 4; z += floor, row++)
+      for (let u = 0.35, col = 0; u + ww <= len - 0.25; u += 1, col++) {
+        const on = windowLit(rnd(b.id, f, row, col), frac);
+        const wc = on ? lit : f ? shade(glass, 0.85) : glass;
+        g.poly([q(u, z), q(u + ww, z), q(u + ww, z + wh), q(u, z + wh)], wc);
+        if (!on && b.kind === 'tower') g.px(q(u + 0.1, z + wh - 1)[0], q(u + 0.1, z + wh - 1)[1], shade(glass, 1.4));
+      }
+    if (b.kind === 'shop') {
+      // 1층 통유리와 차양
+      g.poly([q(0.3, 1), q(len - 0.3, 1), q(len - 0.3, 8), q(0.3, 8)], shade(glass, f ? 0.9 : 1.05));
+      const aw = hex(AWNINGS[b.id % AWNINGS.length]);
+      g.poly([q(0.1, 8), q(len - 0.1, 8), q(len - 0.1, 11), q(0.1, 11)], f ? shade(aw, 0.8) : aw);
+      for (let u = 0.1; u < len - 0.3; u += 0.5) g.line(q(u, 8), q(u, 10), shade(aw, 1.35));
+    } else {
+      // 1층 출입구
+      const m = len / 2;
+      g.poly([q(m - 0.5, 0), q(m + 0.5, 0), q(m + 0.5, 5), q(m - 0.5, 5)], shade(glass, 0.7));
+    }
+  }
+  // 옥상 설비
+  if (b.w > 2 && b.d > 2) box(g, v, b.x + b.w * 0.25, b.y + b.d * 0.3, b.h, 1.2, 1, b.kind === 'shop' ? 2 : 4, cols('#9aa0ad'));
+  if (b.kind === 'tower') {
+    const top = P(v, b.x + b.w * 0.7, b.y + b.d * 0.6, b.h);
+    g.line(top, [top[0], top[1] - 12], hex('#5d6473'));
+    g.px(top[0], top[1] - 13, hex('#e5484d'));
+  }
+}
+
+function drawTree(g: Pix, v: View, gx: number, gy: number) {
+  const p = P(v, gx, gy, 0);
+  const x = Math.round(p[0]);
+  const y = Math.round(p[1]);
+  g.rect(x - 3, y - 1, 7, 2, hex('#000000', 45));
+  g.rect(x, y - 6, 2, 6, hex('#7a5233'));
+  const leaf = C.grassDark;
+  const leafHi = hex('#93c76f');
+  for (let dy = -5; dy <= 5; dy++)
+    for (let dx = -5; dx <= 5; dx++) {
+      const d = dx * dx + dy * dy * 1.2;
+      if (d > 26) continue;
+      g.px(x + 1 + dx, y - 11 + dy, dy < -1 && dx < 2 && d < 14 ? leafHi : dy > 2 ? shade(leaf, 0.85) : leaf);
+    }
+}
+
+function drawLamp(g: Pix, v: View, gx: number, gy: number, frac: number) {
+  const p = P(v, gx, gy, 0);
+  const x = Math.round(p[0]);
+  const y = Math.round(p[1]);
+  const pole = hex('#3a3f4b');
+  g.rect(x, y - 18, 1, 18, pole);
+  g.rect(x - 3, y - 18, 4, 1, pole);
+  const on = frac > 0.7;
+  g.rect(x - 4, y - 17, 3, 1, on ? hex('#ffe9a8') : hex('#c9ccd3'));
+  if (on) g.rect(x - 5, y - 16, 5, 1, hex('#ffe9a8', 90));
+}
+
+// 차: 몸체 + 지붕. alongX면 gx 방향으로 깁니다.
+function drawCar(g: Pix, v: View, gx: number, gy: number, alongX: boolean, col: string) {
+  const len = 1.6;
+  const W = 0.8;
+  const [w, d] = alongX ? [len, W] : [W, len];
+  rect(g, v, gx + 0.1, gy + 0.1, gx + w + 0.2, gy + d + 0.2, hex('#000000', 60));
+  box(g, v, gx, gy, 1, w, d, 4, { ...cols(col), line: hex('#22252c') });
+  const [cx, cy, cw, cd] = alongX ? [gx + 0.4, gy + 0.08, 0.8, d - 0.16] : [gx + 0.08, gy + 0.4, w - 0.16, 0.8];
+  box(g, v, cx, cy, 5, cw, cd, 3, { top: shade(hex(col), 1.1), left: hex('#2c3546'), right: hex('#3a465c') });
 }
 
 function drawFloor({ g, v }: DrawCtx) {
@@ -327,25 +712,26 @@ function drawFloor({ g, v }: DrawCtx) {
   rect(g, v, 0.05, L.doorY - 0.1, 0.9, L.doorY + 1.1, hex('#4a3b33'));
 }
 
-// 배치 모드: 바닥 격자, 놓을 수 없는 곳은 어둡게, 마우스 자리에 초록(놓을 수 있음)·빨강(안 됨) 테두리
+// 배치 모드: 바닥 격자, 놓을 수 없는 곳은 어둡게(책상은 방도 막힘, 가구는 방 안에도 놓임), 마우스 자리에 초록(놓을 수 있음)·빨강(안 됨) 테두리
 function drawEditFloor({ g, v, s, t }: DrawCtx, edit: EditState) {
   const line = hex('#ffffff', 60);
   for (let i = 0; i <= FW; i++) g.line(P(v, i, 0), P(v, i, FH), line);
   for (let j = 0; j <= FH; j++) g.line(P(v, 0, j), P(v, FW, j), line);
-  for (const b of floorPlan(TIER).blocked) {
+  const hand = editItem(s, edit);
+  const plan = floorPlan(TIER);
+  for (const b of hand && hand !== 'desk' ? plan.fixed : plan.blocked) {
     const x0 = Math.max(0, b.x0), y0 = Math.max(0, b.y0), x1 = Math.min(FW, b.x1), y1 = Math.min(FH, b.y1);
     if (x1 > x0 && y1 > y0) rect(g, v, x0, y0, x1, y1, hex('#1b1f2e', 70));
   }
-  if (!edit.tile) return;
+  if (!edit.tile || !hand) return;
   const { gx, gy } = edit.tile;
-  let ok = true;
-  if (edit.mode === 'place') ok = !deskFits(s, gx, gy);
-  else if (edit.mode === 'move' && edit.pick) ok = !deskFits(s, gx, gy, edit.pick);
-  else return;
+  const ignore = edit.mode === 'move' ? edit.pick?.id : undefined;
+  const ok = hand === 'desk' ? !deskFits(s, gx, gy, ignore) : !furnitureSpotFits(s, hand, gx, gy, ignore, TIER, edit.rot);
+  const { w, h } = itemSize(hand, edit.rot);
   const c = ok ? hex('#57d391', 120) : hex('#e5484d', 120);
-  rect(g, v, gx, gy, gx + 2, gy + 2, c);
+  rect(g, v, gx, gy, gx + w, gy + h, c);
   const blink = Math.floor(t / 250) % 2 === 0;
-  outline(g, v, gx, gy, gx + 2, gy + 2, blink ? hex('#ffffff') : ok ? hex('#2fbf71') : hex('#e5484d'));
+  outline(g, v, gx, gy, gx + w, gy + h, blink ? hex('#ffffff') : ok ? hex('#2fbf71') : hex('#e5484d'));
 }
 
 function drawWalls({ g, v, s, t }: DrawCtx) {
@@ -449,7 +835,7 @@ function glassSeg(ctx: DrawCtx, x0: number, y0: number, x1: number, y1: number, 
 function seatOccupant(s: GameState, seat: Seat): { kind: 'empty' | 'pending' | 'emp' | 'ceo'; emp?: Employee } {
   const o = seat.occupant;
   if (!o || o.startsWith('moving:')) return { kind: 'empty' };
-  if (o === 'ceo') return { kind: 'ceo' };
+  if (o === 'ceo') return awayOuting(s) ? { kind: 'empty' } : { kind: 'ceo' }; // 외출·이동 중이면 빈 책상(A-101, A-127)
   if (o.startsWith('pending:')) return { kind: 'pending' };
   const emp = s.employees.find((e) => e.id === o);
   return emp ? { kind: 'emp', emp } : { kind: 'empty' };
@@ -457,7 +843,7 @@ function seatOccupant(s: GameState, seat: Seat): { kind: 'empty' | 'pending' | '
 
 function drawSeat(ctx: DrawCtx, seat: Seat, x: number, y: number) {
   if (frontSeat(seat)) drawFrontSeat(ctx, seat, x, y);
-  else drawBackSeat(ctx, seat, x, y);
+  else drawTurned(ctx, x + 1, y + 1, seat.rot ?? 0, (c) => drawBackSeat(c, seat, x, y));
 }
 
 function drawBackSeat(ctx: DrawCtx, seat: Seat, x: number, y: number) {
@@ -520,10 +906,13 @@ function drawBackPerson(ctx: DrawCtx, seat: Seat, emp: Employee) {
   if (running && cyc < 1.1) rows = SPRITES.STRETCH; // 가끔 기지개
   else if (busy && running) rows = Math.floor(t / 180 + look.phase * 10) % 2 ? (look.long ? SPRITES.BACK_LONG_A : SPRITES.BACK_SHORT_A) : look.long ? SPRITES.BACK_LONG_B : SPRITES.BACK_SHORT_B;
   else rows = look.long ? SPRITES.BACK_LONG_A : SPRITES.BACK_SHORT_A;
+  // 돌린 책상(A-128): 1·2번 돌리면 사람이 화면 쪽을 봄(앞모습)
+  const facing = seat.rot === 1 || seat.rot === 2;
+  if (facing) rows = (t / 1000 + look.phase * 7) % 4.2 < 0.14 ? SPRITES.FRONT_BLINK : SPRITES.FRONT_A;
   const sx = a[0] - SPRITE_W / 2;
   const sy = a[1] - SPRITE_H + 2;
   if (hover === emp.id) g.spriteOutline(sx, sy, rows, hex('#ffffff'));
-  g.sprite(sx, sy, rows, look.pal, (hashStr(emp.id) & 16) === 16);
+  g.sprite(sx, sy, rows, look.pal, facing ? seat.rot === 1 : (hashStr(emp.id) & 16) === 16);
 }
 
 function drawFrontSeat(ctx: DrawCtx, seat: Seat, x: number, y: number) {
@@ -567,8 +956,6 @@ interface Decor {
   x: number;
   y: number;
   k?: number;
-  item?: string; // 산 가구일 때만 그림(A-78). 없으면 건물 밖 나무·벤치처럼 항상
-
   draw: (ctx: DrawCtx, x: number, y: number) => void;
 }
 
@@ -735,20 +1122,75 @@ function stage(ctx: DrawCtx, x: number, y: number) {
   for (let r = 0; r < 3; r++) for (let c = 0; c < 5; c++) box(g, v, x + 0.2 + c * 0.85, y + 2 + r * 1.2, 0, 0.45, 0.4, 6, cols('#7b2f3b'));
 }
 
-// 평면(core/officeLayout)의 가구 자리를 그리기 함수로 바꿉니다. 살 수 있는 가구는 산 것만 그립니다(A-78).
+// 평면(core/officeLayout)의 소품(건물 밖 나무·벤치·가로등)을 그리기 함수로 바꿉니다.
 const DRAW: Record<DecorKind, Decor['draw']> = {
   plant, bigPlant, cooler, printer, meeting: (c, x, y) => meeting2(c, x, y), lounge: (c, x, y) => lounge2(c, x, y), beanbag, cafeTable, pingpong,
   kitchen: (c, x, y) => kitchen2(c, x, y), diningTable, vending, treadmill, weights, stage, tree, bench, lamp,
 };
-const ITEM: Partial<Record<DecorKind, string>> = {
-  plant: 'plant', bigPlant: 'plant', cooler: 'cooler', printer: 'printer', meeting: 'meeting', lounge: 'lounge', beanbag: 'lounge',
-  cafeTable: 'cafe', pingpong: 'pingpong', kitchen: 'kitchen', diningTable: 'kitchen', vending: 'vending', treadmill: 'gym', weights: 'gym', stage: 'stage',
+
+// 가구(A-87): 놓은 칸(왼쪽 위 gx·gy, 크기는 furniture.json size) 안에 소품을 그리는 위치. [그리기, 칸 안 x, 칸 안 y]
+type Piece = [Decor['draw'], number, number];
+const PIECES: Record<string, Piece[]> = {
+  plant: [[bigPlant, 0.5, 0.5]],
+  cooler: [[cooler, 0.27, 0.27]],
+  printer: [[printer, 0.15, 0.2]],
+  vending: [[vending, 0.1, 0.15]],
+  cafe: [[cafeTable, 0.92, 0.38]],
+  lounge: [[(c, x, y) => lounge2(c, x, y), 1.1, 0]],
+  meeting: [[(c, x, y) => meeting2(c, x, y), 0, 0.8]],
+  pingpong: [[pingpong, 0.2, 0.3]],
+  kitchen: [[(c, x, y) => kitchen2(c, x, y), 0.02, 0.2]],
+  gym: [[treadmill, 0.15, 0.2], [treadmill, 1.05, 0.2], [weights, 2.2, 0.8]],
+  stage: [[stage, 0.3, 0.2]],
 };
+
+// rot(A-128): 돌린 크기의 칸(gx·gy가 왼쪽 위) 가운데를 기준으로, 원래 방향 그림을 돌려 그림
+function drawItem(ctx: DrawCtx, item: string, gx: number, gy: number, rot: Rot = 0) {
+  const R = itemSize(item, rot);
+  const { w, h } = itemSize(item);
+  const cx = gx + R.w / 2;
+  const cy = gy + R.h / 2;
+  const ox = cx - w / 2;
+  const oy = cy - h / 2;
+  drawTurned(ctx, cx, cy, rot, (c) => {
+    for (const [draw, dx, dy] of PIECES[item] ?? []) draw(c, ox + dx, oy + dy);
+  });
+}
+
+// 상점 그림(A-87): 사무실에 그려지는 그대로의 픽셀 가구(또는 책상)를 투명 바탕 작은 그림으로. 가구마다 한 번만 그림
+const thumbs = new Map<string, string>();
+export function itemThumb(s: GameState, item: string): string {
+  const hit = thumbs.get(item);
+  if (hit) return hit;
+  const { w, h } = itemSize(item);
+  const pad = 4;
+  const tall = 44; // 가장 높은 소품(냉장고·자판기·무대 화면)이 들어가는 높이
+  const artW = ((w + h) * TW) / 2 + pad * 2;
+  const artH = ((w + h) * TH) / 2 + tall + pad;
+  const v: View = { artW, artH, scale: 1, ox: (h * TW) / 2 + pad, oy: tall };
+  const g = new Pix(artW, artH);
+  const ctx: DrawCtx = { g, v, t: 0, s, hover: null, edit: null };
+  if (item === 'desk') drawSeat(ctx, { id: 'thumb', zone: 'desk', occupant: null, gx: 0, gy: 0 }, 0, 0);
+  else drawItem(ctx, item, 0, 0);
+  const cv = document.createElement('canvas');
+  cv.width = artW;
+  cv.height = artH;
+  cv.getContext('2d')!.putImageData(g.img, 0, 0);
+  const url = cv.toDataURL();
+  thumbs.set(item, url);
+  return url;
+}
+
+// 앞뒤 순서: 물건 가운데 칸 기준(책상 2×2가 gx+gy+1인 것과 맞춤)
+function itemKey(item: string, gx: number, gy: number, rot: Rot = 0): number {
+  const { w, h } = itemSize(item, rot);
+  return gx + gy + (w + h) / 2 - 1;
+}
 
 function buildLayout(tierId: number): Layout {
   const f = floorPlan(tierId);
   const none: Rect = { x0: f.W, y0: 0, x1: f.W, y1: 0 };
-  const decor: Decor[] = f.decor.map((d) => ({ x: d.x, y: d.y, k: d.k, item: ITEM[d.kind], draw: DRAW[d.kind] }));
+  const decor: Decor[] = f.decor.map((d) => ({ x: d.x, y: d.y, k: d.k, draw: DRAW[d.kind] }));
   return { id: tierId, W: f.W, H: f.H, exec: f.exec ?? none, meeting: f.meeting, lounge: f.lounge, loungeLeft: f.loungeLeft, kitchen: f.kitchen, doorY: f.doorY, board: f.board, winX: f.winX, winY: f.winY, decor, glass: f.glass };
 }
 

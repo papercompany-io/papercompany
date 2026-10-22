@@ -9,6 +9,9 @@ import { PxIcon, type PxId } from './icons';
 import './feedback.css';
 
 const ICON: Record<Notice['kind'], PxId> = { info: 'talk', good: 'check', bad: 'warn', urgent: 'siren', achievement: 'trophy', mission: 'star' };
+const LABEL: Record<Notice['kind'], string> = { info: '알림', good: '좋은 소식', bad: '주의', urgent: '긴급', achievement: '업적 달성', mission: '목표 완료' };
+// 알림이 떠 있는 시간. 남은 시간은 토스트 아래 막대로 보여 줍니다.
+const lifeOf = (k: Notice['kind']) => (k === 'urgent' || k === 'achievement' || k === 'mission' ? 9000 : 5500);
 
 export function Toasts({ s, enabled, onOpen }: { s: GameState; enabled: boolean; onOpen: (app: string, arg?: string) => void }) {
   const seen = useRef<string | null>(s.notices.length ? s.notices[s.notices.length - 1].id : null);
@@ -29,7 +32,7 @@ export function Toasts({ s, enabled, onOpen }: { s: GameState; enabled: boolean;
     if (!shown.length) return;
     const t = setInterval(() => {
       const now = Date.now();
-      setShown((cur) => cur.filter((n) => now - n.at < (n.kind === 'urgent' || n.kind === 'achievement' || n.kind === 'mission' ? 9000 : 5500)));
+      setShown((cur) => cur.filter((n) => now - n.at < lifeOf(n.kind)));
     }, 500);
     return () => clearInterval(t);
   }, [shown.length]);
@@ -39,16 +42,22 @@ export function Toasts({ s, enabled, onOpen }: { s: GameState; enabled: boolean;
       {shown.map((n) => (
         <button
           key={n.id}
-          className={`toast ${n.kind}`}
+          className={`toast ${n.kind} ${n.app ? 'link' : ''}`}
+          style={{ ['--life' as string]: `${lifeOf(n.kind)}ms` }}
           onClick={() => {
             setShown((cur) => cur.filter((x) => x.id !== n.id));
             if (n.app) onOpen(n.app, n.arg);
           }}
         >
           <span className="toast-ic">
-            <PxIcon id={ICON[n.kind]} size={20} />
+            <PxIcon id={ICON[n.kind]} size={18} />
           </span>
-          <span className="toast-text">{n.text}</span>
+          <span className="toast-body">
+            <span className="toast-label">{LABEL[n.kind]}</span>
+            <span className="toast-text">{n.text}</span>
+          </span>
+          {n.app && <span className="toast-go">›</span>}
+          <span className="toast-life" />
         </button>
       ))}
     </div>

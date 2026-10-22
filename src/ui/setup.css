@@ -39,3 +39,66 @@
 .industry.sel { border-color: var(--blue); background: #eef6fd; box-shadow: inset 0 -3px 0 var(--blue); }
 .industry:disabled { opacity: 0.5; cursor: not-allowed; }
 .cand:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* ── 새 게임 대화상자 톤: 밝은 창·위 탭·가운데 제목·색 띠 카드·파란 작은 버튼·초록 다음 ── */
+.setup .setup-window { background: var(--surface); color: var(--text); border: 1px solid var(--line-strong); border-radius: 12px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45); }
+.setup .setup-head { background: var(--surface); color: var(--text); border: 0; border-bottom: 1px solid var(--line); padding: 14px 20px 0; flex-wrap: wrap; row-gap: 8px; }
+.setup .setup-title { font-family: inherit; font-size: 15px; font-weight: 700; letter-spacing: 0.06em; color: var(--c-gray-800); }
+.setup .setup-steps { width: 100%; justify-content: center; gap: 28px; color: var(--c-gray-500); }
+.setup .setup-steps > * { border-radius: 0; padding: 10px 6px; font-size: 13px; font-weight: 600; background: none; box-shadow: none; border-bottom: 3px solid transparent; }
+.setup .setup-steps .on { color: var(--accent-text); background: none; box-shadow: none; border-bottom-color: var(--accent-text); }
+.setup .setup-steps .done { color: var(--positive-press); }
+.setup .setup-body { background: var(--surface); color: var(--text); padding: 22px 28px 24px; gap: 14px; }
+.setup .section-title { text-align: center; font-size: 20px; font-weight: 600; color: var(--text-2); margin-top: 6px; }
+.setup .muted, .setup .tiny.muted { color: var(--text-3); }
+.setup .tiny { color: var(--c-gray-800); }
+
+/* 카드: 위 색 띠(이름) + 설명 */
+.setup .cands { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 16px; }
+.setup .cand, .setup .industry, .setup .spec-item, .setup .choice { background: var(--surface-tile); border: 2px solid var(--c-gray-300); border-radius: 8px; box-shadow: none; color: var(--text); transform: none; padding: 0 0 12px; overflow: hidden; gap: 8px; }
+.setup .cand > :not(.cand-name), .setup .industry > :not(.cand-name), .setup .spec-item > :not(.spec-name), .setup .choice > * { margin: 0 12px; }
+.setup .cand-name, .setup .spec-name { background: var(--surface-head); color: var(--text); padding: 8px 12px; font-size: 14px; font-weight: 700; text-align: center; }
+.setup .cand:hover:not(:disabled), .setup .industry:hover:not(:disabled), .setup .spec-item:hover:not(:disabled), .setup .choice:hover { border-color: var(--c-blue-300); transform: none; }
+.setup .cand.sel, .setup .industry.sel, .setup .spec-item.sel { background: var(--surface-sel); border-color: var(--c-blue-500); box-shadow: none; }
+.setup .cand.sel .cand-name, .setup .industry.sel .cand-name, .setup .spec-item.sel .spec-name { background: var(--surface-sel-head); }
+.setup .spec-price { color: var(--accent-text); }
+.setup .spec-fx { color: var(--text-2); }
+.setup .profile.card { background: var(--surface-sunk); border: 1px solid var(--line); box-shadow: none; color: var(--text); }
+.setup .credit b { color: var(--accent-text); }
+.setup .warn { background: var(--caution-soft); color: var(--caution-text); border: 1px solid var(--c-amber-300); }
+
+.setup .name-input { background: var(--surface); color: var(--text); text-align: center; font-size: 20px; border: 2px solid var(--c-gray-300); border-radius: 8px; }
+.setup .name-input:focus { border-color: var(--c-blue-500); outline: none; }
+
+/* 버튼: 보조 = 파란 작은 버튼, 다음(big) = 초록 */
+.setup .btn { background: var(--accent); border: 1px solid var(--accent-press); color: #fff; text-shadow: none; box-shadow: 0 2px 0 var(--accent-press); border-radius: 4px; font-weight: 700; }
+.setup .btn.ghost { background: var(--surface-tile); border-color: var(--line-strong); color: var(--text-2); box-shadow: 0 2px 0 var(--line-strong); }
+.setup .btn.big { background: var(--positive); border-color: var(--positive-press); box-shadow: 0 3px 0 var(--positive-press); padding: 10px 34px; font-size: 16px; }
+.setup .btn:disabled { opacity: 0.5; }
+.setup .section-title { background: none; border: 0; box-shadow: none; padding: 0; text-shadow: none; }
+.setup .section-title::before, .setup .section-title::after { display: none; }
+.setup .profile .section-title { font-size: 14px; text-align: left; }
+.setup .spec-cat .section-title { font-size: 16px; }
+.setup .choice { padding: 0 0 16px; min-height: 0; }
+.setup .choice > b { margin: 0; background: var(--surface-head); padding: 9px 14px; text-align: center; font-size: 15px; }
+.setup .choice:hover > b { background: var(--c-blue-200); }
+.setup .cand.challenge { min-height: 150px; }
+.setup .cand.challenge .cand-name { font-size: 17px; padding: 10px 12px; }
+.setup .cand.challenge .tiny.muted { font-size: 14px; line-height: 1.5; color: var(--c-gray-800); flex: 1; }
+.setup .cand.challenge .diff { font-size: 17px; font-weight: 800; text-align: center; padding-top: 8px; border-top: 1px solid var(--c-gray-300); }
+
+/* 서비스 분야·이름·로고 (산업 단계) */
+.setup .service-card { display: flex; gap: 22px; align-items: stretch; background: var(--surface-sunk); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; }
+.setup .service-preview { width: 170px; flex: none; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; border-right: 1px solid var(--line); padding-right: 18px; text-align: center; }
+.setup .service-preview-name { font-size: 17px; font-weight: 800; color: var(--text); word-break: keep-all; }
+.setup .service-form { flex: 1; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.setup .service-row { display: flex; align-items: center; gap: 12px; }
+.setup .service-row > span { width: 76px; flex: none; font-size: 13px; font-weight: 700; color: var(--text-2); }
+.setup .service-row input { flex: 1; min-width: 0; font-size: 15px; padding: 8px 10px; border: 2px solid var(--c-gray-300); border-radius: 6px; background: var(--surface); color: var(--text); }
+.setup .service-row input:focus { border-color: var(--c-blue-500); outline: none; }
+.setup .logo-marks, .setup .logo-colors { display: flex; flex-wrap: wrap; gap: 6px; }
+.setup .logo-pick { padding: 3px; border-radius: 9px; border: 2px solid transparent; background: none; }
+.setup .logo-pick.sel { border-color: var(--c-blue-500); background: var(--surface-sel); }
+.setup .logo-pick .svc-logo { box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.18); }
+.setup .logo-color { width: 26px; height: 26px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 0 1px var(--line-strong); padding: 0; }
+.setup .logo-color.sel { box-shadow: 0 0 0 3px var(--c-blue-500); }

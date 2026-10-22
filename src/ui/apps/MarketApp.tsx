@@ -1,359 +1,452 @@
 // 시장 메뉴(RV-01·PD-02 확장): 시장별 수요·점유율·인지도·광고 예산, 해외 진출, 경쟁사와 인수(M&A), 대기업 계약, 수익 구조(LTV·CAC)
+// 화면 짜임(A-113): 채용처럼 왼쪽 회색 판(고른 시장 · 고객이 들고 나는 줄 · 광고 · 팀 지시) + 오른쪽 시장 카드. 공식 대신 쉬운 말
 import { useState } from 'react';
 import { DATA, industry, market, MARKET_IDS } from '../../core/data';
-import { demand, infraPerUser, launchBlock, launchMarket, revenuePerUser, setAdBudget, shares, totalUsers, deptCoverage } from '../../core/market';
+import { activeCampaigns } from '../../core/ads';
+import { Ads } from './AdsPanel';
+import { infraPerUser, launchBlock, launchMarket, revenuePerUser, setAdBudget, shares, totalUsers, deptCoverage } from '../../core/market';
 import { acquire, acquireBlock, acquisitionPrice, competitorUsers } from '../../core/competitors';
 import { appeal, fxTotals } from '../../core/product';
-import { enterpriseThreshold, orderOf, setOrder } from '../../core/orders';
+import { enterpriseThreshold, orderOf } from '../../core/orders';
 import { formatDate } from '../../core/calendar';
 import { wonShort } from '../../core/format';
+import { commandOrder } from '../../core/reactions';
 import { act, useGame } from '../store';
-import { Money, Tabs, Help } from '../common';
+import { Tabs, Help } from '../common';
 import { play } from '../sound';
-import type { DeptId, MarketId, MarketState } from '../../core/types';
+import type { DeptId, GameState, MarketId, MarketState } from '../../core/types';
 import './apps.css';
 
 const SHARE_COLORS = ['#e5484d', '#f0a020', '#8b63e8', '#11a3a6', '#7a8597', '#c46be0', '#b5651d', '#5c6bc0'];
 
+function n(v: number): string {
+  return Math.round(v).toLocaleString('ko-KR');
+}
+
 export function MarketApp() {
   const s = useGame();
-  const [tab, setTab] = useState<'markets' | 'comp' | 'ent' | 'econ'>('markets');
-  const [sel, setSel] = useState<MarketId>('kr');
+  const [tab, setTab] = useState<'markets' | 'ads' | 'comp' | 'ent' | 'econ'>('markets');
   const [msg, setMsg] = useState<string | null>(null);
   const ind = industry(s.company.industry);
-  const ms = s.markets[sel];
-  const sh = shares(s, sel);
-  const D = demand(s, sel);
+  const launched = MARKET_IDS.filter((m) => s.markets[m].launched);
+  const ads = launched.reduce((a, m) => a + s.markets[m].adBudget, 0);
+  const net = launched.reduce((a, m) => {
+    const f = s.markets[m].flow;
+    return f ? a + (f.inbound + f.viral + f.sales + f.paid - f.lost) * 30 : a;
+  }, 0);
   return (
-    <div className="col">
-      <div className="row tiny">
-        <span className="muted">{ind.name} · 전체 {ind.unit}</span>
-        <b>{Math.round(totalUsers(s)).toLocaleString('ko-KR')}</b>
-        <span className="grow" />
-        {(['marketing', 'sales', 'cs'] as DeptId[])
-          .filter((d) => s.employees.some((e) => e.dept === d))
-          .map((d) => (
-            <label key={d} className="row tiny" style={{ gap: 4 }}>
-              <span className="muted">{DATA.depts.departments.find((x) => x.id === d)!.name}팀</span>
-              <select value={orderOf(s, d)} onChange={(e) => act((g) => setOrder(g, d, e.target.value))}>
-                {DATA.orders.orders
-                  .filter((o) => o.dept === d)
-                  .map((o) => (
-                    <option key={o.id} value={o.id} disabled={s.company.stage < o.stage}>
-                      {o.name}
-                    </option>
-                  ))}
-              </select>
-            </label>
-          ))}
+    <div className="col mkt">
+      <div className="emp-top">
+        <div className="hf-sum">
+          <span>전체 {ind.unit}</span>
+          <b>{n(totalUsers(s))}</b>
+        </div>
+        <div className="hf-sum" title="최근 2주 평균을 한 달로 환산">
+          <span>한 달에 늘어나는 {ind.unit}</span>
+          <b className={net < 0 ? 'fin-bad' : net > 0 ? 'fin-good' : ''}>
+            {net > 0 ? '+' : ''}
+            {n(net)}
+          </b>
+        </div>
+        <div className="hf-sum">
+          <span>진출한 시장</span>
+          <b>{launched.length}곳</b>
+        </div>
+        <div className="hf-sum">
+          <span>한 달 광고비</span>
+          <b>{wonShort(ads)}</b>
+        </div>
       </div>
       <Tabs
         tabs={[
           { id: 'markets', label: '시장' },
+          { id: 'ads', label: `광고${activeCampaigns(s).length ? ` · 캠페인 ${activeCampaigns(s).length}` : ''}` },
           { id: 'comp', label: `경쟁사 ${s.competitors.filter((c) => c.alive).length}` },
           { id: 'ent', label: `대기업 계약 ${s.enterprise.filter((d) => d.endDay > s.day).length}` },
-          { id: 'econ', label: '수익 구조' },
+          { id: 'econ', label: '고객 한 명의 값' },
         ]}
         value={tab}
         onChange={setTab}
       />
       {msg && <div className="warn">{msg}</div>}
-      {tab === 'markets' && (
-        <>
-          <div className="mk-grid">
-            {MARKET_IDS.map((m) => {
-              const st = s.markets[m];
-              const md = market(m);
-              const block = launchBlock(s, m);
-              return (
-                <div key={m} className={`mk ${st.launched ? '' : 'off'} ${sel === m ? 'sel' : ''}`} onClick={() => setSel(m)} style={sel === m ? { borderColor: 'var(--blue)' } : undefined} data-testid={`market-${m}`}>
-                  <div className="row">
-                    <span className="mk-flag">{md.flag}</span>
-                    <b>{md.name}</b>
-                  </div>
-                  {st.launched ? (
-                    <>
-                      <div className="tiny">
-                        {ind.unit} <b>{Math.round(st.users).toLocaleString('ko-KR')}</b>
-                      </div>
-                      <div className="tiny">점유율 {(shares(s, m).player * 100).toFixed(1)}%</div>
-                      <div className="tiny">인지도 {(st.awareness * 100).toFixed(0)}%</div>
-                      <div className="tiny">광고 {wonShort(st.adBudget)}/월</div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="tiny muted">수요 {Math.round(demand(s, m)).toLocaleString('ko-KR')} · 객단가 ×{md.arpu}</div>
-                      <div className="tiny muted">진출 비용 {wonShort(md.entry)}</div>
-                      <button
-                        className="btn small"
-                        data-testid={`launch-${m}`}
-                        disabled={!!block}
-                        title={block ?? ''}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const err = act((g) => launchMarket(g, m));
-                          setMsg(err ?? null);
-                        }}
-                      >
-                        진출
-                      </button>
-                      {block && <div className="tiny muted">잠김: 현지화 기능 필요</div>}
-                    </>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-          <div className="card col">
-            <div className="row">
-              <b>
-                {market(sel).flag} {market(sel).name} 시장
-              </b>
-              <span className="tiny muted">
-                전체 수요 {Math.round(D).toLocaleString('ko-KR')} {ind.unit} (도입률 × 잠재 고객 × 경기)
-              </span>
-            </div>
-            <div className="share-bar" title="점유율">
-              <div style={{ width: `${sh.player * 100}%`, background: 'var(--blue)' }} />
-              {sh.comps.map((c, i) => (
-                <div key={c.id} style={{ width: `${c.share * 100}%`, background: SHARE_COLORS[i % SHARE_COLORS.length] }} title={`${c.name} ${(c.share * 100).toFixed(1)}%`} />
-              ))}
-            </div>
-            <div className="row tiny" style={{ flexWrap: 'wrap' }}>
-              <span>
-                <b style={{ color: 'var(--blue)' }}>■</b> 우리 {(sh.player * 100).toFixed(1)}%
-              </span>
-              {sh.comps.map((c, i) => (
-                <span key={c.id}>
-                  <b style={{ color: SHARE_COLORS[i % SHARE_COLORS.length] }}>■</b> {c.name} {(c.share * 100).toFixed(1)}%
-                </span>
-              ))}
-              <span className="muted">나머지: 현지 기업·대체재·아직 고르지 않은 고객</span>
-            </div>
-            {ms.launched && ms.flow && <GrowthPanel flow={ms.flow} users={ms.users} unit={ind.unit} />}
-            {ms.launched && (
-              <>
-                <div className="row">
-                  <span className="tiny" style={{ width: 120 }}>
-                    월 광고 예산
-                  </span>
-                  <input
-                    type="range"
-                    className="grow"
-                    data-testid={`ad-${sel}`}
-                    min={0}
-                    max={Math.max(2e7, Math.min(2e10, Math.ceil((s.cash / 6) / 1e6) * 1e6))}
-                    step={Math.max(1e5, Math.round(Math.max(2e7, s.cash / 6) / 200 / 1e5) * 1e5)}
-                    value={ms.adBudget}
-                    onChange={(e) => act((g) => setAdBudget(g, sel, Number(e.target.value)))}
-                  />
-                  <b style={{ width: 110, textAlign: 'right' }}>
-                    <Money v={ms.adBudget} />
-                  </b>
-                </div>
-                <Help text="광고는 인지도(브랜드)를 올리고 고객을 직접 데려옵니다(CAC). 점유율이 높아질수록 고객 한 명 데려오는 비용이 비싸집니다. 마케팅팀이 &quot;퍼포먼스 광고 운영&quot;을 하면 효율이 오릅니다. 매일 예산의 1/30씩 나갑니다." />
-              </>
-            )}
-          </div>
-        </>
-      )}
-      {tab === 'comp' && (
-        <>
-          <div className="tiny muted">
-            우리 매력도 {appeal(s).toFixed(1)}. 경쟁사는 매달 기능을 내고 투자를 받으며 우리를 따라옵니다. 단계 4부터 경쟁사를 인수해 고객의 60%와 기술을 흡수할 수 있습니다.
-          </div>
-          <table className="t">
-            <thead>
-              <tr>
-                <th>회사</th>
-                <th className="r">매력도</th>
-                <th className="r">인지도</th>
-                <th>시장</th>
-                <th className="r">추정 고객</th>
-                <th>성향</th>
-                <th className="r">인수가</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {s.competitors
-                .filter((c) => c.alive || c.acquiredDay !== null)
-                .map((c) => {
-                  const block = acquireBlock(s, c);
-                  return (
-                    <tr key={c.id} style={{ opacity: c.alive ? 1 : 0.5 }}>
-                      <td>
-                        <b>{c.name}</b> {c.boostUntil && c.boostUntil > s.day && <span className="chip red">가격 인하</span>}
-                        {!c.alive && <span className="chip">{c.acquiredDay ? '인수됨' : '폐업'}</span>}
-                      </td>
-                      <td className="r">{c.appeal.toFixed(1)}</td>
-                      <td className="r">{(c.awareness * 100).toFixed(0)}%</td>
-                      <td>{c.markets.map((m) => market(m).flag).join(' ')}</td>
-                      <td className="r">{c.alive ? Math.round(competitorUsers(s, c)).toLocaleString('ko-KR') : '-'}</td>
-                      <td>{c.aggression > 0.66 ? '공격적' : c.aggression > 0.33 ? '보통' : '신중'}</td>
-                      <td className="r">{c.alive ? wonShort(acquisitionPrice(s, c)) : '-'}</td>
-                      <td>
-                        {c.alive && (
-                          <button
-                            className="btn small"
-                            data-testid={`acquire-${c.id}`}
-                            disabled={!!block}
-                            title={block ?? ''}
-                            onClick={() => {
-                              const err = act((g) => acquire(g, c.id));
-                              setMsg(err ?? null);
-                              if (!err) play('success');
-                            }}
-                          >
-                            인수
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-            </tbody>
-          </table>
-        </>
-      )}
-      {tab === 'ent' && (
-        <>
-          <div className="card col">
-            <div className="row">
-              <b>대기업 파이프라인</b>
-              <div className="bar">
-                <div style={{ width: `${Math.min(100, (s.entPipeline / enterpriseThreshold(s)) * 100)}%` }} />
-              </div>
-              <span className="tiny">
-                {s.entPipeline.toFixed(1)} / {enterpriseThreshold(s).toFixed(1)}
-              </span>
-            </div>
-            <div className="tiny muted">
-              {fxTotals(s).enterprise
-                ? '파이프라인이 다 차면 대기업 계약이 하나 성사됩니다. 대표의 "대기업 영업"(경영 모드)과 세일즈팀 "대기업 영업" 지시가 채웁니다.'
-                : '대기업용 기능(SSO·보안 등)이 없어서 계약이 성사되지 않습니다. 제품 메뉴에서 대기업 기능을 만드세요.'}
-              {industry(s.company.industry).entBase <= 0 ? ' 이 산업은 대기업 계약이 거의 없습니다.' : ''}
-            </div>
-          </div>
-          <table className="t">
-            <thead>
-              <tr>
-                <th>고객사</th>
-                <th>시장</th>
-                <th className="r">월 계약액</th>
-                <th>기간</th>
-              </tr>
-            </thead>
-            <tbody>
-              {s.enterprise.map((d) => (
-                <tr key={d.id} style={{ opacity: d.endDay > s.day ? 1 : 0.5 }}>
-                  <td>{d.name}</td>
-                  <td>{market(d.market).flag}</td>
-                  <td className="r">
-                    <Money v={d.monthly} />
-                  </td>
-                  <td>
-                    {formatDate(d.startDay)} ~ {formatDate(d.endDay)}
-                    {d.endDay <= s.day ? ' (종료)' : ''}
-                  </td>
-                </tr>
-              ))}
-              {s.enterprise.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="muted">
-                    아직 대기업 계약이 없습니다.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </>
-      )}
+      {tab === 'markets' && <Markets setMsg={setMsg} goAds={() => setTab('ads')} />}
+      {tab === 'ads' && <Ads setMsg={setMsg} />}
+      {tab === 'comp' && <Competitors setMsg={setMsg} />}
+      {tab === 'ent' && <Enterprise />}
       {tab === 'econ' && <Econ />}
     </div>
   );
-
-  function Econ() {
-    const rows = MARKET_IDS.filter((m) => s.markets[m].launched);
-    const infra = infraPerUser(s);
-    return (
-      <div className="col">
-        <div className="tiny muted">
-          {ind.name}: {ind.desc}
-        </div>
-        <table className="t">
-          <thead>
-            <tr>
-              <th>시장</th>
-              <th className="r">유료 비율</th>
-              <th className="r">구독 매출/명</th>
-              <th className="r">광고/명</th>
-              <th className="r">수수료/명</th>
-              <th className="r">합계/명·월</th>
-              <th className="r">인프라/명</th>
-              <th className="r">고객 생애 가치(LTV)</th>
-              <th className="r">광고 CAC(기준)</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((m) => {
-              const r = revenuePerUser(s, m);
-              const churn = ind.churnM;
-              return (
-                <tr key={m}>
-                  <td>
-                    {market(m).flag} {market(m).name}
-                  </td>
-                  <td className="r">{(r.payShare * 100).toFixed(1)}%</td>
-                  <td className="r">{Math.round(r.sub).toLocaleString('ko-KR')}원</td>
-                  <td className="r">{Math.round(r.ad).toLocaleString('ko-KR')}원</td>
-                  <td className="r">{Math.round(r.take).toLocaleString('ko-KR')}원</td>
-                  <td className="r">
-                    <b>{Math.round(r.total).toLocaleString('ko-KR')}원</b>
-                  </td>
-                  <td className="r">{Math.round(infra).toLocaleString('ko-KR')}원</td>
-                  <td className="r">{wonShort((r.total - infra) / churn)}</td>
-                  <td className="r">{wonShort(ind.cac * market(m).arpu * (1 + 3 * shares(s, m).player))}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-        <div className="tiny muted">
-          LTV는 (객단가 − 인프라비) ÷ 기본 이탈률로 어림한 값입니다. LTV가 CAC보다 넉넉히 크면 광고를 늘릴수록 남는 장사입니다. 고객지원팀 충족도 {Math.round(deptCoverage(s, 'cs') * 100)}%, 인프라팀 충족도 {Math.round(deptCoverage(s, 'infra') * 100)}% (사용자가 늘면 사람이 더 필요합니다).
-        </div>
-      </div>
-    );
-  }
 }
 
-// 성장 분석: 왜 고객이 늘거나 안 느는지(점유율 상한 vs 획득 속도 vs 이탈)
+function Markets({ setMsg, goAds }: { setMsg: (m: string | null) => void; goAds: () => void }) {
+  const s = useGame();
+  const [sel, setSel] = useState<MarketId>('kr');
+  const ind = industry(s.company.industry);
+  const ms = s.markets[sel];
+  const md = market(sel);
+  const sh = shares(s, sel);
+  return (
+    <div className="hire-layout">
+      <section className="hire-form">
+        <div className="hf-title inv-title">
+          <span className="mk-flag">{md.flag}</span>
+          {md.name} 시장
+          {!ms.launched && <span className="chip">아직 진출 전</span>}
+        </div>
+        <div className="hf-label">누가 고객을 갖고 있나</div>
+        <div className="inv-capbar" title="점유율">
+          <div style={{ flex: Math.max(0.001, sh.player), background: 'var(--accent)' }} />
+          {sh.comps.map((c, i) => (
+            <div key={c.id} style={{ flex: c.share, background: SHARE_COLORS[i % SHARE_COLORS.length] }} title={`${c.name} ${(c.share * 100).toFixed(1)}%`} />
+          ))}
+          <div style={{ flex: Math.max(0, 1 - sh.player - sh.comps.reduce((a, c) => a + c.share, 0)), background: 'var(--surface-tile)' }} title="아직 아무것도 안 쓰는 고객" />
+        </div>
+        <div className="mkt-legend">
+          <span>
+            <i style={{ background: 'var(--accent)' }} />
+            <b>우리 {(sh.player * 100).toFixed(1)}%</b>
+          </span>
+          {sh.comps.map((c, i) => (
+            <span key={c.id}>
+              <i style={{ background: SHARE_COLORS[i % SHARE_COLORS.length] }} />
+              {c.name} {(c.share * 100).toFixed(1)}%
+            </span>
+          ))}
+          <span className="muted">
+            <i style={{ background: 'var(--surface-tile)' }} />
+            아직 안 쓰는 {ind.unit}
+          </span>
+        </div>
+
+        {ms.launched && ms.flow && <GrowthPanel flow={ms.flow} users={ms.users} unit={ind.unit} />}
+
+        {ms.launched && (
+          <div className="hf-field">
+            <div className="hf-label inv-room-label">
+              <span>한 달 광고 예산</span>
+              <b>{wonShort(ms.adBudget)}</b>
+              <Help text="광고는 우리를 아는 사람을 늘리고, 고객을 직접 데려옵니다. 고객이 많아질수록 한 명 데려오는 값이 비싸집니다. 마케팅팀이 '퍼포먼스 광고 운영'을 하면 효율이 오릅니다. 매일 예산의 1/30씩 나갑니다." />
+            </div>
+            <input
+              type="range"
+              className="inv-range"
+              data-testid={`ad-${sel}`}
+              min={0}
+              max={Math.max(2e7, Math.min(2e10, Math.ceil(s.cash / 6 / 1e6) * 1e6))}
+              step={Math.max(1e5, Math.round(Math.max(2e7, s.cash / 6) / 200 / 1e5) * 1e5)}
+              value={ms.adBudget}
+              onChange={(e) => act((g) => setAdBudget(g, sel, Number(e.target.value)))}
+            />
+            <div className="ew-note">
+              우리를 아는 사람 {(ms.awareness * 100).toFixed(1)}% · 지금 비율대로 채널에 나눠 씁니다.{' '}
+              <button className="pc-link" onClick={goAds}>
+                채널별로 나누기 ›
+              </button>
+            </div>
+          </div>
+        )}
+        <TeamOrders />
+      </section>
+
+      <section className="post-list">
+        <div className="hf-title">시장</div>
+        {MARKET_IDS.map((m) => {
+          const st = s.markets[m];
+          const mdef = market(m);
+          const block = launchBlock(s, m);
+          return (
+            <div
+              key={m}
+              className={`post-card mkt-card ${sel === m ? 'on' : ''} ${st.launched ? '' : 'closed'}`}
+              style={{ ['--dc' as string]: st.launched ? 'var(--positive)' : 'var(--c-gray-400)' }}
+              onClick={() => setSel(m)}
+              data-testid={`market-${m}`}
+            >
+              <div className="pc-head">
+                <span className="mk-flag">{mdef.flag}</span>
+                <b>{mdef.name}</b>
+                <span className="pc-hired">{st.launched ? `${ind.unit} ${n(st.users)}` : wonShort(mdef.entry)}</span>
+              </div>
+              {st.launched ? (
+                <div className="pc-stats">
+                  <span>
+                    점유율 <b>{(shares(s, m).player * 100).toFixed(1)}%</b>
+                  </span>
+                  <span>
+                    광고 <b>{st.adBudget ? `월 ${wonShort(st.adBudget)}` : '없음'}</b>
+                  </span>
+                </div>
+              ) : block ? (
+                <div className="pc-foot">
+                  <span>{block}</span>
+                </div>
+              ) : (
+                <button
+                  className="btn small"
+                  data-testid={`launch-${m}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const err = act((g) => launchMarket(g, m));
+                    setMsg(err ?? null);
+                  }}
+                >
+                  {wonShort(mdef.entry)} 들여 진출하기
+                </button>
+              )}
+            </div>
+          );
+        })}
+      </section>
+    </div>
+  );
+}
+
+// 시장에 영향을 주는 팀 지시(마케팅·세일즈·고객지원): 그 팀에 사람이 있을 때만
+function TeamOrders() {
+  const s = useGame();
+  const teams = (['marketing', 'sales', 'cs'] as DeptId[]).filter((d) => s.employees.some((e) => e.dept === d));
+  if (!teams.length) return null;
+  return (
+    <>
+      <div className="hf-label">팀이 맡은 일</div>
+      {teams.map((d) => (
+        <div key={d} className="fb-row">
+          <span>{DATA.depts.departments.find((x) => x.id === d)!.name}팀</span>
+          <select value={orderOf(s, d)} onChange={(e) => act((g) => commandOrder(g, d, e.target.value))}>
+            {DATA.orders.orders
+              .filter((o) => o.dept === d)
+              .map((o) => (
+                <option key={o.id} value={o.id} disabled={s.company.stage < o.stage}>
+                  {o.name}
+                </option>
+              ))}
+          </select>
+        </div>
+      ))}
+    </>
+  );
+}
+
+// 고객이 들고 나는 줄(최근 2주 평균, 한 달 환산): 재무 판처럼 들어옴/나감 + 왜 그런지 한 줄
 function GrowthPanel({ flow, users, unit }: { flow: NonNullable<MarketState['flow']>; users: number; unit: string }) {
   const gain = flow.inbound + flow.viral + flow.sales + flow.paid;
   const net = gain - flow.lost;
   const capped = users >= flow.target * 0.9;
-  const m = (v: number) => (v * 30 >= 100 ? Math.round(v * 30).toLocaleString('ko-KR') : (v * 30).toFixed(1));
+  const m = (v: number) => (v * 30 >= 100 ? n(v * 30) : (v * 30).toFixed(1));
   const why = capped
-    ? `점유율 상한에 거의 닿았습니다(지금 ${Math.round(users).toLocaleString('ko-KR')} / 상한 ${Math.round(flow.target).toLocaleString('ko-KR')}${unit}). 더 크려면 인지도(광고·콘텐츠 마케팅·영업)나 매력도(제품 기능·품질)를 올려 점유율을 키워야 합니다.`
+    ? '지금 매력과 알려진 정도로 올 수 있는 고객은 거의 다 왔습니다. 더 크려면 광고·마케팅·영업으로 더 알리거나, 기능·품질로 제품을 더 좋게 만드세요.'
     : net <= 0
-      ? '들어오는 고객보다 떠나는 고객이 많습니다. 버그(품질)·가격·고객지원 부족·경기가 이탈을 키웁니다.'
-      : `상한까지 여유가 있습니다(상한 ${Math.round(flow.target).toLocaleString('ko-KR')}${unit}). 영업·광고·입소문으로 획득 속도를 올리면 더 빨리 큽니다.`;
+      ? '들어오는 고객보다 떠나는 고객이 많습니다. 버그·가격·고객지원 부족·경기가 떠나는 고객을 늘립니다.'
+      : '아직 더 올 고객이 있습니다. 영업·광고·입소문으로 더 빨리 데려올 수 있습니다.';
   return (
-    <div className="growth" data-testid="growth-panel">
-      <div className="row tiny">
-        <b>성장 분석(최근 2주 평균, 한 달 환산)</b>
-        <span className="grow" />
-        <span className={net >= 0 ? 'good' : 'bad'}>순증 {net >= 0 ? '+' : ''}{m(net)}{unit}/월</span>
+    <div className="mkt-flow" data-testid="growth-panel">
+      <div className="hf-label">한 달에 들고 나는 {unit}(최근 2주 기준)</div>
+      <div className="fb-line">
+        <span>스스로 찾아옴</span>
+        <b>+{m(flow.inbound)}</b>
       </div>
-      <div className="row tiny" style={{ flexWrap: 'wrap', gap: 10 }}>
-        <span>스스로 찾아옴 +{m(flow.inbound)}</span>
-        <span>입소문 +{m(flow.viral)}</span>
-        <span>영업 +{m(flow.sales)}</span>
-        <span>광고 +{m(flow.paid)}</span>
-        <span className="bad">이탈 −{m(flow.lost)}</span>
+      <div className="fb-line">
+        <span>입소문</span>
+        <b>+{m(flow.viral)}</b>
       </div>
-      <div className="tiny muted">{why}</div>
+      <div className="fb-line">
+        <span>영업</span>
+        <b>+{m(flow.sales)}</b>
+      </div>
+      <div className="fb-line">
+        <span>광고</span>
+        <b>+{m(flow.paid)}</b>
+      </div>
+      <div className="fb-line">
+        <span>떠남</span>
+        <b className="fin-bad">−{m(flow.lost)}</b>
+      </div>
+      <div className="fb-line fb-total">
+        <span>합계</span>
+        <b className={net >= 0 ? 'fin-good' : 'fin-bad'}>
+          {net >= 0 ? '+' : ''}
+          {m(net)}
+        </b>
+      </div>
+      <div className="ew-note">{why}</div>
     </div>
   );
 }
 
+// 경쟁사: 공고 카드처럼. 매력도 숫자 대신 "우리보다 강함/비슷/약함"
+function strength(ours: number, theirs: number): { text: string; tone: string } {
+  const r = theirs / Math.max(1, ours);
+  return r > 1.15 ? { text: '우리보다 강함', tone: 'red' } : r < 0.85 ? { text: '우리보다 약함', tone: 'green' } : { text: '비슷함', tone: '' };
+}
+
+function Competitors({ setMsg }: { setMsg: (m: string | null) => void }) {
+  const s = useGame();
+  const ours = appeal(s);
+  const list = s.competitors.filter((c) => c.alive || c.acquiredDay !== null);
+  return (
+    <div className="col">
+      <div className="ew-note">경쟁사는 매달 기능을 내고 투자를 받으며 따라옵니다. 회사 단계 4부터 경쟁사를 사들여 고객의 60%와 기술을 가져올 수 있습니다.</div>
+      {list.length === 0 && <div className="empty-note">아직 경쟁사가 없습니다.</div>}
+      <div className="emp-depts">
+        {list.map((c, i) => {
+          const block = acquireBlock(s, c);
+          const st = strength(ours, c.appeal);
+          return (
+            <div key={c.id} className={`post-card ${c.alive ? '' : 'closed'}`} style={{ ['--dc' as string]: SHARE_COLORS[i % SHARE_COLORS.length] }}>
+              <div className="pc-head">
+                <span className="pc-dot" />
+                <b>{c.name}</b>
+                {c.alive ? <span className={`chip ${st.tone}`}>{st.text}</span> : <span className="chip">{c.acquiredDay ? '인수함' : '문 닫음'}</span>}
+                {c.alive && c.boostUntil && c.boostUntil > s.day && <span className="chip red">가격 내리는 중</span>}
+              </div>
+              {c.alive && (
+                <>
+                  <div className="pc-stats">
+                    <span>
+                      고객 약 <b>{n(competitorUsers(s, c))}</b>
+                    </span>
+                    <span>
+                      성향 <b>{c.aggression > 0.66 ? '공격적' : c.aggression > 0.33 ? '보통' : '신중'}</b>
+                    </span>
+                    <span>{c.markets.map((m) => market(m).flag).join(' ')}</span>
+                  </div>
+                  <div className="row">
+                    <span className="pc-foot grow">
+                      <span>사들이려면 {wonShort(acquisitionPrice(s, c))}</span>
+                    </span>
+                    <button
+                      className="btn small"
+                      data-testid={`acquire-${c.id}`}
+                      disabled={!!block}
+                      title={block ?? ''}
+                      onClick={() => {
+                        const err = act((g) => acquire(g, c.id));
+                        setMsg(err ?? null);
+                        if (!err) play('success');
+                      }}
+                    >
+                      인수
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function Enterprise() {
+  const s = useGame();
+  const need = enterpriseThreshold(s);
+  const ready = fxTotals(s).enterprise;
+  const live = s.enterprise.filter((d) => d.endDay > s.day);
+  return (
+    <div className="hire-layout">
+      <section className="hire-form">
+        <div className="hf-title">다음 대기업 계약까지</div>
+        <div className="emp-bar inv-interest">
+          <span />
+          <div className="meter">
+            <div style={{ width: `${Math.min(100, (s.entPipeline / need) * 100)}%` }} />
+          </div>
+          <b>{Math.min(100, Math.round((s.entPipeline / need) * 100))}%</b>
+        </div>
+        {!ready ? (
+          <div className="warn">대기업용 기능(SSO·보안 등)이 없어서 계약이 성사되지 않습니다. 제품 메뉴에서 대기업 기능을 만드세요.</div>
+        ) : (
+          <div className="ew-note">막대가 다 차면 대기업 계약이 하나 성사됩니다. 대표의 "대기업 영업"(경영 모드)과 세일즈팀 "대기업 영업" 지시가 채웁니다.</div>
+        )}
+        {industry(s.company.industry).entBase <= 0 && <div className="ew-note">이 산업은 대기업 계약이 거의 없습니다.</div>}
+        {live.length > 0 && (
+          <div className="fb-row big">
+            <span>대기업에서 받는 돈</span>
+            <b className="fin-good">월 {wonShort(live.reduce((a, d) => a + d.monthly, 0))}</b>
+          </div>
+        )}
+      </section>
+      <section className="post-list">
+        <div className="hf-title">계약</div>
+        {s.enterprise.length === 0 && <div className="empty-note">아직 대기업 계약이 없습니다.</div>}
+        {s.enterprise
+          .slice()
+          .reverse()
+          .map((d) => (
+            <div key={d.id} className={`post-card ${d.endDay > s.day ? '' : 'closed'}`} style={{ ['--dc' as string]: 'var(--positive)' }}>
+              <div className="pc-head">
+                <span className="pc-dot" />
+                <b>{d.name}</b>
+                <span className="mk-flag">{market(d.market).flag}</span>
+                <span className="pc-hired">월 {wonShort(d.monthly)}</span>
+              </div>
+              <div className="pc-foot">
+                <span>
+                  {formatDate(d.startDay)} ~ {formatDate(d.endDay)}
+                </span>
+                <span>{d.endDay <= s.day ? '끝남' : `${d.endDay - s.day}일 남음`}</span>
+              </div>
+            </div>
+          ))}
+      </section>
+    </div>
+  );
+}
+
+// 고객 한 명의 값: 표 대신 시장마다 카드. "한 명이 한 달에 내는 돈 → 오래 쓰면 남는 돈 vs 광고로 데려오는 값"
+function Econ() {
+  const s = useGame();
+  const ind = industry(s.company.industry);
+  const rows = MARKET_IDS.filter((m) => s.markets[m].launched);
+  const infra = infraPerUser(s);
+  if (!rows.length) return <div className="empty-note">출시하면 고객 한 명이 얼마를 벌어 주는지 볼 수 있습니다.</div>;
+  return (
+    <div className="col">
+      <div className="ew-note">
+        {ind.name}: {ind.desc}
+      </div>
+      <div className="emp-depts">
+        {rows.map((m) => (
+          <EconCard key={m} s={s} m={m} infra={infra} />
+        ))}
+      </div>
+      <div className="ew-note">
+        고객지원팀은 필요한 만큼의 {Math.round(deptCoverage(s, 'cs') * 100)}%, 인프라팀은 {Math.round(deptCoverage(s, 'infra') * 100)}%를 채우고 있습니다. 고객이 늘면 사람이 더 필요합니다.
+      </div>
+    </div>
+  );
+}
+
+function EconCard({ s, m, infra }: { s: GameState; m: MarketId; infra: number }) {
+  const ind = industry(s.company.industry);
+  const r = revenuePerUser(s, m);
+  const ltv = (r.total - infra) / ind.churnM;
+  const cac = ind.cac * market(m).arpu * (1 + 3 * shares(s, m).player);
+  const good = ltv > cac * 1.5;
+  return (
+    <div className="post-card" style={{ ['--dc' as string]: good ? 'var(--positive)' : 'var(--caution)' }}>
+      <div className="pc-head">
+        <span className="mk-flag">{market(m).flag}</span>
+        <b>{market(m).name}</b>
+        <span className={`chip ${good ? 'green' : 'amber'}`}>{good ? '광고할수록 남음' : '광고는 아껴서'}</span>
+      </div>
+      <div className="fb-line">
+        <span>한 명이 한 달에 내는 돈</span>
+        <b>{wonShort(r.total)}</b>
+      </div>
+      <div className="fb-line">
+        <span>한 명당 서버비</span>
+        <b>{wonShort(infra)}</b>
+      </div>
+      <div className="fb-line" title="(한 달에 내는 돈 − 서버비) ÷ 한 달에 떠나는 비율">
+        <span>쓰는 동안 남겨 주는 돈</span>
+        <b>{wonShort(ltv)}</b>
+      </div>
+      <div className="fb-line">
+        <span>광고로 한 명 데려오는 값</span>
+        <b>{wonShort(cac)}</b>
+      </div>
+    </div>
+  );
+}

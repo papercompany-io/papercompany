@@ -97,6 +97,8 @@ Event:
 | `healthMax` | 직원 평균 건강 상한(0~100) |
 | `bugsMin` | 품질 점수 상한 대신 버그 하한(버그 0~100, 30 이상이면 품질이 나쁨) |
 | `marketsMin` | 진출한 시장 수 하한 |
+| `mvp` | MVP(핵심 기능)를 만들었는지(true/false, A-119) |
+| `roundOpen` | 투자 라운드가 열려 있는지(true/false, A-121) |
 | `funded` | `true`면 투자를 한 번 이상 받음, `false`면 무투자 |
 | `investorPctMin` | 투자자 지분 합 하한(0~1) |
 | `public` | `true`면 상장사, `false`면 비상장 |

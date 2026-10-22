@@ -7,15 +7,16 @@ import { yearOf } from './calendar';
 import { avgAdoption } from './aiadopt';
 import { book, lastRevenue, runwayMonths } from './finance';
 import { investorPct, recordEquity, totalShares } from './equity';
+import { openRound } from './funding';
 import { computeValuation } from './valuation';
 import { nextId } from './ids';
 import { addMod, clearFlag, hasFlag, setFlag } from './mods';
 import { ensureNamedExternal, post } from './messenger';
 import { news, notify } from './notify';
-import { applyWork } from './product';
+import { applyWork, hasMvp } from './product';
 import { launchedMarkets, totalUsers } from './market';
 import { pick, rand, weighted } from './rng';
-import { avgHealth, avgSat, hasTrait, removeEmployee, startSkill } from './staff';
+import { avgHealth, avgSat, hasTrait, removeEmployee, rollTalent, startSkill } from './staff';
 import { takeDesk } from './office';
 import { onEmployeeJoined } from './messenger';
 import { DATA } from './data';
@@ -130,6 +131,12 @@ export function condOk(s: GameState, c: Cond | undefined): boolean {
         break;
       case 'marketsMin':
         if (launchedMarkets(s).length < (v as number)) return false;
+        break;
+      case 'mvp': // A-119: 만든 게 있어야 오는 일(베타 피드백 등)
+        if (hasMvp(s) !== v) return false;
+        break;
+      case 'roundOpen': // A-121: 투자 라운드가 열려 있을 때만(계약서·텀싯)
+        if (!!openRound(s) !== v) return false;
         break;
       case 'funded':
         if ((s.fundingStage !== null || s.safes.length > 0) !== v) return false;
@@ -446,6 +453,7 @@ function hireSpecial(s: GameState, h: { name: string; dept: DeptId; grade: Grade
     kind: 'staff',
     traits: h.trait ? [h.trait] : [],
     skill: startSkill(s, h.grade, 8),
+    talent: rollTalent(s),
     sat: 75,
     health: 80,
     lead: false,
