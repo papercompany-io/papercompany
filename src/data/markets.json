@@ -57,7 +57,22 @@
       "local": 6.0
     }
   ],
-  "discoveryAwareness": 0.03, "discoveryUsers": 20000, "userAwareness": 3, "awarenessDecayPerDay": 0.002,
+  "discoveryAwareness": 0.03,
+  "discoveryUsers": 20000,
+  "userAwareness": 3,
+  "awarenessDecayPerDay": 0.002,
   "shareExponent": 1.6,
-  "foreign": 0.2
+  "foreign": 0.2,
+  "adScale": {
+    "_note": "A-138 광고 단가가 사용자 규모로 바뀜 [예시값]. 광고 매출 배율 = 1 + perDecade × log10(그 시장 사용자 ÷ ref), min~max. 작은 앱은 광고주가 적어 단가가 낮고, 사용자가 많을수록 광고주가 붙어 단가가 오름. milestones = 이 사용자 수를 처음 넘을 때 뉴스·알림으로 '광고주가 늘어 단가가 오른다'를 알림(광고 매출이 있는 산업만, 숫자 배율은 보여 주지 않음)",
+    "ref": 10000,
+    "perDecade": 1.0,
+    "min": 0.7,
+    "max": 3.2,
+    "milestones": [
+      10000,
+      100000,
+      1000000
+    ]
+  }
 }

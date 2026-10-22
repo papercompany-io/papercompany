@@ -29,6 +29,15 @@ import { formatDate, yearFrac } from '../../src/core/calendar';
 import { Meter, summarize, type CompanyMetrics } from './metrics';
 import type { DeptId, GameState, IndustryId, MarketId, StageId } from '../../src/core/types';
 
+// 실험용(계측 도구): OVR='{"industries.consumer.adBase":600}'처럼 데이터 값을 이 실행에서만 바꿉니다. 배열은 id로 찾습니다
+if (process.env.OVR) {
+  for (const [path, v] of Object.entries(JSON.parse(process.env.OVR) as Record<string, unknown>)) {
+    const keys = path.split('.');
+    let o: unknown = DATA;
+    for (const k of keys.slice(0, -1)) o = Array.isArray(o) ? o.find((x: { id?: string }) => x.id === k) : (o as Record<string, unknown>)[k];
+    (o as Record<string, unknown>)[keys[keys.length - 1]] = v;
+  }
+}
 const runs = Number(process.argv[2] ?? 3);
 const seed0 = Number(process.argv[3] ?? 1);
 const verbose = process.argv.includes('-v');

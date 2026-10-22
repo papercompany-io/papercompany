@@ -57,6 +57,26 @@ export function launchedMarkets(s: GameState): MarketId[] {
   return MARKET_IDS.filter((m) => s.markets[m].launched);
 }
 
+// 광고 단가 배율(A-138): 사용자가 적으면 광고주가 적어 싸고, 많아질수록 비싸집니다. 소비자 앱이 "커야 사는" 이유
+export function adScale(users: number): number {
+  const A = M.adScale;
+  return Math.max(A.min, Math.min(A.max, 1 + A.perDecade * Math.log10(Math.max(1, users) / A.ref)));
+}
+
+// 광고주가 붙는 문턱(A-138)을 처음 넘으면 알립니다. 배율 숫자는 숨기고 "단가가 오른다"는 말로만
+function adMilestone(s: GameState, m: MarketId, ind: IndustryDef) {
+  if (ind.adBase <= 0) return;
+  const users = s.markets[m].users;
+  for (const n of M.adScale.milestones) {
+    const key = `adtier-${m}-${n}`;
+    if (users < n || s.flags.includes(key)) continue;
+    s.flags.push(key);
+    const who = `${market(m).name} 사용자 ${n >= 1e6 ? `${n / 1e6}00만` : `${n / 1e4}만`} 명`;
+    news(s, `[광고] ${s.company.name}, ${who} 돌파 — 광고주 문의 늘어`, 'company');
+    notify(s, `${who}을 넘었습니다. 광고주가 늘어 앞으로 광고 단가가 오릅니다(사용자가 많을수록 사용자 한 명당 광고 매출이 커집니다).`, 'good', 'market');
+  }
+}
+
 // 사용자 1명(곳)당 월 매출(시장별) — 구독·광고·거래 수수료 나눠서
 export function revenuePerUser(s: GameState, m: MarketId, fx: FxTotals = fxTotals(s)) {
   const ind = industry(s.company.industry);
@@ -66,7 +86,7 @@ export function revenuePerUser(s: GameState, m: MarketId, fx: FxTotals = fxTotal
   // 결제 기능 전(A-111)에는 무료로만 쓰므로 구독·거래 수수료가 없습니다. 광고는 결제와 상관없음
   const charge = canCharge(s, fx) ? 1 : 0;
   const sub = ind.price * pt.price * (1 + fx.arpu) * payShare * arpuM * charge;
-  const ad = (ind.adBase + fx.ad) * arpuM;
+  const ad = (ind.adBase + fx.ad) * arpuM * adScale(s.markets[m].users);
   const take = ind.gmv * (1 + fx.gmv) * (ind.takeBase + fx.take) * Math.sqrt(pt.price) * arpuM * charge;
   return { sub, ad, take, total: sub + ad + take, payShare };
 }
@@ -159,6 +179,7 @@ export function marketDay(s: GameState, push: DayPush) {
       const k = raw > 0 ? got / raw : 0;
       Object.assign(day, { inbound: inbound * acqM * k, viral: viral * acqM * k, sales: sales * acqM * k, paid: paid * acqM * k });
       ms.users += got;
+      adMilestone(s, m, ind);
       gotAd = paidAd * acqM * k;
       gotCp = paidCp * acqM * k;
     }
