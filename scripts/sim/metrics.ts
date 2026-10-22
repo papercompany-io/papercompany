@@ -17,6 +17,7 @@ export interface CompanyMetrics {
   crises: number; // 위기 시작 횟수(런웨이 3개월 미만 진입, S·A급 퇴사, 경쟁 사건)
   crisisGapMed: number | null; // 위기 사이 간격 중앙값(일)
   crisisGapMax: number | null;
+  gaps: number[]; // 위기 사이 간격들(A-141 몰림 측정)
   runwayCrises: number;
   keyQuits: number;
   compEvents: number;
@@ -143,6 +144,7 @@ export class Meter {
       crises: cd.length,
       crisisGapMed: gaps.length ? gaps[Math.floor(gaps.length / 2)] : null,
       crisisGapMax: gaps.length ? gaps[gaps.length - 1] : null,
+      gaps,
       runwayCrises: this.runwayCrises,
       keyQuits: this.keyQuits,
       compEvents: this.compEvents,
@@ -187,6 +189,9 @@ export function summarize(all: { m: CompanyMetrics; kind: string; maxVal: number
   const sd = Math.sqrt(lv.reduce((a, b) => a + (b - mean) ** 2, 0) / lv.length);
   out.push(`  최고 기업가치(억): ${fmt(vals)} | log10 표준편차 ${sd.toFixed(2)}`);
   out.push(`  위기: 회사당 ${fmt(ms.map((m) => m.crises))}회 (런웨이 ${ms.reduce((a, m) => a + m.runwayCrises, 0)} · 핵심 퇴사 ${ms.reduce((a, m) => a + m.keyQuits, 0)} · 경쟁 ${ms.reduce((a, m) => a + m.compEvents, 0)}) | 간격 중앙 ${med(ms.map((m) => m.crisisGapMed ?? NaN).filter((x) => !isNaN(x)))}일 · 최대 간격 중앙 ${med(ms.map((m) => m.crisisGapMax ?? NaN).filter((x) => !isNaN(x)))}일`);
+  const allGaps = ms.flatMap((m) => m.gaps);
+  const bunched = allGaps.filter((g) => g < 7).length;
+  out.push(`  위기 리듬: 간격 7일 미만(몰림) ${allGaps.length ? Math.round((bunched / allGaps.length) * 100) : 0}% · 간격 60일 넘음 ${allGaps.length ? Math.round((allGaps.filter((g) => g > 60).length / allGaps.length) * 100) : 0}% · 회사당 가장 긴 조용한 구간 중앙 ${med(ms.map((m) => m.crisisGapMax ?? NaN).filter((x) => !isNaN(x)))}일`);
   const crisis = all.filter((x) => x.m.runwayCrises > 0);
   const surv = crisis.filter((x) => x.kind !== 'bankrupt').length;
   const lk: Record<string, number> = {};

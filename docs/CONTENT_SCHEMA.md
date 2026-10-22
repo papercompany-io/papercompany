@@ -234,3 +234,15 @@ Choice:
 경쟁사 `style`: `price`(가격으로 맞서는 곳) · `feature`(기능을 빨리 따라오는 곳) · `marketing`(광고를 크게 쓰는 곳). 화면에는 쓰지 않고 예고 뉴스 말투로만 드러납니다.
 
 사건 문구의 `{competitor}가` `{company}를`처럼 이름 바로 뒤 조사(이·가·을·를·은·는·과·와)는 이름 받침에 맞게 바뀝니다.
+
+## 사건 스토리텔러 `src/data/story.json` (A-141)
+
+사건 카드의 성격은 데이터에 쓰지 않고 기본 선택지(`default`, 없으면 마지막)의 결과로 자동 분류합니다: 돈·사용자·인지도·만족·건강·명성·매력도·IR·네트워크·이사회·주가·기간 효과가 좋아지면 기회, 나빠지면(버그·퇴사 포함) 위협, 점수가 ±`toneCut` 안이면 보통. 새 사건을 쓸 때 기본 선택지를 "아무것도 안 하면 생기는 일"로 두면 스토리텔러가 알맞게 다룹니다.
+
+| 키 | 뜻 |
+| --- | --- |
+| `restDays` · `restMult` | 위기(위협 사건·강제 사건) 뒤 쉬는 기간과 그동안의 위협 가중치 |
+| `calmDays` · `calmCap` | 조용한 날 ÷ calmDays만큼 위협 가중치가 커짐(최대 1 + calmCap배) |
+| `successGrowth` · `successRunway` · `successMult` | 잘나가는 회사(월 매출 성장·버틸 기간)에 위협 가중치 배율 |
+| `desperateRunway` · `desperateBoost` · `desperateDamp` | 절박도(버틸 기간이 이보다 짧거나 고객 감소)만큼 기회 가중치 ↑, 위협 ↓ |
+| `quietDays` · `quietBoost` | 조용한 날이 길수록 하루 사건 확률 배율 |

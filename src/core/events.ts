@@ -2,10 +2,12 @@
 // 이벤트 데이터는 src/data/events-*.json(형식은 docs/CONTENT_SCHEMA.md). 판정은 알고리즘(DEC-031).
 import eventsA from '../data/events-a.json';
 import eventsB from '../data/events-b.json';
+import storyRules from '../data/story.json';
 import { dept, market } from './data';
 import { yearOf } from './calendar';
 import { avgAdoption } from './aiadopt';
 import { book, lastRevenue, runwayMonths } from './finance';
+import { revenueGrowth } from './valuation';
 import { investorPct, recordEquity, totalShares } from './equity';
 import { openRound } from './funding';
 import { computeValuation } from './valuation';
@@ -235,13 +237,82 @@ export function choiceCost(s: GameState, c: Choice): number {
   return Math.round((c.cost ?? 0) + (c.costRev ?? 0) * revBase(s));
 }
 
+// ── A-141 사건 스토리텔러: 무작위 추첨 대신 회사 상황과 직전 위기를 보고 고릅니다 ──
+const ST = storyRules;
+export type Tone = 'threat' | 'opportunity' | 'neutral';
+const MOD_SIGN: Record<string, number> = { appeal: 1, acq: 1, churn: -1, output: 1, valuation: 1, invest: 1, infra: -1, outage: -1, sat: 1, price: 1 };
+const cap = (v: number, c: number) => Math.max(-c, Math.min(c, v));
+
+// 결과 하나가 회사에 좋은지(+)·나쁜지(−) 대략의 점수
+function fxScore(fx: Record<string, unknown>): number {
+  const n = (k: string) => (typeof fx[k] === 'number' ? (fx[k] as number) : 0);
+  let v = Math.sign(n('cash')) + Math.sign(n('cashRev'));
+  for (const [k, w] of [['users', 30], ['awareness', 20], ['sat', 0.2], ['satDept', 0.15], ['health', 0.15], ['rep', 0.4], ['appeal', 0.2], ['ir', 0.05], ['network', 0.05], ['board', 0.1], ['stock', 10]] as [string, number][]) v += cap(n(k) * w, 1.5);
+  v -= cap(n('bugs') * 0.08, 1.5);
+  if (fx.leaveTarget) v -= 1;
+  if (fx.compDie || fx.hire) v += 1;
+  if (Array.isArray(fx.mod)) for (const m of fx.mod as { key: string; value: number }[]) v += cap((MOD_SIGN[m.key] ?? 0) * m.value * 5, 1);
+  return v;
+}
+
+const toneCache = new Map<string, Tone>();
+// 사건의 성격: 아무것도 안 하면(기본 선택) 회사가 좋아지는지 나빠지는지
+export function eventTone(ev: EventDef): Tone {
+  const hit = toneCache.get(ev.id);
+  if (hit) return hit;
+  const ch = ev.choices[ev.default ?? ev.choices.length - 1] ?? ev.choices[ev.choices.length - 1];
+  const tot = ch.outcomes.reduce((a, o) => a + o.w, 0) || 1;
+  const v = ch.outcomes.reduce((a, o) => a + o.w * fxScore(o.fx ?? {}), 0) / tot;
+  const tone: Tone = v < -ST.toneCut ? 'threat' : v > ST.toneCut ? 'opportunity' : 'neutral';
+  toneCache.set(ev.id, tone);
+  return tone;
+}
+
+function story(s: GameState) {
+  return (s.story ??= { lastCrisisDay: s.company.startDay, restUntil: 0 });
+}
+
+// 위기가 왔다고 기록(위협 사건, 경쟁사 반격·대출 제안 같은 강제 사건): 한동안 쉬는 구간
+export function noteCrisis(s: GameState) {
+  const st = story(s);
+  st.lastCrisisDay = s.day;
+  st.restUntil = s.day + ST.restDays;
+}
+
+// 절박도 0~1: 버틸 기간이 짧거나 고객이 줄면
+function desperation(s: GameState): number {
+  const rw = runwayMonths(s);
+  let d = rw !== null && rw < ST.desperateRunway ? (ST.desperateRunway - rw) / ST.desperateRunway : 0;
+  const h = s.plHistory.slice(-4);
+  if (h.length >= 4 && h[0].usersEnd > 0 && h[3].usersEnd < h[0].usersEnd * 0.95) d = Math.max(d, 0.5);
+  return Math.min(1, d);
+}
+
+function thriving(s: GameState): boolean {
+  const g = revenueGrowth(s);
+  const rw = runwayMonths(s);
+  return g !== null && g >= ST.successGrowth && (rw === null || rw >= ST.successRunway);
+}
+
+export function storyWeight(s: GameState, ev: EventDef): number {
+  const tone = eventTone(ev);
+  if (tone === 'neutral') return 1;
+  const st = story(s);
+  const des = desperation(s);
+  if (tone === 'opportunity') return 1 + ST.desperateBoost * des;
+  if (s.day < st.restUntil) return ST.restMult;
+  const calm = s.day - st.lastCrisisDay;
+  return (1 + Math.min(ST.calmCap, calm / ST.calmDays)) * (thriving(s) ? ST.successMult : 1) * (1 - ST.desperateDamp * des);
+}
+
 // 하루 한 번: 결정 기한 처리, 새 이벤트 등장 판정
 export function eventsDay(s: GameState) {
   for (const d of s.decisions) if (!d.resolved && s.day >= d.deadline) resolveDecision(s, d.id, defaultIndex(d), true);
   s.decisions = s.decisions.filter((d) => !d.resolved || s.day - d.day < 60).slice(-40);
   const open = s.decisions.filter((d) => !d.resolved).length;
   if (open >= 3) return;
-  const pDay = Math.min(0.12, 0.05 + 0.001 * staffN(s) + (s.company.stage >= 1 ? 0.02 : 0));
+  const quiet = s.day - story(s).lastCrisisDay;
+  const pDay = Math.min(0.12, 0.05 + 0.001 * staffN(s) + (s.company.stage >= 1 ? 0.02 : 0)) * (1 + ST.quietBoost * Math.min(1, quiet / ST.quietDays));
   if (rand(s) >= pDay) return;
   trigger(s);
 }
@@ -273,7 +344,7 @@ export function trigger(s: GameState, forceId?: string, opts: { competitorId?: s
   const { ev, target } = weighted(
     s,
     cands,
-    cands.map((c) => c.ev.weight ?? 1),
+    cands.map((c) => (c.ev.weight ?? 1) * (forceId ? 1 : storyWeight(s, c.ev))),
   );
   const alive = s.competitors.filter((c) => c.alive);
   // A-140: 반격하는 경쟁사가 직접 보낸 사건이면 그 회사 이름으로
@@ -322,6 +393,7 @@ export function trigger(s: GameState, forceId?: string, opts: { competitorId?: s
     ctx,
   };
   s.decisions.push(d);
+  if (forceId || eventTone(ev) === 'threat') noteCrisis(s); // A-141
   post(s, channelId, from, d.text, 'npc', id);
   if (target) target.bubble = { text: 'talk', until: s.day + 3 };
   if (d.urgent) {

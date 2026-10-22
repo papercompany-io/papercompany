@@ -621,6 +621,7 @@ export interface GameState {
   campaigns?: Campaign[]; // A-116 광고 캠페인(없으면 예전 저장)
   flags: string[];
   eventSeen: Record<string, number>;
+  story?: { lastCrisisDay: number; restUntil: number }; // 사건 스토리텔러(A-141): 마지막 위기, 쉬는 구간 끝
   decisions: PendingDecision[];
   news: NewsItem[];
   notices: Notice[];

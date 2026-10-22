@@ -1,0 +1,16 @@
+{
+  "_note": "A-141 사건 스토리텔러 [예시값]. 사건 카드의 성격(tone)은 기본 선택지(기한까지 두면 고르는 것)의 결과로 자동 분류: 돈·사용자·인지도·만족·명성·매력도·기간 효과가 좋아지면 opportunity, 나빠지면 threat(점수 ±toneCut). 위기(위협 사건·강제 사건) 뒤 restDays일은 위협 가중치 × restMult. 그 뒤로는 조용한 날이 길수록 위협 가중치 × (1 + min(calmCap, 조용한 날/calmDays)), 잘나가는 회사(매출 월 성장 successGrowth 이상이고 버틸 기간이 successRunway개월 이상 또는 흑자)는 × successMult. 망해 가는 회사(버틸 기간 desperateRunway개월 미만 또는 최근 3개월 사용자 감소)는 기회 가중치 × (1 + desperateBoost × 절박도), 위협 × (1 − desperateDamp × 절박도). 하루 사건 확률은 조용한 날이 길수록 × (1 + quietBoost × min(1, 조용한 날/quietDays))",
+  "toneCut": 0.3,
+  "restDays": 25,
+  "restMult": 0.25,
+  "calmDays": 90,
+  "calmCap": 2,
+  "successGrowth": 0.05,
+  "successRunway": 12,
+  "successMult": 1.4,
+  "desperateRunway": 3,
+  "desperateBoost": 2,
+  "desperateDamp": 0.6,
+  "quietDays": 60,
+  "quietBoost": 0.6
+}
