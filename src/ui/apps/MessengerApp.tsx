@@ -8,11 +8,13 @@ import { DATA, dept, ordersFor } from '../../core/data';
 import { dateOf } from '../../core/calendar';
 import { orderOf } from '../../core/orders';
 import { DM_ACTIONS, commandOrder, dmAction } from '../../core/reactions';
-import { answerSaid, postSaid } from '../../core/talk';
-import { readTalk } from '../talkJev';
+import { answerSaid, postSaid, setEmpOrder } from '../../core/talk';
+import { answerChannel, postChannelSaid } from '../../core/chat';
+import { empOrderOf } from '../../core/assign';
+import { readChannel, readTalk } from '../talkJev';
 import { delegateAway, isFullDay, outingEffect, outingRange, outingTravel, outings } from '../../core/outings';
 import { OutingOfferActions } from './ScheduleApp';
-import { createGroup, markRead } from '../../core/messenger';
+import { createGroup, markRead, teamChannelId } from '../../core/messenger';
 import { deptMembers } from '../../core/employees';
 import { deptOutput, isSick } from '../../core/staff';
 import { act, getGame, useGame } from '../store';
@@ -303,7 +305,12 @@ export function MessengerApp({ initial, openInvest }: { initial?: string; openIn
 
         <div className="mg-compose">
           {ch.kind === 'team' && ch.dept ? (
-            <TeamOrders deptId={ch.dept} onErr={setErr} />
+            <>
+              <ChatInput channelId={ch.id} placeholder={`${ch.name}에 메시지 쓰기 — 예: 하늘님은 버그 수정, 나머지는 기능 개발해 주세요`} busy={!!typing || shown < total} onErr={setErr} />
+              <TeamOrders deptId={ch.dept} onErr={setErr} />
+            </>
+          ) : (ch.kind === 'all' || ch.kind === 'group') && s.employees.length > 0 ? (
+            <ChatInput channelId={ch.id} placeholder={ch.kind === 'all' ? '모두에게 메시지 쓰기 — 이름을 부르면 그 사람이, 팀 이름과 일을 말하면 그 팀이 답합니다' : '이 그룹에 메시지 쓰기'} busy={!!typing || shown < total} onErr={setErr} />
           ) : ch.kind === 'dm' && members[0] ? (
             <DmActions empId={members[0].id} name={members[0].name} busy={!!typing || shown < total} onErr={setErr} />
           ) : (
@@ -425,6 +432,67 @@ function DmActions({ empId, name, busy, onErr }: { empId: string; name: string; 
   );
 }
 
+// 팀·전체 채널 직접 쓰기(A-147): 쓴 말의 뜻을 읽어 부른 사람이나 팀이 답함. 사람별·팀 업무 지시도 여기서
+function ChatInput({ channelId, placeholder, busy, onErr }: { channelId: string; placeholder: string; busy: boolean; onErr: (e: string | null) => void }) {
+  const [text, setText] = useState('');
+  const [waiting, setWaiting] = useState(false);
+  const send = async () => {
+    const said = text;
+    if (busy || waiting || !said.trim()) return;
+    const err = act((g) => postChannelSaid(g, channelId, said)) ?? null;
+    onErr(err);
+    if (err) return;
+    setText('');
+    setWaiting(true);
+    const g0 = getGame();
+    const read = g0 ? await readChannel(g0, channelId, said) : null;
+    setWaiting(false);
+    act((g) => answerChannel(g, channelId, said, read));
+  };
+  return (
+    <form
+      className="mg-write"
+      onSubmit={(ev) => {
+        ev.preventDefault();
+        send();
+      }}
+    >
+      <input data-testid="ch-input" value={text} maxLength={200} placeholder={waiting ? '답을 기다리는 중…' : placeholder} onChange={(ev) => setText(ev.target.value)} />
+      <button className="btn small" data-testid="ch-send" type="submit" disabled={busy || waiting || !text.trim()}>
+        보내기
+      </button>
+    </form>
+  );
+}
+
+// 사람별 맡은 일(A-147): 팀 일을 따르거나 이 사람만 다른 일
+export function EmpOrderSelect({ e, onErr }: { e: Employee; onErr?: (m: string | null) => void }) {
+  const s = useGame();
+  const team = orderOf(s, e.dept);
+  const cur = empOrderOf(s, e);
+  return (
+    <select
+      className="emp-order"
+      data-testid={`emp-order-${e.id}`}
+      value={cur === team ? '' : cur}
+      onChange={(ev) => {
+        const err = act((g) => setEmpOrder(g, e.id, ev.target.value || null, teamChannelId(e.dept))) ?? null;
+        onErr?.(err);
+      }}
+    >
+      <option value="">팀 일 따름 ({ordersFor(e.dept).find((o) => o.id === team)?.name})</option>
+      {ordersFor(e.dept)
+        .filter((o) => o.id !== team)
+        .map((o) => (
+          <option key={o.id} value={o.id} disabled={s.company.stage < o.stage}>
+            {o.name}
+            {s.company.stage < o.stage ? ` (단계 ${o.stage})` : ''}
+          </option>
+        ))}
+    </select>
+  );
+}
+
 // 대표 외출 초대(A-101): 메시지 속 카드에서 바로 수락·거절
 function MsgOuting({ id }: { id: string }) {
   const s = useGame();
@@ -475,12 +543,14 @@ function TeamOrders({ deptId, onErr }: { deptId: DeptId; onErr: (e: string | nul
   const cur = orderOf(s, deptId);
   const pb = s.company.orderPushback;
   const refused = pb && pb.dept === deptId && s.day - pb.day <= 2 ? pb.order : null;
+  const team = deptMembers(s, deptId);
+  const personal = team.filter((e) => empOrderOf(s, e) !== cur).length;
   return (
     <div className="mg-box">
       <div className="mg-box-head">
         <b>맡은 일</b>
-        <span>고른 일은 바꿀 때까지 팀 전체가 매일 계속합니다.</span>
-        <Help text="지시는 개인이 아니라 부서 단위입니다. 회사 단계가 오르면 고를 수 있는 일이 늘어납니다." />
+        <span>고른 일은 바꿀 때까지 팀이 매일 계속합니다. 사람별로 다른 일을 맡길 수도 있습니다.</span>
+        <Help text="팀 일이 기본이고, 아래 사람별 목록에서 한 사람만 다른 일을 맡길 수 있습니다. 위 입력칸에 '하늘님은 버그 수정해 주세요'처럼 써도 됩니다. 자주 바꾸면 만족도가 조금 떨어집니다. 회사 단계가 오르면 고를 수 있는 일이 늘어납니다." />
       </div>
       <div className="mg-orders">
         {ordersFor(deptId).map((o) => {
@@ -503,6 +573,22 @@ function TeamOrders({ deptId, onErr }: { deptId: DeptId; onErr: (e: string | nul
           );
         })}
       </div>
+      {team.length > 0 && (
+        <details className="mg-people" open={personal > 0}>
+          <summary>
+            사람별 맡은 일 <span className="muted">{personal > 0 ? `· 따로 맡은 사람 ${personal}명` : '· 모두 팀 일'}</span>
+          </summary>
+          {team.map((e) => (
+            <div key={e.id} className="mg-person">
+              <span>
+                {e.name}
+                {e.lead ? ' (팀장)' : ''}
+              </span>
+              <EmpOrderSelect e={e} onErr={onErr} />
+            </div>
+          ))}
+        </details>
+      )}
     </div>
   );
 }

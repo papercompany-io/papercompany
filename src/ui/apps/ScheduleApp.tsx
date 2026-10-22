@@ -3,7 +3,7 @@
 // A-127: 하루짜리 약속은 시각·이동 시간이 있고, 겹치면 기존 일정을 취소하고 받거나 거절
 import { DATA, dept } from '../../core/data';
 import { slotParts, actionDef, approveMultiplier, approveNeed, ceoWork, efficiency, executiveBlock, setCeoMode, setCeoWork, workChoices } from '../../core/ceo';
-import { acceptContract, contractsOpen, dropContract } from '../../core/contracts';
+import { acceptContract, contractsOpen, dropContract, trustLevel } from '../../core/contracts';
 import { openRound } from '../../core/funding';
 import { enterpriseThreshold, orderOf } from '../../core/orders';
 import { deptMembers } from '../../core/employees';
@@ -18,7 +18,7 @@ import './apps.css';
 
 // TODO(human): 디자인 시스템 토큰(var(--c-*) / var(--positive) …)으로 활동 색을 다시 정하기.
 //   흰 글자가 올라가므로 대비 3:1 이상이어야 함 — 지금 network(#3fbf7f)·sales(#f2a33a)는 약 2.3:1.
-const COLORS: Record<ActionId, string> = { dev: '#4f8df5', contract: '#2bb3a8', sales: '#f2a33a', ir: '#e5484d', network: '#3fbf7f', enterprise: '#b5651d', approve: '#6b5bd6' };
+export const COLORS: Record<ActionId, string> = { dev: '#4f8df5', contract: '#2bb3a8', sales: '#f2a33a', ir: '#e5484d', network: '#3fbf7f', enterprise: '#b5651d', approve: '#6b5bd6' };
 
 // 주 업무 설명(하루 내내 했을 때)
 const WORK_DESC: Partial<Record<ActionId, string>> = {
@@ -238,7 +238,8 @@ export function OutingOfferActions({ o, onErr }: { o: Outing; onErr: (e: string 
 }
 
 // 외주 일감(A-79). A-132: 작업량 숫자 대신 "얼마나 했나 · 지금 속도면 언제 끝나나 · 누가 하고 있나"를 보여 줌
-function contractPace(s: ReturnType<typeof useGame>) {
+// 왼쪽 알림 카드(A-144)도 같은 계산을 씁니다.
+export function contractPace(s: ReturnType<typeof useGame>) {
   const per = actionDef('contract').perSlot * efficiency(s, 'contract');
   let ceo = 0;
   for (let i = 0; i < DATA.time.slotsPerDay; i++) for (const p of slotParts(s, i)) if (p.action === 'contract') ceo += p.w * per;
@@ -248,13 +249,13 @@ function contractPace(s: ReturnType<typeof useGame>) {
   return { ceo, ceoFull, team, devs, total: ceo + team };
 }
 
-const daysText = (d: number) => (d < 1 ? '오늘 안에' : `약 ${Math.ceil(d)}일`);
+export const daysText = (d: number) => (d < 1 ? '오늘 안에' : `약 ${Math.ceil(d)}일`);
 
 export function ContractsCard() {
   const s = useGame();
   const c = s.contracts;
   const a = c?.active ?? null;
-  if (!a && (!contractsOpen(s) || !c?.offers.length)) return null;
+  if (!a && !contractsOpen(s)) return null;
   const pace = contractPace(s);
   return (
     <div className="card col" data-testid="contracts">
@@ -262,7 +263,21 @@ export function ContractsCard() {
         <div className="section-title grow">외주 일감</div>
         {!!c?.completed && <span className="chip">완료 {c.completed}건</span>}
       </div>
-      <Help text="대표 주 업무 &quot;외주&quot;나 개발팀 &quot;외주 작업&quot; 지시로 일을 하면 끝냈을 때 대금이 들어옵니다. 그만큼 제품 개발은 늦어집니다. 마감을 넘기면 대금이 깎이고, 많이 넘기면 취소됩니다." />
+      <Help text="대표 주 업무 &quot;외주&quot;나 개발팀 &quot;외주 작업&quot; 지시로 일을 하면 끝냈을 때 대금이 들어옵니다. 그만큼 제품 개발은 늦어집니다. 마감을 넘기면 대금이 깎이고, 많이 넘기면 취소됩니다. 제때 끝낼수록 외주 평판이 올라 더 크고 비싼 일감이 들어옵니다." />
+      {(() => {
+        // A-144: 외주 평판 — 단계 이름과 다음 단계까지 막대만(점수·단가는 숨김)
+        const t = trustLevel(s);
+        return (
+          <div className="ct-trust" data-testid="contract-trust">
+            <span>외주 평판</span>
+            <b>{t.name}</b>
+            <div className="bar grow" title={t.next ? `다음 단계: ${t.next}` : '가장 높은 단계'}>
+              <div style={{ width: `${t.progress * 100}%`, background: COLORS.contract }} />
+            </div>
+            <span className="tiny muted">{t.next ? `다음: ${t.next}` : '최고 단계'}</span>
+          </div>
+        );
+      })()}
       {a && a.deadline !== null && (() => {
         const pct = Math.min(100, (a.done / a.work) * 100);
         const left = Math.max(0, a.work - a.done);
@@ -310,6 +325,12 @@ export function ContractsCard() {
           </div>
         );
       })()}
+      {!a && !c?.offers.length && (
+        // A-136: 업무 창에서 탭이 늘 보이므로, 제안이 없을 때는 다음 제안이 언제 오는지 알려 줌
+        <div className="tiny muted" data-testid="contracts-empty">
+          지금 들어온 외주 제안이 없습니다. {c && c.nextOfferDay > s.day ? `${c.nextOfferDay - s.day}일 뒤에 새 제안이 들어옵니다.` : '곧 새 제안이 들어옵니다.'}
+        </div>
+      )}
       {!!c?.offers.length && (
         <div className="furn-grid">
           {c.offers.map((o) => {
@@ -317,7 +338,10 @@ export function ContractsCard() {
             const ok = Math.ceil(solo) <= o.days;
             return (
               <div key={o.id} className="card furn">
-                <b>{o.title}</b>
+                <div className="row">
+                  <b className="grow">{o.title}</b>
+                  {(o.tier ?? 0) >= 2 && <span className="chip amber">큰 일감</span>}
+                </div>
                 <div className="tiny muted">
                   {o.client} · 기간 {o.days}일
                 </div>

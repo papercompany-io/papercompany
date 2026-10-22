@@ -75,6 +75,21 @@ export function SettingsApp() {
         <Row title="축하 연출 보이기" sub="종이 꽃가루와 떠오르는 숫자.">
           <Switch label="축하 연출 보이기" on={st.animations} onChange={(v) => setSettings({ animations: v })} />
         </Row>
+        <Row title="퇴근 뒤 시간 건너뛰기" sub="18시가 지나면 시계는 다음 날 9시까지 흐릅니다. 위 막대의 건너뛰기 버튼으로 언제든 아침으로 넘어갈 수 있습니다.">
+          <div className="seg" data-testid="auto-skip-night">
+            {(
+              [
+                ['off', '끄기'],
+                ['quiet', '야근이 끝나면'],
+                ['always', '바로'],
+              ] as const
+            ).map(([v, label]) => (
+              <button key={v} className={st.autoSkipNight === v ? 'on' : ''} onClick={() => setSettings({ autoSkipNight: v })}>
+                {label}
+              </button>
+            ))}
+          </div>
+        </Row>
         <Row title="스페이스로 다시 시작할 빠르기">
           <div className="seg">
             {[1, 2, 4].map((v) => (

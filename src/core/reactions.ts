@@ -50,7 +50,8 @@ const WHY_LINES: Record<Why, string[]> = {
 
 // ── 팀 지시 ──
 // 반환: null = 지시가 바뀜(답은 팀 채널에), 문자열 = 바뀌지 않은 이유(UI에 표시)
-export function commandOrder(s: GameState, d: DeptId, orderId: string): string | null {
+// said = false: 대표가 채팅으로 직접 말해 이미 올라가 있으면 "[지시]" 말을 다시 올리지 않음(A-147)
+export function commandOrder(s: GameState, d: DeptId, orderId: string, said = true): string | null {
   const o = orderDef(orderId);
   if (!o || o.dept !== d) return '이 부서의 지시가 아닙니다.';
   if (s.company.stage < o.stage) return `회사 단계 ${o.stage}부터 내릴 수 있는 지시입니다.`;
@@ -65,7 +66,7 @@ export function commandOrder(s: GameState, d: DeptId, orderId: string): string |
   // 거절당한 같은 지시를 이틀 안에 다시 내리면 강행
   const pb = s.company.orderPushback;
   const insist = !!pb && pb.dept === d && pb.order === orderId && s.day - pb.day <= 2;
-  post(s, ch, ME, insist ? `[지시] 다시 말하지만 "${o.name}"로 갑니다. 이번엔 꼭 부탁해요.` : `[지시] 앞으로 "${o.name}"에 집중해 주세요. ${o.desc}`, 'player');
+  if (said) post(s, ch, ME, insist ? `[지시] 다시 말하지만 "${o.name}"로 갑니다. 이번엔 꼭 부탁해요.` : `[지시] 앞으로 "${o.name}"에 집중해 주세요. ${o.desc}`, 'player');
   if (!team.length) {
     apply();
     return null;
@@ -135,11 +136,12 @@ function worstGripe(s: GameState, e: Employee): string | null {
 }
 
 // 자유 입력 DM(A-139): said = 대표가 직접 쓴 말(없으면 기본 문장, null이면 이미 올라가 있어 다시 올리지 않음). 효과·재사용 대기는 버튼과 같습니다
-export function dmAction(s: GameState, empId: string, action: DmAction, said?: string | null): string | null {
+// channelId: 팀·전체 채널에서 공개로 말한 경우 그 채널에 답함(A-147). 효과·재사용 대기는 DM과 같음
+export function dmAction(s: GameState, empId: string, action: DmAction, said?: string | null, channelId?: string): string | null {
   const e = s.employees.find((x) => x.id === empId);
   if (!e) return '직원을 찾을 수 없습니다.';
   const def = DM_ACTIONS.find((a) => a.id === action)!;
-  const ch = `dm-${e.id}`;
+  const ch = channelId ?? `dm-${e.id}`;
   if (said !== null) post(s, ch, ME, said ?? def.say, 'player');
   const say = (t: string) => post(s, ch, e.name, t, 'npc');
   const last = e.dmDay?.[action];

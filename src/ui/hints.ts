@@ -13,7 +13,7 @@ import { DATA, featuresOf } from '../core/data';
 import type { DeptId, GameState } from '../core/types';
 
 export function nextHint(s: GameState, desktopOpenedOnce: boolean): string {
-  if (!desktopOpenedOnce) return '왼쪽 메뉴에서 일을 고릅니다. 창업하자마자 대표가 MVP(핵심 기능)를 만들기 시작합니다. "제품"에서 출시까지 남은 날을 확인하세요.';
+  if (!desktopOpenedOnce) return '왼쪽 메뉴에서 일을 고릅니다. 창업하자마자 대표가 MVP(핵심 기능)를 만들기 시작합니다. "업무"에서 출시까지 남은 날을 확인하세요.';
   if (s.pauseReason) return `일시정지: ${s.pauseReason}. 확인한 뒤 ▶ 버튼(스페이스)으로 시간을 다시 흐르게 하세요.`;
   const open = s.decisions.filter((d) => !d.resolved);
   if (s.exitAttempt?.status === 'offer') return `${s.exitAttempt.buyer ?? '인수 희망 기업'}의 인수 제안이 와 있습니다. Exit 메뉴에서 수락하거나 거절하세요.`;
@@ -38,7 +38,7 @@ export function nextHint(s: GameState, desktopOpenedOnce: boolean): string {
     if (s.product.roadmap.length === 0) return '제품 메뉴의 만드는 순서가 비었습니다. 핵심 기능을 넣으세요. 핵심 기능을 모두 만들면 MVP가 출시됩니다.';
     if (ceoWork(s) !== 'dev' && !todayOuting(s) && !s.employees.some((e) => e.dept === 'dev')) return '개발할 사람이 없습니다. 사무실의 대표(나)를 눌러 주 업무를 "개발"로 바꾸거나 개발자를 뽑으세요.';
     if (s.contracts?.active && ceoWork(s) !== 'contract' && s.company.orders.dev !== 'dev_contract') return `받은 외주 "${s.contracts.active.title}"가 멈춰 있습니다. 사무실의 대표(나)를 눌러 주 업무를 "외주"로 바꾸거나 개발팀에 맡기세요.`;
-    if (!s.contracts?.active && s.contracts?.offers.length && s.cash < 30000000) return '돈이 빠듯합니다. 대표 일정의 외주 일감을 받고 주 업무를 "외주"로 바꾸면 MVP를 만드는 동안 대금으로 버틸 수 있습니다.';
+    if (!s.contracts?.active && s.contracts?.offers.length && s.cash < 30000000) return '돈이 빠듯합니다. "업무" 창의 외주 탭에서 일감을 받고 주 업무를 "외주"로 바꾸면 MVP를 만드는 동안 대금으로 버틸 수 있습니다.';
     return 'MVP를 만드는 중입니다. 제품 메뉴에서 출시까지 남은 날을 확인하세요. 그동안 투자 유치(엔젤·SAFE)나 채용을 준비할 수 있습니다.';
   }
   // A-111: 출시했어도 결제 기능이 없으면 무료로만 씁니다

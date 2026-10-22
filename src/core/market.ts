@@ -10,6 +10,7 @@ import { news, notify } from './notify';
 import { appeal, canCharge, fxTotals, hasMvp, type FxTotals } from './product';
 import { adDay, campaignDay, endCampaigns, fullInform, recordAdStats, recordCampaigns, setTotalAdBudget } from './ads';
 import type { GameState, MarketId } from './types';
+import { orderShare } from './assign';
 
 const M = DATA.markets;
 
@@ -95,7 +96,7 @@ export function revenuePerUser(s: GameState, m: MarketId, fx: FxTotals = fxTotal
 export function infraPerUser(s: GameState, fx: FxTotals = fxTotals(s)): number {
   const ind = industry(s.company.industry);
   const dept = deptCoverage(s, 'infra');
-  const opt = s.company.orders.infra === 'infra_cost' ? 0.3 * dept : 0.12 * dept;
+  const opt = (0.12 + 0.18 * orderShare(s, 'infra', 'infra_cost')) * dept; // A-147
   return ind.infra * Math.max(0.25, 1 + fx.infra) * (1 - opt) * (1 + mod(s, 'infra'));
 }
 
@@ -114,6 +115,16 @@ function isAbsent(s: GameState, id: string) {
   return !!e && e.sickUntil !== null && e.sickUntil > s.day;
 }
 
+// 목표(점유율 × 수요)를 넘은 고객이 하루에 떠나는 비율(A-147). 영업·광고로 데려온 고객이 제품이 별로면 빨리 샙니다
+export function excessChurn(s: GameState, m: MarketId): number {
+  const base = M.outbound.excessChurn;
+  const rivals = s.competitors.filter((c) => c.alive && c.markets.includes(m));
+  const ref = rivals.length ? rivals.reduce((a, c) => a + c.appeal, 0) / rivals.length : 20;
+  const ratio = appeal(s) / Math.max(1, ref); // 1 = 경쟁사 평균만큼 매력 있음
+  // TODO(human): ratio에 따라 base를 늘리거나 줄여 돌려주기
+  return base;
+}
+
 export interface DayPush {
   salesPush: number; // 세일즈 출력(직원+대표)
   mktOutput: number; // 마케팅팀 출력
@@ -129,7 +140,7 @@ export function marketDay(s: GameState, push: DayPush) {
   const fx = fxTotals(s);
   const pt = priceTierDef(s.product.priceTier);
   const csCov = deptCoverage(s, 'cs');
-  const csFocus = s.company.orders.cs === 'cs_support' ? 1 : 0.6;
+  const csFocus = 0.6 + 0.4 * orderShare(s, 'cs', 'cs_support'); // A-147
   const userCount = totalUsers(s);
   // 고객지원이 모자라면 사용자가 많을수록 이탈이 늘어납니다.
   const csFx = userCount < 50 ? 0 : -0.3 * csCov * csFocus + 0.8 * (1 - csCov) * Math.min(1, userCount / 2000);
@@ -157,31 +168,36 @@ export function marketDay(s: GameState, push: DayPush) {
     ms.peakShare = Math.max(ms.peakShare, sh);
     const target = D * sh;
     const day = { inbound: 0, viral: 0, sales: 0, paid: 0, lost: 0 };
-    // 획득(A-48): 스스로 찾아오는 고객 + 입소문 + 세일즈 계약 + 광고로 산 고객(CAC). 목표(점유율 × 수요)까지만.
-    if (target > ms.users) {
-      const gap = target - ms.users;
-      const acqM = econ(s, 'acq') * (1 + mod(s, 'acq'));
-      const foreign = m === 'kr' ? 1 : M.foreign;
+    // 획득(A-48): 스스로 찾아오는 고객 + 입소문 + 세일즈 계약 + 광고로 산 고객(CAC).
+    // 스스로 오는 몫만 목표(점유율 × 수요)까지. 영업·광고는 우리가 직접 찾아가 데려오므로 목표에 막히지 않습니다(A-147)
+    const acqM = econ(s, 'acq') * (1 + mod(s, 'acq'));
+    const foreign = m === 'kr' ? 1 : M.foreign;
+    const gap = Math.max(0, target - ms.users);
+    let organic = 0;
+    if (gap > 0) {
       // 아무도 모르는 서비스는 검색되지 않습니다(A-95). 인지도가 오르거나, 쓰는 사람이 쌓여 순위·검색에 걸리면 스스로 찾아옵니다.
       const found = Math.min(1, Math.max(ms.awareness / M.discoveryAwareness, Math.sqrt(ms.users / M.discoveryUsers)));
       const inbound = gap * ind.baseAcq * (1 + fx.conv) * foreign * found;
       const viral = ((ms.users * ind.viral * (1 + fx.viral * 10)) / 30) * Math.min(1, gap / Math.max(1, D)) * foreign;
-      const sales = push.salesPush * ind.salesPer * (m === 'kr' ? 1 : 0.6) * Math.min(2, Math.max(0.3, appeal(s) / 25));
-      const cac = ind.cac * md.arpu * (1 + 3 * sh) / Math.min(2.5, mktEff);
-      // 광고로 사는 고객은 하루 수요의 0.1%에서 포화(돈을 더 써도 덜 늘어남)
-      const cap = D * 0.001;
-      const paidAd = ad.direct > 0 ? cap * (1 - Math.exp(-ad.direct / cac / Math.max(1, cap))) : 0;
-      // 캠페인은 짧게 몰아서: 상한을 두 배로
-      const paidCp = cp.direct > 0 ? 2 * cap * (1 - Math.exp(-cp.direct / cac / Math.max(1, 2 * cap))) : 0;
-      const paid = paidAd + paidCp;
-      const raw = (inbound + viral + sales + paid) * acqM;
-      const got = Math.min(gap * 0.05, raw);
-      const k = raw > 0 ? got / raw : 0;
-      Object.assign(day, { inbound: inbound * acqM * k, viral: viral * acqM * k, sales: sales * acqM * k, paid: paid * acqM * k });
+      const raw = (inbound + viral) * acqM;
+      organic = Math.min(gap * M.outbound.gapRate, raw);
+      const k = raw > 0 ? organic / raw : 0;
+      Object.assign(day, { inbound: inbound * acqM * k, viral: viral * acqM * k });
+    }
+    const sales = push.salesPush * ind.salesPer * (m === 'kr' ? 1 : 0.6) * Math.min(2, Math.max(0.3, appeal(s) / 25));
+    const cac = ind.cac * md.arpu * (1 + 3 * sh) / Math.min(2.5, mktEff);
+    // 광고로 사는 고객은 하루 수요의 0.1%에서 포화(돈을 더 써도 덜 늘어남)
+    const cap = D * 0.001;
+    const paidAd = ad.direct > 0 ? cap * (1 - Math.exp(-ad.direct / cac / Math.max(1, cap))) : 0;
+    // 캠페인은 짧게 몰아서: 상한을 두 배로
+    const paidCp = cp.direct > 0 ? 2 * cap * (1 - Math.exp(-cp.direct / cac / Math.max(1, 2 * cap))) : 0;
+    gotAd = paidAd * acqM;
+    gotCp = paidCp * acqM;
+    Object.assign(day, { sales: sales * acqM, paid: gotAd + gotCp });
+    const got = organic + day.sales + day.paid;
+    if (got > 0) {
       ms.users += got;
       adMilestone(s, m, ind);
-      gotAd = paidAd * acqM * k;
-      gotCp = paidCp * acqM * k;
     }
     recordAdStats(s, m, ad.parts, gotAd, awAd);
     recordCampaigns(cp.list, gotCp, awCp);
@@ -189,7 +205,7 @@ export function marketDay(s: GameState, push: DayPush) {
     const bugF = 1 + s.product.bugs / 45;
     const churnM = ind.churnM * pt.churn * Math.max(0.3, 1 + fx.churn + csFx + mod(s, 'churn') - 0.04 * Math.pow(push.retention, 0.6)) * bugF * econ(s, 'churn');
     let lost = ms.users * (churnM / 30);
-    if (ms.users > target) lost += (ms.users - target) * 0.012;
+    if (ms.users > target) lost += (ms.users - target) * excessChurn(s, m);
     ms.users = Math.max(0, ms.users - lost);
     day.lost = lost;
     // 성장 분석용 이동 평균(약 2주)

@@ -11,6 +11,7 @@ import { float, notify } from './notify';
 import { pick, poisson, rand, randInt, weighted } from './rng';
 import { marketSalary, rollTalent, startSkill, welfareApply, welfareQuality } from './staff';
 import type { Applicant, DeptId, Employee, GameState, Grade, NegoMsg, Posting } from './types';
+import { orderShare } from './assign';
 
 const H = DATA.hiring;
 
@@ -175,7 +176,7 @@ function stageMult(s: GameState) {
 
 export function hrBoost(s: GameState): number {
   const hr = s.employees.filter((e) => e.dept === 'hr').length;
-  return s.company.orders.hr === 'hr_recruit' || !s.company.orders.hr ? 1 + 0.25 * hr : 1 + 0.08 * hr;
+  return 1 + hr * (0.08 + 0.17 * orderShare(s, 'hr', 'hr_recruit')); // 채용 지원을 맡은 비율(A-147)
 }
 
 export function arrivalRate(s: GameState, p: Posting): number {
@@ -383,7 +384,7 @@ export function setAutoHire(s: GameState, d: DeptId, target: number): string | n
 function autoHireDay(s: GameState) {
   const hr = s.employees.filter((e) => e.dept === 'hr' && !(e.sickUntil && e.sickUntil > s.day)).length;
   if (!hr) return;
-  const speed = 0.12 * hr * (s.company.orders.hr === 'hr_recruit' ? 1.6 : 1) * econ(s, 'apply');
+  const speed = 0.12 * hr * (1 + 0.6 * orderShare(s, 'hr', 'hr_recruit')) * econ(s, 'apply');
   for (const [d, target] of Object.entries(s.company.autoHire) as [DeptId, number][]) {
     if (!target) continue;
     const have = s.employees.filter((e) => e.dept === d && e.leaving === null).length + s.pendingHires.filter((h) => h.dept === d).length;

@@ -3,6 +3,7 @@
 import { DATA } from './data';
 import { daysInMonthOf, monthKey } from './calendar';
 import type { GameState, MonthAccrual, MonthPL } from './types';
+import { orderCount } from './assign';
 
 const F = DATA.finance;
 
@@ -62,7 +63,7 @@ function taxOf(s: GameState, op: number): number {
   if (op <= 0) return 0;
   const hi = F.corpTaxHighFrom / 12;
   const raw = Math.min(op, hi) * F.corpTaxRate + Math.max(0, op - hi) * F.corpTaxHighRate;
-  const fl = s.company.orders.finlegal === 'fl_tax' ? Math.min(0.2, s.employees.filter((e) => e.dept === 'finlegal').length * 0.04) : 0;
+  const fl = Math.min(0.2, orderCount(s, 'finlegal', 'fl_tax') * 0.04); // 세무 최적화를 맡은 사람 수(A-147)
   return Math.round(raw * (1 - fl));
 }
 

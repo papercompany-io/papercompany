@@ -11,7 +11,8 @@ import { deptCoverage, launchedMarkets, totalUsers, type DayPush } from './marke
 import { nextId } from './ids';
 import { ceoSalesToday } from './ceo';
 import { workOnContract } from './contracts';
-import { allDeptOutputs } from './staff';
+import { allDeptOutputs, orderOutputs } from './staff';
+import { orderShare } from './assign';
 import { pick, rand, randInt, randRange } from './rng';
 import type { DeptId, GameState } from './types';
 
@@ -63,60 +64,56 @@ function qualityWarn(s: GameState) {
 }
 
 // 하루 부서 출력 반영. 시장 처리에 넘길 값(DayPush)을 돌려줍니다.
+// A-147: 출력은 사람마다 하는 일(개인 업무 또는 팀 일)로 나뉩니다(byOrder). 개인 업무가 없으면 부서 출력 전부가 팀 일로 가서 예전과 같습니다.
 export function ordersDay(s: GameState): DayPush & { outputs: Record<DeptId, number> } {
   const out = allDeptOutputs(s);
+  const byOrder = orderOutputs(s);
+  const amt = (id: string) => byOrder[id] ?? 0;
   const push: DayPush = { salesPush: ceoSalesToday(s), mktOutput: 0, retention: 0, contentAwareness: 0 };
-  const aiBoost = orderOf(s, 'ai') === 'ai_research' ? Math.min(2, out.ai * 0.08) : 0;
+  const aiBoost = Math.min(2, amt('ai_research') * 0.08);
   const hasDesigners = deptMembers(s, 'design').length > 0;
   // 개발
-  if (out.dev > 0) {
-    const o = orderOf(s, 'dev');
-    if (o === 'dev_build') {
-      const used = applyWork(s, out.dev, 'dev', !hasDesigners, devBugMult(s), aiBoost);
-      if (used < out.dev * 0.5 && s.product.roadmap.length === 0) fixBugs(s, (out.dev - used) * 0.5, 'stabilize');
-    } else if (o === 'dev_contract') {
-      const left = workOnContract(s, out.dev);
-      if (left > 0) applyWork(s, left, 'dev', !hasDesigners, devBugMult(s), aiBoost);
-    } else if (o === 'dev_stabilize') fixBugs(s, out.dev, 'stabilize');
-    else if (o === 'dev_debt') fixBugs(s, out.dev, 'debt');
+  const build = amt('dev_build');
+  if (build > 0) {
+    const used = applyWork(s, build, 'dev', !hasDesigners, devBugMult(s), aiBoost);
+    if (used < build * 0.5 && s.product.roadmap.length === 0) fixBugs(s, (build - used) * 0.5, 'stabilize');
   }
+  if (amt('dev_contract') > 0) {
+    const left = workOnContract(s, amt('dev_contract'));
+    if (left > 0) applyWork(s, left, 'dev', !hasDesigners, devBugMult(s), aiBoost);
+  }
+  if (amt('dev_stabilize') > 0) fixBugs(s, amt('dev_stabilize'), 'stabilize');
+  if (amt('dev_debt') > 0) fixBugs(s, amt('dev_debt'), 'debt');
   qualityWarn(s);
   // 디자인
-  if (out.design > 0) {
-    const o = orderOf(s, 'design');
-    if (o === 'design_build') {
-      const used = applyWork(s, out.design, 'design', false, 1, aiBoost);
-      if (used < out.design) s.product.polish = Math.min(0.4, s.product.polish + (out.design - used) * 0.0004 * (1 - s.product.polish / 0.4));
-    } else if (o === 'design_polish') s.product.polish = Math.min(0.4, s.product.polish + out.design * 0.0008 * (1 - s.product.polish / 0.4));
-    else if (o === 'design_brand') push.contentAwareness += 0.00016 * Math.pow(out.design, 0.8);
+  const dBuild = amt('design_build');
+  if (dBuild > 0) {
+    const used = applyWork(s, dBuild, 'design', false, 1, aiBoost);
+    if (used < dBuild) s.product.polish = Math.min(0.4, s.product.polish + (dBuild - used) * 0.0004 * (1 - s.product.polish / 0.4));
   }
+  if (amt('design_polish') > 0) s.product.polish = Math.min(0.4, s.product.polish + amt('design_polish') * 0.0008 * (1 - s.product.polish / 0.4));
+  if (amt('design_brand') > 0) push.contentAwareness += 0.00016 * Math.pow(amt('design_brand'), 0.8);
   // 세일즈
-  if (out.sales > 0) {
-    const o = orderOf(s, 'sales');
-    if (o === 'sales_direct') push.salesPush += out.sales;
-    else if (o === 'sales_enterprise') s.entPipeline += out.sales * 0.12 * (fxTotals(s).enterprise ? 1 : 0.3);
-    else if (o === 'sales_partner') s.networkPoints += out.sales * 0.3;
-  }
+  push.salesPush += amt('sales_direct');
+  if (amt('sales_enterprise') > 0) s.entPipeline += amt('sales_enterprise') * 0.12 * (fxTotals(s).enterprise ? 1 : 0.3);
+  if (amt('sales_partner') > 0) s.networkPoints += amt('sales_partner') * 0.3;
   // 영업 콜·미팅도 회사를 알립니다(아웃바운드 인지도, A-59). 세일즈만으로 점유율 상한에 막히지 않게 합니다.
   if (push.salesPush > 0) push.contentAwareness += 0.0001 * Math.pow(push.salesPush, 0.8);
   // 마케팅
-  if (out.marketing > 0) {
-    const o = orderOf(s, 'marketing');
-    if (o === 'mkt_perf') push.mktOutput = out.marketing;
-    else if (o === 'mkt_content') push.contentAwareness += 0.0003 * Math.pow(out.marketing, 0.8);
-    else if (o === 'mkt_retention') push.retention = out.marketing;
-  }
+  push.mktOutput = amt('mkt_perf');
+  if (amt('mkt_content') > 0) push.contentAwareness += 0.0003 * Math.pow(amt('mkt_content'), 0.8);
+  push.retention = amt('mkt_retention');
   // 인사: 조직 문화
-  const cultureTarget = orderOf(s, 'hr') === 'hr_culture' ? Math.min(12, (out.hr * 30) / (s.employees.length + 5)) : 0;
+  const cultureTarget = Math.min(12, (amt('hr_culture') * 30) / (s.employees.length + 5));
   s.company.culture += (cultureTarget - s.company.culture) * 0.02;
   // 고객지원: 의견 수집
-  if (out.cs > 0 && orderOf(s, 'cs') === 'cs_feedback') s.product.appealBonus += out.cs * 0.0025;
+  if (amt('cs_feedback') > 0) s.product.appealBonus += amt('cs_feedback') * 0.0025;
   // 고객 인사이트(A-115): 쓰는 사람이 많을수록, 의견 수집을 맡길수록 쌓입니다
-  insightDay(s, totalUsers(s), orderOf(s, 'cs') === 'cs_feedback' ? out.cs : 0);
+  insightDay(s, totalUsers(s), amt('cs_feedback'));
   // 인프라: 안정성
-  if (out.infra > 0 && orderOf(s, 'infra') === 'infra_reliability') fixBugs(s, out.infra * 0.6, 'infra');
+  if (amt('infra_reliability') > 0) fixBugs(s, amt('infra_reliability') * 0.6, 'infra');
   // 재무법무: 상장 준비
-  if (out.finlegal > 0 && orderOf(s, 'finlegal') === 'fl_ipo') s.company.ipoReady = Math.min(100, s.company.ipoReady + out.finlegal * 0.12);
+  if (amt('fl_ipo') > 0) s.company.ipoReady = Math.min(100, s.company.ipoReady + amt('fl_ipo') * 0.12);
   else s.company.ipoReady = Math.max(0, s.company.ipoReady - 0.02);
   enterpriseDay(s);
   outageRoll(s);
@@ -169,7 +166,7 @@ function outageRoll(s: GameState) {
   const users = totalUsers(s);
   if (users < 20) return;
   const stab = Math.min(0.7, fxTotals(s).stability);
-  const infra = deptCoverage(s, 'infra') * (orderOf(s, 'infra') === 'infra_reliability' ? 0.6 : 0.4);
+  const infra = deptCoverage(s, 'infra') * (0.4 + 0.2 * orderShare(s, 'infra', 'infra_reliability')); // A-147
   const OU = DATA.orders.outage;
   const debt = s.product.debt;
   const p = 0.0022 * (1 + s.product.bugs / 22) * (1 - stab) * (1 - infra) * Math.max(0.2, 1 + mod(s, 'outage')) * (1 + OU.debtProb * debt); // A-143 기술 부채

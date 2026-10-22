@@ -15,6 +15,7 @@ import { aiMultiplier } from './aiadopt';
 import { approveMultiplier } from './ceo';
 import { unvestedOptions, forfeitOptions } from './equity';
 import type { DeptId, Employee, GameState, Grade } from './types';
+import { empOrderOf, orderShare } from './assign';
 
 function traitFx(e: Employee, key: string): number {
   let v = 0;
@@ -96,6 +97,18 @@ export function deptOutput(s: GameState, d: DeptId): number {
   return deptMembers(s, d).reduce((a, e) => a + output(s, e, cache), 0);
 }
 
+// 맡은 일별 하루 출력(A-147): 사람마다 하는 일(개인 업무 또는 팀 일)로 나눠 더함
+export function orderOutputs(s: GameState): Record<string, number> {
+  const out: Record<string, number> = {};
+  const cache = new Map<DeptId, ReturnType<typeof leadInfo>>();
+  for (const d of DATA.depts.departments) cache.set(d.id as DeptId, leadInfo(s, d.id as DeptId));
+  for (const e of s.employees) {
+    const o = empOrderOf(s, e);
+    out[o] = (out[o] ?? 0) + output(s, e, cache);
+  }
+  return out;
+}
+
 export function allDeptOutputs(s: GameState): Record<DeptId, number> {
   const out: Record<string, number> = {};
   const cache = new Map<DeptId, ReturnType<typeof leadInfo>>();
@@ -160,7 +173,7 @@ export function healthTarget(s: GameState, e: Employee): number {
 
 // 하루 처리: 만족도·건강·숙련이 목표를 따라가고, 병가가 생기고, 퇴사 예정자가 떠납니다.
 export function staffDay(s: GameState) {
-  const train = (s.company.orders.hr === 'hr_training' ? 0.6 : 0) + welfareSum(s, 'skill');
+  const train = 0.6 * orderShare(s, 'hr', 'hr_training') + welfareSum(s, 'skill'); // A-147
   for (const e of [...s.employees]) {
     if (e.leaving !== null && s.day >= e.leaving) {
       removeEmployee(s, e, 'quit');

@@ -32,7 +32,7 @@ export type AppId = 'schedule' | 'messenger' | 'product' | 'market' | 'hiring' |
 export const APPS: { id: AppId; name: string; unit: string; desc: string; stage: number; publicOnly?: boolean; noMenu?: boolean }[] = [
   { id: 'schedule', name: 'CEO 개인 일정', unit: 'F14 대표 행동', desc: '대표의 하루 8칸', stage: 0, noMenu: true },
   { id: 'messenger', name: '메신저', unit: 'F06 메신저', desc: '팀 지시·결정', stage: 0 },
-  { id: 'product', name: '제품', unit: 'F09 제품', desc: '로드맵·품질·가격', stage: 0 },
+  { id: 'product', name: '업무', unit: 'F09 업무', desc: '제품 개발·외주', stage: 0 }, // A-136: 제품 → 업무(외주 관리 포함)
   { id: 'market', name: '시장·광고', unit: 'RV 시장·경쟁', desc: '고객·광고·경쟁사', stage: 1 },
   { id: 'hiring', name: '채용', unit: 'F04 채용', desc: '공고·지원자·위임', stage: 0 },
   { id: 'employees', name: '직원 관리', unit: 'F05 직원·조직', desc: '직원·팀장·복지', stage: 0 },
@@ -260,7 +260,7 @@ export function AppPanel({
         {app === 'invest' && <InvestApp initialStage={arg} openChat={(ch) => setApp('messenger', ch)} />}
         {app === 'finance' && <FinanceApp />}
         {app === 'exit' && <ExitApp />}
-        {app === 'product' && <ProductApp openSchedule={() => setApp('schedule')} openHiring={() => setApp('hiring')} />}
+        {app === 'product' && <ProductApp initialTab={arg} openSchedule={() => setApp('schedule')} openHiring={() => setApp('hiring')} />}
         {app === 'market' && <MarketApp />}
         {app === 'ai' && <AiApp />}
         {app === 'office' && <OfficeApp />}

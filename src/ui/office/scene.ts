@@ -4,6 +4,7 @@
 import { DATA, dept, officeTier } from '../../core/data';
 import { deskFits, furnitureSpotFits, itemSize, placedOn, seatGrid } from '../../core/office';
 import { awayOuting } from '../../core/outings';
+import { atDesk, clockHour, inNight, workingLate } from '../../core/night';
 import { floorPlan, type DecorKind, type Rect } from '../../core/officeLayout';
 import type { Employee, GameState, Rot, Seat } from '../../core/types';
 import { Pix, hex, mix, shade, type Col, type Pt } from './pixel';
@@ -271,11 +272,25 @@ const C = {
   glassR: hex('#a9d6f5', 90),
 };
 
-export function skyColor(frac: number): Col {
+// 하늘색: 낮 → 오후 노을(퇴근 무렵) → 밤(A-149) → 새벽 → 아침. hour는 9~33(33 = 다음 날 9시)
+export function skyColor(hour: number): Col {
   const day = hex('#93d3ff');
   const eve = hex('#ffb070');
-  const t = Math.max(0, Math.min(1, (frac - 0.6) / 0.4));
-  return mix(day, eve, t * t);
+  const night = hex('#1d2a4a');
+  if (hour <= 18) {
+    const t = Math.max(0, Math.min(1, (hour - 14.4) / 3.6));
+    return mix(day, eve, t * t);
+  }
+  if (hour <= 20.5) return mix(eve, night, (hour - 18) / 2.5);
+  if (hour <= 29.5) return night;
+  if (hour <= 31) return mix(night, eve, (hour - 29.5) / 1.5);
+  return mix(eve, day, Math.min(1, (hour - 31) / 2));
+}
+
+// 가로등·창문 불에 쓰는 하루 진행(0 출근 ~ 1 퇴근). 퇴근 뒤 밤에는 1로 둠(새벽 6시 넘으면 꺼짐)
+function dayFrac(s: GameState): number {
+  if (inNight(s)) return clockHour(s) < 30 ? 1 : 0.5;
+  return Math.min(1, s.msInDay / DATA.time.dayMs);
 }
 
 // ── 사람(스프라이트) ──
@@ -311,6 +326,7 @@ export function actors(s: GameState, v: View): Actor[] {
     const a = anchor(v, seat);
     const kind: Actor['kind'] = seat.occupant === 'ceo' ? 'ceo' : seat.occupant.startsWith('pending:') ? 'pending' : 'emp';
     if (kind === 'emp' && !s.employees.some((e) => e.id === seat.occupant)) continue;
+    if (kind !== 'pending' && !atDesk(s, seat.occupant)) continue; // 퇴근한 사람(A-149)
     const top = kind === 'pending' ? a[1] - 12 : a[1] - 15;
     out.push({ id: seat.occupant, kind, seat, head: [a[0], top - 2], box: [a[0] - 7, top - 1, 14, kind === 'pending' ? 14 : 19] });
   }
@@ -384,6 +400,13 @@ export function drawOffice(g: Pix, v: View, s: GameState, t: number, hover: stri
   }
   items.sort((a, b) => a.key - b.key);
   for (const it of items) it.draw();
+  // 퇴근 뒤(A-149): 밤에는 화면 전체가 어둡고, 야근하는 사람이 없으면 사무실 불도 꺼져 더 어두움
+  if (inNight(s)) {
+    const h = clockHour(s);
+    const dark = Math.max(0, Math.min(1, (h - 18) / 2, (33 - h) / 3));
+    const lit = workingLate(s).length > 0 || atDesk(s, 'ceo');
+    if (dark > 0) g.rect(0, 0, g.w, g.h, hex('#0b1430', Math.round(dark * (lit ? 70 : 130))));
+  }
 }
 
 // ── 바깥 거리(A-122) ── 사무실 대지를 가운데 두고 4칸 도로로 나뉜 블록이 바둑판처럼 이어집니다.
@@ -446,9 +469,9 @@ const BLD_COLS: Record<BldKind, string[]> = {
 const AWNINGS = ['#d9453b', '#3f8cff', '#2fbf71', '#f0a020'];
 
 function drawGround({ g, v, s, t }: DrawCtx) {
-  g.clear(C.asphalt);
-  const frac = Math.min(1, s.msInDay / DATA.time.dayMs);
-  const sky = skyColor(frac);
+  g.clear(inNight(s) ? shade(C.asphalt, 0.6) : C.asphalt);
+  const frac = dayFrac(s);
+  const sky = skyColor(clockHour(s));
   const cxs = roadCenters(FW);
   const cys = roadCenters(FH);
   const [ax0] = lotSpan(-BLOCKS, FW);
@@ -735,7 +758,7 @@ function drawEditFloor({ g, v, s, t }: DrawCtx, edit: EditState) {
 }
 
 function drawWalls({ g, v, s, t }: DrawCtx) {
-  const sky = skyColor(Math.min(1, s.msInDay / DATA.time.dayMs));
+  const sky = skyColor(clockHour(s));
   const T = 0.34;
   // 왼쪽 뒤 벽(gx = 0)
   box(g, v, -T, -T, -7, T, FH + T, WALL_H + 7, { top: C.wallTop, left: C.wallEdge, right: C.wallB });
@@ -788,7 +811,7 @@ function drawWalls({ g, v, s, t }: DrawCtx) {
   // 벽시계
   const clk = P(v, (L.meeting ? L.meeting.x0 : L.exec.x0) - 0.05, 0, 30);
   for (let dy = -4; dy <= 4; dy++) for (let dx = -4; dx <= 4; dx++) if (dx * dx + dy * dy <= 17) g.px(clk[0] + dx, clk[1] + dy, dx * dx + dy * dy >= 13 ? C.ink : hex('#ffffff'));
-  const ang = (Math.min(1, s.msInDay / DATA.time.dayMs) * 9 + 9) * ((Math.PI * 2) / 12);
+  const ang = clockHour(s) * ((Math.PI * 2) / 12);
   g.line(clk, [clk[0] + Math.sin(ang) * 2.5, clk[1] - Math.cos(ang) * 2.5], C.ink);
   g.line(clk, [clk[0], clk[1] - 3], hex('#e5484d'));
 }
@@ -835,6 +858,7 @@ function glassSeg(ctx: DrawCtx, x0: number, y0: number, x1: number, y1: number, 
 function seatOccupant(s: GameState, seat: Seat): { kind: 'empty' | 'pending' | 'emp' | 'ceo'; emp?: Employee } {
   const o = seat.occupant;
   if (!o || o.startsWith('moving:')) return { kind: 'empty' };
+  if (!o.startsWith('pending:') && !atDesk(s, o)) return { kind: 'empty' }; // 퇴근했으면 빈 책상(A-149)
   if (o === 'ceo') return awayOuting(s) ? { kind: 'empty' } : { kind: 'ceo' }; // 외출·이동 중이면 빈 책상(A-101, A-127)
   if (o.startsWith('pending:')) return { kind: 'pending' };
   const emp = s.employees.find((e) => e.id === o);

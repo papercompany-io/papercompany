@@ -10,6 +10,7 @@ import { DATA, dept, orderDef } from './data';
 import { runwayMonths } from './finance';
 import { post } from './messenger';
 import { orderOf } from './orders';
+import { empOrderOf } from './assign';
 import { DM_ACTIONS, commandOrder, dmAction, type DmAction } from './reactions';
 import { pick, rand } from './rng';
 import { hasTrait, isSick } from './staff';
@@ -19,11 +20,11 @@ const ME = '나(대표)';
 
 export type Mood = 'good' | 'neutral' | 'bad';
 type Pieces = { open: string[]; body: string[]; close: string[] };
-type ReplySet = Record<Mood, Pieces> & { trait?: Record<string, string[]>; again?: string[] };
+export type ReplySet = Record<Mood, Pieces> & { trait?: Record<string, string[]>; again?: string[] };
 type IntentDef = { id: string; dm?: string | null; keys: string[] };
-type TopicDef = { id: string; keys: string[]; lines: Record<Mood, string[]> };
+export type TopicDef = { id: string; keys: string[]; lines: Record<Mood, string[]> };
 
-const T = talk as unknown as {
+export const T = talk as unknown as {
   fx: {
     scoldSat: number;
     scoldSatHothead: number;
@@ -34,11 +35,15 @@ const T = talk as unknown as {
     warmDays: number;
     traitChance: number;
     maxLen: number;
+    personalRecentDays: number;
+    personalRecentSat: number;
   };
   intents: IntentDef[];
   orderVerbs: string[];
   orderKeys: Record<string, string[]>;
-  orderReplies: Record<'ok' | 'no' | 'cant' | 'same', string[]>;
+  orderReplies: Record<'ok' | 'no' | 'cant' | 'same' | 'self' | 'back', string[]>;
+  teamKeys: string[];
+  group: Record<string, number>;
   topics: TopicDef[];
   replies: Record<string, ReplySet>;
   sick: string[];
@@ -50,17 +55,18 @@ export interface TalkRead {
   order: string | null;
   tone: number;
   topic: string | null;
+  scope?: 'self' | 'team' | null; // 업무 변경이 이 사람만인지 팀 전체인지(A-147)
 }
 
 export const INTENT_IDS = ['checkin', 'praise', 'push', 'rest', 'order', 'scold', 'apology', 'work', 'idea', 'pay', 'greet', 'bye', 'joke', 'smalltalk', 'unknown'];
 
 // 띄어쓰기·문장부호를 지운 소문자. 키워드도 띄어쓰기 없이 적혀 있습니다
-function norm(text: string): string {
+export function norm(text: string): string {
   return text.toLowerCase().replace(/[\s.,!?~…·"'“”‘’()\-]/g, '');
 }
 
 // 맞은 키워드 길이 합이 가장 큰 것(길수록 구체적). 같으면 JSON 순서가 앞선 것
-function best<D extends { keys: string[] }>(t: string, defs: D[]): { def: D; score: number } | null {
+export function best<D extends { keys: string[] }>(t: string, defs: D[]): { def: D; score: number } | null {
   let top: { def: D; score: number } | null = null;
   for (const def of defs) {
     const score = def.keys.reduce((a, k) => (t.includes(k) ? a + [...k].length : a), 0);
@@ -97,7 +103,7 @@ export function classify(s: GameState, e: Employee, text: string): { intent: str
   return { intent: it.def.id, dm: asDm(it.def.dm), order: null, topic: null };
 }
 
-function asDm(id: string | null | undefined): DmAction | null {
+export function asDm(id: string | null | undefined): DmAction | null {
   return DM_ACTIONS.some((a) => a.id === id) ? (id as DmAction) : null;
 }
 
@@ -112,15 +118,15 @@ export function moodOf(s: GameState, e: Employee): Mood {
   return v >= 68 ? 'good' : v < 45 ? 'bad' : 'neutral';
 }
 
-function fill(s: GameState, e: Employee, text: string): string {
-  const o = orderDef(orderOf(s, e.dept));
+export function fill(s: GameState, e: Employee, text: string): string {
+  const o = orderDef(empOrderOf(s, e));
   return text
     .replace(/\{order\}/g, o?.name ?? '지금 맡은 일')
     .replace(/\{dept\}/g, dept(e.dept).name)
     .replace(/\{company\}/g, s.company.name);
 }
 
-function compose(s: GameState, e: Employee, set: ReplySet, mood: Mood, body?: string[]): string {
+export function compose(s: GameState, e: Employee, set: ReplySet, mood: Mood, body?: string[]): string {
   const own = Object.entries(set.trait ?? {}).filter(([id]) => hasTrait(e, id)).flatMap(([, l]) => l);
   if (!body && own.length && rand(s) < T.fx.traitChance) return pick(s, own);
   const p = set[mood];
@@ -136,10 +142,14 @@ export function postSaid(s: GameState, empId: string, raw: string): string | nul
   return null;
 }
 
-// 올라간 대표 말에 직원이 답하고 효과를 냅니다. read = LLM이 읽은 뜻(null이면 키워드 규칙)
+// 올라간 대표 말에 직원이 답하고 효과를 냅니다. read = Jev가 고른 뜻(null이면 키워드 규칙)
 export function answerSaid(s: GameState, empId: string, raw: string, read: TalkRead | null) {
   const e = s.employees.find((x) => x.id === empId);
-  if (!e) return;
+  if (e) respond(s, e, `dm-${e.id}`, raw, read);
+}
+
+// 한 직원이 채널 ch에서 대표 말에 답함(DM, 또는 팀·전체 채널에서 이 사람을 부른 경우)
+export function respond(s: GameState, e: Employee, ch: string, raw: string, read: TalkRead | null) {
   const text = raw.trim().slice(0, T.fx.maxLen);
   const rule = classify(s, e, text);
   // Jev가 고른 의도가 있으면 그것, 없거나 확신이 낮으면 키워드 규칙
@@ -148,19 +158,24 @@ export function answerSaid(s: GameState, empId: string, raw: string, read: TalkR
   if (intent === 'order' && !read?.order && !rule.order) intent = rule.intent;
   const light = ['greet', 'joke', 'smalltalk', 'unknown'].includes(intent);
   const topic = read && light ? T.topics.find((t) => t.id === read.topic) ?? rule.topic : light ? rule.topic : null;
-  const ch = `dm-${e.id}`;
   const say = (t: string) => post(s, ch, e.name, fill(s, e, t), 'npc');
 
   const dm = asDm(intent);
   if (dm) {
-    dmAction(s, empId, dm, null);
+    dmAction(s, e.id, dm, null, ch);
     return applyTone(s, e, read, intent);
   }
   if (isSick(s, e)) return say(pick(s, T.sick));
 
   if (intent === 'order') {
     const target = read?.order ?? rule.order;
-    if (target && ordersForEmp(s, e).some((o) => o.id === target)) return changeOrder(s, e, target, say);
+    // 이 사람만(기본) 또는 팀 전체("팀", "다 같이" 같은 말이 있거나 Jev가 팀이라고 고름)
+    const scope = read?.scope ?? (T.teamKeys.some((k) => norm(text).includes(k)) ? 'team' : 'self');
+    if (target && ordersForEmp(s, e).some((o) => o.id === target)) {
+      if (scope === 'team') changeOrder(s, e, target, say);
+      else setEmpOrder(s, e.id, target, ch);
+      return applyTone(s, e, read, intent);
+    }
     if (target && orderDef(target)) return say(pick(s, T.orderReplies.cant));
     // 알 수 없는 일: 업무 질문처럼 답함
   }
@@ -186,13 +201,36 @@ export function answerSaid(s: GameState, empId: string, raw: string, read: TalkR
   applyTone(s, e, read, intent);
 }
 
-// 업무 변경: 팀 지시와 같은 판정(팀이 거절할 수 있음). 답은 결과에 맞춰
+// 팀 업무 변경: 팀 지시와 같은 판정(팀이 거절할 수 있음). 답은 결과에 맞춰
 function changeOrder(s: GameState, e: Employee, target: string, say: (t: string) => void) {
   const R = T.orderReplies;
   if (orderOf(s, e.dept) === target) return say(pick(s, R.same));
   commandOrder(s, e.dept, target);
   if (s.company.orders[e.dept] === target) say(pick(s, R.ok));
   else say(pick(s, s.company.orderPushback?.order === target ? R.no : R.cant));
+}
+
+// 개인 업무 지정(A-147). orderId = null 또는 팀 일이면 팀 일로 돌아감. ch가 있으면 그 채널에 직원이 답함.
+// 며칠 안에 또 바꾸면 만족이 조금 떨어집니다(자주 바꾸는 게 공짜가 아님). 반환: null = 됨, 문자열 = 못 한 이유
+export function setEmpOrder(s: GameState, empId: string, orderId: string | null, ch?: string): string | null {
+  const e = s.employees.find((x) => x.id === empId);
+  if (!e) return '직원을 찾을 수 없습니다.';
+  const R = T.orderReplies;
+  const say = (t: string) => ch && post(s, ch, e.name, fill(s, e, t), 'npc');
+  const team = orderOf(s, e.dept);
+  const next = orderId && orderId !== team ? orderId : null;
+  if (next) {
+    const o = orderDef(next);
+    if (!o || o.dept !== e.dept) return say(pick(s, R.cant)), '이 직원 부서의 일이 아닙니다.';
+    if (s.company.stage < o.stage) return say(pick(s, R.cant)), `회사 단계 ${o.stage}부터 맡길 수 있는 일입니다.`;
+  }
+  if ((e.order ?? null) === next || (!next && empOrderOf(s, e) === team)) return say(pick(s, R.same)), null;
+  const last = e.dmDay?.['order'];
+  if (last !== undefined && s.day - last < T.fx.personalRecentDays) e.sat = Math.max(0, e.sat - T.fx.personalRecentSat);
+  (e.dmDay ??= {})['order'] = s.day;
+  e.order = next;
+  say(pick(s, next ? R.self : R.back));
+  return null;
 }
 
 // 말투 효과: 거친 말은 만족 하락(질책은 이미 깎았으니 제외), 따뜻한 말은 며칠에 한 번만 조금(버튼 칭찬보다 작게)

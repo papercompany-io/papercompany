@@ -16,6 +16,7 @@ import { PixelAvatar } from '../office/Avatar';
 import { wonShort } from '../../core/format';
 import type { DeptId, Employee, GameState, WorkPolicy } from '../../core/types';
 import './apps.css';
+import { EmpOrderSelect } from './MessengerApp';
 
 function meterCls(v: number) {
   return v < 35 ? 'bad' : v < 55 ? 'warnc' : '';
@@ -79,6 +80,10 @@ export function EmployeeDetail({ e, openDm, compact }: { e: Employee; openDm?: (
       )}
       {!compact && (
         <>
+          <label className="tiny row">
+            맡은 일
+            <EmpOrderSelect e={e} onErr={(m) => m && setMsg({ text: m, ok: false })} />
+          </label>
           <label className="tiny row">
             부서 이동
             <select
@@ -419,7 +424,7 @@ function Welfare() {
           </div>
           <div className="ew-note">
             {policy.desc}
-            {policy.id === 'crunch' ? ' 버그와 기술 부채도 늘어납니다.' : ''}
+            {policy.id === 'crunch' ? ' 버그와 기술 부채도 늘어납니다. 대표와 팀이 밤늦게까지 사무실에 남습니다.' : ''}
           </div>
         </div>
         <div className="hf-field">

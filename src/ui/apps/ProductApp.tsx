@@ -1,11 +1,11 @@
-// F09 제품 창(Startup Company식): 위 제품 띠(로고·순위·품질·사용자) + 탭 4개
+// F09 업무 창(A-136, 예전 제품 창 · Startup Company식): 위 제품 띠(로고·순위·품질·사용자) + 탭(상태·기능·만드는 순서·외주·출시 기록)
 //  상태: MVP 전에는 출시까지 공정(진행률·남은 날·누가 만드나), 출시 후에는 지금 사용자·어제 매출·품질 계기판·추이 그래프
 //  기능: 위 요약(잠재 고객·사용자·매력도 구성 팝업 / 다음 출시·작업량) + 기능 카드 줄(그림·레벨·업그레이드)
 //  만드는 순서(로드맵) · 출시 기록
 // 오른쪽 위 제품 카드(ProductCard)도 여기서 내보냅니다.
 import { ContractsCard } from './ScheduleApp';
 import { contractsOpen } from '../../core/contracts';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { DATA, feature, gradeOutput, industry, featuresOf, featureWork, priceTierDef, type FeatureDef, type FeatureFx } from '../../core/data';
 import { addToRoadmap, appeal, appealBreakdown, canCharge, coreFeatures, etaDays, featureLevel, featureLock, hasMvp, insightCost, insightHave, itemNeed, moveRoadmap, quality, removeFromRoadmap, ROADMAP_MAX, upkeepShare } from '../../core/product';
 import { ceoDevPerDay } from '../../core/ceo';
@@ -170,11 +170,17 @@ export function ProductCard({ onOpen }: { onOpen: () => void }) {
   );
 }
 
-export function ProductApp({ openSchedule, openHiring }: { openSchedule?: () => void; openHiring?: () => void }) {
+type ProductTab = 'status' | 'features' | 'roadmap' | 'contract' | 'log';
+
+export function ProductApp({ initialTab, openSchedule, openHiring }: { initialTab?: string; openSchedule?: () => void; openHiring?: () => void }) {
   const s = useGame();
   const mvp = hasMvp(s);
-  const [tab, setTab] = useState<'status' | 'features' | 'roadmap' | 'contract' | 'log'>('status');
-  const showContract = !!s.contracts?.active || (contractsOpen(s) && !!s.contracts?.offers.length); // 개발 일정: 외주 일감(A-133, CEO 일정에서 옮김)
+  const [tab, setTab] = useState<ProductTab>((initialTab as ProductTab) ?? 'status');
+  // 알림 카드(외주 진행, A-144)에서 열면 창이 이미 떠 있어도 그 탭으로
+  useEffect(() => {
+    if (initialTab) setTab(initialTab as ProductTab);
+  }, [initialTab]);
+  const showContract = !!s.contracts?.active || contractsOpen(s); // 외주 일감(A-133). A-136: 제안이 없어도 외주를 받을 수 있는 동안은 탭을 늘 보여 줌
   const v = productView(s);
   const name = s.company.service?.name ?? s.company.name;
   const all = featuresOf(s.company.industry);
@@ -212,7 +218,7 @@ export function ProductApp({ openSchedule, openHiring }: { openSchedule?: () => 
             id: 'roadmap',
             label: `만드는 순서 ${s.product.roadmap.length}/${ROADMAP_MAX}`,
           },
-          ...(showContract ? [{ id: 'contract' as const, label: `외주 일감${s.contracts?.active ? ' · 진행 중' : ''}` }] : []),
+          ...(showContract ? [{ id: 'contract' as const, label: `외주${s.contracts?.active ? ' · 진행 중' : s.contracts?.offers.length ? ` ${s.contracts.offers.length}` : ''}` }] : []),
           { id: 'log', label: '출시 기록' },
         ]}
         value={tab}

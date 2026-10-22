@@ -4,7 +4,8 @@ import { ProductCard } from './apps/ProductApp';
 import { paydayForecast } from '../core/forecast';
 import { useEffect, useRef, useState } from 'react';
 import { advance, isRunning, setSpeed } from '../core/sim';
-import { clockOf, dateOf, formatDate } from '../core/calendar';
+import { autoSkipDue, clockHour, clockText, inNight, shownDay, skipNight, workingLate } from '../core/night';
+import { dateOf, formatDate } from '../core/calendar';
 import { founderPct } from '../core/equity';
 import { DATA, industry, market, MARKET_IDS } from '../core/data';
 import { currentPL, runwayMonths } from '../core/finance';
@@ -104,6 +105,7 @@ export function Game({ continued, notice, clearNotice, onEnded }: Props) {
       if (g && isRunning(g) && !timeHold.nego) {
         const day = g.day;
         advance(g, dt);
+        if (autoSkipDue(g, getSettings().autoSkipNight)) skipNight(g); // 퇴근 뒤 자동 건너뛰기(A-149)
         const important = g.day !== day || g.events.length > 0 || !isRunning(g);
         if (important || now - lastTouch.current > 150) {
           lastTouch.current = now;
@@ -341,8 +343,10 @@ function settingsSpeed() {
 
 // 위 가로 막대(Startup Company식): 왼쪽 회사, 가운데 자금·지표, 오른쪽 날짜·시각·배속·저장(DT-05)
 function TopBar({ s }: { s: GameState }) {
-  const d = dateOf(s.day);
-  const frac = Math.min(1, s.msInDay / DATA.time.dayMs);
+  const d = dateOf(shownDay(s));
+  const frac = (clockHour(s) - DATA.time.workStartHour) / 24; // 테두리: 출근(9시)부터 다음 날 9시까지 한 바퀴
+  const night = inNight(s);
+  const late = workingLate(s);
   const fc = paydayForecast(s);
   const rw = runwayMonths(s);
   const net = currentPL(s).netIncome;
@@ -392,7 +396,7 @@ function TopBar({ s }: { s: GameState }) {
         <div className="tb-row tb-row1">
           <div className="tb-date" data-testid="hud-date">
             <span>
-              {formatDate(s.day)} ({WEEK[d.getUTCDay()]})
+              {formatDate(shownDay(s))} ({WEEK[d.getUTCDay()]})
             </span>
             <span className={`hud-econ ${s.economy.phase}`} title="경기">
               {s.economy.phase === 'boom' ? '호황' : s.economy.phase === 'recession' ? '불황' : '보통'}
@@ -407,9 +411,28 @@ function TopBar({ s }: { s: GameState }) {
           </div>
         </div>
         <div className="tb-row tb-row2">
-          <span className="tb-clock" title="현재 시각">
-            {clockOf(s.msInDay)}
+          <span className={`tb-clock ${night ? 'night' : ''}`} title={night ? '퇴근 뒤 시각' : '현재 시각'} data-testid="hud-clock">
+            {clockText(s)}
           </span>
+          {/* 퇴근 뒤(A-149): 야근 중인 사람 수와 다음 날 아침으로 건너뛰기 */}
+          {night && late.length > 0 && (
+            <span className="tb-late" data-testid="hud-late" title={`야근 중: ${late.map((e) => e.name).join(', ')}`}>
+              야근 {late.length}명
+            </span>
+          )}
+          {night && (
+            <button
+              className="tb-skip"
+              data-testid="skip-night"
+              title="다음 날 아침 9시로 건너뜁니다. 야근한 만큼의 일은 그대로 반영됩니다."
+              onClick={() => {
+                act((g) => skipNight(g));
+                play('click');
+              }}
+            >
+              아침으로 <SkipIcon />
+            </button>
+          )}
           {/* 버닝 중(A-131) */}
           {burningActive(s) && (
             <span className="tb-burn" data-testid="hud-burning" title="버닝: 팀이 더 빨리 일하는 중">
@@ -503,6 +526,13 @@ const PauseIcon = () => (
   <svg width="12" height="12" viewBox="0 0 12 12">
     <rect x="2" y="1" width="3" height="10" fill="currentColor" />
     <rect x="7" y="1" width="3" height="10" fill="currentColor" />
+  </svg>
+);
+// 건너뛰기(▶▶|)
+const SkipIcon = () => (
+  <svg width="14" height="12" viewBox="0 0 14 12">
+    <path d="M1 1 L6 6 L1 11 Z M6 1 L11 6 L6 11 Z" fill="currentColor" />
+    <rect x="11" y="1" width="2" height="10" fill="currentColor" />
   </svg>
 );
 const PlayIcon = ({ n }: { n: number }) => (

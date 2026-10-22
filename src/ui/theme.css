@@ -890,6 +890,12 @@ input[type='checkbox'] { accent-color: var(--accent); width: 16px; height: 16px;
 .mg-write { display: flex; gap: 6px; }
 .mg-write input { flex: 1; min-width: 0; padding: 7px 10px; border: 1px solid var(--line-strong); border-radius: var(--r-sm); background: var(--surface); color: var(--text); font-size: var(--fs-md); }
 .mg-write input:focus { outline: none; border-color: var(--c-blue-500); }
+/* 사람별 맡은 일(A-147): 접히는 목록, 한 줄에 이름 + 고르기 */
+.mg-people { font-size: var(--fs-sm); color: var(--text-2); }
+.mg-people summary { cursor: pointer; font-weight: 700; color: var(--text); padding: 2px 0; }
+.mg-people .muted { font-weight: 400; color: var(--text-3); }
+.mg-person { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 0; border-top: 1px solid var(--line); }
+.mg-person select { max-width: 60%; }
 .mg-pick { display: flex; flex-direction: column; gap: 2px; max-height: 320px; overflow-y: auto; }
 .mg-pick-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: var(--r-sm); cursor: pointer; }
 .mg-pick-row:hover { background: var(--surface-hover); }
@@ -1420,3 +1426,22 @@ input[type='checkbox'] { accent-color: var(--accent); width: 16px; height: 16px;
 
 /* 화면(A-142): 주식 앱 가이던스 판의 "주주 신뢰" 막대 — 이름 칸을 넓혀 한 줄로 */
 .emp-bar.stock-trust { grid-template-columns: 64px 1fr 28px; margin-top: 6px; }
+
+/* 화면(A-144): 왼쪽 알림 카드 맨 위 "외주 진행" 카드 — 진행률 막대·마감·끝나는 때. 누르면 업무 창 외주 탭 */
+.ss-card.contract { width: 100%; text-align: left; font: inherit; cursor: pointer; border-left-color: #2bb3a8; }
+.ss-card.contract.late { border-left-color: var(--negative); }
+.ss-card.contract:hover { border-color: var(--line-strong); box-shadow: var(--sh-3, var(--sh-2)); }
+.ss-due.bad { color: var(--negative-press); }
+.ss-progress { display: flex; align-items: center; gap: 8px; font-size: var(--fs-sm); }
+.ss-progress .bar { height: 8px; }
+.ss-sub { font-size: var(--fs-sm); color: var(--text-2); }
+/* 화면(A-144): 외주 탭 "외주 평판" 줄 — 단계 이름과 다음 단계까지 막대 */
+.ct-trust { display: flex; align-items: center; gap: 8px; font-size: var(--fs-sm); }
+.ct-trust > span:first-child { color: var(--text-2); }
+.ct-trust .bar { height: 8px; min-width: 60px; }
+
+/* 퇴근 뒤 시간(A-149): 밤 시각은 푸른빛, 야근 인원 칩, 아침으로 건너뛰기 버튼 */
+.tb-clock.night { color: var(--c-blue-200); }
+.tb-late { font-size: var(--fs-sm); font-weight: 800; color: var(--c-amber-800); background: var(--c-amber-300); border-radius: var(--r-full); padding: 1px 8px; white-space: nowrap; }
+.tb-skip { display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 9px; border: none; border-radius: var(--r-xs); background: rgba(255, 255, 255, 0.12); color: var(--c-white); font-size: var(--fs-sm); font-weight: 700; white-space: nowrap; cursor: pointer; }
+.tb-skip:hover { background: rgba(255, 255, 255, 0.2); color: var(--chrome-active); }

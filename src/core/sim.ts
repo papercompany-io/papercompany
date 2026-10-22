@@ -3,6 +3,7 @@ import { DATA } from './data';
 import { isFirstOfMonth, isQuarterStart, dateOf } from './calendar';
 import { aiDay, aiMonth } from './aiadopt';
 import { ceoDayEnd, runSlot } from './ceo';
+import { chatterSlot } from './chatter';
 import { competitorsMonth } from './competitors';
 import { economyDay } from './economy';
 import { applySeatMoves } from './employees';
@@ -51,6 +52,14 @@ export function advance(s: GameState, realMs: number) {
   if (!isRunning(s)) return;
   let ms = Math.min(realMs, 1000) * s.speed;
   while (ms > 0 && isRunning(s)) {
+    // 퇴근 뒤(A-149): 다음 날 9시까지 시계만 흐름. 야근 효과는 하루 끝(endDay)의 근무 정책이 매김
+    if (s.nightMs !== undefined) {
+      const step = Math.min(ms, T.nightMs - s.nightMs);
+      s.nightMs += step;
+      ms -= step;
+      if (s.nightMs >= T.nightMs - 1e-6) endDay(s);
+      continue;
+    }
     const nextSlot = s.slotsDone < T.slotsPerDay ? slotEnd(s.slotsDone) : T.dayMs;
     const target = Math.min(nextSlot, T.dayMs);
     const step = Math.min(ms, target - s.msInDay);
@@ -59,9 +68,10 @@ export function advance(s: GameState, realMs: number) {
     hiringArrivals(s, s.msInDay);
     if (s.slotsDone < T.slotsPerDay && s.msInDay >= slotEnd(s.slotsDone) - 1e-6) {
       runSlot(s, s.slotsDone);
+      chatterSlot(s, s.slotsDone); // 직원 잡담(A-148)
       s.slotsDone += 1;
     }
-    if (s.msInDay >= T.dayMs - 1e-6) endDay(s);
+    if (s.msInDay >= T.dayMs - 1e-6) s.nightMs = 0;
   }
 }
 
@@ -69,6 +79,7 @@ export function advance(s: GameState, realMs: number) {
 export function runDay(s: GameState) {
   while (s.slotsDone < T.slotsPerDay) {
     runSlot(s, s.slotsDone);
+    chatterSlot(s, s.slotsDone);
     s.slotsDone += 1;
   }
   endDay(s);
@@ -84,6 +95,7 @@ export function endDay(s: GameState) {
   ceoDayEnd(s);
   s.day += 1;
   s.msInDay = 0;
+  s.nightMs = undefined;
   s.slotsDone = 0;
   s.todayLog = { dev: 0, contract: 0, sales: 0, ir: 0, network: 0, enterprise: 0, approve: 0 };
   staffDay(s);

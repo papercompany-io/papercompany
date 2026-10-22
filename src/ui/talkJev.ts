@@ -8,6 +8,10 @@ import { runwayMonths } from '../core/finance';
 import { orderOf } from '../core/orders';
 import { isSick } from '../core/staff';
 import { moodOf, ordersForEmp, topicList, type TalkRead } from '../core/talk';
+import { channelMembers, namedIn, type ChannelRead } from '../core/chat';
+import { getChannel } from '../core/messenger';
+import { empOrderOf } from '../core/assign';
+import { DATA } from '../core/data';
 import type { GameState } from '../core/types';
 
 const TIMEOUT_MS = 10000;
@@ -46,6 +50,7 @@ function buildRequest(s: GameState, empId: string, said: string) {
       order: { type: 'choice', instructions: 'message가 이 직원의 팀에게 맡은 일을 바꾸라는 지시라면, 어떤 일로 바꾸라는 것인가?', criteria: orders },
       tone: { type: 'score', instructions: 'message의 말투는 직원에게 얼마나 따뜻한가?', criteria: ['모욕·막말', '무례·짜증', '보통', '친절', '아주 따뜻함'] },
       topic: { type: 'choice', instructions: 'message가 이야기하는 일상·회사 주제는?', criteria: topics },
+      scope: { type: 'choice', instructions: '업무를 바꾸라는 지시라면 누구에게 하는 지시인가?', criteria: { self: '이 직원 한 명에게만(개인 업무)', team: '이 직원이 속한 팀 전체에게' } },
     },
     state: {
       message: said,
@@ -74,6 +79,7 @@ function toRead(a: Answers | null): TalkRead | null {
     order: pickOf('order'),
     tone: typeof a.tone?.score === 'number' ? a.tone.score - 2 : 0,
     topic: pickOf('topic'),
+    scope: a.scope?.choice === 'team' ? 'team' : a.scope?.choice === 'self' ? 'self' : null,
   };
 }
 
@@ -82,6 +88,78 @@ export async function readTalk(s: GameState, empId: string, said: string): Promi
   if (!req) return null;
   try {
     return toRead(await Promise.race([call(req), new Promise<null>((r) => setTimeout(() => r(null), TIMEOUT_MS))]));
+  } catch {
+    return null;
+  }
+}
+
+// ── 팀·전체 채널(A-147) ──
+// 질문: 의도, 말투, 주제, 팀 단위로 바꿀 일, 모두(개인 업무까지)인지, 부른 사람, 그리고 문장에 이름이 나온 사람마다 맡길 일
+function buildChannelRequest(s: GameState, chId: string, said: string) {
+  const ch = getChannel(s, chId);
+  const members = channelMembers(s, chId);
+  if (!ch || !members.length) return null;
+  const pool = DATA.orders.orders.filter((o) => s.company.stage >= o.stage && (ch.kind !== 'team' || o.dept === ch.dept));
+  const teamOrders = Object.fromEntries([...pool.map((o) => [o.id, `${dept(o.dept as never).name}팀: ${o.name}`]), [NONE, '팀 업무를 바꾸라는 말이 아님']]);
+  const named = namedIn(members, said);
+  const assignQs = Object.fromEntries(
+    named.map(({ e }) => [
+      `assign_${e.id}`,
+      {
+        type: 'choice',
+        instructions: `message에서 ${e.name}(${dept(e.dept).name}팀)에게 따로 맡기라고 한 일은?`,
+        criteria: Object.fromEntries([...ordersForEmp(s, e).map((o) => [o.id, `${o.name}: ${o.desc}`]), ['team', '팀 일로 돌아가라고 함'], [NONE, `${e.name}에게 따로 일을 맡기는 말이 아님`]]),
+      },
+    ]),
+  );
+  const speakers = members.length <= 15 ? Object.fromEntries([...members.map((e) => [e.id, `${e.name}(${dept(e.dept).name}팀)`]), [NONE, '특정한 사람을 부르지 않음(모두에게)']]) : null;
+  const hist = ch.messages.slice(-7, -1).map((m) => `${m.from}: ${m.text}`);
+  return {
+    named,
+    req: {
+      questions: {
+        intent: { type: 'choice', instructions: `대표가 ${ch.kind === 'all' ? '회사 전체 채널' : `${ch.name} 채널`}에 쓴 message의 주된 뜻은?`, criteria: INTENTS },
+        tone: { type: 'score', instructions: 'message의 말투는 얼마나 따뜻한가?', criteria: ['모욕·막말', '무례·짜증', '보통', '친절', '아주 따뜻함'] },
+        topic: { type: 'choice', instructions: 'message가 이야기하는 일상·회사 주제는?', criteria: Object.fromEntries([...topicList().map((t) => [t.id, t.keys.slice(0, 6).join(', ')]), [NONE, '특별한 주제 없음']]) },
+        team_order: { type: 'choice', instructions: 'message가 팀 전체가 맡을 일을 바꾸라는 지시라면 어떤 일인가?', criteria: teamOrders },
+        everyone: { type: 'noul', instructions: '따로 다른 일을 하던 사람까지 모두 같은 일을 하라는 말인가?', criteria: { true: '모두·다 같이·전원', false: '그런 말 없음' } },
+        ...(speakers ? { speaker: { type: 'choice', instructions: 'message가 특정한 한 사람에게 하는 말이라면 누구인가?', criteria: speakers } } : {}),
+        ...assignQs,
+      },
+      state: {
+        message: said,
+        channel: ch.kind === 'all' ? '회사 전체 채널' : ch.name,
+        members: members.map((e) => `${e.name}(${dept(e.dept).name}팀${e.lead ? ' 팀장' : ''}, 지금 하는 일: ${orderDef(empOrderOf(s, e))?.name ?? '없음'})`).join(', '),
+        company: s.company.name,
+        recent_conversation: hist.join('\n') || '(없음)',
+      },
+    },
+  };
+}
+
+type NoulAns = { noul?: number };
+
+export async function readChannel(s: GameState, chId: string, said: string): Promise<ChannelRead | null> {
+  const built = buildChannelRequest(s, chId, said);
+  if (!built) return null;
+  try {
+    const a = await Promise.race([call(built.req), new Promise<null>((r) => setTimeout(() => r(null), TIMEOUT_MS))]);
+    if (!a?.intent?.choice) return null;
+    const pickOf = (k: string) => (a[k]?.choice && a[k]!.choice !== NONE ? a[k]!.choice! : null);
+    const assigns: Record<string, string> = {};
+    for (const { e } of built.named) {
+      const o = pickOf(`assign_${e.id}`);
+      if (o) assigns[e.id] = o;
+    }
+    return {
+      intent: (a.intent.confidence ?? 1) >= MIN_CONFIDENCE ? a.intent.choice : null,
+      tone: typeof a.tone?.score === 'number' ? a.tone.score - 2 : 0,
+      topic: pickOf('topic'),
+      teamOrder: pickOf('team_order'),
+      everyone: ((a.everyone as NoulAns | undefined)?.noul ?? 0) >= 0.5,
+      speaker: pickOf('speaker'),
+      assigns,
+    };
   } catch {
     return null;
   }

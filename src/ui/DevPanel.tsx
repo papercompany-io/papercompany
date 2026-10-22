@@ -1,5 +1,6 @@
 // 개발용 상태 패널(` 또는 F9): 자금, 지분표, 손익, 기업가치, 게임 날짜를 한눈에 봅니다(A-31).
-import { clockOf, formatDate } from '../core/calendar';
+import { formatDate } from '../core/calendar';
+import { clockText } from '../core/night';
 import { totalShares } from '../core/equity';
 import { currentPL, lastPL } from '../core/finance';
 import { pctsSumTo100, won } from '../core/format';
@@ -72,7 +73,7 @@ export function DevPanel({ onClose }: { onClose: () => void }) {
         </div>
       </div>
       <div className="dev-block">
-        <b>게임 날짜</b> {formatDate(s.day)} {clockOf(s.msInDay)} · 배속 {s.speed}x {s.pauseReason ? `· 일시정지(${s.pauseReason})` : ''} · 시드 {s.seed}
+        <b>게임 날짜</b> {formatDate(s.day)} {clockText(s)} · 배속 {s.speed}x {s.pauseReason ? `· 일시정지(${s.pauseReason})` : ''} · 시드 {s.seed}
       </div>
       <div className="dev-block">
         <b>자금</b> <span data-testid="dev-cash">{won(s.cash)}</span>

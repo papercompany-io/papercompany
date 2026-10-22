@@ -34,6 +34,7 @@ export interface Employee {
   lastRaiseDay: number;
   bubble: { text: string; until: number } | null; // OF-05 머리 위 말풍선
   dmDay?: Partial<Record<string, number>>; // DM 행동별 마지막 날(A-94: 자주 하면 효과 줄어듦)
+  order?: string | null; // 개인 업무(A-147). 없으면 팀 맡은 일을 따름
 }
 
 export interface Seat {
@@ -576,6 +577,7 @@ export interface GameState {
   idSeq: number;
   day: number; // 2027-01-01부터 지난 날 수(커리어 전체)
   msInDay: number;
+  nightMs?: number; // 퇴근 뒤 지난 시간(A-149). 없으면 근무 시간
   slotsDone: number;
   speed: number;
   pauseReason: string | null;

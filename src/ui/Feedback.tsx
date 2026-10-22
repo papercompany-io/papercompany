@@ -6,6 +6,7 @@ import type { GameState, Notice, PendingDecision } from '../core/types';
 import { act } from './store';
 import { play } from './sound';
 import { PxIcon, type PxId } from './icons';
+import { COLORS as WORK_COLORS, contractPace, daysText } from './apps/ScheduleApp';
 import './feedback.css';
 
 const ICON: Record<Notice['kind'], PxId> = { info: 'talk', good: 'check', bad: 'warn', urgent: 'siren', achievement: 'trophy', mission: 'star' };
@@ -173,6 +174,33 @@ interface StackItem {
 
 const STACK_MAX = 4;
 
+// 외주 진행 카드(A-144): 진행 중인 외주는 마감이 걸린 중요한 상태라 알림 카드 맨 위에 늘 붙여 둡니다(✕ 없음, 개수 제한에 안 셈).
+function ContractStackCard({ s, onOpen }: { s: GameState; onOpen: (app: string, arg?: string) => void }) {
+  const a = s.contracts?.active;
+  if (!a || a.deadline === null) return null;
+  const pct = Math.min(100, (a.done / a.work) * 100);
+  const pace = contractPace(s);
+  const eta = pace.total > 0 ? Math.max(0, a.work - a.done) / pace.total : null;
+  const dl = a.deadline - s.day;
+  const late = s.day > a.deadline || (eta !== null && Math.ceil(eta) > dl);
+  return (
+    <button className={`ss-card contract ${late ? 'late' : ''}`} data-testid="stack-contract" onClick={() => onOpen('product', 'contract')}>
+      <div className="ss-head">
+        <PxIcon id="case" size={16} />
+        <b className="ss-from">외주 · {a.title}</b>
+        <span className={`ss-due ${late ? 'bad' : ''}`}>{dl < 0 ? `마감 ${-dl}일 지남` : `마감 ${dl}일 남음`}</span>
+      </div>
+      <div className="ss-progress">
+        <b>{Math.floor(pct)}%</b>
+        <div className="bar grow">
+          <div style={{ width: `${pct}%`, background: WORK_COLORS.contract }} />
+        </div>
+      </div>
+      <span className="ss-sub">{eta === null ? '아무도 안 하는 중 · 대표 주 업무나 개발팀 지시를 바꾸세요' : `${a.client} · 끝나는 때 ${daysText(eta)}${late ? ' · 마감보다 늦음' : ''}`}</span>
+    </button>
+  );
+}
+
 export function SideStack({ s, onOpen }: { s: GameState; onOpen: (app: string, arg?: string) => void }) {
   const [hidden, setHidden] = useState<string[]>([]);
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -197,10 +225,12 @@ export function SideStack({ s, onOpen }: { s: GameState; onOpen: (app: string, a
         });
     return out.filter((x) => !hidden.includes(x.key));
   })();
-  if (!items.length) return null;
+  const contract = !!s.contracts?.active;
+  if (!items.length && !contract) return null;
   const show = items.slice(0, STACK_MAX);
   return (
     <div className="side-stack" data-testid="side-stack" onPointerDown={(e) => e.stopPropagation()}>
+      <ContractStackCard s={s} onOpen={onOpen} />
       {show.map((it) => {
         const open = expanded === it.key && it.decision;
         return (

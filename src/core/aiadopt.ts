@@ -5,6 +5,7 @@ import { news, notify, float } from './notify';
 import { post, teamChannelId } from './messenger';
 import { rand, randRange } from './rng';
 import type { DeptId, Employee, GameState } from './types';
+import { orderShare } from './assign';
 
 const A = DATA.ai;
 
@@ -70,7 +71,7 @@ export function aiDay(s: GameState) {
   if (!s.ai.modelId) return;
   const m = aiModel(s.ai.modelId)!;
   const ax = s.company.welfare.includes('ax') ? 0.6 : 0;
-  const tools = s.company.orders.ai === 'ai_tools' ? 0.8 : 0;
+  const tools = 0.8 * orderShare(s, 'ai', 'ai_tools'); // A-147
   s.ai.adaptation = Math.min(1, s.ai.adaptation + (1 + ax + tools) / A.adaptDays);
   s.accrual.ai += aiMonthlyCost(s) / 30;
   const adoptedDepts = (Object.keys(s.ai.adoption) as DeptId[]).filter((d) => (s.ai.adoption[d] ?? 0) > 0 && s.employees.some((e) => e.dept === d));

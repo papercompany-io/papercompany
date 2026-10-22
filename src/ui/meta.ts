@@ -2,6 +2,7 @@
 import { useSyncExternalStore } from 'react';
 import { emptyProfile } from '../core/career';
 import type { Profile } from '../core/types';
+import type { AutoSkip } from '../core/night';
 import { saveProfile } from '../platform/save';
 
 let profile: Profile = emptyProfile();
@@ -42,10 +43,11 @@ export interface Settings {
   defaultSpeed: number;
   toasts: boolean;
   animations: boolean;
+  autoSkipNight: AutoSkip; // 퇴근 뒤 자동 건너뛰기(A-149)
 }
 
 const SKEY = 'papercompany.settings';
-let settings: Settings = { autoPauseUrgent: true, defaultSpeed: 1, toasts: true, animations: true };
+let settings: Settings = { autoPauseUrgent: true, defaultSpeed: 1, toasts: true, animations: true, autoSkipNight: 'off' };
 try {
   const raw = localStorage.getItem(SKEY);
   if (raw) settings = { ...settings, ...(JSON.parse(raw) as Partial<Settings>) };

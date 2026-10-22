@@ -60,6 +60,11 @@
   "discoveryAwareness": 0.03,
   "discoveryUsers": 20000,
   "userAwareness": 3,
+  "outbound": {
+    "_note": "A-147 직접 데려오는 고객(영업 계약·광고로 산 고객)은 점유율 목표에 막히지 않음 [예시값]. 스스로 찾아오는 고객·입소문만 목표까지(하루 gapRate × 남은 몫). 목표를 넘은 고객은 excessChurn(하루)을 기준으로 떠나고, 제품 매력도가 경쟁사보다 낮을수록 더 빨리 떠남(돈·영업으로 산 성장의 대가)",
+    "gapRate": 0.05,
+    "excessChurn": 0.012
+  },
   "awarenessDecayPerDay": 0.002,
   "shareExponent": 1.6,
   "foreign": 0.2,
