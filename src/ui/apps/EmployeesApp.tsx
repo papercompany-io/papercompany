@@ -1,5 +1,6 @@
 // F05 직원·조직 앱: EM-01 목록과 상세(만족도·건강·숙련·특성), EM-02 부서 배치, EM-04 퇴사·해고, 팀장, 부서 지시(MG-03),
 // WF-01~04 복지와 근무 방침, 연봉 인상, EQ-04 스톡옵션 지급
+import { burningActive, burningBlock, burningCost, startBurning } from '../../core/burning';
 import { useState } from 'react';
 import { DATA, DEPT_IDS, dept, ordersFor, trait } from '../../core/data';
 import { formatDate } from '../../core/calendar';
@@ -348,6 +349,32 @@ function Depts() {
   );
 }
 
+// 버닝(A-131): 작은 보너스를 주고 며칠 동안 빠르게. 끝나면 지치고 한동안 다시 못 함
+function Burning() {
+  const s = useGame();
+  const [err, setErr] = useState<string | null>(null);
+  const on = burningActive(s);
+  const block = burningBlock(s);
+  const b = s.company.burning;
+  return (
+    <div className="hf-field" data-testid="burning">
+      <div className="hf-label">버닝</div>
+      {on && b ? (
+        <div className="burn-on">버닝 중 · {b.until - s.day}일 남음</div>
+      ) : (
+        <button className="btn small" data-testid="burning-start" disabled={!!block} title={block ?? ''} onClick={() => setErr(act((g) => startBurning(g)) ?? null)}>
+          버닝 시작 · 보너스 {wonShort(burningCost(s))}
+        </button>
+      )}
+      <div className="ew-note">
+        {block && !on ? `${block} ` : ''}
+        전 직원에게 작은 보너스를 주고 며칠 동안 일을 몰아서 빨리 진행합니다. 끝나면 팀이 며칠 지치고, 한동안 다시 할 수 없습니다.
+      </div>
+      {err && <div className="err">{err}</div>}
+    </div>
+  );
+}
+
 // 복지·근무: 채용 짜임처럼 왼쪽 복지 타일(누르면 켜고 끔), 오른쪽 회색 판(근무 방침 · 연봉 인상률). 돈 액수·수치 효과는 보여 주지 않음
 function Welfare() {
   const s = useGame();
@@ -406,6 +433,7 @@ function Welfare() {
           </div>
           <div className="ew-note">다른 회사 월급은 해마다 조금씩 오릅니다. 안 올리면 만족도가 서서히 떨어집니다.</div>
         </div>
+        <Burning />
       </section>
     </div>
   );

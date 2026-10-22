@@ -158,3 +158,86 @@ export function Confetti() {
     </div>
   );
 }
+
+// 쌓이는 알림 카드(A-134): Startup Company처럼 왼쪽 메뉴 옆에 답을 기다리는 결정·직원 DM·긴급 알림이 카드로 쌓입니다.
+// 누르면 그 대화를 열고, 결정 카드는 펼쳐서 바로 고를 수 있습니다. ✕는 이 카드만 치움(새 메시지가 오면 다시 뜸).
+interface StackItem {
+  key: string;
+  kind: 'decision' | 'dm' | 'urgent';
+  from: string;
+  text: string;
+  open: () => void;
+  decision?: PendingDecision;
+  onDismiss?: () => void;
+}
+
+const STACK_MAX = 4;
+
+export function SideStack({ s, onOpen }: { s: GameState; onOpen: (app: string, arg?: string) => void }) {
+  const [hidden, setHidden] = useState<string[]>([]);
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const items = (() => {
+    const out: StackItem[] = [];
+    for (const d of s.decisions) if (!d.resolved) out.push({ key: `d-${d.id}`, kind: 'decision', from: d.from, text: d.text, decision: d, open: () => onOpen('messenger', d.channelId) });
+    for (const ch of s.channels) {
+      if (ch.kind !== 'dm' || ch.unread <= 0) continue;
+      const last = ch.messages[ch.messages.length - 1];
+      if (!last || last.decisionId) continue; // 결정 메시지는 위 결정 카드로
+      out.push({ key: `m-${ch.id}-${last.id}`, kind: 'dm', from: ch.name, text: last.text, open: () => onOpen('messenger', ch.id) });
+    }
+    for (const n of s.notices)
+      if (n.kind === 'urgent' && !n.read && s.day - n.day <= 3)
+        out.push({
+          key: `n-${n.id}`,
+          kind: 'urgent',
+          from: '긴급',
+          text: n.text,
+          open: () => n.app && onOpen(n.app, n.arg),
+          onDismiss: () => act((g) => g.notices.forEach((x) => x.id === n.id && (x.read = true))),
+        });
+    return out.filter((x) => !hidden.includes(x.key));
+  })();
+  if (!items.length) return null;
+  const show = items.slice(0, STACK_MAX);
+  return (
+    <div className="side-stack" data-testid="side-stack" onPointerDown={(e) => e.stopPropagation()}>
+      {show.map((it) => {
+        const open = expanded === it.key && it.decision;
+        return (
+          <div key={it.key} className={`ss-card ${it.kind} ${it.decision?.urgent ? 'urgent' : ''}`} data-testid={`stack-${it.kind}`}>
+            <div className="ss-head">
+              <PxIcon id={it.kind === 'dm' ? 'talk' : it.kind === 'urgent' || it.decision?.urgent ? 'siren' : 'warn'} size={16} />
+              <b className="ss-from">{it.from}</b>
+              {it.decision && <span className="ss-due">{Math.max(0, it.decision.deadline - s.day)}일 안에</span>}
+              <button
+                className="ss-x"
+                title="이 카드 치우기"
+                onClick={() => {
+                  it.onDismiss?.();
+                  setHidden((h) => [...h, it.key]);
+                }}
+              >
+                ✕
+              </button>
+            </div>
+            <button className="ss-text" onClick={() => (it.decision ? setExpanded(open ? null : it.key) : it.open())}>
+              {it.text}
+            </button>
+            {open && it.decision && <DecisionView d={it.decision} onDone={() => setExpanded(null)} />}
+            <div className="ss-foot">
+              {it.decision && (
+                <button className="btn small ghost" onClick={() => setExpanded(open ? null : it.key)}>
+                  {open ? '접기' : '여기서 답하기'}
+                </button>
+              )}
+              <button className="btn small" onClick={it.open}>
+                {it.kind === 'urgent' ? '보기' : '대화 열기'}
+              </button>
+            </div>
+          </div>
+        );
+      })}
+      {items.length > STACK_MAX && <div className="ss-more">외 {items.length - STACK_MAX}개 · 메신저에서 확인</div>}
+    </div>
+  );
+}

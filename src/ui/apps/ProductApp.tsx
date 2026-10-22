@@ -3,6 +3,8 @@
 //  기능: 위 요약(잠재 고객·사용자·매력도 구성 팝업 / 다음 출시·작업량) + 기능 카드 줄(그림·레벨·업그레이드)
 //  만드는 순서(로드맵) · 출시 기록
 // 오른쪽 위 제품 카드(ProductCard)도 여기서 내보냅니다.
+import { ContractsCard } from './ScheduleApp';
+import { contractsOpen } from '../../core/contracts';
 import { useState } from 'react';
 import { DATA, feature, gradeOutput, industry, featuresOf, featureWork, priceTierDef, type FeatureDef, type FeatureFx } from '../../core/data';
 import { addToRoadmap, appeal, appealBreakdown, canCharge, coreFeatures, etaDays, featureLevel, featureLock, hasMvp, insightCost, insightHave, itemNeed, moveRoadmap, quality, removeFromRoadmap, ROADMAP_MAX, upkeepShare } from '../../core/product';
@@ -171,7 +173,8 @@ export function ProductCard({ onOpen }: { onOpen: () => void }) {
 export function ProductApp({ openSchedule, openHiring }: { openSchedule?: () => void; openHiring?: () => void }) {
   const s = useGame();
   const mvp = hasMvp(s);
-  const [tab, setTab] = useState<'status' | 'features' | 'roadmap' | 'log'>('status');
+  const [tab, setTab] = useState<'status' | 'features' | 'roadmap' | 'contract' | 'log'>('status');
+  const showContract = !!s.contracts?.active || (contractsOpen(s) && !!s.contracts?.offers.length); // 개발 일정: 외주 일감(A-133, CEO 일정에서 옮김)
   const v = productView(s);
   const name = s.company.service?.name ?? s.company.name;
   const all = featuresOf(s.company.industry);
@@ -209,6 +212,7 @@ export function ProductApp({ openSchedule, openHiring }: { openSchedule?: () => 
             id: 'roadmap',
             label: `만드는 순서 ${s.product.roadmap.length}/${ROADMAP_MAX}`,
           },
+          ...(showContract ? [{ id: 'contract' as const, label: `외주 일감${s.contracts?.active ? ' · 진행 중' : ''}` }] : []),
           { id: 'log', label: '출시 기록' },
         ]}
         value={tab}
@@ -217,6 +221,7 @@ export function ProductApp({ openSchedule, openHiring }: { openSchedule?: () => 
       {tab === 'status' && (mvp ? <LiveStatus s={s} v={v} openSchedule={openSchedule} /> : <MvpStatus s={s} v={v} openSchedule={openSchedule} openHiring={openHiring} />)}
       {tab === 'features' && <Features s={s} v={v} />}
       {tab === 'roadmap' && <Roadmap s={s} v={v} openSchedule={openSchedule} goFeatures={() => setTab('features')} />}
+      {tab === 'contract' && <ContractsCard />}
       {tab === 'log' && <ShipLog s={s} />}
     </div>
   );

@@ -445,7 +445,7 @@ function NegotiationDialog({ applicantId, onClose, onDone }: { applicantId: stri
                 </div>
                 <div className="nego-patience">
                   <span>인내심</span>
-                  <b className={pat <= 30 ? 'bad' : ''}>{pat}%</b>
+                  <b key={pat} className={`nego-pnum ${pat <= 30 ? 'bad' : ''}`}>{pat}%</b>
                   <i>
                     <em style={{ width: `${pat}%` }} className={pat <= 30 ? 'bad' : pat <= 60 ? 'mid' : ''} />
                   </i>
@@ -504,6 +504,13 @@ function NegotiationDialog({ applicantId, onClose, onDone }: { applicantId: stri
                     )}
                   </div>
                   {m.mood && <span className={`nego-mood ${m.mood}`}>{m.mood === 'happy' ? '만족' : m.mood === 'ok' ? '고민' : '불만'}</span>}
+                  {/* 이 답에서 바뀐 인내심(A-130) */}
+                  {m.patience !== undefined && m.patience !== 0 && (
+                    <span className={`nego-pdelta ${m.patience < 0 ? 'down' : 'up'}`} data-testid="nego-patience-delta">
+                      인내심 {m.patience > 0 ? '+' : ''}
+                      {m.patience}%
+                    </span>
+                  )}
                 </div>
               ))}
               {typing && (

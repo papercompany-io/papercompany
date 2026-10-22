@@ -8,7 +8,7 @@ import { DATA, dept, ordersFor } from '../../core/data';
 import { dateOf } from '../../core/calendar';
 import { orderOf } from '../../core/orders';
 import { DM_ACTIONS, commandOrder, dmAction } from '../../core/reactions';
-import { isFullDay, outingEffect, outingRange, outingTravel, outings } from '../../core/outings';
+import { delegateAway, isFullDay, outingEffect, outingRange, outingTravel, outings } from '../../core/outings';
 import { OutingOfferActions } from './ScheduleApp';
 import { createGroup, markRead } from '../../core/messenger';
 import { deptMembers } from '../../core/employees';
@@ -45,7 +45,7 @@ function empByName(s: GameState, name: string): Employee | undefined {
 
 // 상태 점: 일하는 중(초록) · 병가·퇴사 예정(회색)
 function presence(s: GameState, e: Employee | undefined): 'on' | 'away' {
-  return e && !isSick(s, e) && e.leaving === null ? 'on' : 'away';
+  return e && !isSick(s, e) && e.leaving === null && delegateAway(s, e.id) < 1 ? 'on' : 'away';
 }
 
 // 보낸 사람 얼굴: 직원은 픽셀 얼굴, 대표(나)는 파랑, 시스템·외부는 글자 네모
@@ -67,6 +67,7 @@ export function MessengerApp({ initial, openInvest }: { initial?: string; openIn
   const [grouping, setGrouping] = useState<string[] | null>(null);
   const [folded, setFolded] = useState<string[]>([]);
   const [peek, setPeek] = useState(false); // 투자 요약 팝업(A-124)
+  const [showWorking, setShowWorking] = useState(false); // 일하는 중인 직원 목록(A-135)
   const list = useRef<HTMLDivElement>(null);
   const ch = s.channels.find((c) => c.id === sel) ?? s.channels[0];
 
@@ -136,6 +137,29 @@ export function MessengerApp({ initial, openInvest }: { initial?: string; openIn
           <span>
             <i className="mg-dot on" /> 대표 · 나
           </span>
+          {/* 직원 수 · 일하는 중(A-135): 누르면 일하는 중인 직원 목록, 이름을 누르면 DM */}
+          {s.employees.length > 0 && (() => {
+            const working = s.employees.filter((e) => presence(s, e) === 'on');
+            return (
+              <>
+                <button className="mg-staff" data-testid="mg-staff" onClick={() => setShowWorking(!showWorking)} aria-expanded={showWorking}>
+                  직원 {s.employees.length}명 · <b>일하는 중 {working.length}명</b>
+                </button>
+                {showWorking && (
+                  <div className="mg-working" data-testid="mg-working">
+                    {working.length === 0 && <span className="muted">지금 일하는 직원이 없습니다.</span>}
+                    {working.map((e) => (
+                      <button key={e.id} className="mg-working-row" onClick={() => s.channels.some((c) => c.id === `dm-${e.id}`) && open(`dm-${e.id}`)}>
+                        <PixelAvatar id={e.id} color={dept(e.dept).color} size={18} />
+                        <span>{e.name}</span>
+                        <small>{dept(e.dept).name}</small>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
+            );
+          })()}
         </div>
         {pending.length > 0 && (
           <div className="mg-sec">

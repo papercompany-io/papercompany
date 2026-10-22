@@ -1369,3 +1369,43 @@ input[type='checkbox'] { accent-color: var(--accent); width: 16px; height: 16px;
 /* A-124: 안에서 스크롤하는 메신저는 내용 크기가 거의 0이라, 채팅이 읽히는 폭·높이를 최소 내용으로 둠 */
 .app-panel .mg-main { min-width: 380px; }
 .app-panel .messenger { min-height: 420px; }
+/* 화면(A-130): 협상 답마다 바뀐 인내심, 숫자가 바뀔 때 잠깐 강조 */
+.nego-pdelta { flex: none; font-size: 10px; font-weight: 800; padding: 1px 6px; border-radius: var(--r-full); }
+.nego-pdelta.down { background: var(--negative-soft); color: var(--negative-press); }
+.nego-pdelta.up { background: var(--positive-soft); color: var(--positive-press); }
+.nego-pnum { display: inline-block; animation: negoPulse 500ms var(--ease); }
+@keyframes negoPulse { 0% { transform: scale(1.35); } 100% { transform: none; } }
+@media (prefers-reduced-motion: reduce) { .nego-pnum { animation: none; } }
+/* 화면(A-131): 버닝 */
+.burn-on { font-weight: 700; color: var(--caution-text); }
+.tb-burn { font-size: var(--fs-sm); font-weight: 800; color: var(--c-white); background: var(--negative); border-radius: var(--r-full); padding: 1px 8px; white-space: nowrap; }
+/* 화면(A-132): 외주 일감 진행 */
+.ct-active { display: flex; flex-direction: column; gap: 8px; border: 1px solid var(--line); border-top: 4px solid var(--ac); border-radius: var(--r-sm); padding: 10px 12px; background: var(--surface-sunk); }
+.ct-progress { display: flex; align-items: center; gap: 10px; }
+.ct-progress > b { font-size: var(--fs-xl); min-width: 48px; }
+.ct-facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.ct-facts > div { display: flex; flex-direction: column; gap: 2px; }
+.ct-facts span { font-size: var(--fs-sm); color: var(--text-2); }
+.ct-facts b.bad { color: var(--negative-press); }
+/* 화면(A-133): 외출에 누가 갈지 */
+.oc-who { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-sm); color: var(--text-2); }
+.oc-who select { font: inherit; padding: 2px 6px; border: 1px solid var(--line-strong); border-radius: var(--r-xs); background: var(--surface); color: var(--text); }
+/* 화면(A-134): 왼쪽 메뉴 옆에 쌓이는 알림 카드(결정·직원 DM·긴급) */
+.side-stack { position: absolute; z-index: 45; top: calc(var(--top-h) + 12px); left: calc(var(--side-w) + 10px); width: 300px; max-height: calc(100% - var(--top-h) - 24px); overflow: auto; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+.ss-card { pointer-events: auto; display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; background: var(--surface); color: var(--text); border: 1px solid var(--line-strong); border-left: 4px solid var(--accent); border-radius: var(--r-sm); box-shadow: var(--sh-2); animation: appIn 160ms var(--ease) both; }
+.ss-card.dm { border-left-color: var(--positive); }
+.ss-card.urgent, .ss-card.decision.urgent { border-left-color: var(--negative); }
+.ss-head { display: flex; align-items: center; gap: 6px; }
+.ss-from { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ss-due { font-size: var(--fs-sm); color: var(--caution-text); font-weight: 700; white-space: nowrap; }
+.ss-x { border: none; background: none; color: var(--text-2); cursor: pointer; font-weight: 800; padding: 0 2px; }
+.ss-text { text-align: left; border: none; background: none; padding: 0; font: inherit; font-size: var(--fs-sm); color: var(--text-2); cursor: pointer; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.ss-foot { display: flex; gap: 6px; justify-content: flex-end; }
+.ss-more { pointer-events: auto; font-size: var(--fs-sm); color: var(--text-on-accent); background: var(--chrome-sunk, rgba(0,0,0,.5)); border-radius: var(--r-xs); padding: 4px 8px; align-self: flex-start; }
+/* 화면(A-135): 메신저 직원 수 · 일하는 중 목록 */
+.mg-staff { margin-top: 6px; display: block; width: 100%; text-align: left; border: 1px solid var(--line); background: transparent; color: inherit; font: inherit; font-size: var(--fs-sm); border-radius: var(--r-xs); padding: 4px 8px; cursor: pointer; }
+.mg-staff:hover { background: rgba(255, 255, 255, 0.06); }
+.mg-working { margin-top: 4px; display: flex; flex-direction: column; gap: 2px; max-height: 180px; overflow: auto; }
+.mg-working-row { display: flex; align-items: center; gap: 6px; border: none; background: none; color: inherit; font: inherit; font-size: var(--fs-sm); padding: 3px 4px; border-radius: var(--r-xs); cursor: pointer; text-align: left; }
+.mg-working-row:hover { background: rgba(255, 255, 255, 0.08); }
+.mg-working-row small { margin-left: auto; opacity: 0.7; }

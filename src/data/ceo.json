@@ -95,6 +95,10 @@
       [0.5, 0.5]
     ],
     "meetingStart": [10, 17],
+    "_focusNote": "A-129: 하루짜리 약속이 있는 날은 남은 책상 시간의 집중이 깨져 주 업무 효율이 meetingDayFocus배. A-127로 약속 날에도 3~6시간 개발해 쉬워진 것을 되돌림",
+    "meetingDayFocus": 0.5,
+    "_delegateNote": "A-133: 행사·모임·고객사 방문은 delegate 부서 직원을 대신 보낼 수 있음(투자 미팅·데모데이는 대표만). 직원을 보내면 대표 일정은 비어 그 시간에 다른 약속을 잡을 수 있고, 보낸 직원은 그 시간 일을 못 함. 효과는 끝날 때 보너스의 delegateRate배만(대표가 직접 하는 시간당 점수는 없음)",
+    "delegateRate": 0.6,
     "leadDays": [
       1,
       4
@@ -148,6 +152,7 @@
       },
       {
         "id": "conference",
+        "delegate": ["sales", "marketing"],
         "kind": "network",
         "action": "network",
         "title": "스타트업 컨퍼런스",
@@ -166,6 +171,7 @@
       },
       {
         "id": "meetup",
+        "delegate": ["sales", "marketing", "hr"],
         "hours": [
           2,
           3
@@ -187,6 +193,7 @@
       },
       {
         "id": "customer",
+        "delegate": ["sales"],
         "hours": [
           2,
           3

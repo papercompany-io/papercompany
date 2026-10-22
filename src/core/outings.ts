@@ -3,6 +3,7 @@
 // 끝나는 날 보너스. 투자 라운드 중에는 투자 미팅 초대가 자주 옵니다.
 // A-127: 하루짜리 외출은 약속 시각·길이가 있고, 그 시간과 오가는 이동 시간만 자리를 비웁니다(나머지는 주 업무).
 // 이동 시간까지 겹치면 같은 날 두 약속을 잡을 수 없고, 기존 일정을 취소하고 새 초대를 받거나 새 초대를 거절합니다.
+// A-133: 행사·모임·고객사 방문은 직원을 대신 보낼 수 있습니다. 그러면 대표 일정은 비고(다른 약속 가능), 그 직원이 그 시간 일을 못 합니다.
 import { DATA } from './data';
 import { ceoWork } from './ceo';
 import { dateOf } from './calendar';
@@ -14,10 +15,10 @@ import { ensureExternal, ensureNamedExternal, getChannel, post } from './messeng
 import { notify } from './notify';
 import { hasMvp } from './product';
 import { pick, rand, randInt } from './rng';
-import type { GameState, Outing } from './types';
+import type { Employee, GameState, Outing } from './types';
 
 const O = DATA.ceo.outings;
-type Tpl = (typeof O.templates)[number] & { needsMvp?: boolean; roundChance?: number; hours?: number[]; bonus: { ir?: number; network?: number; pipeline?: number } };
+type Tpl = (typeof O.templates)[number] & { needsMvp?: boolean; roundChance?: number; hours?: number[]; delegate?: string[]; bonus: { ir?: number; network?: number; pipeline?: number } };
 const WORK_START = DATA.time.workStartHour;
 const DAY_HOURS = DATA.time.workEndHour - DATA.time.workStartHour;
 const WEEK = ['일', '월', '화', '수', '목', '금', '토'];
@@ -73,9 +74,27 @@ function overlaps(a: Outing, b: Outing): boolean {
   return a0 < b1 && b0 < a1;
 }
 
-// 오늘 잡힌 외출(하루짜리 약속이 여러 개일 수 있음)
+// 오늘 잡힌 대표 외출(하루짜리 약속이 여러 개일 수 있음). 직원을 대신 보낸 외출은 빠짐(A-133)
 export function todayOutings(s: GameState): Outing[] {
-  return outings(s).filter((o) => o.status === 'booked' && s.day >= o.startDay && s.day < o.startDay + o.days);
+  return outings(s).filter((o) => o.status === 'booked' && !o.delegate && s.day >= o.startDay && s.day < o.startDay + o.days);
+}
+
+// 대신 보낼 수 있는 직원(그 초대가 허락하는 부서, 아프거나 나가는 중이 아닌 사람)
+export function delegates(s: GameState, o: Outing): Employee[] {
+  const depts = outingTpl(o.tpl).delegate ?? [];
+  return s.employees.filter((e) => depts.includes(e.dept) && (e.sickUntil === null || e.sickUntil <= s.day) && e.leaving === null);
+}
+
+// 이 직원이 오늘 외출로 자리를 비우는 비율(근무 시간 중). 직원 하루 출력에 씀
+export function delegateAway(s: GameState, empId: string): number {
+  let away = 0;
+  for (const o of outings(s)) {
+    if (o.status !== 'booked' || o.delegate !== empId || s.day < o.startDay || s.day >= o.startDay + o.days) continue;
+    if (isFullDay(o)) return 1;
+    const [a, b] = busyWindow(o);
+    away += Math.max(0, Math.min(DATA.time.workEndHour, b) - Math.max(WORK_START, a)) / DAY_HOURS;
+  }
+  return Math.min(1, away);
 }
 
 // 오늘 외출이 있는 날의 첫 일정
@@ -92,12 +111,13 @@ export function awayOuting(s: GameState): Outing | null {
   }) ?? null;
 }
 
-export function outingConflicts(s: GameState, o: Outing): Outing[] {
-  return outings(s).filter((x) => x.id !== o.id && x.status === 'booked' && overlaps(x, o));
+// who = 갈 사람(없으면 대표). 같은 사람의 일정끼리만 겹침을 봄
+export function outingConflicts(s: GameState, o: Outing, who?: string): Outing[] {
+  return outings(s).filter((x) => x.id !== o.id && x.status === 'booked' && (x.delegate ?? null) === (who ?? null) && overlaps(x, o));
 }
 
-export function outingConflict(s: GameState, o: Outing): Outing | null {
-  return outingConflicts(s, o)[0] ?? null;
+export function outingConflict(s: GameState, o: Outing, who?: string): Outing | null {
+  return outingConflicts(s, o, who)[0] ?? null;
 }
 
 // 이동 시간(편도): 회사가 작을수록 멀리 다니고 오래 걸림(A-127). 30분 단위
@@ -110,6 +130,7 @@ function travelFor(s: GameState): number {
 // 예상 효과(일정 화면·초대 카드용)
 export function outingEffect(o: Outing): string {
   const t = outingTpl(o.tpl);
+  if (o.delegate) return '직원이 대신 감 · 끝나면 성과 일부'; // A-133
   const slot = DATA.ceo.actions.find((a) => a.id === t.action)?.perSlot ?? 0;
   const hours = isFullDay(o) ? DATA.time.slotsPerDay * o.days : o.hours!; // 하루짜리 약속은 약속 시간만(A-127)
   const per = slot * hours;
@@ -126,12 +147,18 @@ export function outingsDay(s: GameState) {
     if (o.status === 'booked' && s.day >= o.startDay + o.days) {
       o.status = 'done';
       const b = outingTpl(o.tpl).bonus;
-      if (b.ir) s.irPoints += b.ir;
-      if (b.network) s.networkPoints += b.network;
-      if (b.pipeline) s.entPipeline += b.pipeline;
-      notify(s, `외출에서 돌아왔습니다: ${o.title}. 오늘부터 다시 ${workName(s)}에 집중합니다.`, 'good', 'schedule');
+      const k = o.delegate ? O.delegateRate : 1; // 대신 간 직원은 보너스 일부만(A-133)
+      if (b.ir) s.irPoints += b.ir * k;
+      if (b.network) s.networkPoints += b.network * k;
+      if (b.pipeline) s.entPipeline += b.pipeline * k;
+      const emp = o.delegate ? s.employees.find((e) => e.id === o.delegate) : undefined;
+      if (o.delegate) notify(s, `${emp?.name ?? '직원'}님이 ${o.title}에 다녀왔습니다.`, 'good', 'schedule');
+      else notify(s, `외출에서 돌아왔습니다: ${o.title}. 오늘부터 다시 ${workName(s)}에 집중합니다.`, 'good', 'schedule');
     }
-    if (o.status === 'booked' && s.day === o.startDay)
+    if (o.status === 'booked' && o.delegate && s.day === o.startDay) {
+      const emp = s.employees.find((e) => e.id === o.delegate);
+      notify(s, `오늘 ${emp?.name ?? '직원'}님이 대표 대신 ${o.title}(${o.host})에 갑니다.`, 'info', 'schedule');
+    } else if (o.status === 'booked' && s.day === o.startDay)
       notify(
         s,
         isFullDay(o)
@@ -188,16 +215,26 @@ function invite(s: GameState, t: Tpl) {
 }
 
 // 수락. 겹치는 일정이 있으면 거절하거나(replace 없이 부르면 안내만), replace면 겹치는 기존 일정을 취소하고 받습니다(A-127)
-export function acceptOuting(s: GameState, id: string, replace = false): string | null {
+// delegateId(A-133): 대표 대신 보낼 직원
+export function acceptOuting(s: GameState, id: string, replace = false, delegateId?: string): string | null {
   const o = outings(s).find((x) => x.id === id);
   if (!o || o.status !== 'offer') return '이미 지난 초대입니다.';
-  const cs = outingConflicts(s, o);
-  if (cs.length && !replace) return `${outingRange(cs[0])} "${cs[0].title}" 일정과 겹칩니다(이동 시간 포함). 기존 일정을 취소하고 받거나 거절하세요.`;
+  const emp = delegateId ? delegates(s, o).find((e) => e.id === delegateId) : undefined;
+  if (delegateId && !emp) return '이 일정에 보낼 수 없는 직원입니다.';
+  const cs = outingConflicts(s, o, delegateId);
+  const whose = emp ? `${emp.name}님의 ` : '';
+  if (cs.length && !replace) return `${whose}${outingRange(cs[0])} "${cs[0].title}" 일정과 겹칩니다(이동 시간 포함). 기존 일정을 취소하고 받거나 거절하세요.`;
   if (cs.some((c) => s.day >= c.startDay)) return '이미 시작한 일정과 겹쳐 바꿀 수 없습니다.';
   if (o.cost > s.cash) return '비용을 낼 자금이 부족합니다.';
   for (const c of cs) cancelOuting(s, c.id);
   if (o.cost) spendNow(s, `${o.title}(${o.host})`, o.cost, 'other');
   o.status = 'booked';
+  if (emp) {
+    o.delegate = emp.id;
+    post(s, o.channelId, '나(대표)', `감사합니다. 이번에는 저희 ${emp.name}님이 ${outingRange(o)} 찾아뵙겠습니다.`, 'player');
+    post(s, o.channelId, o.host, pick(s, ['네, 그날 뵙겠습니다.', '알겠습니다. 잘 부탁드립니다.']), 'npc');
+    return null;
+  }
   post(s, o.channelId, '나(대표)', `좋습니다. ${outingRange(o)} 뵙겠습니다.`, 'player');
   post(s, o.channelId, o.host, pick(s, ['감사합니다! 그날 뵙겠습니다.', '좋습니다. 일정 잡아 두겠습니다.', '네, 기대하겠습니다.']), 'npc');
   return null;

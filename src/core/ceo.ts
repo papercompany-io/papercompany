@@ -66,7 +66,8 @@ export function slotParts(s: GameState, index: number): SlotPart[] {
     if (meet > 0) parts.push({ action: outingTpl(o.tpl).action as ActionId, w: meet, outing: o.title });
     away += cover(...busyWindow(o));
   }
-  if (away < 1) parts.push({ action: work, w: 1 - away });
+  // 약속 있는 날은 남은 책상 시간도 집중이 깨짐(A-129)
+  if (away < 1) parts.push({ action: work, w: (1 - away) * DATA.ceo.outings.meetingDayFocus });
   return parts;
 }
 

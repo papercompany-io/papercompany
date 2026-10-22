@@ -283,22 +283,29 @@ export function negotiate(s: GameState, applicantId: string, salary: number, bon
   }
   const ratio = value / want;
   // 인내심(%): 기대와 멀수록 많이 깎임. 이전보다 낮게 부르면 더
+  // A-130: 이전보다 올려 부르면 덜 깎이고, 답마다 바뀐 인내심을 채팅에 같이 보여 줌
   let drop = N.dropBase + (1 - ratio) * N.dropPerGap;
-  if (prev && value < (prev.salary ?? 0) + (prev.bonus ?? 0) / N.bonusMonths) drop += N.lowerPenalty;
+  const prevValue = prev ? (prev.salary ?? 0) + (prev.bonus ?? 0) / N.bonusMonths : null;
+  if (prevValue !== null && value < prevValue) drop += N.lowerPenalty;
+  if (prevValue !== null && value > prevValue) drop *= N.raiseKeep;
+  const before = n.patience;
   n.patience = Math.max(0, Math.round(n.patience - drop));
+  const dp = n.patience - before;
   if (n.patience <= 0) {
     a!.status = 'rejected';
     n.counter = null;
-    say({ from: 'them', text: '더 이야기해도 맞지 않을 것 같네요. 다른 곳을 알아보겠습니다.', mood: 'angry' });
+    say({ from: 'them', text: '더 이야기해도 맞지 않을 것 같네요. 다른 곳을 알아보겠습니다.', mood: 'angry', patience: dp });
     return { ok: true, hired: false, message: `${a!.name}님이 협상을 끝내고 떠났습니다.` };
   }
   // 역제안: 보너스는 그대로 두고 월급으로 맞춤
   const target = ratio >= n.floor ? want - (want - value) * (1 - N.counterKeep) : want;
   const cs = round10(target - bonus / N.bonusMonths);
   n.counter = { salary: cs, bonus };
-  if (ratio >= n.floor) say({ from: 'them', text: `조금만 더 맞춰 주시면 좋겠어요. 월 ${man(cs)}이면 함께하고 싶어요.`, salary: cs, bonus, mood: 'ok' });
-  else if (ratio >= N.insult) say({ from: 'them', text: `기대보다 낮네요. 월 ${man(cs)}은 받아야 합니다.`, salary: cs, bonus, mood: 'ok' });
-  else say({ from: 'them', text: `너무 낮은 제안이에요. 적어도 월 ${man(cs)}은 생각하고 왔습니다.`, salary: cs, bonus, mood: 'angry' });
+  const raised = prevValue !== null && value > prevValue;
+  const lead = raised ? pick(s, ['올려 주셔서 감사해요. ', '신경 써 주신 건 알겠어요. ']) : prevValue !== null && value < prevValue ? pick(s, ['오히려 내려가네요? ', '아까보다 낮아졌는데요. ']) : '';
+  if (ratio >= n.floor) say({ from: 'them', text: `${lead}${pick(s, ['조금만 더 맞춰 주시면 좋겠어요.', '거의 다 왔어요.', '한 걸음만 더 와 주시면요.'])} 월 ${man(cs)}이면 함께하고 싶어요.`, salary: cs, bonus, mood: 'ok', patience: dp });
+  else if (ratio >= N.insult) say({ from: 'them', text: `${lead}${pick(s, ['기대보다 낮네요.', '생각한 것과 차이가 있네요.'])} 월 ${man(cs)}은 받아야 합니다.`, salary: cs, bonus, mood: 'ok', patience: dp });
+  else say({ from: 'them', text: `${lead}${pick(s, ['너무 낮은 제안이에요.', '이 조건은 좀 실망스럽네요.'])} 적어도 월 ${man(cs)}은 생각하고 왔습니다.`, salary: cs, bonus, mood: 'angry', patience: dp });
   return { ok: true, hired: false, message: '' };
 }
 

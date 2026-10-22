@@ -14,6 +14,7 @@ import { totalUsers } from '../core/market';
 import { marketRanking, myRank, overallRanking } from '../core/ranking';
 import { activeMissions, missionProgress, STAGE_NAMES } from '../core/progress';
 import { founderAge } from '../core/career';
+import { burningActive } from '../core/burning';
 import { act, getGame, timeHold, touch, useGame } from './store';
 import { AppPanel, Sidebar, defaultBox, type AppId, type WinBox } from './Desktop';
 import { Office } from './office/Office';
@@ -26,7 +27,7 @@ import { requestAutosave } from './autosave';
 import { pct } from '../core/format';
 import { play, type Sfx } from './sound';
 import { getSettings, useSettings } from './meta';
-import { Toasts, DecisionModal, Confetti } from './Feedback';
+import { Toasts, DecisionModal, Confetti, SideStack } from './Feedback';
 import type { GameState } from '../core/types';
 import { PxIcon } from './icons';
 import './game.css';
@@ -259,6 +260,7 @@ export function Game({ continued, notice, clearNotice, onEnded }: Props) {
           </div>
         )}
         {!wins.length && <SideCards s={s} onOpen={(a) => openDesktop(a)} />}
+        <SideStack s={s} onOpen={(app, arg) => openDesktop(app as AppId, arg)} />
         <Toasts s={s} enabled={settings.toasts} onOpen={(app, arg) => openDesktop(app as AppId, arg)} />
         {notice && (
           <div className="notice">
@@ -408,6 +410,12 @@ function TopBar({ s }: { s: GameState }) {
           <span className="tb-clock" title="현재 시각">
             {clockOf(s.msInDay)}
           </span>
+          {/* 버닝 중(A-131) */}
+          {burningActive(s) && (
+            <span className="tb-burn" data-testid="hud-burning" title="버닝: 팀이 더 빨리 일하는 중">
+              버닝 {s.company.burning!.until - s.day}일
+            </span>
+          )}
           <div className="hud-speed">
             {[0, 1, 2, 4].map((sp) => (
               <button

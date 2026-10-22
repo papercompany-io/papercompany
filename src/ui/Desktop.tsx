@@ -143,14 +143,20 @@ export function winArea() {
   return { left, top, w: Math.max(MIN_W, window.innerWidth - left - 14), h: Math.max(MIN_H, window.innerHeight - top - 14) };
 }
 
-// 첫 창은 예전처럼 넓게, 다음 창부터는 조금 작게 비스듬히 겹쳐 엽니다.
+// 기본 크기는 화면을 다 덮지 않는 보통 크기(가로 960·세로 680까지, 화면의 70%·82%까지). 내용이 더 커야 하면 열 때 내용에 맞게 키움(fitMin).
+// 창이 여러 개면 비스듬히 겹쳐 엽니다.
 export function defaultBox(index: number): WinBox {
   const a = winArea();
-  if (index === 0) return { x: a.left, y: a.top, w: Math.min(1240, a.w), h: a.h };
   const k = index % 6;
-  const w = Math.max(MIN_W, Math.min(1000, Math.round(a.w * 0.7)));
-  const h = Math.max(MIN_H, Math.round(a.h * 0.82));
+  const w = Math.max(MIN_W, Math.min(960, Math.round(a.w * 0.7)));
+  const h = Math.max(MIN_H, Math.min(680, Math.round(a.h * 0.82)));
   return clampBox({ x: a.left + 36 * k, y: a.top + 30 * k, w, h });
+}
+
+// 제목줄 두 번 누르기: 넓게(창이 놓일 수 있는 곳 전부)
+export function wideBox(): WinBox {
+  const a = winArea();
+  return { x: a.left, y: a.top, w: Math.min(1240, a.w), h: a.h };
 }
 
 // 제목줄이 늘 화면 안에 남게(끌어서 화면 밖으로 잃어버리지 않게). min = 그 창 내용이 들어가는 최소 크기(A-124)
@@ -162,7 +168,7 @@ export function clampBox(b: WinBox, min: { w: number; h: number } = { w: MIN_W, 
   return { w, h, x: Math.max(120 - w, Math.min(W - 120, b.x)), y: Math.max(0, Math.min(H - 48, b.y)) };
 }
 
-// 앱 창: 사무실 위에 뜨는 패널. 제목줄을 끌면 옮기고, 오른쪽 아래 모서리를 끌면 크기가 바뀝니다. 제목줄을 두 번 누르면 처음 크기로.
+// 앱 창: 사무실 위에 뜨는 패널. 제목줄을 끌면 옮기고, 오른쪽 아래 모서리를 끌면 크기가 바뀝니다. 제목줄을 두 번 누르면 넓게.
 export function AppPanel({
   app,
   arg,
@@ -188,7 +194,7 @@ export function AppPanel({
   const el = useRef<HTMLDivElement>(null);
   const drag = useRef<{ kind: 'move' | 'size'; px: number; py: number; b: WinBox; min: { w: number; h: number } } | null>(null);
   // 최소 크기 = 내용에 맞춘 크기(fit content): 가로는 내용이 잘리지 않는 가장 좁은 폭, 세로는 지금 폭에서 내용이 다 보이는 높이.
-  // 내용이 화면보다 길면 화면 높이까지만(그 아래는 창 안에서 스크롤)
+  // 내용이 기본 높이보다 길면 기본 높이까지만(그 아래는 창 안에서 스크롤). 긴 앱이 늘 화면을 다 덮지 않게
   const fitMin = () => {
     const p = el.current;
     if (!p) return { w: MIN_W, h: MIN_H };
@@ -199,7 +205,7 @@ export function AppPanel({
     p.style.height = 'auto';
     const h = p.offsetHeight;
     p.style.height = height;
-    return { w: Math.max(240, w), h: Math.max(160, Math.min(h, winArea().h)) };
+    return { w: Math.max(240, w), h: Math.max(160, Math.min(h, defaultBox(0).h)) };
   };
   // 처음 열 때 내용보다 작으면 내용에 맞게 키움
   useLayoutEffect(() => {
@@ -236,7 +242,7 @@ export function AppPanel({
         onFocus?.();
       }}
     >
-      <div className="app-head" onPointerDown={grab('move')} onPointerMove={follow} onPointerUp={drop} onPointerCancel={drop} onDoubleClick={(e) => !(e.target as HTMLElement).closest('button') && onBox?.(defaultBox(0))}>
+      <div className="app-head" onPointerDown={grab('move')} onPointerMove={follow} onPointerUp={drop} onPointerCancel={drop} onDoubleClick={(e) => !(e.target as HTMLElement).closest('button') && onBox?.(wideBox())}>
         <span className="app-head-icon">
           <AppIcon id={cur.id} />
         </span>

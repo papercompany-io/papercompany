@@ -10,6 +10,15 @@
     { "id": "edu", "name": "교육비", "cost": 200000, "desc": "도서·강의·컨퍼런스 지원. 숙련이 빨리 오릅니다.", "fx": { "skill": 0.5, "sat": 2, "apply": 0.05, "quality": 3 } },
     { "id": "housing", "name": "주거 지원", "cost": 500000, "desc": "회사 근처 주거비 지원. 좋은 인재가 지원합니다.", "fx": { "sat": 8, "apply": 0.12, "quality": 6 } }
   ],
+  "burning": {
+    "_note": "버닝(A-131): 전 직원에게 작은 보너스(월급의 bonusRate)를 주고 days일 동안 출력 +output. 끝나면 지쳐서 afterDays일 동안 만족도 afterSat. 끝난 날부터 cooldownDays일은 다시 못 함(계속 켜 두는 지배 전략 방지). [예시값]",
+    "days": 5,
+    "output": 0.3,
+    "bonusRate": 0.15,
+    "afterDays": 10,
+    "afterSat": -8,
+    "cooldownDays": 30
+  },
   "workPolicies": [
     { "id": "relaxed", "name": "정시 퇴근", "output": 0.92, "health": 10, "sat": 6, "desc": "출력은 조금 줄지만 건강과 만족도가 좋아집니다." },
     { "id": "normal", "name": "보통", "output": 1.0, "health": 0, "sat": 0, "desc": "기본 근무." },

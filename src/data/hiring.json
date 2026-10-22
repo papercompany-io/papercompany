@@ -119,7 +119,9 @@
     "bonusMonths": 12,
     "dropBase": 15,
     "dropPerGap": 150,
-    "lowerPenalty": 15
+    "lowerPenalty": 15,
+    "_raiseNote": "A-130: 이전 제안보다 올려 부르면 그만큼 성의로 보고 인내심이 덜 깎임(drop × raiseKeep)",
+    "raiseKeep": 0.5
   },
   "careerLevels": [
     {

@@ -15,6 +15,7 @@ import { monthKey } from './calendar';
 import { founderAge, finishCompany } from './career';
 import { founderPct } from './equity';
 import { roundDayEnd } from './funding';
+import { burningDay } from './burning';
 import { hiringArrivals, hiringDayEnd, startPendingHires } from './hiring';
 import { outingsDay } from './outings';
 import { marketDay, totalUsers } from './market';
@@ -85,6 +86,7 @@ export function endDay(s: GameState) {
   s.slotsDone = 0;
   s.todayLog = { dev: 0, contract: 0, sales: 0, ir: 0, network: 0, enterprise: 0, approve: 0 };
   staffDay(s);
+  burningDay(s);
   hiringDayEnd(s);
   outingsDay(s);
   roundDayEnd(s);

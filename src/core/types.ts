@@ -89,6 +89,7 @@ export interface NegoMsg {
   salary?: number;
   bonus?: number;
   mood?: 'happy' | 'ok' | 'angry';
+  patience?: number; // 이 답에서 바뀐 인내심(%p, A-130)
 }
 
 export interface Negotiation {
@@ -457,6 +458,7 @@ export interface Company {
   officeTier: number;
   movingUntil: number | null;
   workPolicy: WorkPolicy;
+  burning?: { until: number; ready: number; tired: boolean }; // 버닝(A-131): until까지 가속, ready부터 다시 가능, tired = 끝난 뒤 피로를 줬는지
   welfare: string[];
   orders: Partial<Record<DeptId, string>>;
   autoHire: Partial<Record<DeptId, number>>; // HR-07 위임 채용 목표 인원
@@ -504,6 +506,7 @@ export interface Outing {
   startHour?: number; // 하루짜리 외출의 약속 시각(A-127). 없으면(예전 저장·여러 날) 하루 내내
   hours?: number; // 약속 길이(시간)
   travel?: number; // 편도 이동 시간(시간, 30분 단위)
+  delegate?: string; // 대신 보낸 직원 id(A-133). 있으면 대표 일정이 아님
   cost: number;
   status: 'offer' | 'booked' | 'done' | 'declined' | 'expired';
 }

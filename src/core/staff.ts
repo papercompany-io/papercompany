@@ -1,5 +1,6 @@
 // 직원 깊이(DEC-022 만족도·건강, EM-03 특성, EM-04 퇴사·해고, WF 복지, 팀장, 근무 방침)와 직원 출력 계산.
 // 출력(하루 작업량) = 등급 × 숙련 × 만족도 × 건강 × 근무 방침 × 복지 × 특성 × 팀장·관리 범위 × AI × 결재 × 기간 효과
+import { delegateAway } from './outings';
 import { DATA, dept, gradeOutput, trait, welfareItem, workPolicy } from './data';
 import { yearOf } from './calendar';
 import { econ } from './economy';
@@ -86,7 +87,8 @@ export function output(s: GameState, e: Employee, cache?: Map<DeptId, ReturnType
   if ((e.dept === 'sales' || e.dept === 'marketing') && hasTrait(e, 'social')) tf += 0.2;
   const moving = s.company.movingUntil !== null ? 0.4 : 1;
   const ai = aiMultiplier(s, e);
-  return gradeOutput(e.grade) * (e.talent ?? 1) * skillF * satF * healthF * policy * wf * tf * li.span * (1 + li.bonus) * ai * approveMultiplier(s) * (1 + mod(s, 'output')) * moving;
+  const away = 1 - delegateAway(s, e.id); // 대표 대신 외출 간 시간(A-133)
+  return away * gradeOutput(e.grade) * (e.talent ?? 1) * skillF * satF * healthF * policy * wf * tf * li.span * (1 + li.bonus) * ai * approveMultiplier(s) * (1 + mod(s, 'output')) * moving;
 }
 
 export function deptOutput(s: GameState, d: DeptId): number {

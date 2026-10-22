@@ -1,13 +1,15 @@
 // F14 일정 메뉴(A-101): 하루 칸 배분 없이, 대표는 주 업무 하나를 하루 내내 합니다(실무: 개발·외주·영업, 경영: 대기업 영업·결재).
 // 투자자 미팅·컨퍼런스·네트워킹·고객사 방문은 메신저로 오는 초대를 수락해 1~3일 자리를 비우는 외출. 여기서도 수락·거절·취소
 // A-127: 하루짜리 약속은 시각·이동 시간이 있고, 겹치면 기존 일정을 취소하고 받거나 거절
-import { DATA } from '../../core/data';
-import { actionDef, approveMultiplier, approveNeed, ceoWork, efficiency, executiveBlock, setCeoMode, setCeoWork, workChoices } from '../../core/ceo';
+import { DATA, dept } from '../../core/data';
+import { slotParts, actionDef, approveMultiplier, approveNeed, ceoWork, efficiency, executiveBlock, setCeoMode, setCeoWork, workChoices } from '../../core/ceo';
 import { acceptContract, contractsOpen, dropContract } from '../../core/contracts';
 import { openRound } from '../../core/funding';
-import { enterpriseThreshold } from '../../core/orders';
+import { enterpriseThreshold, orderOf } from '../../core/orders';
+import { deptMembers } from '../../core/employees';
+import { deptOutput } from '../../core/staff';
 import { fxTotals, hasMvp } from '../../core/product';
-import { acceptOuting, awayOuting, cancelOuting, dayName, declineOuting, hhmm, isFullDay, outingConflict, outingEffect, outingRange, outingTravel, outings, todayOutings } from '../../core/outings';
+import { delegates, acceptOuting, awayOuting, cancelOuting, dayName, declineOuting, hhmm, isFullDay, outingConflict, outingEffect, outingRange, outingTravel, outings, todayOutings } from '../../core/outings';
 import { useState } from 'react';
 import { act, useGame } from '../store';
 import { Money, Help } from '../common';
@@ -128,7 +130,6 @@ export function ScheduleApp() {
         </section>
       </div>
 
-      <ContractsCard />
 
       <div className="stats">
         <div className="stat">
@@ -166,6 +167,7 @@ function OutingCard({ o, children }: { o: Outing; children: React.ReactNode }) {
         <span className="oc-dot" />
         <b>{o.title}</b>
         <span className="oc-host">{o.host}</span>
+        {o.delegate && <OutingDelegate id={o.delegate} />}
       </div>
       <div className="oc-meta">
         <span>{outingRange(o)}</span>
@@ -178,28 +180,54 @@ function OutingCard({ o, children }: { o: Outing; children: React.ReactNode }) {
   );
 }
 
+function OutingDelegate({ id }: { id: string }) {
+  const s = useGame();
+  const e = s.employees.find((x) => x.id === id);
+  return <span className="chip blue">{e ? `${e.name}님이 대신 감` : '직원이 대신 감'}</span>;
+}
+
 // 초대 수락·거절(A-127): 이동 시간까지 따져 겹치는 일정이 있으면 "기존 일정 취소하고 수락" 또는 "거절". 메신저 초대 카드도 같이 씀
+// A-133: 행사·모임·고객사 방문은 "누가 갈까"에서 직원을 고르면 대표 일정과 상관없이 받을 수 있음
 export function OutingOfferActions({ o, onErr }: { o: Outing; onErr: (e: string | null) => void }) {
   const s = useGame();
-  const c = outingConflict(s, o);
+  const can = delegates(s, o);
+  const [who, setWho] = useState<string>(''); // '' = 대표
+  const sent = who && can.some((e) => e.id === who) ? who : undefined;
+  const c = outingConflict(s, o, sent);
   const started = !!c && s.day >= c.startDay;
   const run = (f: Parameters<typeof act>[0]) => onErr((act(f) as string | null | undefined) ?? null);
+  const whoName = sent ? `${can.find((e) => e.id === sent)!.name}님의 ` : '';
   return (
     <>
+      {can.length > 0 && (
+        <label className="oc-who">
+          누가 갈까
+          <select data-testid={`outing-who-${o.id}`} value={sent ?? ''} onChange={(e) => setWho(e.target.value)}>
+            <option value="">대표(나)</option>
+            {can.map((e) => (
+              <option key={e.id} value={e.id}>
+                {e.name} · {dept(e.dept).name}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
       {c && (
         <div className="oc-conflict" data-testid={`outing-conflict-${o.id}`}>
+          {whoName}
           {outingRange(c)} "{c.title}" 일정과 겹칩니다(이동 시간 포함).{started ? ' 이미 시작한 일정이라 바꿀 수 없습니다.' : ''}
+          {!sent && can.length > 0 && !started ? ' 직원을 대신 보낼 수도 있습니다.' : ''}
         </div>
       )}
       {c ? (
         !started && (
-          <button className="btn small" data-testid={`outing-replace-${o.id}`} title="취소한 일정의 비용은 돌려받지 못하고, 상대가 서운해합니다" onClick={() => run((g) => acceptOuting(g, o.id, true))}>
+          <button className="btn small" data-testid={`outing-replace-${o.id}`} title="취소한 일정의 비용은 돌려받지 못하고, 상대가 서운해합니다" onClick={() => run((g) => acceptOuting(g, o.id, true, sent))}>
             기존 일정 취소하고 수락
           </button>
         )
       ) : (
-        <button className="btn small green" data-testid={`outing-accept-${o.id}`} onClick={() => run((g) => acceptOuting(g, o.id))}>
-          수락
+        <button className="btn small green" data-testid={`outing-accept-${o.id}`} onClick={() => run((g) => acceptOuting(g, o.id, false, sent))}>
+          {sent ? '보내기' : '수락'}
         </button>
       )}
       <button className="btn small ghost" data-testid={`outing-decline-${o.id}`} onClick={() => run((g) => declineOuting(g, o.id))}>
@@ -209,61 +237,105 @@ export function OutingOfferActions({ o, onErr }: { o: Outing; onErr: (e: string 
   );
 }
 
-// 외주 일감(A-79): 제품을 만드는 동안 남의 일을 해서 런웨이를 늘립니다.
-function ContractsCard() {
+// 외주 일감(A-79). A-132: 작업량 숫자 대신 "얼마나 했나 · 지금 속도면 언제 끝나나 · 누가 하고 있나"를 보여 줌
+function contractPace(s: ReturnType<typeof useGame>) {
+  const per = actionDef('contract').perSlot * efficiency(s, 'contract');
+  let ceo = 0;
+  for (let i = 0; i < DATA.time.slotsPerDay; i++) for (const p of slotParts(s, i)) if (p.action === 'contract') ceo += p.w * per;
+  const ceoFull = DATA.time.slotsPerDay * per; // 대표가 외주를 주 업무로 할 때
+  const devs = deptMembers(s, 'dev').length;
+  const team = orderOf(s, 'dev') === 'dev_contract' ? deptOutput(s, 'dev') : 0;
+  return { ceo, ceoFull, team, devs, total: ceo + team };
+}
+
+const daysText = (d: number) => (d < 1 ? '오늘 안에' : `약 ${Math.ceil(d)}일`);
+
+export function ContractsCard() {
   const s = useGame();
   const c = s.contracts;
   const a = c?.active ?? null;
   if (!a && (!contractsOpen(s) || !c?.offers.length)) return null;
+  const pace = contractPace(s);
   return (
     <div className="card col" data-testid="contracts">
       <div className="row">
         <div className="section-title grow">외주 일감</div>
         {!!c?.completed && <span className="chip">완료 {c.completed}건</span>}
       </div>
-      <Help text="대표 주 업무 &quot;외주&quot;나 개발팀 &quot;외주 작업&quot; 지시로 작업량을 채우면 대금이 들어옵니다. 그만큼 제품 개발은 늦어집니다. 마감을 넘기면 대금이 깎이고, 많이 넘기면 취소됩니다." />
-      {a && a.deadline !== null && (
-        <div className="card col" style={{ borderTop: `4px solid ${COLORS.contract}` }}>
-          <div className="row">
-            <b className="grow">
-              {a.title} · {a.client}
-            </b>
-            <span className={`chip ${s.day > a.deadline ? 'red' : a.deadline - s.day <= 3 ? 'amber' : 'blue'}`}>{s.day > a.deadline ? `마감 ${s.day - a.deadline}일 지남` : `마감 ${a.deadline - s.day}일 남음`}</span>
+      <Help text="대표 주 업무 &quot;외주&quot;나 개발팀 &quot;외주 작업&quot; 지시로 일을 하면 끝냈을 때 대금이 들어옵니다. 그만큼 제품 개발은 늦어집니다. 마감을 넘기면 대금이 깎이고, 많이 넘기면 취소됩니다." />
+      {a && a.deadline !== null && (() => {
+        const pct = Math.min(100, (a.done / a.work) * 100);
+        const left = Math.max(0, a.work - a.done);
+        const eta = pace.total > 0 ? left / pace.total : null;
+        const dl = a.deadline - s.day;
+        const late = eta !== null && Math.ceil(eta) > dl;
+        const who = [pace.ceo > 0 ? '대표' : null, pace.team > 0 ? `개발팀 ${pace.devs}명` : null].filter(Boolean).join(' · ');
+        return (
+          <div className="ct-active" style={{ ['--ac' as string]: COLORS.contract }}>
+            <div className="row">
+              <b className="grow">
+                {a.title} · {a.client}
+              </b>
+              <span className={`chip ${s.day > a.deadline ? 'red' : dl <= 3 ? 'amber' : 'blue'}`}>{s.day > a.deadline ? `마감 ${s.day - a.deadline}일 지남` : `마감 ${dl}일 남음`}</span>
+            </div>
+            <div className="ct-progress">
+              <b>{Math.floor(pct)}%</b>
+              <div className="bar grow">
+                <div style={{ width: `${pct}%`, background: COLORS.contract }} />
+              </div>
+            </div>
+            <div className="ct-facts">
+              <div>
+                <span>끝나는 때</span>
+                <b className={eta === null || late ? 'bad' : ''}>{eta === null ? '아무도 안 하는 중' : `${daysText(eta)}${late ? ' · 마감보다 늦음' : ''}`}</b>
+              </div>
+              <div>
+                <span>하는 사람</span>
+                <b>{who || '없음'}</b>
+              </div>
+              <div>
+                <span>대금</span>
+                <b>
+                  <Money v={a.pay} />
+                </b>
+              </div>
+            </div>
+            {eta === null && <div className="tiny warn">대표 주 업무를 "외주"로 하거나, 개발팀 채널에서 "외주 작업"을 맡기세요.</div>}
+            <div className="row">
+              <div className="grow" />
+              <button className="btn small ghost" data-testid="contract-drop" onClick={() => act((g) => dropContract(g))}>
+                포기
+              </button>
+            </div>
           </div>
-          <div className="bar">
-            <div style={{ width: `${Math.min(100, (a.done / a.work) * 100)}%`, background: COLORS.contract }} />
-          </div>
-          <div className="row tiny">
-            <span className="grow">
-              작업량 {a.done.toFixed(1)} / {a.work}
-            </span>
-            대금 <Money v={a.pay} />
-            <button className="btn small ghost" data-testid="contract-drop" onClick={() => act((g) => dropContract(g))}>
-              포기
-            </button>
-          </div>
-          {ceoWork(s) !== 'contract' && s.company.orders.dev !== 'dev_contract' && <div className="tiny warn">대표 주 업무가 "외주"가 아니고 개발팀도 맡지 않아 진행되지 않습니다.</div>}
-        </div>
-      )}
+        );
+      })()}
       {!!c?.offers.length && (
         <div className="furn-grid">
-          {c.offers.map((o) => (
-            <div key={o.id} className="card furn">
-              <b>{o.title}</b>
-              <div className="tiny muted">
-                {o.client} · 작업량 {o.work} · 기간 {o.days}일
+          {c.offers.map((o) => {
+            const solo = o.work / pace.ceoFull;
+            const ok = Math.ceil(solo) <= o.days;
+            return (
+              <div key={o.id} className="card furn">
+                <b>{o.title}</b>
+                <div className="tiny muted">
+                  {o.client} · 기간 {o.days}일
+                </div>
+                <div className={`tiny ${ok ? '' : 'warn'}`} title="대표가 하루 내내 외주만 할 때">
+                  대표 혼자 {daysText(solo)} 걸림{ok ? '' : ' · 기간 안에 혼자는 어려움'}
+                </div>
+                <div className="row">
+                  <b className="grow">
+                    <Money v={o.pay} />
+                  </b>
+                  <button className="btn small" data-testid={`contract-take-${o.id}`} disabled={!!a} title={a ? '진행 중인 외주를 먼저 끝내세요.' : ''} onClick={() => act((g) => acceptContract(g, o.id))}>
+                    받기
+                  </button>
+                </div>
+                <div className="tiny muted">{o.offeredUntil - s.day}일 뒤 마감되는 제안</div>
               </div>
-              <div className="row">
-                <b className="grow">
-                  <Money v={o.pay} />
-                </b>
-                <button className="btn small" data-testid={`contract-take-${o.id}`} disabled={!!a} title={a ? '진행 중인 외주를 먼저 끝내세요.' : ''} onClick={() => act((g) => acceptContract(g, o.id))}>
-                  받기
-                </button>
-              </div>
-              <div className="tiny muted">{o.offeredUntil - s.day}일 뒤 마감되는 제안</div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
