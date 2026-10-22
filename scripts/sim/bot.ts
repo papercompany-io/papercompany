@@ -20,7 +20,7 @@ import { startExit, acceptSale, declineSale, annualRevenue, exitBlocked } from '
 import { sellShares, resign, setGuidance } from '../../src/core/public';
 
 const guidanceSet = new Map<string, string>();
-import { setCeoMode, executiveBlock, setCeoWork } from '../../src/core/ceo';
+import { setCeoMode, executiveBlock, setCeoWork, ceoEnergy } from '../../src/core/ceo';
 import { acceptOuting, outings } from '../../src/core/outings';
 import { acceptContract } from '../../src/core/contracts';
 import { createEsop } from '../../src/core/equity';
@@ -146,6 +146,11 @@ function fundStep(s: GameState) {
   }
 }
 
+// 대표 컨디션(A-146): 전략 봇은 지쳤으면 외출을 거절. 보통 봇·IGNORE_ENERGY(계측)는 예전처럼 다 받음
+function energyOk(s: GameState): boolean {
+  return NOVICE || !!process.env.IGNORE_ENERGY || ceoEnergy(s) >= 55;
+}
+
 function opsStep(s: GameState) {
   // 실험(계측): CRUNCH=1이면 늘 야근 — 기술 부채의 대가를 재려고
   if (process.env.CRUNCH) s.company.workPolicy = 'crunch';
@@ -215,11 +220,11 @@ function opsStep(s: GameState) {
     // 결제 기능(A-111)이 없으면 영업해 봐야 매출이 없으므로, 개발자가 없을 땐 결제까지 대표가 직접 만듭니다(유능한 플레이어)
     const devNeeded = !hasMvp(s) || (!NOVICE && !canCharge(s) && !s.employees.some((e) => e.dept === 'dev'));
     setCeoWork(s, s.contracts?.active && s.cash < 25000000 ? 'contract' : devNeeded ? 'dev' : 'sales');
-    for (const o of outings(s).filter((x) => x.status === 'offer')) if (o.cost * 20 < s.cash) acceptOuting(s, o.id);
+    for (const o of outings(s).filter((x) => x.status === 'offer')) if (o.cost * 20 < s.cash && energyOk(s)) acceptOuting(s, o.id);
   } else {
     // 경영 모드(A-101): 결재가 밀리면 결재, 아니면 대기업 영업. 외출 초대는 실무 모드와 같이 수락
     setCeoWork(s, s.company.approveBalance < 0 ? 'approve' : 'enterprise');
-    for (const o of outings(s).filter((x) => x.status === 'offer')) if (o.cost * 20 < s.cash) acceptOuting(s, o.id);
+    for (const o of outings(s).filter((x) => x.status === 'offer')) if (o.cost * 20 < s.cash && energyOk(s)) acceptOuting(s, o.id);
   }
   // ESOP
   if (!NOVICE && s.company.stage >= 2 && !s.flags.includes('esop') && s.fundingStage && stageIndex(s.fundingStage) >= stageIndex('A')) createEsop(s, 0.08);
@@ -233,6 +238,11 @@ function decide(s: GameState) {
     const opts = d.choices.map((c, i) => ({ c, i })).filter((x) => x.c.enabled);
     if (!opts.length) continue;
     if (NOVICE && (d.id.charCodeAt(d.id.length - 1) % 2 === 0) && s.day < d.deadline) continue; // 절반은 기한까지 두어 기본 선택
+    // 대표 컨디션 카드(A-146): 전략 봇은 쉼
+    if (!NOVICE && !process.env.IGNORE_ENERGY && (d.eventId === 'ev_b_per_burnout' || d.eventId === 'ev_b_per_health')) {
+      resolveDecision(s, d.id, 0);
+      continue;
+    }
     // 대출 제안(A-137): 정책자금이 붙을 만하면 정책자금, 곧 바닥이면 은행, 아니면 빚 없이
     if (!NOVICE && d.eventId === LOAN_EVENT) {
       const rw = runwayMonths(s) ?? 99;

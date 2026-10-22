@@ -23,6 +23,8 @@ export interface CompanyMetrics {
   compEvents: number;
   eventCats: Record<string, number>;
   loans: number; // 받은 대출 수(A-137)
+  energyAvg: number; // 대표 컨디션 평균(A-146)
+  energyLow: number; // 컨디션 50 미만인 날 비율
   loanKinds: string[];
 }
 
@@ -38,6 +40,7 @@ export class Meter {
   private compEvents = 0;
   private cats: Record<string, number> = {};
   private loanKinds: string[] = [];
+  private energy: number[] = [];
 
   constructor(s: GameState) {
     this.snap(s);
@@ -95,6 +98,7 @@ export class Meter {
     const mk = Object.values(s.markets).filter((m) => m.launched).length;
     if (mk !== this.prev.markets) n++;
     for (const l of s.loans ?? []) if (newKey('L' + l.id)) this.loanKinds.push(l.kind);
+    this.energy.push(s.ceoEnergy ?? 80);
     const rw = runwayMonths(s);
     const low = !s.public && rw !== null && rw < 3;
     if (low && !this.lowRunway) {
@@ -150,6 +154,8 @@ export class Meter {
       compEvents: this.compEvents,
       eventCats: this.cats,
       loans: this.loanKinds.length,
+      energyAvg: this.energy.length ? sum(this.energy) / this.energy.length : 0,
+      energyLow: this.energy.length ? this.energy.filter((e) => e < 50).length / this.energy.length : 0,
       loanKinds: this.loanKinds,
     };
   }
@@ -197,6 +203,7 @@ export function summarize(all: { m: CompanyMetrics; kind: string; maxVal: number
   const lk: Record<string, number> = {};
   for (const x of all) for (const k of x.m.loanKinds) lk[k] = (lk[k] ?? 0) + 1;
   out.push(`  런웨이 3개월 미만에 빠진 회사 ${crisis.length}개 중 생존 ${surv}개(${crisis.length ? Math.round((surv / crisis.length) * 100) : 0}%) | 대출 받은 회사 ${all.filter((x) => x.m.loans > 0).length}/${all.length} · 종류 ${Object.entries(lk).map(([k, v]) => `${k} ${v}`).join(' · ') || '없음'}`);
+  out.push(`  대표 컨디션: 평균 ${fmt(ms.map((m) => m.energyAvg))} · 50 미만인 날 ${fmt(ms.map((m) => m.energyLow * 100))}%`);
   const cats: Record<string, number> = {};
   for (const m of ms) for (const [k, v] of Object.entries(m.eventCats)) cats[k] = (cats[k] ?? 0) + v;
   const tot = Object.values(cats).reduce((a, b) => a + b, 0);

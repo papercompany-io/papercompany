@@ -5,6 +5,10 @@ import { legacyFx } from './career';
 import { applyWork, hasMvp } from './product';
 import { hasActiveContract, workOnContract } from './contracts';
 import { busyWindow, isFullDay, outingTpl, todayOutings } from './outings';
+import { runwayMonths } from './finance';
+import { notify } from './notify';
+import { clearFlag, setFlag } from './mods';
+import { trigger } from './events';
 import type { ActionId, GameState } from './types';
 
 const C = DATA.ceo;
@@ -24,7 +28,42 @@ export function modeActions(s: GameState): ActionId[] {
 export function efficiency(s: GameState, id: ActionId): number {
   const fx = specEffects(s.founder.picks) as unknown as Record<string, number>;
   const key = actionDef(id).specKey;
-  return 1 + ((fx[key] ?? 0) + fx.allActions) / 100 + legacyFx(s, 'ceo');
+  return (1 + ((fx[key] ?? 0) + fx.allActions) / 100 + legacyFx(s, 'ceo')) * energyMult(s);
+}
+
+// ── A-146 대표 컨디션: 대표 시간은 쓰면 닳습니다 ──
+const E = C.energy;
+
+export function ceoEnergy(s: GameState): number {
+  return s.ceoEnergy ?? E.start;
+}
+
+// 컨디션이 lowAt 아래면 대표 일의 효율이 줄어듭니다(0이면 minMult)
+export function energyMult(s: GameState): number {
+  const e = ceoEnergy(s);
+  return e >= E.lowAt ? 1 : E.minMult + (1 - E.minMult) * (e / E.lowAt);
+}
+
+function energyDay(s: GameState) {
+  const before = ceoEnergy(s);
+  let d = E.recover;
+  const slots = DATA.time.slotsPerDay;
+  for (const [a, w] of Object.entries(s.todayLog) as [ActionId, number][]) d -= ((E.drain as Record<string, number>)[a] ?? 1) * (w / slots);
+  if (todayOutings(s).some((o) => !o.delegate)) d -= E.outingDay;
+  if (s.company.workPolicy === 'crunch') d -= E.crunch;
+  const rw = runwayMonths(s);
+  if (!s.public && rw !== null && rw < 3) d -= E.stress;
+  if (s.company.approveBalance < 0) d -= E.backlog;
+  const after = Math.max(0, Math.min(100, before + d));
+  s.ceoEnergy = after;
+  for (const w of E.warn) if (before >= w && after < w) notify(s, w <= 20 ? '비서: 대표님, 이러다 쓰러지십니다. 외출을 줄이고 꼭 쉬어 가세요. 지금은 일의 속도도 많이 떨어졌습니다.' : '비서: 대표님 요즘 많이 지쳐 보이세요. 일이 예전만큼 손에 붙지 않습니다. 외출 일정을 줄여 보시는 건 어떨까요?', w <= 20 ? 'urgent' : 'info');
+  if ((s.ceoCardDay ?? -9999) + E.cardCooldown > s.day) return;
+  const card = after < E.healthAt ? 'ev_b_per_health' : after < E.burnoutAt ? 'ev_b_per_burnout' : null;
+  if (!card) return;
+  s.ceoCardDay = s.day;
+  setFlag(s, 'ceo_tired_now');
+  trigger(s, card);
+  clearFlag(s, 'ceo_tired_now');
 }
 
 export function allocTotal(alloc: Record<ActionId, number>): number {
@@ -178,6 +217,7 @@ export function ceoDevPerDay(s: GameState): number {
 
 // 하루 끝: 결재 필요량 차감, 오늘 대표 영업량(세일즈 출력에 더함)
 export function ceoDayEnd(s: GameState) {
+  energyDay(s);
   if (s.company.ceoMode === 'executive') {
     s.company.approveBalance -= approveNeed(s);
     s.company.approveBalance = Math.max(-10, Math.min(5, s.company.approveBalance));

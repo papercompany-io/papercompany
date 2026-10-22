@@ -420,10 +420,12 @@ export function resolveDecision(s: GameState, id: string, idx: number, auto = fa
     book(s, `결정 비용: ${ch.label}`, -cost);
     s.accrual.other += cost;
   }
+  // A-146 지친 대표는 판단이 흐려짐: 컨디션이 낮으면 나쁜 결과가 더 잘 나옴
+  const tired = Math.max(0, 1 - (s.ceoEnergy ?? DATA.ceo.energy.start) / DATA.ceo.energy.lowAt);
   const oc = weighted(
     s,
     orig.outcomes,
-    orig.outcomes.map((o) => o.w),
+    orig.outcomes.map((o) => o.w * (tired > 0 && fxScore(o.fx ?? {}) < 0 ? 1 + DATA.ceo.energy.judgeBad * tired : 1)),
   );
   const text = fill(s, oc.text, ctx);
   applyFx(s, oc.fx ?? {}, { ...ctx, from: d.from });
@@ -502,6 +504,7 @@ export function applyFx(s: GameState, fx: Record<string, unknown>, ctx: Ctx) {
     s.public.price *= 1 + num('stock');
   }
   if (typeof fx.loan === 'string') applyLoanChoice(s, fx.loan); // A-137 대출 제안
+  if (num('ceoEnergy')) s.ceoEnergy = Math.max(0, Math.min(100, (s.ceoEnergy ?? DATA.ceo.energy.start) + num('ceoEnergy'))); // A-146 대표 컨디션
   if (typeof fx.flag === 'string') setFlag(s, fx.flag);
   if (typeof fx.unflag === 'string') clearFlag(s, fx.unflag);
   const comp = s.competitors.find((c) => c.id === ctx.competitorId);

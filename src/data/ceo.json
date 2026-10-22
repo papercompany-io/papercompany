@@ -224,5 +224,4 @@
   "executiveWork": [
     "enterprise",
     "approve"
-  ]
-}
+  ], "energy": {"_note": "A-146 대표 컨디션 0~100 [예시값]. 하루마다 +recover, 그날 한 일 비율 × drain[일], 대표가 직접 간 외출 날 −outingDay, 야근 정책 −crunch, 버틸 기간 3개월 미만이면 −stress, 결재가 밀리면 −backlog. lowAt 아래면 대표 일의 효율이 줄어 minMult까지(0일 때). warn 문턱을 내려가면 비서 알림, burnoutAt 아래면 번아웃 카드, healthAt 아래면 건강검진 카드(cardCooldown일에 한 번씩). 카드에서 쉬면 회복", "start": 80, "recover": 1.0, "drain": {"dev": 0.9, "contract": 1.0, "sales": 1.0, "ir": 0.8, "network": 1.1, "enterprise": 1.2, "approve": 0.9}, "outingDay": 1.4, "crunch": 0.5, "stress": 0.5, "backlog": 0.4, "lowAt": 50, "minMult": 0.65, "warn": [40, 20], "burnoutAt": 25, "healthAt": 10, "cardCooldown": 120, "judgeBad": 1.5, "_judgeNote": "컨디션이 lowAt 아래면 결정 카드의 나쁜 결과(효과 점수가 음수) 가중치 × (1 + judgeBad × (1 − 컨디션/lowAt)) — 지친 대표는 판단이 흐려짐"}}

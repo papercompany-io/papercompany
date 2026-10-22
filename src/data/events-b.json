@@ -5313,8 +5313,7 @@
       "weight": 1,
       "cooldown": 240,
       "cond": {
-        "stageMin": 1,
-        "stageMax": 2
+        "flag": "ceo_tired_now"
       },
       "texts": [
         "대표님, 요즘 잠은 주무세요? 결정이 자꾸 늦어지고 예민해졌다는 얘기가 들려요.",
@@ -5337,7 +5336,8 @@
                   }
                 ],
                 "sat": 3,
-                "rep": 1
+                "rep": 1,
+                "ceoEnergy": 45
               }
             }
           ]
@@ -5351,13 +5351,16 @@
               "w": 80,
               "text": "일하는 방식을 바꾸니 숨통이 트였습니다.",
               "fx": {
-                "sat": 2
+                "sat": 2,
+                "ceoEnergy": 25
               }
             },
             {
               "w": 20,
               "text": "아직은 잘 모르겠습니다.",
-              "fx": {}
+              "fx": {
+                "ceoEnergy": 8
+              }
             }
           ]
         },
@@ -5382,7 +5385,8 @@
         }
       ],
       "deadline": 5,
-      "default": 2
+      "default": 2,
+      "_note": "A-146: 무작위로 오지 않음. 대표 컨디션이 낮아지면(ceo.ts) 띄움. ceoEnergy = 대표 컨디션 회복"
     },
     {
       "id": "ev_b_per_family",
@@ -5709,7 +5713,7 @@
       "cooldown": 540,
       "urgent": true,
       "cond": {
-        "stageMin": 1
+        "flag": "ceo_tired_now"
       },
       "texts": [
         "대표님, 건강검진 결과 심장 쪽 수치가 좋지 않습니다. 정밀검사를 서둘러 받으셔야 합니다.",
@@ -5731,7 +5735,8 @@
                     "days": 14
                   }
                 ],
-                "sat": 2
+                "sat": 2,
+                "ceoEnergy": 60
               }
             },
             {
@@ -5745,7 +5750,8 @@
                     "days": 30
                   }
                 ],
-                "ir": -5
+                "ir": -5,
+                "ceoEnergy": 60
               }
             }
           ]
@@ -5757,7 +5763,9 @@
             {
               "w": 60,
               "text": "다행히 별일 없었습니다.",
-              "fx": {}
+              "fx": {
+                "ceoEnergy": 10
+              }
             },
             {
               "w": 40,
@@ -5795,7 +5803,8 @@
                     "days": 14
                   }
                 ],
-                "board": 2
+                "board": 2,
+                "ceoEnergy": 55
               }
             },
             {
@@ -5808,14 +5817,16 @@
                     "value": -0.06,
                     "days": 14
                   }
-                ]
+                ],
+                "ceoEnergy": 55
               }
             }
           ]
         }
       ],
       "deadline": 3,
-      "default": 0
+      "default": 0,
+      "_note": "A-146: 무작위로 오지 않음. 대표 컨디션이 바닥이면 띄움. ceoEnergy = 대표 컨디션 회복"
     },
     {
       "id": "ev_b_per_mentor",

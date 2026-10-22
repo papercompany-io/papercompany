@@ -625,6 +625,8 @@ export interface GameState {
   eventSeen: Record<string, number>;
   story?: { lastCrisisDay: number; restUntil: number }; // 사건 스토리텔러(A-141): 마지막 위기, 쉬는 구간 끝
   lastMajorOutage?: number; // 마지막 큰 장애 날(A-143) — 투자사가 기억함
+  ceoEnergy?: number; // 대표 컨디션 0~100(A-146). 없으면 예전 저장(시작값)
+  ceoCardDay?: number; // 마지막 컨디션 카드 날(A-146)
   decisions: PendingDecision[];
   news: NewsItem[];
   notices: Notice[];

@@ -266,3 +266,16 @@ Choice:
 | `majorSev` | 이 심각도를 넘으면 큰 장애: 뉴스 + 결정 카드 + 투자사 기억 |
 | `debtCard` | 기술 부채가 이 이상이면 `ev_product_debt_outage`, 아니면 `ev_product_outage`(두 카드 모두 `cond: {"flag": "outage_now"}`라 실제 장애 때만) |
 | `investPenalty` · `investDays` | 큰 장애 뒤 투자 결정 확률 감점(최대값)과 기간(날이 갈수록 0으로) |
+
+## 대표 컨디션 `src/data/ceo.json` → `energy` (A-146)
+
+| 키 | 뜻 |
+| --- | --- |
+| `start` · `recover` | 시작값, 하루 회복 |
+| `drain` | 그날 한 일(대표 주 업무·외출의 일)별 하루치 소모. 하루 중 그 일을 한 비율만큼 |
+| `outingDay` · `crunch` · `stress` · `backlog` | 직접 간 외출 날, 야근 정책, 버틸 기간 3개월 미만, 결재 밀림일 때 더 닳는 양 |
+| `lowAt` · `minMult` | 이 아래면 대표 일 효율이 줄어 0일 때 minMult |
+| `judgeBad` | `lowAt` 아래에서 결정 카드의 나쁜 결과(효과 점수 음수) 가중치 × (1 + judgeBad × 지친 정도) |
+| `warn` · `burnoutAt` · `healthAt` · `cardCooldown` | 비서 알림 문턱, 번아웃 카드·건강검진 카드 문턱(둘 다 `cond: {"flag": "ceo_tired_now"}`), 카드 사이 최소 일수 |
+
+사건 효과 키 `ceoEnergy`: 대표 컨디션 증감(번아웃·건강 카드에서 쉬는 선택지).
