@@ -34,7 +34,7 @@
 | 업무(MVP 전) | `.wk-hero`(큰 D-day) → `.wk-path`/`.wk-node`(색 타일 + 흰 픽셀 표식 길) → `.wk-team` / 기능 `.wk-stats` / 빈 화면 `.wk-empty` | 업무 창 MVP 전 화면. 커리어와 같은 톤(A-171) |
 | 마케팅 판 | `.ad2-head`(큰 광고비) → `.ad2-pills` → `.ad2-grid` > `.ad2-ch`(채널 카드) → `.ad2-stats` → `.ad2-cp`(캠페인) → `.ad2-lock` | 업무 창 마케팅 탭 · 시장·광고 창 광고 탭 공용(A-176) |
 | 앱별 개편(A-179) | 루트 고유 클래스 + `src/ui/apps/skin/<앱>.css` | 직원 `.em2`(상세 `.emd`)·사무실 `.of2`·상점 `.sh2`·투자 `.iv2`·재무 `.fn2`·시장 `.mk2`·AI `.ai2`·Exit `.ex2`·주식 `.st2`·뉴스 `.nw2`·설정 `.se2`·업무 출시 뒤 `.wk .pl*` |
-| 부서 페이지(A-191) | `.dpg` > `.dpg-head`(부서색 왼쪽 줄 + 팀 이름·맡은 일 지시·사람 칩) + `.dpg-body`(그 부서 화면) | 팀 앱 탭, 사무실 직원 창 오른쪽(`.epm.wide` 한 줄 짜임: 왼쪽 직원 정보 · 오른쪽 부서 페이지) |
+| 부서 페이지(A-191) | `.dpg` > `.dpg-head`(밑줄 하나로 나눈 팀 이름·맡은 일 지시·사람 칩, 색 바탕·왼쪽 색 줄 없음, A-193) + `.dpg-body`(그 부서 화면) | 팀 앱 탭, 사무실 직원 창 오른쪽(`.epm.wide` 한 줄 짜임: 왼쪽 직원 정보 · 오른쪽 부서 페이지) |
 | 설정 줄 | `.set-group` > `.set-row`(`.set-text` + `.set-ctrl`), `.set-switch` | 설정 |
 
 새 상태는 기존 상태 클래스(`.fin-good`/`.fin-bad`, `.chip green/red/blue`, `.warn`/`.ok`/`.err`)로 칠합니다. 색을 직접 쓰지 않습니다.

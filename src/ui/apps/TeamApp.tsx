@@ -1,5 +1,6 @@
 // 화면(A-191): 팀 앱 — 사람이 있는 부서마다 알약 탭, 탭마다 그 부서가 하는 일 페이지(DeptPage).
 // DeptPage는 사무실 직원 창 오른쪽에도 그대로 들어갑니다(왼쪽 직원 정보 + 오른쪽 그 직원 부서의 일, 바로 조작 가능).
+// 화면(A-193): 위 띠는 색 바탕·왼쪽 색 줄 없이 밑줄 하나. 직원 창에서 혼자인 팀이면 사람 칩 줄을 뺌
 // 부서마다 이미 있는 화면을 그대로 씀: 개발·디자인 = 개발 일정, 마케팅 = 광고 집행, 광고 운영 = 광고 판매, 세일즈 = 대기업 계약, 인사 = 위임 채용, AI연구 = AI 도입
 import { useState } from 'react';
 import { DEPT_IDS, dept, ordersFor } from '../../core/data';
@@ -59,6 +60,8 @@ export function DeptPage({ d, openApp, focusId, onEmployee }: { d: DeptId; openA
   const li = leadInfo(s, d);
   const orders = ordersFor(d);
   const cur = orders.find((o) => o.id === orderOf(s, d));
+  // 직원 창 왼쪽에 이미 그 사람이 있으니, 혼자인 팀이면 사람 칩 줄을 빼서 같은 이름이 두 번 나오지 않게(A-193)
+  const showPeople = !focusId || members.length > 1;
   return (
     <div className="dpg" style={{ ['--dc' as string]: dept(d).color }} data-testid={`dept-page-${d}`}>
       <div className="dpg-head">
@@ -84,6 +87,7 @@ export function DeptPage({ d, openApp, focusId, onEmployee }: { d: DeptId; openA
             {cur && <span className="dpg-desc">{cur.desc}</span>}
           </div>
         )}
+        {showPeople && (
         <div className="dpg-people">
           {members.map((e) => (
             <button key={e.id} className={`dpg-person ${e.id === focusId ? 'on' : ''}`} disabled={!onEmployee} title={onEmployee ? `${e.name} 보기` : e.name} onClick={() => onEmployee?.(e.id)}>
@@ -95,6 +99,7 @@ export function DeptPage({ d, openApp, focusId, onEmployee }: { d: DeptId; openA
             </button>
           ))}
         </div>
+        )}
       </div>
       {msg && <div className="info dpg-msg">{msg}</div>}
       <div className="dpg-body">
@@ -113,7 +118,7 @@ function DeptWork({ d, setMsg, openApp }: { d: DeptId; setMsg: (m: string | null
     case 'marketing':
       return <Ads setMsg={setMsg} />;
     case 'adops':
-      return <AdSales setMsg={setMsg} />;
+      return <AdSales setMsg={setMsg} inTeam />;
     case 'sales':
       return <Enterprise />;
     case 'hr':

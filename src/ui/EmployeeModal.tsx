@@ -1,8 +1,10 @@
 // OF-06 직원 클릭 정보 모달: 이름·부서·능력·만족도·건강·숙련·특성·지금 하는 일
 // 화면(A-180): 직원 상세 톤(A-179)에 맞춘 머리 + 아래 행동 버튼(보너스·DM·연봉 인상·직원 관리). 결과는 버튼 위 한 줄로
 // 화면(A-191): 한 줄 짜임 — 왼쪽 직원 정보, 오른쪽 그 직원 부서가 하는 일 페이지(팀 앱과 같은 DeptPage, 바로 조작). 오른쪽 사람 칩을 누르면 같은 팀의 다른 직원으로
+// 화면(A-193): 머리는 색 띠·색 바탕 없이 흰 면 + 부서색 얼굴 타일. 입사·경력은 이름 아래 한 줄로 모아 아래 상세의 같은 줄을 뺌
 import { useState } from 'react';
 import { dept } from '../core/data';
+import { formatDate } from '../core/calendar';
 import { orderLabel } from '../core/orders';
 import { bonusBlock, bonusCost, giveBonus, giveRaise } from '../core/staff';
 import type { GameState } from '../core/types';
@@ -34,10 +36,10 @@ export function EmployeeModal({ id, onClose, onDm, onManage, openApp, onEmployee
             <PixelAvatar id={e.id} color={color} />
           </div>
           <div className="epm-id">
-            <span className="epm-kicker">
-              {dept(e.dept).name}팀 · {e.lead ? '팀장' : kind}
-            </span>
             <b className="epm-name">{e.name}</b>
+            <span className="epm-kicker">
+              {dept(e.dept).name}팀 · {e.lead ? '팀장' : kind} · 입사 {formatDate(e.joinedDay)} · 경력 {e.years}년
+            </span>
             <span className="epm-now">
               지금 하는 일 <em data-testid="emp-status">{orderLabel(s, e.dept)}</em>
             </span>

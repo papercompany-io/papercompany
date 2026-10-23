@@ -2,10 +2,10 @@
 
 .modal.emp-modal.epm { width: 440px; max-width: calc(100vw - 32px); padding: 0; gap: 0; overflow: hidden; border-radius: var(--r-lg); background: var(--surface); }
 
-.epm-head { position: relative; display: flex; align-items: center; gap: 14px; padding: 18px 18px 14px; border-left: 4px solid var(--dc); background: color-mix(in srgb, var(--dc) 10%, var(--surface)); }
+.epm-head { position: relative; display: flex; align-items: center; gap: 14px; padding: 18px 18px 14px; border-bottom: 1px solid var(--line); background: var(--surface); }
 .epm-avatar { width: 60px; height: 60px; flex: none; border-radius: var(--r-sm); background: color-mix(in srgb, var(--dc) 24%, var(--surface)); image-rendering: pixelated; overflow: hidden; }
 .epm-id { display: flex; flex-direction: column; gap: 3px; min-width: 0; padding-right: 30px; }
-.epm-kicker { font-family: var(--pixel); font-size: 11px; color: var(--text-3); -webkit-font-smoothing: none; }
+.epm-kicker { font-size: var(--fs-sm); color: var(--text-3); }
 .epm-name { font-size: var(--fs-xl); font-weight: 800; color: var(--text); line-height: 1.2; }
 .epm-now { font-size: var(--fs-sm); color: var(--text-3); }
 .epm-now em { font-style: normal; font-weight: 700; color: var(--text-2); margin-left: 4px; }
@@ -45,3 +45,9 @@
   .epm.wide .epm-left { overflow: visible; border-right: none; border-bottom: 1px solid var(--line); }
   .epm.wide .epm-right { overflow: visible; }
 }
+
+/* 화면(A-193): AI 카드 티 빼기 — 아래 상세의 직무 줄은 머리로 옮겨 숨기고, 숫자 네 칸은 회색 타일 대신 이름·값 줄(선으로만 나눔) */
+.epm .emd-meta { display: none; }
+.epm .emd-stats { gap: 0 20px; }
+.epm .emd-stats > div { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 7px 0; border: none; border-bottom: 1px solid var(--line); border-radius: 0; background: none; }
+.epm .emd-stats > div b { font-size: var(--fs-md); font-variant-numeric: tabular-nums; }

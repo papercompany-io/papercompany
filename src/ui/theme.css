@@ -1989,13 +1989,16 @@ input[type='checkbox'] { accent-color: var(--accent); width: 16px; height: 16px;
 .ss-card.promise:hover { border-color: var(--line-strong); box-shadow: var(--sh-3, var(--sh-2)); }
 
 /* 화면(A-182): 광고 판매 탭 — 왼쪽 판의 광고 자리 칸(형식별 계약 몫 막대), 계약 카드의 자동 연장·해지 줄 */
-.ads2-slot { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--dc); border-radius: var(--r-sm); }
-.ads2-slot.off { background: transparent; border-style: dashed; border-left-style: solid; opacity: 0.85; }
-.ads2-slot-head { display: flex; align-items: center; gap: 8px; }
+/* A-193: 광고 자리는 색 줄 카드 대신 선으로 나눈 줄 + 칸칸이 차는 막대(직원 막대와 같은 결). 없는 자리는 회색 한 줄 */
+.ads2-slot { display: flex; flex-direction: column; gap: 6px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.ads2-slot.off { padding: 8px 0; }
+.ads2-slot.off .ads2-slot-head b { color: var(--text-3); font-weight: 600; }
+.ads2-slot-head { display: flex; align-items: baseline; gap: 8px; }
 .ads2-slot-head b { font-size: var(--fs-md); color: var(--text); }
 .ads2-slot-pct { margin-left: auto; font-size: var(--fs-sm); font-weight: 700; color: var(--text-2); font-variant-numeric: tabular-nums; }
-.ads2-bar { height: 8px; border-radius: var(--r-full); background: var(--surface-tile); overflow: hidden; }
-.ads2-bar i { display: block; height: 100%; background: var(--dc); border-radius: var(--r-full); transition: width 400ms var(--ease); }
+.ads2-slot-lock { margin-left: auto; font-family: var(--pixel); font-size: 11px; color: var(--text-off); -webkit-font-smoothing: none; cursor: help; }
+.ads2-bar { position: relative; height: 10px; background: repeating-linear-gradient(90deg, var(--surface-tile) 0 6px, transparent 6px 8px); }
+.ads2-bar i { display: block; height: 100%; background: repeating-linear-gradient(90deg, var(--dc) 0 6px, transparent 6px 8px); transition: width 400ms var(--ease); }
 .ads2-slot-foot { display: flex; justify-content: space-between; gap: 8px; font-size: var(--fs-xs); color: var(--text-3); font-weight: 600; }
 .ads2-short { font-size: var(--fs-xs); color: var(--negative-press); font-weight: 700; line-height: 1.4; }
 .ads2-deal-acts { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding-top: 6px; border-top: 1px solid var(--line); }

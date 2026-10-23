@@ -1,6 +1,7 @@
 // 광고 판매 탭(A-182): 광고 자리(배너·이미지·비디오)가 얼마나 팔렸는지, 광고 운영팀이 받아 온 광고주 제안, 맺은 계약(자동 연장·해지 위약금).
 // 짜임은 채용(A-88)과 같게 — 왼쪽 회색 판(광고 자리·이번 달 광고 매출·광고 운영팀) + 오른쪽 광고주 카드. 흥정은 채용 협상 창과 같은 모양.
 // 광고주가 낼 수 있는 최고 단가는 보여 주지 않습니다(흥정 답으로 알게).
+// 화면(A-193): 광고 자리는 색 줄 카드 세 장 대신 선으로 나눈 줄. 아직 없는 자리는 회색 한 줄(자세한 말은 title). 팀 페이지 안(inTeam)에서는 위 띠와 겹치는 "광고 운영팀" 제목을 빼고 다음 제안 날만
 import { useEffect, useRef, useState } from 'react';
 import { DATA, featuresOf } from '../../core/data';
 import {
@@ -32,7 +33,7 @@ import type { GameState } from '../../core/types';
 const TIER_COLOR: Record<string, string> = { local: 'var(--positive)', mid: 'var(--c-blue-500)', big: 'var(--caution)', global: 'var(--c-violet-600)' };
 const FORMAT_COLOR: Record<string, string> = { banner: 'var(--c-blue-500)', image: 'var(--c-violet-600)', video: 'var(--negative)' };
 
-export function AdSales({ setMsg }: { setMsg: (m: string | null) => void }) {
+export function AdSales({ setMsg, inTeam }: { setMsg: (m: string | null) => void; inTeam?: boolean }) {
   const s = useGame();
   const [talk, setTalk] = useState<string | null>(null);
   const st = adSalesOf(s);
@@ -51,13 +52,18 @@ export function AdSales({ setMsg }: { setMsg: (m: string | null) => void }) {
           const def = adFormatDef(f.id);
           const feat = feats.find((x) => x.fx.adFormat === f.id);
           return (
-            <div key={f.id} className={`ads2-slot ${f.on ? '' : 'off'}`} style={{ ['--dc' as string]: FORMAT_COLOR[f.id] }} data-testid={`ad-slot-${f.id}`}>
+            <div
+              key={f.id}
+              className={`ads2-slot ${f.on ? '' : 'off'}`}
+              style={{ ['--dc' as string]: FORMAT_COLOR[f.id] }}
+              data-testid={`ad-slot-${f.id}`}
+              title={f.on ? undefined : `업무 창에서 "${feat?.name ?? def.name}" 기능을 만들면 이 광고 자리가 생깁니다.`}
+            >
               <div className="ads2-slot-head">
-                <span className="pc-dot" />
                 <b>{def.name} 광고</b>
-                {f.on && <span className="ads2-slot-pct">{Math.round(f.soldShare * 100)}% 계약</span>}
+                {f.on ? <span className="ads2-slot-pct">{Math.round(f.soldShare * 100)}% 계약</span> : <span className="ads2-slot-lock">기능을 만들면 생김</span>}
               </div>
-              {f.on ? (
+              {f.on && (
                 <>
                   <div className="ads2-bar" title="색 칸 = 광고주와 계약한 노출, 회색 = 광고 네트워크가 싸게 채우는 자리">
                     <i style={{ width: `${f.soldShare * 100}%` }} />
@@ -68,8 +74,6 @@ export function AdSales({ setMsg }: { setMsg: (m: string | null) => void }) {
                   </div>
                   {f.fill < 1 && <div className="ads2-short">사용자가 줄어 약속한 노출의 {Math.round(f.fill * 100)}%만 내보내고 있습니다. 모자라면 위약금을 냅니다.</div>}
                 </>
-              ) : (
-                <div className="ew-note">업무 창에서 "{feat?.name ?? def.name}" 기능을 만들면 이 광고 자리가 생깁니다.</div>
               )}
             </div>
           );
@@ -88,15 +92,15 @@ export function AdSales({ setMsg }: { setMsg: (m: string | null) => void }) {
             <b>{liveAdDeals(s).length}건</b>
           </div>
         </div>
-        <div className="hf-title">광고 운영팀</div>
+        {!inTeam && <div className="hf-title">광고 운영팀</div>}
         {ao.length === 0 ? (
           <div className="warn" data-testid="adops-none">
             광고 운영 담당자가 없어 광고주 제안이 오지 않습니다. 채용 창에서 "광고 운영"(애드옵스 매니저)을 뽑으면 광고주를 찾아 일주일마다 계약 제안을 받아 옵니다.
           </div>
         ) : (
           <div className="fb-row">
-            <span>광고 운영 {ao.length}명</span>
-            <b>{sales.some((f) => f.on) ? `다음 제안 D-${Math.max(0, st.nextBatchDay - s.day)}` : '광고 자리가 없습니다'}</b>
+            <span>{inTeam ? '다음 광고주 제안' : `광고 운영 ${ao.length}명`}</span>
+            <b>{sales.some((f) => f.on) ? `${inTeam ? '' : '다음 제안 '}D-${Math.max(0, st.nextBatchDay - s.day)}` : '광고 자리가 없습니다'}</b>
           </div>
         )}
       </section>

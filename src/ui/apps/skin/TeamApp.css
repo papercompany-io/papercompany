@@ -1,7 +1,7 @@
-/* 화면(A-191): 팀 앱·직원 창 오른쪽의 부서 페이지. 위 띠(부서색 왼쪽 줄 + 팀 이름·사람·맡은 일) + 아래 그 부서가 하는 일 화면. 루트 .dpg 아래로만 */
+/* 화면(A-191): 팀 앱·직원 창 오른쪽의 부서 페이지. A-193: 머리는 색 띠·색 바탕 없이 밑줄 하나로, 빈 목록은 하늘색 띠 대신 회색 글 한 줄. 위 띠(부서색 왼쪽 줄 + 팀 이름·사람·맡은 일) + 아래 그 부서가 하는 일 화면. 루트 .dpg 아래로만 */
 
 .dpg { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
-.dpg-head { display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; border-left: 4px solid var(--dc); border-radius: var(--r-sm); background: color-mix(in srgb, var(--dc) 8%, var(--surface-sunk)); }
+.dpg-head { display: flex; flex-direction: column; gap: 10px; padding: 2px 0 14px; border-bottom: 1px solid var(--line); }
 .dpg-title { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .dpg-title b { font-size: var(--fs-lg); color: var(--text); }
 .dpg-dot { width: 10px; height: 10px; border-radius: 3px; background: var(--dc); flex: none; }
@@ -11,11 +11,11 @@
 .dpg-order select { min-width: 0; }
 .dpg-desc { font-size: var(--fs-sm); color: var(--text-2); min-width: 0; }
 .dpg-people { display: flex; flex-wrap: wrap; gap: 6px; }
-.dpg-person { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 3px; border: 1px solid var(--line); border-radius: var(--r-full); background: var(--surface); color: var(--text-2); font: inherit; font-size: var(--fs-sm); cursor: pointer; }
-.dpg-person canvas { border-radius: 50%; background: color-mix(in srgb, var(--dc) 24%, var(--surface)); }
+.dpg-person { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 3px; border: 1px solid transparent; border-radius: var(--r-sm); background: var(--surface-tile); color: var(--text-2); font: inherit; font-size: var(--fs-sm); cursor: pointer; }
+.dpg-person canvas { border-radius: 2px; background: color-mix(in srgb, var(--dc) 24%, var(--surface)); }
 .dpg-person:disabled { cursor: default; }
 .dpg-person:not(:disabled):hover { border-color: var(--line-strong); color: var(--text); }
-.dpg-person.on { border-color: var(--dc); color: var(--text); font-weight: 700; box-shadow: inset 0 0 0 1px var(--dc); }
+.dpg-person.on { border-color: var(--line-strong); background: var(--surface); color: var(--text); font-weight: 700; }
 .dpg-msg { margin: 0; text-align: left; }
 .dpg-body { min-width: 0; }
 
@@ -29,3 +29,6 @@
 .dpg-empty b { font-size: var(--fs-lg); color: var(--text); }
 
 @media (max-width: 760px) { .dpg-order { grid-template-columns: 1fr; } }
+
+/* 화면(A-193): 부서 페이지 안의 빈 목록은 하늘색 가운데 띠 대신 왼쪽 정렬 회색 글 */
+.dpg .empty-note { padding: 6px 0 10px; text-align: left; font-size: var(--fs-sm); color: var(--text-3); background: none; border-radius: 0; }
