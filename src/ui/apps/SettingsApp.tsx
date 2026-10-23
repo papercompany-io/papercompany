@@ -10,6 +10,14 @@ import { APP_COLORS, AppIcon } from '../icons';
 import './apps.css';
 import './skin/SettingsApp.css';
 
+// 화면 크기 고르기(A-241) [예시값]: 창 최소 크기 1100×700에서 가장 크게 골라도 화면이 넘치지 않을 만큼
+const UI_SCALES: [number, string][] = [
+  [0.9, '작게'],
+  [1, '보통'],
+  [1.15, '크게'],
+  [1.3, '아주 크게'],
+];
+
 function Switch({ on, onChange, label }: { on: boolean; onChange: (v: boolean) => void; label: string }) {
   return (
     <button type="button" role="switch" aria-checked={on} aria-label={label} className={`set-switch ${on ? 'on' : ''}`} onClick={() => onChange(!on)}>
@@ -112,6 +120,16 @@ export function SettingsApp() {
 
       <section className="set-group">
         <div className="hf-title">화면</div>
+        {/* 화면 크기(A-241): 화면 전체 확대 배율 */}
+        <Row title="화면 크기" sub="글자와 창을 함께 키우거나 줄입니다.">
+          <div className="seg" data-testid="ui-scale">
+            {UI_SCALES.map(([v, label]) => (
+              <button key={v} className={st.uiScale === v ? 'on' : ''} onClick={() => setSettings({ uiScale: v })}>
+                {label}
+              </button>
+            ))}
+          </div>
+        </Row>
         <Row title="전체 화면">
           <button className="btn small ghost" onClick={toggleFullscreen}>
             켜기 / 끄기
