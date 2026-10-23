@@ -2,18 +2,12 @@
 
 .sh2 { gap: 14px; min-width: 320px; container-type: inline-size; }
 
-.sh2-head { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 0 2px; text-align: center; }
-.sh2-kicker { font-family: var(--pixel); font-size: 13px; font-weight: 400; color: var(--accent-text); -webkit-font-smoothing: none; }
-.sh2-big { margin: 0; font-size: 36px; font-weight: 800; line-height: 1.15; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
-.sh2-lead { margin: 0; font-size: var(--fs-md); color: var(--text-3); cursor: help; word-break: keep-all; }
-
-/* 분류 탭: 알약(.rk .tab 모양), 오른쪽 옮기기·치우기 */
+/* 분류 탭: 알약(.rk .tab 모양). 위 책상 수 머리·옮기기·치우기 버튼은 뺌 — 배치 수정은 사무실 화면 버튼(A-128) */
 .sh2 .shop-bar { justify-content: center; gap: 8px 12px; }
 .sh2.sh2 .shop-tabs { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; border: none; border-radius: 0; overflow: visible; background: none; }
 .sh2.sh2 .shop-tabs button { padding: 7px 13px; border: none; border-radius: var(--r-full); background: var(--surface-tile); color: var(--text-2); font-size: var(--fs-md); font-weight: 600; }
 .sh2.sh2 .shop-tabs button:hover { background: var(--surface-sel); color: var(--text); }
 .sh2.sh2 .shop-tabs button.on { background: var(--text); color: var(--surface); }
-.sh2 .shop-tools .btn { border-radius: var(--r-full); }
 
 /* 그림 타일: 납작한 카드, 위 그림 칸(회색) + 아래 이름·가격 */
 .sh2 .shop-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
@@ -42,7 +36,5 @@
 .sh2.sh2 .st-meta { font-family: var(--pixel); font-size: 13px; font-weight: 400; -webkit-font-smoothing: none; }
 
 @container (max-width: 520px) {
-  .sh2-big { font-size: 30px; }
   .sh2 .shop-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-  .sh2 .shop-tools { margin-left: 0; }
 }

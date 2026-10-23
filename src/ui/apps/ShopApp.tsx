@@ -1,7 +1,7 @@
 // OF-07 상점(A-87): 책상·가구를 사서 사무실 빈 바닥에 직접 놓습니다. 그림 타일을 누르면 창이 닫히고 사무실 화면이 배치 모드로 바뀝니다.
 // Startup Company 구매 창처럼 위 분류 탭, 큰 그림 타일(올리면 이름·가격 말풍선, 오른쪽 위 보유 배지).
 // 놓인 가구 타일을 누르면 옮기기, 보관 중인 가구는 다시 놓기.
-// 화면(A-179): 커리어·업무와 같은 톤 — 가운데 큰 책상 수, 알약 분류 탭, 그림 타일 아래 이름·가격(작은 글자는 픽셀 글꼴), 놓임 배지는 흰 픽셀 체크
+// 화면(A-179, A-232): 커리어·업무와 같은 톤 — 알약 분류 탭, 그림 타일 아래 이름·가격(작은 글자는 픽셀 글꼴), 놓임 배지는 흰 픽셀 체크
 import { useState } from 'react';
 import { DATA } from '../../core/data';
 import { buyFurnitureBlock, currentTier, desks, furnitureFits, furnitureItems, itemSize, placedItems } from '../../core/office';
@@ -71,13 +71,6 @@ export function ShopApp({ onEdit }: { onEdit: (r: EditRequest) => void }) {
 
   return (
     <div className="shop sh2">
-      <div className="sh2-head">
-        <span className="sh2-kicker">{t.name}</span>
-        <h2 className="sh2-big">책상 {all.length}개</h2>
-        <p className="sh2-lead" title="그림을 누르면 창이 닫히고 사무실 빈 바닥에 직접 놓습니다. 놓인 가구는 옮기고, 보관 중인 가구는 다시 놓을 수 있습니다.">
-          이 사무실에는 {t.maxDesks}개까지 놓을 수 있습니다
-        </p>
-      </div>
       <div className="shop-bar">
         <div className="shop-tabs" role="tablist">
           {CATS.map((c) => (
@@ -85,14 +78,6 @@ export function ShopApp({ onEdit }: { onEdit: (r: EditRequest) => void }) {
               {c.name}
             </button>
           ))}
-        </div>
-        <div className="shop-tools">
-          <button className="btn small ghost" data-testid="shop-move" disabled={!!moving} onClick={() => onEdit({ mode: 'move' })}>
-            옮기기
-          </button>
-          <button className="btn small ghost" data-testid="shop-remove" disabled={!!moving} onClick={() => onEdit({ mode: 'remove' })}>
-            치우기
-          </button>
         </div>
       </div>
 
