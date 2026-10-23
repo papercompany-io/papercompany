@@ -22,13 +22,20 @@ export function staffCount(s: GameState): number {
 }
 
 export function deptUnlocked(s: GameState, d: DeptId): boolean {
-  return s.company.stage >= dept(d).stage;
+  return deptInIndustry(s, d) && s.company.stage >= dept(d).stage;
+}
+
+// 이 산업에 있는 부서인지(A-182 광고 운영은 광고 판매 산업만). 없는 부서는 목록에서도 숨김
+export function deptInIndustry(s: GameState, d: DeptId): boolean {
+  const only = dept(d).industries;
+  return !only || only.includes(s.company.industry);
 }
 
 export function moveDept(s: GameState, empId: string, to: DeptId): string | null {
   const e = employee(s, empId);
   if (!e) return '직원을 찾을 수 없습니다.';
   if (e.dept === to) return '이미 그 부서입니다.';
+  if (!deptInIndustry(s, to)) return `${dept(to).name} 부서는 이 산업에 없습니다.`;
   if (!deptUnlocked(s, to)) return `${dept(to).name} 부서는 회사 단계 ${dept(to).stage}부터 둘 수 있습니다.`;
   // 책상은 직무와 상관없어 자리를 옮기지 않습니다(A-80).
   const from = e.dept;

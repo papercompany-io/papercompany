@@ -14,11 +14,12 @@ import { nextId } from './ids';
 import { ensureExternal, ensureNamedExternal, getChannel, post } from './messenger';
 import { notify } from './notify';
 import { hasMvp } from './product';
-import { pick, rand, randInt } from './rng';
+import { pick, rand, randInt, weighted } from './rng';
+import { companyOf, inviteWeight } from './contacts';
 import type { Employee, GameState, Outing } from './types';
 
 const O = DATA.ceo.outings;
-type Tpl = (typeof O.templates)[number] & { needsMvp?: boolean; roundChance?: number; hours?: number[]; delegate?: string[]; bonus: { ir?: number; network?: number; pipeline?: number } };
+type Tpl = (typeof O.templates)[number] & { internal?: boolean; needsMvp?: boolean; roundChance?: number; hours?: number[]; delegate?: string[]; bonus: { ir?: number; network?: number; pipeline?: number } };
 const WORK_START = DATA.time.workStartHour;
 const DAY_HOURS = DATA.time.workEndHour - DATA.time.workStartHour;
 const WEEK = ['일', '월', '화', '수', '목', '금', '토'];
@@ -89,7 +90,7 @@ export function delegates(s: GameState, o: Outing): Employee[] {
 export function delegateAway(s: GameState, empId: string): number {
   let away = 0;
   for (const o of outings(s)) {
-    if (o.status !== 'booked' || o.delegate !== empId || s.day < o.startDay || s.day >= o.startDay + o.days) continue;
+    if (o.status !== 'booked' || (o.delegate !== empId && o.companion !== empId) || s.day < o.startDay || s.day >= o.startDay + o.days) continue; // 미팅에 함께 간 직원도(A-186)
     if (isFullDay(o)) return 1;
     const [a, b] = busyWindow(o);
     away += Math.max(0, Math.min(DATA.time.workEndHour, b) - Math.max(WORK_START, a)) / DAY_HOURS;
@@ -106,6 +107,7 @@ export function todayOuting(s: GameState): Outing | null {
 export function awayOuting(s: GameState): Outing | null {
   const hour = WORK_START + (Math.min(1, s.msInDay / DATA.time.dayMs) * DAY_HOURS);
   return todayOutings(s).find((o) => {
+    if (o.kind === 'review') return false; // 점검 회의는 사무실 안(A-181)
     const [a, b] = busyWindow(o);
     return hour >= a && hour < b;
   }) ?? null;
@@ -131,11 +133,13 @@ function travelFor(s: GameState): number {
 export function outingEffect(o: Outing): string {
   const t = outingTpl(o.tpl);
   if (o.delegate) return '직원이 대신 감 · 끝나면 성과 일부'; // A-133
+  if (o.kind === 'review') return '약속한 기능에 숨은 일이 없는지 점검(사무실 안, 이동 없음)'; // A-181
   const slot = DATA.ceo.actions.find((a) => a.id === t.action)?.perSlot ?? 0;
   const hours = isFullDay(o) ? DATA.time.slotsPerDay * o.days : o.hours!; // 하루짜리 약속은 약속 시간만(A-127)
   const per = slot * hours;
   if (t.kind === 'ir') return `IR 점수 약 +${(per + (t.bonus.ir ?? 0)).toFixed(0)}${t.bonus.network ? ` · 네트워크 +${t.bonus.network}` : ''}`;
   if (t.kind === 'network') return `네트워크 점수 약 +${(per + (t.bonus.network ?? 0)).toFixed(0)}`;
+  if (o.tpl === 'customer') return `고객사 미팅 ${o.stage ?? 1}단계 · 약속 시각에 회의실에 들어갑니다`; // A-186
   return `영업 ${isFullDay(o) ? `${o.days}일치` : `${o.hours}시간`}${t.bonus.pipeline ? ' · 대기업 파이프라인 +' + t.bonus.pipeline : ''}`;
 }
 
@@ -150,12 +154,15 @@ export function outingsDay(s: GameState) {
       const k = o.delegate ? O.delegateRate : 1; // 대신 간 직원은 보너스 일부만(A-133)
       if (b.ir) s.irPoints += b.ir * k;
       if (b.network) s.networkPoints += b.network * k;
-      if (b.pipeline) s.entPipeline += b.pipeline * k;
+      if (b.pipeline && !o.result) s.entPipeline += b.pipeline * k; // 고객사 미팅은 결과로 이미 받음(A-186)
       const emp = o.delegate ? s.employees.find((e) => e.id === o.delegate) : undefined;
+      if (o.kind === 'review') continue; // 점검 결과는 milestones.ts가 알림(A-181)
       if (o.delegate) notify(s, `${emp?.name ?? '직원'}님이 ${o.title}에 다녀왔습니다.`, 'good', 'schedule');
       else notify(s, `외출에서 돌아왔습니다: ${o.title}. 오늘부터 다시 ${workName(s)}에 집중합니다.`, 'good', 'schedule');
     }
-    if (o.status === 'booked' && o.delegate && s.day === o.startDay) {
+    if (o.status === 'booked' && o.kind === 'review' && s.day === o.startDay) {
+      notify(s, `오늘 ${hhmm(o.startHour!)} ${o.title}(${o.host}). 그 한 시간은 회의를 합니다.`, 'info', 'schedule');
+    } else if (o.status === 'booked' && o.delegate && s.day === o.startDay) {
       const emp = s.employees.find((e) => e.id === o.delegate);
       notify(s, `오늘 ${emp?.name ?? '직원'}님이 대표 대신 ${o.title}(${o.host})에 갑니다.`, 'info', 'schedule');
     } else if (o.status === 'booked' && s.day === o.startDay)
@@ -172,6 +179,7 @@ export function outingsDay(s: GameState) {
   if (s.outings.filter((o) => o.status === 'offer').length >= O.maxOffers) return;
   const round = !!openRound(s);
   for (const t of O.templates as Tpl[]) {
+    if (t.internal) continue; // 점검 회의는 약속에서만 생김(A-181). rand를 쓰기 전에 건너뛰어 다른 초대 흐름을 바꾸지 않음
     if (t.needsMvp && !hasMvp(s)) continue;
     const p = round && t.roundChance !== undefined ? t.roundChance : t.chance;
     if (rand(s) >= p) continue;
@@ -201,7 +209,8 @@ function invite(s: GameState, t: Tpl) {
     host = inv.name;
     channelId = ensureExternal(s, inv.id);
   } else if (t.host === 'customer') {
-    host = pick(s, ['한빛상사 구매팀', '오름물산 IT팀', '새솔유통 운영팀', '다온테크 기획팀']);
+    const hosts = ['한빛상사 구매팀', '오름물산 IT팀', '새솔유통 운영팀', '다온테크 기획팀'];
+    host = weighted(s, hosts, hosts.map((h) => inviteWeight(s, companyOf(h)))); // 친한 연락처가 있는 회사가 자주 부름(A-186)
     channelId = ensureNamedExternal(s, host);
   } else channelId = ensureNamedExternal(s, host);
   const o: Outing = { id: nextId(s, 'out'), tpl: t.id, kind: t.kind as Outing['kind'], title: t.title, host, channelId, startDay, days, ...time, cost: t.cost, status: 'offer' };
@@ -235,6 +244,11 @@ export function acceptOuting(s: GameState, id: string, replace = false, delegate
     post(s, o.channelId, o.host, pick(s, ['네, 그날 뵙겠습니다.', '알겠습니다. 잘 부탁드립니다.']), 'npc');
     return null;
   }
+  if (o.kind === 'review') {
+    post(s, o.channelId, '나(대표)', `좋습니다. ${outingRange(o)}에 봅시다.`, 'player');
+    post(s, o.channelId, o.host, '네, 자료 준비해 두겠습니다.', 'npc');
+    return null;
+  }
   post(s, o.channelId, '나(대표)', `좋습니다. ${outingRange(o)} 뵙겠습니다.`, 'player');
   post(s, o.channelId, o.host, pick(s, ['감사합니다! 그날 뵙겠습니다.', '좋습니다. 일정 잡아 두겠습니다.', '네, 기대하겠습니다.']), 'npc');
   return null;
@@ -244,6 +258,11 @@ export function declineOuting(s: GameState, id: string): string | null {
   const o = outings(s).find((x) => x.id === id);
   if (!o || o.status !== 'offer') return '이미 지난 초대입니다.';
   o.status = 'declined';
+  if (o.kind === 'review') {
+    post(s, o.channelId, '나(대표)', '이번 점검은 건너뛰죠. 하던 일 계속해 주세요.', 'player');
+    post(s, o.channelId, o.host, '알겠습니다.', 'npc');
+    return null;
+  }
   post(s, o.channelId, '나(대표)', '죄송하지만 이번에는 어렵겠습니다. 다음에 꼭 뵙죠.', 'player');
   post(s, o.channelId, o.host, pick(s, ['아쉽네요. 다음 기회에 뵙겠습니다.', '알겠습니다. 다음에 다시 연락드릴게요.']), 'npc');
   return null;
@@ -258,7 +277,26 @@ export function cancelOuting(s: GameState, id: string): string | null {
   post(s, o.channelId, '나(대표)', '정말 죄송합니다. 사정이 생겨 일정을 취소해야 할 것 같습니다.', 'player');
   post(s, o.channelId, o.host, '…알겠습니다. 갑작스럽네요.', 'npc');
   if (o.kind === 'ir') s.irPoints = Math.max(0, s.irPoints - 1);
-  else s.networkPoints = Math.max(0, s.networkPoints - 1);
+  else if (o.kind !== 'review') s.networkPoints = Math.max(0, s.networkPoints - 1);
   return null;
 }
 
+
+// 고객사 미팅에서 이겼을 때 다음 단계 미팅 초대(A-186): 같은 회사·같은 채널, followLead일 뒤
+export function inviteFollowUp(s: GameState, prev: Outing, carry: Pick<Outing, 'stage' | 'promised' | 'discount'>): Outing | null {
+  const t = outingTpl(prev.tpl);
+  if (!t) return null;
+  const L = DATA.meetings.followLead;
+  const startDay = s.day + randInt(s, L[0], L[1]);
+  const hours = t.hours ? randInt(s, t.hours[0], t.hours[1]) : 2;
+  const [m0, m1] = O.meetingStart;
+  const startHour = randInt(s, m0, Math.max(m0, Math.min(m1, DATA.time.workEndHour - hours)));
+  const o: Outing = { id: nextId(s, 'out'), tpl: t.id, kind: t.kind as Outing['kind'], title: `${t.title} ${carry.stage}단계`, host: prev.host, channelId: prev.channelId, startDay, days: 1, startHour, hours, travel: prev.travel ?? travelFor(s), cost: t.cost, status: 'offer', ...carry };
+  (s.outings ??= []).push(o);
+  post(s, o.channelId, o.host, `${dayName(startDay)} ${startHour}시에 ${carry.stage === DATA.meetings.stages.length ? '결정권자분들과 최종' : '담당 임원도 함께'} 미팅을 하면 어떨까요?`, 'npc');
+  const ch = getChannel(s, o.channelId);
+  const m = ch?.messages[ch.messages.length - 1];
+  if (m) m.outingId = o.id;
+  notify(s, `초대: ${o.host} — ${o.title}(${outingRange(o)})`, 'info', 'messenger', o.channelId);
+  return o;
+}

@@ -139,7 +139,12 @@
         "min": 18,
         "rateMult": 1.4
       }
-    ]
+    ],
+    "_delta": "A-172: 끝낸 모양별 평판 변화. 제때 = gain[일감 단계], 일찍 = 그 ×earlyMult. 늦음·포기·취소 = -(loss + lossPerTier × 일감 단계)",
+    "gain": [1, 2, 3, 4],
+    "earlyMult": 1.5,
+    "loss": { "late": 1, "drop": 2, "cancel": 3 },
+    "lossPerTier": 1
   },
   "bigClients": [
     "중견 제조사",

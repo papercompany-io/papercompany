@@ -1,0 +1,80 @@
+{
+  "_note": "A-186 고객사 미팅 [예시값]. 고객사 방문 외출(ceo.json outings customer)에 대표가 직접 가면 약속 시각에 시계가 멈추고 미팅을 합니다. 참석자마다 숨은 걱정(concerns)과 분위기(-100~100, 숨김)가 있고, 카드를 낼 때마다 minutes만큼 시간이 줄어듭니다. 시간이 다 되거나 마무리 요청을 하면 결과(won·warm·cold·lost)가 나옵니다. B2B 산업(entBase > 0)만 3단계까지 이어지고, 3단계에서 이기면 대기업 계약이 생깁니다.",
+  "stages": [
+    { "minutes": 60, "roles": ["user", "gate"], "start": 0 },
+    { "minutes": 70, "roles": ["user", "gate", "decider"], "start": 4 },
+    { "minutes": 60, "roles": ["decider", "buyer"], "start": 8 }
+  ],
+  "_gateNote": "gate = 실무자 말고 문턱이 되는 사람(구매 담당·반대파 중 하나)",
+  "gateRoles": ["buyer", "skeptic"],
+  "roles": {
+    "decider": { "name": "결정권자", "titles": ["상무", "이사", "본부장"], "weight": 2, "start": 0, "concerns": ["fit", "reference", "price", "security"] },
+    "user": { "name": "실무자", "titles": ["과장", "대리", "팀장"], "weight": 1, "start": 4, "concerns": ["integration", "onboarding", "fit", "stability"] },
+    "buyer": { "name": "구매 담당", "titles": ["구매팀 과장", "구매팀 차장"], "weight": 1, "start": 0, "concerns": ["price", "reference"] },
+    "skeptic": { "name": "반대파", "titles": ["IT팀 차장", "보안팀 과장"], "weight": 1.2, "start": -12, "concerns": ["security", "stability", "integration"] }
+  },
+  "concernsPer": [1, 2],
+  "_concernsNote": "cats = 이 걱정을 풀어 주는 기능 분류(데모·약속). bugsMax = 버그가 이보다 많으면 데모로 못 풂(안정성). caseFits = 고객 사례로 풀림",
+  "concerns": {
+    "integration": { "name": "기존 시스템 연동", "cats": ["platform", "enterprise"], "say": ["지금 쓰는 사내 시스템이랑 붙일 수 있어야 합니다.", "데이터를 매번 옮겨 담아야 한다면 저희는 못 씁니다."] },
+    "security": { "name": "보안", "cats": ["enterprise", "infra"], "say": ["보안 심사를 통과할 수 있을지가 제일 걱정입니다.", "저희 데이터가 밖으로 나가는 건 아닌지 확인해야 합니다."] },
+    "stability": { "name": "안정성", "cats": ["infra"], "bugsMax": 25, "say": ["작은 회사 서비스라 자주 멈추지 않을까 걱정됩니다.", "장애가 나면 저희 업무가 멈춥니다."] },
+    "price": { "name": "가격", "cats": ["monetize"], "say": ["예산이 정해져 있어서 가격이 제일 중요합니다.", "솔직히 견적이 부담스럽습니다."] },
+    "onboarding": { "name": "직원 교육·도입", "cats": ["growth", "retention"], "say": ["직원들이 새 도구를 배우는 데 오래 걸리면 곤란합니다.", "도입하고 나서 아무도 안 쓰면 제 책임이라서요."] },
+    "reference": { "name": "도입 사례", "cats": [], "caseFits": true, "say": ["저희 같은 회사가 실제로 쓰고 있나요?", "처음 도입하는 회사가 되기는 부담스럽습니다."] },
+    "fit": { "name": "업무에 맞는지", "cats": ["core", "ai"], "say": ["저희 업무 방식에 정말 맞는지 모르겠습니다.", "보기에는 좋은데 저희한테 필요한 건지 확신이 없습니다."] }
+  },
+  "cards": {
+    "ask": { "name": "질문", "minutes": 10, "desc": "이 사람이 무엇을 걱정하는지 묻습니다.", "listen": 4, "repeat": -3 },
+    "demo": { "name": "데모", "minutes": 20, "desc": "만든 기능을 직접 보여 줍니다. 걱정에 맞는 기능이 있어야 잘 먹힙니다.", "match": 24, "plain": 2, "miss": -4, "glitchPerBug": 0.006, "glitch": -10 },
+    "case": { "name": "고객 사례", "minutes": 10, "desc": "다른 고객이 어떻게 쓰는지 이야기합니다. 고객이 있어야 낼 수 있습니다.", "match": 20, "partial": 8, "plain": 2, "needUsers": 30 },
+    "price": { "name": "가격 양보", "minutes": 10, "desc": "단가를 낮춰 주겠다고 합니다. 계약하면 그만큼 덜 받습니다.", "match": 22, "buyer": 8, "plain": 2, "discount": 0.08, "maxDiscount": 0.3 },
+    "promise": { "name": "기능 약속", "minutes": 10, "desc": "아직 없는 기능을 만들어 주겠다고 약속합니다. 계약하려면 그 기능을 기한 안에 만들어야 합니다.", "match": 18, "max": 2 },
+    "companion": { "name": "동행 발언", "minutes": 10, "desc": "함께 온 직원이 대신 설명합니다.", "match": 16, "plain": 3, "uses": 2, "skillK": 0.004 },
+    "close": { "name": "마무리 요청", "minutes": 10, "desc": "다음 단계로 가자고 정중하게 요청합니다. 분위기가 무르익지 않았으면 역효과가 납니다." }
+  },
+  "_companionNote": "함께 갈 수 있는 부서와 그 직원이 풀 수 있는 걱정. 데려가면 그 시간 그 직원은 일을 못 함",
+  "companionCovers": { "dev": ["integration", "security", "stability"], "sales": ["reference", "onboarding", "price", "fit"] },
+  "objection": { "chance": 0.35, "win": 8, "lose": -12 },
+  "signals": [
+    { "min": 40, "id": "nod", "text": "고개를 끄덕입니다" },
+    { "min": 15, "id": "note", "text": "메모하며 듣습니다" },
+    { "min": -10, "id": "listen", "text": "조용히 듣고 있습니다" },
+    { "min": -30, "id": "arms", "text": "팔짱을 꼈습니다" },
+    { "min": -999, "id": "clock", "text": "시계를 봅니다" }
+  ],
+  "_tiredNote": "대표 컨디션(A-146)이 낮으면(tiredness ≥ at) 카드 하나가 떠오르지 않고, 몸짓을 misread 확률로 한 칸 잘못 읽음",
+  "tired": { "at": 0.3, "misread": 0.35 },
+  "_outcomeNote": "점수 = 참석자 분위기를 역할 weight로 가중 평균. won·warm·cold 문턱 이상이면 그 결과, 아니면 lost. 마무리 요청: 점수가 closeReady 이상이면 + closeBonus, 아니면 + closeEarly. 마무리 요청 없이 시간이 다 되면 won 문턱 + closeBonus. 결정권자 분위기가 veto 아래면 won 대신 warm까지",
+  "outcome": { "won": 30, "warm": 12, "cold": -8, "closeReady": 25, "closeBonus": 6, "closeEarly": -10, "veto": -30 },
+  "_rewardNote": "pipeline = 대기업 영업 파이프라인에 더함(이전 고객사 방문 보너스는 1). 3단계에서 이기면 대기업 계약(월액 = 산업 entBase × (1 + 매력도/250) × dealMult × (1 − 양보 비율)). 대기업 기능이 없거나 약속한 기능이 있으면 계약 대신 고객사 약속(A-177) 제안",
+  "reward": { "pipeline": { "won": 1.5, "warm": 1.5, "cold": 1, "lost": 0 }, "dealMult": [0.8, 1.2], "dealMonths": [12, 24], "promiseMult": [0.7, 1.0], "promiseMonths": [12, 18] },
+  "_bondNote": "친밀도 0~100. 처음 만나면 start, 미팅이 끝나면 + 최종 분위기 × perMood, 진 미팅은 + lost. 미팅 시작 분위기 + (친밀도 − start) × startMood. 마지막 만남에서 decayAfter일이 지나면 매달 − decayPerMonth. labels = [문턱, 화면 말]",
+  "bond": { "start": 10, "perMood": 0.25, "lost": -5, "startMood": 0.4, "decayAfter": 60, "decayPerMonth": 3, "labels": [[0, "낯섦"], [20, "아는 사이"], [45, "친함"], [75, "내 편"]] },
+  "_autoNote": "알아서 진행·직원 위임: 참석자 걱정마다 지금 제품으로 풀 수 있으면 + fitPer × mult, 못 풀면 + miss, 그리고 ± noise. 직원 위임은 mult에 (delegateBase + 숙련/100 × delegateSkill)을 곱함",
+  "auto": { "mult": 0.7, "fitPer": 18, "miss": -4, "noise": 12, "delegateBase": 0.6, "delegateSkill": 0.4 },
+  "_inviteNote": "고객사 방문 초대 상대: 친밀도 inviteBond 이상인 연락처의 회사는 inviteWeight배로 자주 뽑힘. 이긴 미팅의 다음 단계 초대는 followLead일 뒤",
+  "inviteBond": 30,
+  "inviteWeight": 3,
+  "followLead": [3, 7],
+  "lines": {
+    "open": ["오늘 시간 내 주셔서 감사합니다. 저희 서비스를 소개해 드리겠습니다.", "반갑습니다. 지난번에 이어 오늘도 잘 부탁드립니다."],
+    "ask": ["혹시 도입하실 때 가장 걱정되시는 부분이 뭘까요?", "실제로 쓰신다면 어떤 점이 제일 마음에 걸리세요?"],
+    "askRepeat": ["말씀드린 것 말고는 딱히 없습니다.", "아까 말씀드린 그게 전부입니다."],
+    "demoMatch": ["아, 이건 저희가 찾던 겁니다.", "이렇게 되면 걱정했던 부분은 해결되겠네요."],
+    "demoPlain": ["깔끔하네요.", "네, 잘 봤습니다."],
+    "demoMiss": ["그건 저희한테 크게 필요한 건 아니라서요.", "음, 제가 궁금했던 건 그게 아닌데요."],
+    "glitch": ["어… 화면이 멈춘 것 같은데요?", "로딩이 꽤 기네요."],
+    "caseMatch": ["다른 회사도 쓰고 있다니 안심이 됩니다.", "그 정도 회사가 쓴다면 믿을 만하네요."],
+    "casePlain": ["그렇군요.", "참고하겠습니다."],
+    "priceMatch": ["그 가격이면 예산 안에 들어옵니다.", "그렇게 해 주시면 내부 설득이 쉬워집니다."],
+    "pricePlain": ["가격은 나중 문제라서요.", "네, 알겠습니다."],
+    "promiseMatch": ["그 기능이 정말 나온다면 이야기가 달라집니다.", "언제까지 되는지만 확실하면 좋겠습니다."],
+    "companionMatch": ["설명 들으니까 이해가 됩니다.", "실무 쪽 이야기를 들으니 안심이 되네요."],
+    "companionPlain": ["네, 잘 들었습니다.", "그렇군요."],
+    "objectionLose": ["제 질문에는 답을 안 주시네요.", "그건 제가 물어본 게 아닌데요."],
+    "closeReady": ["좋습니다. 내부에서 다음 단계로 올려 보겠습니다.", "긍정적으로 검토하겠습니다. 다음에 더 자세히 이야기하시죠."],
+    "closeEarly": ["아직 결정하기는 이릅니다.", "조금 서두르시는 것 같네요."],
+    "timeUp": ["시간이 다 됐네요. 오늘은 여기까지 하시죠.", "다음 일정이 있어서 이만 마무리해야겠습니다."]
+  }
+}

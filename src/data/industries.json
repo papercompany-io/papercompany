@@ -1,5 +1,5 @@
 {
-  "_note": "v2 산업(Claude 제안, 수치 [예시값]). friends = 출시 날 들어오는 지인 고객 수, friendsPerNet = 대표 네트워크 점수 1당 더 오는 지인 고객(홍보 없이 오는 첫 고객). tam = 국내 잠재 고객 수, adoption = 연도별 도입률 S곡선(a0→a1, mid 연도, k 기울기). price = 월 구독료(유료 고객 1명당), payBase = 유료 비율 기본값, adBase = 사용자당 월 광고 매출, gmv = 사용자당 월 거래액, takeBase = 기본 수수료율, churnM = 월 기본 이탈률, infra = 사용자당 월 인프라 비용, viral = 입소문 계수, valMult = 매출 배수 기준, unit = 고객 단위. adCost = 잠재 고객(TAM) 1명을 완전히 알리는 데 드는 광고비(원). cac = 광고로 고객 1명(곳)을 데려오는 기본 비용(점유율이 클수록 비싸짐), salesPer = 세일즈 출력 1이 하루에 데려오는 고객 수. userValue = 매출 전·초기 성장 기업의 사용자 1명당 가치(VC식 사용자 기반 평가). needsBilling = 결제 기능(fx.billing)을 만들어야 구독·거래 매출이 생김(A-111, MVP만으로는 무료). tamMult = 이 산업만 쓰는 해외 시장 잠재 고객 배수(없으면 markets.json 값, A-156): B2C(소비자 앱·커머스·핀테크)는 해외 사람 수가 그대로 고객이라 배수가 커서, 전 세계를 다 열면 소비자 앱 수요가 약 20억 명까지 오름(1억은 잘하면, 10억은 시장을 거의 다 가져야)",
+  "_note": "v2 산업(Claude 제안, 수치 [예시값]). friends = 출시 날 들어오는 지인 고객 수, friendsPerNet = 대표 네트워크 점수 1당 더 오는 지인 고객(홍보 없이 오는 첫 고객). tam = 국내 잠재 고객 수, adoption = 연도별 도입률 S곡선(a0→a1, mid 연도, k 기울기). price = 월 구독료(유료 고객 1명당), payBase = 유료 비율 기본값, adBase = 사용자당 월 광고 매출, gmv = 사용자당 월 거래액, takeBase = 기본 수수료율, churnM = 월 기본 이탈률, infra = 사용자당 월 인프라 비용, viral = 입소문 계수, valMult = 매출 배수 기준, unit = 고객 단위. adCost = 잠재 고객(TAM) 1명을 완전히 알리는 데 드는 광고비(원). cac = 광고로 고객 1명(곳)을 데려오는 기본 비용(점유율이 클수록 비싸짐), salesPer = 세일즈 출력 1이 하루에 데려오는 고객 수. userValue = 매출 전·초기 성장 기업의 사용자 1명당 가치(VC식 사용자 기반 평가). needsBilling = 결제 기능(fx.billing)을 만들어야 구독·거래 매출이 생김(A-111, MVP만으로는 무료). tamMult = 이 산업만 쓰는 해외 시장 잠재 고객 배수(없으면 markets.json 값, A-156): adDeals = 광고 판매(A-182): 사용자당 광고 매출(adBase) 대신 광고 형식 기능(배너·이미지·비디오)을 만들고 광고 운영팀이 받아 온 광고주와 계약해야 광고 매출이 생김(adsales.json). B2C(소비자 앱·커머스·핀테크)는 해외 사람 수가 그대로 고객이라 배수가 커서, 전 세계를 다 열면 소비자 앱 수요가 약 20억 명까지 오름(1억은 잘하면, 10억은 시장을 거의 다 가져야)",
   "industries": [
     {
       "id": "saas", "needsBilling": true, "friends": 0, "friendsPerNet": 0.005,
@@ -43,7 +43,7 @@
       "userValue": 10000000
     },
     {
-      "id": "consumer", "friends": 20, "friendsPerNet": 0.12,
+      "id": "consumer", "friends": 20, "friendsPerNet": 0.12, "adDeals": true,
       "name": "소비자 앱",
       "unit": "사용자",
       "desc": "누구나 쓰는 앱. 사용자는 많이 모이지만 돈을 내는 사람은 일부입니다. 입소문과 광고가 성장을 이끕니다.",
@@ -56,8 +56,8 @@
         "k": 0.4
       },
       "price": 9900,
-      "payBase": 0.03,
-      "adBase": 400,
+      "payBase": 0.01,
+      "adBase": 0,
       "gmv": 0,
       "takeBase": 0,
       "churnM": 0.05,

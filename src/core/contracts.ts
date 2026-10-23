@@ -45,9 +45,13 @@ export function trustLevel(s: GameState) {
 }
 
 // A-144: 끝난 모양(일찍·제때·늦게·포기·취소)과 일감 크기로 평판이 얼마나 바뀌나
+// A-172: 비어 있어 늘 0이던 것을 채움. 큰 일감일수록 많이 오르고 많이 깎임
 export function trustDelta(outcome: ContractOutcome, a: Contract): number {
-  // TODO(human)
-  return 0;
+  const T = K.trust;
+  const tier = Math.max(0, Math.min(T.gain.length - 1, a.tier ?? 0));
+  if (outcome === 'early') return T.gain[tier] * T.earlyMult;
+  if (outcome === 'onTime') return T.gain[tier];
+  return -(T.loss[outcome] + T.lossPerTier * tier);
 }
 
 function changeTrust(s: GameState, outcome: ContractOutcome, a: Contract) {

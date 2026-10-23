@@ -1,7 +1,7 @@
 // FN-01 다음 월급일 예상 자금(A-33): 남은 날의 대표 행동 칸 비용과 지금 하루 흐름(매출·인프라·AI·광고)까지 넣어 계산합니다.
 import { DATA, MARKET_IDS } from './data';
 import { daySchedule } from './ceo';
-import { nextPaydayForecast } from './finance';
+import { monthOutlook, nextPaydayForecast } from './finance';
 import { aiMonthlyCost } from './aiadopt';
 import { fxTotals, hasMvp } from './product';
 import { infraPerUser, revenuePerUser } from './market';
@@ -30,12 +30,22 @@ export function dailyRates(s: GameState) {
   return { revenue, infra: (users * infraPerUser(s, fx)) / 30, ai: aiMonthlyCost(s) / 30, ads };
 }
 
-export function paydayForecast(s: GameState) {
+// 남은 날 대표 행동 칸에서 나갈 접대비
+function futureEntertainment(s: GameState, daysLeft: number) {
   const sched = daySchedule(s).map((x) => (x.locked ? 0 : slotCost(s, x.action)));
   const perDay = sched.reduce((a, b) => a + b, 0);
-  const done = s.slotsDone;
-  const today = sched.slice(done).reduce((a, b) => a + b, 0);
+  const today = sched.slice(s.slotsDone).reduce((a, b) => a + b, 0);
+  return today + perDay * Math.max(0, daysLeft - 1);
+}
+
+export function paydayForecast(s: GameState) {
   const rates = dailyRates(s);
   const daysLeft = nextPaydayForecast(s, rates).daysLeft;
-  return nextPaydayForecast(s, rates, today + perDay * Math.max(0, daysLeft - 1));
+  return nextPaydayForecast(s, rates, futureEntertainment(s, daysLeft));
+}
+
+// A-184 재무 "이번 달" 판: 한 달치 나가는 돈·들어오는 돈을 한꺼번에
+export function monthPlan(s: GameState) {
+  const rates = dailyRates(s);
+  return monthOutlook(s, rates, futureEntertainment(s, nextPaydayForecast(s, rates).daysLeft));
 }

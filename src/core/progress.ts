@@ -116,6 +116,8 @@ export function metric(s: GameState, m: string): number {
       return s.employees.filter((e) => e.dept === 'hr').length;
     case 'exitPct':
       return Math.max(0, ...s.career.companies.filter((c) => c.kind === 'sale' || c.kind === 'ipo_exit').map((c) => c.founderPct));
+    case 'promisesKept':
+      return s.milestones?.kept ?? 0; // 약속(A-177)
     case 'retired':
       return s.career.retired ? 1 : 0;
   }

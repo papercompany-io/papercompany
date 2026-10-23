@@ -277,6 +277,32 @@ export function giveRaise(s: GameState, empId: string, rate: number): string | n
   return null;
 }
 
+// 보너스(A-180): 월급 몇 달치를 한 번에 주고 만족도를 100으로. 만족도는 staffDay에서 목표로 다시 내려가므로
+// 처우·근무 문제를 고치는 대신 잠깐 버티게 하는 돈 — 퇴사 판정(달마다) 직전에 쓸 만함
+export function bonusCost(e: Employee): number {
+  return Math.round((e.salary * DATA.hiring.bonus.months) / 10000) * 10000;
+}
+
+// 줄 수 없으면 이유, 줄 수 있으면 null. 화면 버튼(disabled·title)과 giveBonus가 같이 씀
+export function bonusBlock(s: GameState, e: Employee): string | null {
+  // TODO(human)
+  return null;
+}
+
+export function giveBonus(s: GameState, empId: string): string | null {
+  const e = employee(s, empId);
+  if (!e) return '직원을 찾을 수 없습니다.';
+  const why = bonusBlock(s, e);
+  if (why) return why;
+  book(s, `${e.name} 보너스`, -bonusCost(e));
+  s.accrual.other += bonusCost(e);
+  e.bonusDay = s.day;
+  e.sat = 100;
+  e.bubble = { text: 'coin', until: s.day + 3 };
+  float(s, '보너스', 'money', e.seatId ?? undefined);
+  return null;
+}
+
 export function avgSat(s: GameState): number {
   return s.employees.length ? s.employees.reduce((a, e) => a + e.sat, 0) / s.employees.length : 70;
 }

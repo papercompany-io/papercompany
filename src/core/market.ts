@@ -6,12 +6,14 @@ import { yearFrac } from './calendar';
 import { econ } from './economy';
 import { spendNow } from './finance';
 import { mod } from './mods';
+import { dayProgress } from './night';
 import { news, notify } from './notify';
 import { appeal, canCharge, fxTotals, hasMvp, type FxTotals } from './product';
 import { adDay, audience, campaignDay, endCampaigns, fullInform, opensAt, recordAdStats, recordCampaigns, setTotalAdBudget } from './ads';
 import { countShort } from './format';
 import type { CustMonth, GameState, MarketId } from './types';
 import { orderShare } from './assign';
+import { adPerUser } from './adsales';
 
 const M = DATA.markets;
 
@@ -55,6 +57,41 @@ export function totalUsers(s: GameState): number {
   return MARKET_IDS.reduce((a, m) => a + s.markets[m].users, 0);
 }
 
+// 화면용 "지금 사용자"(A-174): 실제 사용자는 하루가 끝날 때 한 번 바뀌므로, 하루 동안은 최근 2주 평균 증감(ms.flow)을
+// 하루를 쪼갠 조각마다 다른 몫으로 미리 더해 보여 줍니다(몰려 오다 잠잠해짐). 상태·매출·순위 계산에는 쓰지 않고(밸런스 불변),
+// 하루 끝에 실제 값으로 바뀝니다. 조각 몫은 (시드·날짜·시장)으로 정해져 다시 그려도 같고, 합은 늘 1입니다.
+const BURST_SLICES = 48;
+
+function burstShare(s: GameState, key: number, k: number): number {
+  const w: number[] = [];
+  let sum = 0;
+  for (let i = 0; i < BURST_SLICES; i++) {
+    let x = (s.seed ^ Math.imul(s.day + 1, 0x9e3779b1) ^ Math.imul(key + 1, 0x85ebca6b) ^ Math.imul(i + 1, 0xc2b2ae35)) >>> 0;
+    x = Math.imul(x ^ (x >>> 16), 0x45d9f3b) >>> 0;
+    x = Math.imul(x ^ (x >>> 16), 0x45d9f3b) >>> 0;
+    const h = ((x ^ (x >>> 16)) >>> 0) / 4294967296;
+    const v = 0.05 + h * h * 3; // 제곱으로 치우쳐 몇 조각에 몰림
+    w.push(v);
+    sum += v;
+  }
+  const at = Math.min(BURST_SLICES, Math.max(0, k * BURST_SLICES));
+  const whole = Math.floor(at);
+  let done = 0;
+  for (let i = 0; i < whole; i++) done += w[i];
+  if (whole < BURST_SLICES) done += w[whole] * (at - whole);
+  return done / sum;
+}
+
+export function liveUsers(s: GameState): number {
+  const k = dayProgress(s);
+  return MARKET_IDS.reduce((a, m, i) => {
+    const ms = s.markets[m];
+    const f = ms.flow;
+    const net = ms.launched && f ? f.inbound + f.viral + f.sales + f.paid - f.lost : 0;
+    return a + Math.max(0, ms.users + net * (net === 0 ? 0 : burstShare(s, i, k)));
+  }, 0);
+}
+
 export function launchedMarkets(s: GameState): MarketId[] {
   return MARKET_IDS.filter((m) => s.markets[m].launched);
 }
@@ -88,7 +125,8 @@ export function revenuePerUser(s: GameState, m: MarketId, fx: FxTotals = fxTotal
   // 결제 기능 전(A-111)에는 무료로만 쓰므로 구독·거래 수수료가 없습니다. 광고는 결제와 상관없음
   const charge = canCharge(s, fx) ? 1 : 0;
   const sub = ind.price * pt.price * (1 + fx.arpu) * payShare * arpuM * charge;
-  const ad = (ind.adBase + fx.ad) * arpuM * adScale(s.markets[m].users);
+  // A-182 광고 판매 산업은 광고 형식 기능 + 광고주 계약으로만(남는 자리는 광고 네트워크)
+  const ad = ind.adDeals ? adPerUser(s, m, arpuM, fx) : (ind.adBase + fx.ad) * arpuM * adScale(s.markets[m].users);
   const take = ind.gmv * (1 + fx.gmv) * (ind.takeBase + fx.take) * Math.sqrt(pt.price) * arpuM * charge;
   return { sub, ad, take, total: sub + ad + take, payShare };
 }

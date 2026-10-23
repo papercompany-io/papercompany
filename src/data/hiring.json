@@ -109,19 +109,28 @@
     "G": 2.0
   },
   "networkArrivalBonusPer100": 0.3,
+  "bonus": {
+    "_note": "A-180 보너스: 월급 months개월치를 한 번에 주고 만족도를 100으로. 만족도는 하루 3.5%씩 목표로 돌아가므로 잠깐 효과. 같은 사람에게 coolDays일에 한 번",
+    "months": 1,
+    "coolDays": 120
+  },
   "nego": {
-    "_note": "연봉 협상(A-89, A-90). 제안 가치 = 월급 + 사이닝 보너스/12. 희망 월급 이상이면 수락, floor 이상이면 차이의 counterKeep만큼 남긴 역제안, insult 미만이면 화냄. 인내심은 100%에서 시작해 제안마다 dropBase + (1 - 비율) × dropPerGap만큼 줄고, 이전보다 낮게 부르면 lowerPenalty 더. 0%면 떠남",
+    "_note": "연봉 흥정(A-167). 제안 가치 = 월급 + 사이닝 보너스/bonusMonths. 지원자 요구액은 희망 월급에서 시작하고, 이전 제안보다 올려 부르면 올린 만큼 × concede 내려옴(숨은 최저선 = 희망 × floorMin~floorMax 아래로는 안 내려감). 요구액 이하로 부르면 수락. 남은 차이가 희망의 bridgeGap 이하면 월급은 그대로 두고 차이 × bonusMonths만큼 사이닝 보너스를 요구. 인내심은 100%에서 제안마다 dropBase, 희망의 insult 미만이면 insultDrop, 이전보다 낮게 부르면 lowerPenalty 더. 0%면 떠남",
     "patience": 100,
-    "floorMin": 0.86,
-    "floorMax": 0.95,
+    "floorMin": 0.88,
+    "floorMax": 0.96,
     "insult": 0.75,
-    "counterKeep": 0.6,
+    "concede": 1,
+    "bridgeGap": 0.05,
     "bonusMonths": 12,
-    "dropBase": 15,
-    "dropPerGap": 150,
+    "dropBase": 12,
+    "insultDrop": 25,
     "lowerPenalty": 15,
-    "_raiseNote": "A-130: 이전 제안보다 올려 부르면 그만큼 성의로 보고 인내심이 덜 깎임(drop × raiseKeep)",
-    "raiseKeep": 0.5
+    "_stallNote": "A-170: 가장 높은 제안보다 올리지 않고 버티면(같거나 낮게) 연속 횟수만큼 인내심이 stallDrop × 횟수 더 줄고, 요구액이 희망의 stallHarden만큼 다시 올라감(희망까지). 버틴 횟수가 finalStall이거나 인내심이 finalPatience 이하가 되면 최후통첩: 다음 제안이 요구액에 못 미치면 떠남",
+    "stallDrop": 5,
+    "stallHarden": 0.015,
+    "finalStall": 3,
+    "finalPatience": 20
   },
   "careerLevels": [
     {

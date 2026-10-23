@@ -6,7 +6,7 @@ import { nextId } from './ids';
 import { onEmployeeJoined } from './messenger';
 import { econ } from './economy';
 import { legacyFx } from './career';
-import { deptUnlocked } from './employees';
+import { deptInIndustry, deptUnlocked } from './employees';
 import { float, notify } from './notify';
 import { pick, poisson, rand, randInt, weighted } from './rng';
 import { marketSalary, rollTalent, startSkill, welfareApply, welfareQuality } from './staff';
@@ -49,6 +49,7 @@ export function postingWarnings(s: GameState): string[] {
 
 export function createPosting(s: GameState, input: PostingInput): string | null {
   if (s.ended) return '회사가 끝났습니다.';
+  if (!deptInIndustry(s, input.dept)) return `${dept(input.dept).name} 부서는 이 산업에 없습니다.`;
   if (!deptUnlocked(s, input.dept)) return `${dept(input.dept).name} 부서는 회사 단계 ${dept(input.dept).stage}부터 둘 수 있습니다.`;
   if (seatsAvailable(s) === 0) return '사무실에 책상을 더 놓을 자리가 없습니다.';
   const headcount = input.headcount ?? 0;
@@ -233,7 +234,6 @@ function hire(s: GameState, a: Applicant, salary: number, bonus: number): string
 }
 
 const man = (v: number) => `${Math.round(v / 1e4).toLocaleString('ko-KR')}만원`;
-const round10 = (v: number) => Math.max(10e4, Math.round(v / 1e5) * 1e5);
 
 // 희망 월급 그대로 바로 채용(봇·자동 플레이용). lowball이면 10% 낮게 제안하고 일정 확률로 거절
 export function offerJob(s: GameState, applicantId: string, lowball: boolean): { ok: boolean; message: string } {
@@ -260,9 +260,10 @@ export function negotiation(s: GameState, a: Applicant) {
   });
 }
 
-// 연봉 협상(A-89): 제안 가치 = 월급 + 보너스/12를 희망 월급과 비교.
-//  ≥ 희망: 수락 · ≥ 최저선: 차이를 조금 줄인 역제안 · 그 아래: 기대치를 밝힘(아주 낮으면 화냄)
-//  수락이 아니면 인내심(%)이 기대와의 차이만큼 줄고, 이전보다 낮게 부르면 더. 0%면 떠남
+// 연봉 흥정(A-89, A-167): 제안 가치 = 월급 + 보너스/12를 지원자의 지금 요구액과 비교.
+//  요구액은 희망 월급에서 시작해, 내가 이전보다 올려 부른 만큼 내려옴(숨은 최저선 아래로는 안 내려감)
+//  ≥ 요구액: 수락 · 차이가 작으면 월급은 두고 사이닝 보너스로 메우자고 함 · 그 밖엔 요구액을 다시 밝힘
+//  수락이 아니면 인내심(%)이 줄고, 아주 낮거나 이전보다 낮게 부르면 더. 0%면 떠남
 export function negotiate(s: GameState, applicantId: string, salary: number, bonus: number): { ok: boolean; hired: boolean; message: string } {
   const a = s.applicants.find((x) => x.id === applicantId);
   const err = hireBlock(s, a);
@@ -275,37 +276,73 @@ export function negotiate(s: GameState, applicantId: string, salary: number, bon
   const value = salary + bonus / N.bonusMonths;
   const want = a!.desiredSalary;
   const prev = [...n.log].reverse().find((m) => m.from === 'me');
+  const prevValue = prev ? (prev.salary ?? 0) + (prev.bonus ?? 0) / N.bonusMonths : null;
   say({ from: 'me', text: '', salary, bonus });
   n.revealed = true;
-  if (value >= want) {
-    say({ from: 'them', text: '좋아요, 함께하겠습니다!', mood: 'happy' });
+  // 내가 올린 만큼 지원자도 내려옴(최저선까지). 내렸다 다시 올린 건 지금까지 가장 높은 제안을 넘은 만큼만
+  const askBefore = n.ask ?? want;
+  const best = Math.max(...n.log.filter((m) => m.from === 'me').slice(0, -1).map((m) => (m.salary ?? 0) + (m.bonus ?? 0) / N.bonusMonths));
+  const raise = prevValue !== null ? value - best : 0;
+  const floorValue = want * n.floor;
+  // A-170: 올리지 않고 버티면 지원자도 굳어짐(요구액이 다시 오르고 인내심이 더 닳음). 올리면 풀림
+  const stalled = prevValue !== null && raise <= 0;
+  n.stall = stalled ? (n.stall ?? 0) + 1 : 0;
+  n.ask = raise > 0 ? Math.max(floorValue, askBefore - raise * N.concede) : stalled ? Math.min(want, askBefore + want * N.stallHarden) : askBefore;
+  const conceded = askBefore - n.ask;
+  if (value >= n.ask - 1) {
+    say({ from: 'them', text: conceded > 0 ? `${pick(s, ['서로 한 걸음씩 왔네요.', '그 정도면 맞춰 볼게요.'])} 함께하겠습니다!` : '좋아요, 함께하겠습니다!', mood: 'happy' });
     return { ok: true, hired: true, message: hire(s, a!, salary, bonus) };
   }
   const ratio = value / want;
-  // 인내심(%): 기대와 멀수록 많이 깎임. 이전보다 낮게 부르면 더
-  // A-130: 이전보다 올려 부르면 덜 깎이고, 답마다 바뀐 인내심을 채팅에 같이 보여 줌
-  let drop = N.dropBase + (1 - ratio) * N.dropPerGap;
-  const prevValue = prev ? (prev.salary ?? 0) + (prev.bonus ?? 0) / N.bonusMonths : null;
+  // 인내심(%): 제안마다 조금씩, 아주 낮으면 크게, 이전보다 낮게 부르면 더(A-130: 답마다 바뀐 인내심을 채팅에 같이 보여 줌)
+  let drop = N.dropBase;
+  if (ratio < N.insult) drop += N.insultDrop;
   if (prevValue !== null && value < prevValue) drop += N.lowerPenalty;
-  if (prevValue !== null && value > prevValue) drop *= N.raiseKeep;
+  drop += (n.stall ?? 0) * N.stallDrop;
   const before = n.patience;
   n.patience = Math.max(0, Math.round(n.patience - drop));
   const dp = n.patience - before;
-  if (n.patience <= 0) {
+  // 최후통첩 뒤에도 못 맞추면 인내심과 상관없이 떠남
+  if (n.patience <= 0 || n.final) {
     a!.status = 'rejected';
     n.counter = null;
-    say({ from: 'them', text: '더 이야기해도 맞지 않을 것 같네요. 다른 곳을 알아보겠습니다.', mood: 'angry', patience: dp });
+    say({ from: 'them', text: n.final ? '마지막이라고 말씀드렸는데요. 다른 회사 제안을 받기로 하겠습니다.' : '더 이야기해도 맞지 않을 것 같네요. 다른 곳을 알아보겠습니다.', mood: 'angry', patience: dp });
     return { ok: true, hired: false, message: `${a!.name}님이 협상을 끝내고 떠났습니다.` };
   }
+  // 버틴 횟수에 따라 말이 세짐: 지적 → 다른 회사 언급 → 최후통첩
+  const stall = n.stall ?? 0;
+  n.final = stall >= N.finalStall || n.patience <= N.finalPatience;
+  const lowered = prevValue !== null && value < prevValue;
+  const press = n.final
+    ? pick(s, ['다른 회사 최종 답변을 내일까지 줘야 해요. ', '솔직히 다른 곳에서도 제안을 받았어요. '])
+    : stall >= 2
+      ? pick(s, ['계속 같은 조건이시네요. 시간이 길어지면 저도 조건을 다시 볼 수밖에 없어요. ', '제 쪽에서만 맞추는 느낌이에요. 기다리는 동안 다른 곳 면접도 잡혔고요. '])
+      : stall === 1 && !lowered
+        ? pick(s, ['같은 조건을 다시 주셨네요. ', '아까와 그대로인데요. '])
+        : '';
+  const last = n.final ? ' 이번이 마지막 제안입니다.' : '';
+  const gap = n.ask - value;
+  const atFloor = n.ask <= floorValue + 1;
+  // 차이가 작으면 월급은 그대로, 남은 차이를 사이닝 보너스로(1년치를 한 번에)
+  const bridge = bonus + Math.ceil((gap * N.bonusMonths) / 1e5) * 1e5;
+  if (gap <= want * N.bridgeGap && bridge <= s.cash) {
+    n.counter = { salary, bonus: bridge };
+    say({ from: 'them', text: `${press || pick(s, ['거의 다 왔어요. ', '조금만 더 맞추면 되겠어요. '])}월급은 이대로 좋으니, 사이닝 보너스 ${man(bridge)}을 주시면 함께할게요.${last}`, salary, bonus: bridge, mood: stall ? 'angry' : 'ok', patience: dp });
+    return { ok: true, hired: false, message: '' };
+  }
   // 역제안: 보너스는 그대로 두고 월급으로 맞춤
-  const target = ratio >= n.floor ? want - (want - value) * (1 - N.counterKeep) : want;
-  const cs = round10(target - bonus / N.bonusMonths);
+  const cs = Math.max(10e4, Math.ceil((n.ask - bonus / N.bonusMonths) / 1e4) * 1e4);
   n.counter = { salary: cs, bonus };
-  const raised = prevValue !== null && value > prevValue;
-  const lead = raised ? pick(s, ['올려 주셔서 감사해요. ', '신경 써 주신 건 알겠어요. ']) : prevValue !== null && value < prevValue ? pick(s, ['오히려 내려가네요? ', '아까보다 낮아졌는데요. ']) : '';
-  if (ratio >= n.floor) say({ from: 'them', text: `${lead}${pick(s, ['조금만 더 맞춰 주시면 좋겠어요.', '거의 다 왔어요.', '한 걸음만 더 와 주시면요.'])} 월 ${man(cs)}이면 함께하고 싶어요.`, salary: cs, bonus, mood: 'ok', patience: dp });
-  else if (ratio >= N.insult) say({ from: 'them', text: `${lead}${pick(s, ['기대보다 낮네요.', '생각한 것과 차이가 있네요.'])} 월 ${man(cs)}은 받아야 합니다.`, salary: cs, bonus, mood: 'ok', patience: dp });
-  else say({ from: 'them', text: `${lead}${pick(s, ['너무 낮은 제안이에요.', '이 조건은 좀 실망스럽네요.'])} 적어도 월 ${man(cs)}은 생각하고 왔습니다.`, salary: cs, bonus, mood: 'angry', patience: dp });
+  let text: string;
+  if (lowered) text = `${pick(s, ['오히려 내려가네요? ', '아까보다 낮아졌는데요. '])}저는 월 ${man(cs)}에서 물러설 수 없어요.`;
+  else if (atFloor && conceded > 0) text = `${pick(s, ['여기가 제 마지노선이에요.', '더는 내려가기 어려워요.'])} 월 ${man(cs)}이면 함께하겠습니다.`;
+  else if (atFloor && raise > 0) text = `${pick(s, ['말씀드린 대로 더는 못 내려가요.', '마지노선은 그대로예요.'])} 월 ${man(cs)}입니다.`;
+  else if (conceded > 0) text = `${man(conceded)} 올려 주셨으니 저도 ${man(conceded)} 내릴게요. 월 ${man(cs)}이면 어떠세요?`;
+  else if (ratio < N.insult) text = `${pick(s, ['너무 낮은 제안이에요.', '이 조건은 좀 실망스럽네요.'])} 적어도 월 ${man(cs)}은 생각하고 왔습니다.`;
+  else if (stall) text = `${press}월 ${man(cs)}은 받아야겠어요.`;
+  else text = `${pick(s, ['기대보다 낮네요.', '생각한 것과 차이가 있네요.'])} 저는 월 ${man(cs)}을 생각하고 있어요.`;
+  if (!lowered && stall === 0 && n.final) text = press + text;
+  say({ from: 'them', text: text + last, salary: cs, bonus, mood: ratio < N.insult || lowered || stall ? 'angry' : 'ok', patience: dp });
   return { ok: true, hired: false, message: '' };
 }
 

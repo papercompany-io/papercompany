@@ -213,6 +213,21 @@
         },
         "host": "customer",
         "text": "{date}에 저희 회사로 와서 제품 소개 한번 해 주실 수 있을까요?"
+      },
+      {
+        "id": "review",
+        "internal": true,
+        "_note": "A-181 사내 점검 회의: 약속 기능을 만드는 개발자가 요청(milestones.ts가 만듦, 무작위 초대 아님). 사무실 안이라 이동 없음, 그 시간만 주 업무 대신 회의(action approve = 회의·결재). 외출 날 컨디션 소모·집중 저하(A-129)는 없음",
+        "hours": [1, 1],
+        "kind": "review",
+        "action": "approve",
+        "title": "점검 회의",
+        "days": [1, 1],
+        "cost": 0,
+        "chance": 0,
+        "bonus": {},
+        "host": "team",
+        "text": "{date}에 약속한 기능 진행 상황을 같이 점검하실 수 있을까요?"
       }
     ]
   },

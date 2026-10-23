@@ -1,4 +1,5 @@
-// FN-01 보유 자금, FN-02 비용, FN-03 손익, HR-02 인건비. 매출·비용은 하루씩 쌓고 월급일(매월 1일)에 정산합니다(A-12).
+// FN-01 보유 자금, FN-02 비용, FN-03 손익, HR-02 인건비. 매출·비용은 하루씩 쌓고 월급일(매월 1일)에 손익을 마감합니다(A-12).
+// A-184 Startup Company처럼 매출과 고정비(월급·보험·월세·복지·인프라·AI·접대비)는 하루치씩 자금에 바로 반영하고, 법인세·대출 이자·원금만 월급일에 나갑니다.
 // 바로 나가는 돈(채용 홍보비·광고비·이벤트 비용·진출 비용)은 그날 자금에서 빠지고, 손익에는 그 달 비용으로 들어갑니다.
 import { DATA } from './data';
 import { daysInMonthOf, monthKey } from './calendar';
@@ -59,6 +60,26 @@ export function accrueDay(s: GameState) {
   s.accrual.days += 1;
 }
 
+// A-184 지금까지 쌓인 매출 − 부가세 − 고정비(쓰는 날 바로 빠진 홍보비·광고비·기타는 뺌)
+function dueSoFar(pl: Omit<MonthPL, 'cashAfter'>): number {
+  return pl.revenue - pl.vat - (pl.salary + pl.insurance + pl.pension + pl.entertainment + pl.infra + pl.rent + pl.welfare + pl.ai);
+}
+
+// A-184 하루 끝: 오늘 쌓인 만큼만 자금에 반영(거래 내역에는 월급일에 항목별로 한 줄씩 남김)
+export function settleDay(s: GameState, dim = daysInMonthOf(s.day)) {
+  const due = dueSoFar(computePL(s, s.accrual, dim));
+  const delta = due - (s.accrual.settled ?? 0);
+  if (delta) book(s, '', delta);
+  s.accrual.settled = due;
+}
+
+// 거래 내역에만 남기는 줄(돈은 이미 하루씩 오감)
+function note(s: GameState, item: string, amount: number) {
+  if (!amount) return;
+  s.ledger.push({ day: s.day, item, amount: Math.round(amount), balance: Math.round(s.cash) });
+  if (s.ledger.length > 300) s.ledger.splice(0, s.ledger.length - 300);
+}
+
 function taxOf(s: GameState, op: number): number {
   if (op <= 0) return 0;
   const hi = F.corpTaxHighFrom / 12;
@@ -113,23 +134,22 @@ export function computePL(s: GameState, a: MonthAccrual, dim: number): Omit<Mont
   };
 }
 
-// 월급일 정산: 지난달 매출이 들어오고, 월급·4대보험·퇴직연금·접대비·인프라·월세·복지·AI 구독·법인세가 나갑니다.
+// 월급일 마감: 매출·고정비는 하루씩 이미 오갔으므로(A-184) 남은 끝전만 맞추고, 법인세·대출 이자·원금이 나갑니다.
 export function closeMonth(s: GameState, usersEnd: number): MonthPL {
   const dim = daysInMonthOf(s.day - 1);
+  settleDay(s, dim);
   s.accrual.interest = loanInterestDue(s); // A-137 지난달 이자
   const pl = computePL(s, s.accrual, dim);
   pl.usersEnd = Math.floor(usersEnd);
   const label = pl.month.replace('-', '년 ') + '월';
-  if (pl.revenue > 0) book(s, `${label} 매출`, pl.revenue);
-  if (pl.vat > 0) book(s, `${label} 부가가치세`, -pl.vat);
-  if (pl.salary > 0) book(s, `${label} 월급`, -pl.salary);
-  if (pl.insurance > 0) book(s, `${label} 4대보험(회사)`, -pl.insurance);
-  if (pl.pension > 0) book(s, `${label} 퇴직연금(회사)`, -pl.pension);
-  if (pl.entertainment > 0) book(s, `${label} 접대비·업무추진비`, -pl.entertainment);
-  if (pl.infra > 0) book(s, `${label} 인프라(클라우드)`, -pl.infra);
-  if (pl.rent > 0) book(s, `${label} 월세`, -pl.rent);
-  if (pl.welfare > 0) book(s, `${label} 복지비`, -pl.welfare);
-  if (pl.ai > 0) book(s, `${label} AI 도구 구독`, -pl.ai);
+  note(s, `${label} 매출(매일 들어옴)`, pl.revenue);
+  note(s, `${label} 부가가치세(매일 나감)`, -pl.vat);
+  note(s, `${label} 월급·4대보험·퇴직연금(매일 나감)`, -(pl.salary + pl.insurance + pl.pension));
+  note(s, `${label} 접대비·업무추진비(매일 나감)`, -pl.entertainment);
+  note(s, `${label} 인프라(클라우드)(매일 나감)`, -pl.infra);
+  note(s, `${label} 월세(매일 나감)`, -pl.rent);
+  note(s, `${label} 복지비(매일 나감)`, -pl.welfare);
+  note(s, `${label} AI 도구 구독(매일 나감)`, -pl.ai);
   if (pl.tax > 0) book(s, `${label} 법인세`, -pl.tax);
   if (pl.interest) book(s, `${label} 대출 이자`, -pl.interest);
   const paid = repayLoans(s, label);
@@ -169,27 +189,35 @@ export interface DailyRates {
   ads: number;
 }
 
-// FN-01 다음 월급일 예상 자금. 남은 날은 지금 하루 흐름이 이어진다고 봅니다.
-export function nextPaydayForecast(s: GameState, rates: DailyRates, futureEntertainment = 0) {
+// A-184 이번 달 한 달치 손익: 고정비는 한 달치 전부, 매출·인프라·AI·광고는 지금 하루 흐름이 남은 날에도 이어진다고 봅니다.
+export function monthOutlook(s: GameState, rates: DailyRates, futureEntertainment = 0): Omit<MonthPL, 'cashAfter'> {
   const dim = daysInMonthOf(s.day);
   const left = dim - s.accrual.days;
   const a = s.accrual;
   const pendingUnits = s.pendingHires.reduce((sum, h) => sum + h.salary * Math.max(0, left - Math.max(0, h.startDay - s.day)), 0);
-  const salary = Math.round((a.salaryUnits + monthlySalary(s) * left + pendingUnits) / dim);
-  const pay = payrollWithBenefits(salary);
-  const revenue = Math.round(a.revSub + a.revAd + a.revTake + a.revEnt + (rates.revenue + enterpriseMonthly(s) / dim) * left);
-  const vat = Math.round(revenue * F.vatRate);
-  const ent = a.entertainment + futureEntertainment;
-  const infra = a.infra + rates.infra * left;
-  const welfare = a.welfare + (welfareMonthly(s) / dim) * left;
-  const ai = a.ai + rates.ai * left;
-  const ads = rates.ads * left; // 광고비는 매일 나가므로 남은 날만
-  const rent = rentMonthly(s);
-  const op = revenue - vat - (pay.total + ent + a.recruiting + a.ads + ads + infra + welfare + ai + rent + a.other);
-  const tax = taxOf(s, op);
-  const loan = loanInterestDue(s) + loanPrincipalDue(s); // A-137 이번 월급일에 갚을 이자·원금
-  const cashAfter = s.cash - ads + revenue - vat - pay.total - ent - infra - welfare - ai - rent - tax - loan;
-  return { cashAfter: Math.round(cashAfter), salaryOut: pay.total, revenue, daysLeft: left };
+  const full: MonthAccrual = {
+    ...a,
+    salaryUnits: a.salaryUnits + monthlySalary(s) * left + pendingUnits,
+    revSub: a.revSub + rates.revenue * left, // 남은 날 사용자 매출은 갈래를 나누지 않고 구독·유료에 모음
+    revEnt: a.revEnt + (enterpriseMonthly(s) / dim) * left,
+    entertainment: a.entertainment + futureEntertainment,
+    infra: a.infra + rates.infra * left,
+    welfare: a.welfare + (welfareMonthly(s) / dim) * left,
+    ai: a.ai + rates.ai * left,
+    ads: a.ads + rates.ads * left,
+    days: dim,
+    interest: loanInterestDue(s),
+  };
+  return computePL(s, full, dim);
+}
+
+// FN-01 다음 월급일 예상 자금. 남은 날은 지금 하루 흐름이 이어진다고 봅니다.
+export function nextPaydayForecast(s: GameState, rates: DailyRates, futureEntertainment = 0) {
+  const left = daysInMonthOf(s.day) - s.accrual.days;
+  const pl = monthOutlook(s, rates, futureEntertainment);
+  const adsLeft = pl.ads - s.accrual.ads; // 광고비는 매일 나가므로 남은 날만
+  const cashAfter = s.cash - adsLeft + dueSoFar(pl) - (s.accrual.settled ?? 0) - pl.tax - (pl.interest ?? 0) - loanPrincipalDue(s); // A-184 이미 하루씩 오간 돈은 빼고 남은 날 몫만
+  return { cashAfter: Math.round(cashAfter), salaryOut: pl.salary + pl.insurance + pl.pension, revenue: pl.revenue, daysLeft: left };
 }
 
 // FN-01 런웨이(개월): 최근 월 순손실 기준 [Claude 제안]

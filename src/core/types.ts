@@ -1,7 +1,8 @@
 // 게임 상태 타입 v2. 모든 값은 JSON으로 저장 가능해야 합니다(DT-07).
 // 한 저장 파일 = 창업자 한 사람의 커리어(여러 회사). 회사가 끝나면 company 부분만 새로 만듭니다.
 
-export type DeptId = 'dev' | 'design' | 'sales' | 'marketing' | 'hr' | 'cs' | 'infra' | 'finlegal' | 'ai';
+export type DeptId = 'dev' | 'design' | 'sales' | 'marketing' | 'hr' | 'cs' | 'infra' | 'finlegal' | 'ai' | 'adops';
+export type AdFormatId = 'banner' | 'image' | 'video'; // A-182 광고 형식
 export type MarketId = 'kr' | 'jp' | 'sea' | 'us' | 'eu';
 export type IndustryId = 'saas' | 'consumer' | 'commerce' | 'fintech' | 'ai';
 export type ActionId = 'dev' | 'contract' | 'sales' | 'ir' | 'network' | 'enterprise' | 'approve';
@@ -32,6 +33,7 @@ export interface Employee {
   sickUntil: number | null; // 병가(WF-03)
   leaving: number | null; // 퇴사 예정일
   lastRaiseDay: number;
+  bonusDay?: number; // 마지막 보너스 날(A-180). 없으면 받은 적 없음
   bubble: { text: string; until: number } | null; // OF-05 머리 위 말풍선
   dmDay?: Partial<Record<string, number>>; // DM 행동별 마지막 날(A-94: 자주 하면 효과 줄어듦)
   order?: string | null; // 개인 업무(A-147). 없으면 팀 맡은 일을 따름
@@ -96,7 +98,10 @@ export interface NegoMsg {
 export interface Negotiation {
   log: NegoMsg[];
   patience: number; // 0~100%
-  floor: number; // 역제안해 줄 최저 비율(숨김)
+  floor: number; // 더는 안 내려오는 최저 비율(숨김)
+  ask?: number; // 지원자의 지금 요구액(월 환산, A-167). 없으면 희망 월급(예전 저장)
+  stall?: number; // 올리지 않고 버틴 제안 수(연속, A-170)
+  final?: boolean; // 최후통첩을 했음: 다음에 못 맞추면 떠남(A-170)
   revealed: boolean; // 희망 월급을 알게 됨
   counter: { salary: number; bonus: number } | null; // 지원자의 마지막 역제안(받아들이면 채용)
 }
@@ -123,6 +128,7 @@ export interface Message {
   decisionId?: string; // DC-01 결정 메시지
   at?: number; // 보낸 시각(그날 ms, A-93). 없으면 예전 저장
   outingId?: string; // 대표 외출 초대(A-101)
+  milestoneId?: string; // 약속 제안(A-177)
 }
 
 export interface Channel {
@@ -268,6 +274,7 @@ export interface MonthAccrual {
   cashStart: number;
   days: number;
   interest?: number; // A-137
+  settled?: number; // A-184 이번 달 하루씩 이미 오간 돈(매출 − 부가세 − 고정비)
 }
 
 export interface LedgerEntry {
@@ -317,6 +324,9 @@ export interface RoadmapItem {
   level: number; // 만드는 레벨(1부터)
   devDone: number;
   designDone: number;
+  hidden?: number; // 아직 아무도 모르는 숨은 개발 일(약속 기능, A-181). 점검 회의나 마무리 때 드러나 extra로 옮겨짐
+  extra?: number; // 드러난 숨은 일(개발 작업량에 더함)
+  found?: 'review' | 'late'; // 숨은 일이 어떻게 드러났나
 }
 
 export interface Product {
@@ -468,6 +478,7 @@ export interface PublicState {
   buybacks: number;
   missStreak?: number; // 가이던스 연속 미달(A-142)
   ipoPrice?: number; // 공모가(A-142)
+  prev?: number; // 전날 주가(A-161 순위표 등락)
 }
 
 // 플레이어가 정한 서비스(산업 단계): 분야·이름은 직접 입력, 로고는 심볼 + 배경색
@@ -536,7 +547,7 @@ export interface PlacedItem {
 export interface Outing {
   id: string;
   tpl: string;
-  kind: 'ir' | 'network' | 'sales';
+  kind: 'ir' | 'network' | 'sales' | 'review'; // review = 사내 점검 회의(A-181)
   title: string;
   host: string;
   channelId: string;
@@ -546,8 +557,112 @@ export interface Outing {
   hours?: number; // 약속 길이(시간)
   travel?: number; // 편도 이동 시간(시간, 30분 단위)
   delegate?: string; // 대신 보낸 직원 id(A-133). 있으면 대표 일정이 아님
+  milestoneId?: string; // 점검 회의가 점검하는 약속(A-181)
+  reviewed?: boolean; // 점검 결과를 처리함
   cost: number;
   status: 'offer' | 'booked' | 'done' | 'declined' | 'expired';
+  stage?: number; // 고객사 미팅 단계(A-186, 1부터). 없으면 1
+  result?: MeetResult; // 미팅을 마친 결과(A-186). 있으면 끝날 때 보너스 대신 이 결과를 씀
+  promised?: string[]; // 앞 단계 미팅에서 약속한 기능(A-186)
+  discount?: number; // 앞 단계에서 양보한 단가 비율(A-186)
+  companion?: string; // 미팅에 함께 간 직원 id(A-186). 그 시간 일을 못 함
+}
+
+// 고객사 미팅(A-186): 대표가 직접 회의실에 들어가 참석자의 걱정을 찾아 풀어 주는 한 판
+export type MeetRole = 'decider' | 'user' | 'buyer' | 'skeptic';
+export type MeetResult = 'won' | 'warm' | 'cold' | 'lost';
+
+// 연락처(A-186): 미팅에서 만난 사람. 회사가 바뀌어도 커리어 내내 남음
+export interface Contact {
+  id: string;
+  name: string;
+  company: string; // 상대 회사(예: 한빛상사)
+  role: MeetRole;
+  title: string; // 직함
+  concerns: string[]; // 걱정(숨김). meetings.json concerns
+  known: string[]; // 알아낸 걱정
+  bond: number; // 친밀도 0~100(숨김, 화면은 말로만)
+  metDay: number; // 마지막으로 만난 날
+  meetings: number;
+}
+
+export interface MeetAttendee {
+  contactId: string;
+  mood: number; // 분위기 -100~100(숨김)
+  resolved: string[]; // 이번 미팅에서 풀린 걱정
+  signal: string; // 보이는 몸짓(meetings.json signals id)
+}
+
+export interface MeetLine {
+  from: 'me' | 'them' | 'mate' | 'sys';
+  who?: string; // 말한 사람(연락처 id 또는 직원 id)
+  text: string;
+  tone?: 'good' | 'bad';
+}
+
+export interface Meeting {
+  outingId: string;
+  host: string; // 초대한 쪽(예: 한빛상사 구매팀)
+  company: string;
+  stage: number;
+  minutes: number; // 전체 시간(분)
+  minutesLeft: number;
+  attendees: MeetAttendee[];
+  log: MeetLine[];
+  objection: { contactId: string; concern: string } | null;
+  promised: string[]; // 약속한 기능 id
+  discount: number; // 양보한 단가 비율
+  companion?: string; // 함께 간 직원 id
+  companionUses: number;
+  dropped?: string; // 지쳐서 떠오르지 않는 카드(A-146 컨디션)
+  closed: boolean; // 마무리 요청을 했음
+  closedEarly?: boolean; // 무르익기 전에 마무리를 요청함
+  result?: MeetResult;
+  auto?: boolean; // 알아서 진행(직접 하지 않음)
+}
+
+// 약속(마일스톤, A-177): 바깥이 날짜를 제안하고 대표가 받으면 기한 안에 조건을 채움. 분기 목표(goal)는 대표가 수준을 고름
+export type MilestoneKind = 'customer' | 'partner' | 'event' | 'investor' | 'goal';
+
+export interface Milestone {
+  id: string;
+  kind: MilestoneKind;
+  title: string;
+  from: string; // 상대(고객사·행사·투자사 이름, 분기 목표는 '이사회')
+  channelId?: string;
+  status: 'offer' | 'active' | 'done' | 'late' | 'failed' | 'declined' | 'expired';
+  offeredDay: number;
+  offerUntil: number;
+  days: number; // 받은 날부터 기한까지
+  startDay?: number;
+  deadline?: number; // 받으면 정해짐(행사는 제안 때부터 고정)
+  needs?: { id: string; level: number }[]; // 만들어야 할 기능(레벨 이상)
+  metric?: 'users' | 'mrr';
+  base?: number; // 받을 때 지표
+  target?: number;
+  targets?: number[]; // 분기 목표 제안: 수준별 목표
+  level?: number; // 분기 목표 수준(goal.levels 번호)
+  reward: { months?: number; mult?: number };
+  cut?: boolean; // 범위 줄임
+  extended?: boolean;
+  pushed?: boolean;
+  warned?: boolean; // 늦을 것 같다는 알림을 보냄
+  checked?: boolean; // 점검했거나 숨은 일이 드러나 예상이 좁아짐(A-181)
+  reviews?: number; // 다녀온 점검 회의 수
+  nextReviewDay?: number; // 다음 점검 회의 요청 날
+  endDay?: number;
+}
+
+export interface MilestoneState {
+  list: Milestone[];
+  trust: number; // 약속 신뢰 0~100
+  nextOfferDay: number;
+  roundSeen: number | null; // 투자사 약속을 낸 마지막 라운드 날
+  kept: number;
+  broken: number;
+  reviewsDone?: number; // 다녀온 점검 회의(A-181)
+  foundEarly?: number; // 점검으로 일찍 찾은 숨은 일 수
+  foundLate?: number; // 마무리 무렵 늦게 드러난 숨은 일 수
 }
 
 export interface CareerCompany {
@@ -613,6 +728,8 @@ export interface GameState {
   ceoAlloc: Record<ActionId, number>; // 예전 칸 배분(A-101부터 쓰지 않음, 저장 호환용)
   ceoWork?: ActionId; // 대표 주 업무(A-101: 실무 모드 개발·외주·영업, 경영 모드 대기업 영업·결재). 없으면 첫 번째
   outings?: Outing[];
+  contacts?: Contact[]; // 연락처(A-186). 회사가 바뀌어도 남음
+  meeting?: Meeting | null; // 지금 하는 고객사 미팅(A-186). 있으면 시계가 멈춤
   todayLog: Record<ActionId, number>;
   contracts?: import('./contracts').ContractState; // 외주 일감(A-79)
   loans?: Loan[]; // 대출(A-137)
@@ -639,6 +756,8 @@ export interface GameState {
   flags: string[];
   eventSeen: Record<string, number>;
   story?: { lastCrisisDay: number; restUntil: number }; // 사건 스토리텔러(A-141): 마지막 위기, 쉬는 구간 끝
+  milestones?: MilestoneState; // 약속(A-177). 예전 저장은 없음
+  adSales?: import('./adsales').AdSalesState; // A-182 광고 판매(광고주 제안·계약). 예전 저장은 없음
   lastMajorOutage?: number; // 마지막 큰 장애 날(A-143) — 투자사가 기억함
   ceoEnergy?: number; // 대표 컨디션 0~100(A-146). 없으면 예전 저장(시작값)
   ceoCardDay?: number; // 마지막 컨디션 카드 날(A-146)

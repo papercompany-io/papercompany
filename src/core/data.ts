@@ -26,7 +26,9 @@ import missions from '../data/missions.json';
 import achievements from '../data/achievements.json';
 import publicData from '../data/public.json';
 import ads from '../data/ads.json';
-import type { DeptId, Grade, IndustryId, MarketId, StageId } from './types';
+import adsales from '../data/adsales.json';
+import meetings from '../data/meetings.json';
+import type { AdFormatId, DeptId, Grade, IndustryId, MarketId, StageId } from './types';
 
 export const DATA = {
   specs,
@@ -55,6 +57,8 @@ export const DATA = {
   achievements,
   public: publicData,
   ads,
+  adsales,
+  meetings,
 };
 
 export type SpecEffects = {
@@ -104,6 +108,7 @@ export interface DeptDef {
   baseSalary: number;
   stage: number;
   cap?: Record<string, number>;
+  industries?: IndustryId[]; // A-182 이 산업에서만 둘 수 있는 부서(없으면 모든 산업)
 }
 
 export const DEPTS = depts.departments as DeptDef[];
@@ -144,6 +149,7 @@ export interface IndustryDef {
   friends: number;
   friendsPerNet: number;
   needsBilling?: boolean; // 결제 기능을 만들어야 구독·거래 매출이 생김(A-111)
+  adDeals?: boolean; // A-182 광고 매출은 광고 형식 기능 + 광고주 계약으로만(adBase 대신)
   tam: number;
   tamMult?: Partial<Record<MarketId, number>>; // A-156 이 산업만 쓰는 해외 잠재 고객 배수(B2C)
   adoption: { a0: number; a1: number; mid: number; k: number };
@@ -216,6 +222,9 @@ export interface FeatureFx {
   market?: MarketId;
   bugs?: number;
   ai?: boolean;
+  adFormat?: AdFormatId; // A-182 이 광고 형식의 광고 자리를 만듦
+  ecpm?: number; // A-182 광고주가 내는 단가 +비율
+  adOffers?: number; // A-182 광고주 제안이 한 번에 더 오는 수
 }
 
 export interface FeatureDef {

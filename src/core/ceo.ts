@@ -38,6 +38,11 @@ export function ceoEnergy(s: GameState): number {
   return s.ceoEnergy ?? E.start;
 }
 
+// 지친 정도 0~1: 컨디션이 lowAt 아래로 내려간 만큼(결정 카드 판단·미팅 몸짓 읽기, A-146·A-186)
+export function tiredness(s: GameState): number {
+  return Math.max(0, 1 - ceoEnergy(s) / E.lowAt);
+}
+
 // 컨디션이 lowAt 아래면 대표 일의 효율이 줄어듭니다(0이면 minMult)
 export function energyMult(s: GameState): number {
   const e = ceoEnergy(s);
@@ -49,7 +54,7 @@ function energyDay(s: GameState) {
   let d = E.recover;
   const slots = DATA.time.slotsPerDay;
   for (const [a, w] of Object.entries(s.todayLog) as [ActionId, number][]) d -= ((E.drain as Record<string, number>)[a] ?? 1) * (w / slots);
-  if (todayOutings(s).some((o) => !o.delegate)) d -= E.outingDay;
+  if (todayOutings(s).some((o) => !o.delegate && o.kind !== 'review')) d -= E.outingDay; // 점검 회의는 외출이 아님(A-181)
   if (s.company.workPolicy === 'crunch') d -= E.crunch;
   const rw = runwayMonths(s);
   if (!s.public && rw !== null && rw < 3) d -= E.stress;
@@ -105,8 +110,9 @@ export function slotParts(s: GameState, index: number): SlotPart[] {
     if (meet > 0) parts.push({ action: outingTpl(o.tpl).action as ActionId, w: meet, outing: o.title });
     away += cover(...busyWindow(o));
   }
-  // 약속 있는 날은 남은 책상 시간도 집중이 깨짐(A-129)
-  if (away < 1) parts.push({ action: work, w: (1 - away) * DATA.ceo.outings.meetingDayFocus });
+  // 약속 있는 날은 남은 책상 시간도 집중이 깨짐(A-129). 사내 점검 회의만 있는 날은 그대로(A-181)
+  const focus = list.some((o) => o.kind !== 'review') ? DATA.ceo.outings.meetingDayFocus : 1;
+  if (away < 1) parts.push({ action: work, w: (1 - away) * focus });
   return parts;
 }
 

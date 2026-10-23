@@ -19,6 +19,13 @@ export function clockHour(s: GameState): number {
   return T.workStartHour + Math.min(1, s.msInDay / T.dayMs) * DAY_HOURS;
 }
 
+// 게임 하루(다음 날 9시까지 한 바퀴)에서 지금까지 지난 몫(0~1). 하루 끝에 한꺼번에 바뀌는 값을 화면에서 시간에 따라 보여 줄 때 씁니다(A-174).
+export function dayProgress(s: GameState): number {
+  const worked = Math.min(1, s.msInDay / T.dayMs) * DAY_HOURS;
+  const night = s.nightMs !== undefined ? Math.min(1, s.nightMs / T.nightMs) * NIGHT_HOURS : 0;
+  return Math.min(1, (worked + night) / 24);
+}
+
 // 10분 단위 "HH:MM"(24시 넘으면 새벽 시각으로)
 export function clockText(s: GameState): string {
   const total = Math.floor(clockHour(s) * 6) * 10;

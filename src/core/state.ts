@@ -200,6 +200,9 @@ function setupCompany(s: GameState, c: SetupChoices, owned: Record<string, strin
     ceoAlloc: { ...(DATA.ceo.defaultAlloc as Record<ActionId, number>) },
     todayLog: { dev: 0, contract: 0, sales: 0, ir: 0, network: 0, enterprise: 0, approve: 0 },
     contracts: undefined,
+    milestones: undefined,
+    adSales: undefined,
+    meeting: undefined, // 연락처(contacts)는 커리어 내내 남음(A-186)
     valuation: { stored: 0, storedDay: s.day, penaltyUntil: null, revenueStage: false },
     fundingStage: null,
     lastRoundDay: null,

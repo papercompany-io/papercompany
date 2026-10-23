@@ -1,9 +1,9 @@
 {
- "_note": "A-148 직원 잡담: 시간 칸마다 slotChance(직원 수에 따라 perEmployee만큼 늘고 maxChance까지) 확률로 두 사람(가끔 셋)이 팀 채널(teamShare) 또는 #전체에서 2~4줄 대화. ask(A가 말을 검) → answer[B의 무드] → follow(A 마무리, followChance) → chime(C가 거듦, chimeChance). when: 상황 조건(crunch 야근, runwayLow 자금 3개월 미만, outage 큰 장애 recentDays일 안, launch 출시 recentDays일 안, newHire 입사 newHireDays일 안, growing 30일 사용자 growth 이상 증가). 조건이 맞는 주제는 situationWeight배로 더 자주. 게임 난수와 따로 돌아 효과·시뮬 결과에 영향 없음, 안 읽음 수도 올리지 않음. {a}·{b} 이름, {order} A 팀 일, {company}, {newbie} 새 동료. [예시값]",
+ "_note": "A-148·A-175 직원 잡담: 시간 칸마다 slotChance(직원 수에 따라 perEmployee만큼 늘고 maxChance까지) 확률로 두 사람(가끔 셋)이 팀 채널(teamShare) 또는 #전체에서 2~4줄 대화. ask(A가 말을 검) → answer[B의 무드] → follow(A 마무리, followChance) → chime(C가 거듦, chimeChance). when: 상황 조건(crunch 야근, runwayLow 자금 3개월 미만, outage 큰 장애 recentDays일 안, launch 출시 recentDays일 안, newHire 입사 newHireDays일 안, growing 30일 사용자 growth 이상 증가). 조건이 맞는 주제는 situationWeight배로 더 자주. 게임 난수와 따로 돌아 효과·시뮬 결과에 영향 없음, 안 읽음 수도 올리지 않음. {a}·{b} 이름, {order} A 팀 일, {company}, {newbie} 새 동료. [예시값]",
  "fx": {
-  "slotChance": 0.06,
-  "perEmployee": 0.012,
-  "maxChance": 0.22,
+  "slotChance": 0.03,
+  "perEmployee": 0.006,
+  "maxChance": 0.11,
   "teamShare": 0.6,
   "followChance": 0.75,
   "chimeChance": 0.3,

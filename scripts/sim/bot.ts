@@ -4,7 +4,7 @@ import fs from 'fs';
 import { DATA, featuresOf, stageIndex } from '../../src/core/data';
 import { runDay } from '../../src/core/sim';
 import { newCareer, nextCompany, defaultPicks, ownedSpecs, type SetupChoices } from '../../src/core/state';
-import { addToRoadmap, availableFeatures, hasMvp, appeal, fxTotals, canCharge } from '../../src/core/product';
+import { addToRoadmap, availableFeatures, hasMvp, appeal, fxTotals, canCharge, moveRoadmap } from '../../src/core/product';
 import { createPosting, offerJob } from '../../src/core/hiring';
 import { runwayMonths, lastRevenue, projectedMonthlyPayroll, debtBalance } from '../../src/core/finance';
 import { startRound, sendLetter, requestDecision, closeForOffer, acceptOffer, activeRound, fits, decisionProbability, selectableStages } from '../../src/core/funding';
@@ -21,8 +21,13 @@ import { sellShares, resign, setGuidance } from '../../src/core/public';
 
 const guidanceSet = new Map<string, string>();
 import { setCeoMode, executiveBlock, setCeoWork, ceoEnergy } from '../../src/core/ceo';
-import { acceptOuting, outings } from '../../src/core/outings';
+import { acceptOuting, declineOuting, outings } from '../../src/core/outings';
 import { acceptContract } from '../../src/core/contracts';
+import { autoFinish, bringCompanion, cardFits, companionCandidates, leaveMeeting, meetingHand, meetingScore, pendingMeetings, playCard, promiseFor, startMeeting, type CardId } from '../../src/core/meeting';
+import { contact } from '../../src/core/contacts';
+import { acceptAdCounter, adFormatDef, adNegotiation, adSalesOf, adSalesOn, declineAdOffer, formatSales, liveAdDeals, negotiateAd, setAdAutoRenew } from '../../src/core/adsales';
+import { adScale } from '../../src/core/market';
+import { acceptMilestone, declineMilestone, canExtend, canPush, extendDeadline, forecast, milestones, pushTeam } from '../../src/core/milestones';
 import { createEsop } from '../../src/core/equity';
 import { emptyProfile, retire, endingFor, founderAge } from '../../src/core/career';
 import { acquire, acquireBlock } from '../../src/core/competitors';
@@ -55,11 +60,17 @@ function planRoadmap(s: GameState) {
     if (!av.length) return;
     av.sort((a, b) => {
       // 결제 기능(A-111)은 MVP 바로 다음: 이게 없으면 매출이 0
-      const pa = CAT_PRI[a.cat] + (a.fx.billing ? -1.5 : 0) + (a.cat === 'infra' && s.product.bugs > 25 ? -3 : 0) + (a.dev + a.design) / 400 + (s.product.features[a.id] ?? 0) * 1.5;
-      const pb = CAT_PRI[b.cat] + (b.fx.billing ? -1.5 : 0) + (b.cat === 'infra' && s.product.bugs > 25 ? -3 : 0) + (b.dev + b.design) / 400 + (s.product.features[b.id] ?? 0) * 1.5;
+      // 광고 판매 산업(A-182)은 광고 자리(배너·이미지·비디오)도 결제처럼 일찍: 없으면 광고 매출이 0
+      const pa = CAT_PRI[a.cat] + (a.fx.billing || a.fx.adFormat ? -1.5 : 0) + (a.cat === 'infra' && s.product.bugs > 25 ? -3 : 0) + (a.dev + a.design) / 400 + (s.product.features[a.id] ?? 0) * 1.5;
+      const pb = CAT_PRI[b.cat] + (b.fx.billing || b.fx.adFormat ? -1.5 : 0) + (b.cat === 'infra' && s.product.bugs > 25 ? -3 : 0) + (b.dev + b.design) / 400 + (s.product.features[b.id] ?? 0) * 1.5;
       return pa - pb;
     });
     if (addToRoadmap(s, av[0].id)) return;
+  }
+  // A-182 출시 뒤 광고 자리는 맨 앞으로(광고 판매 산업은 이게 없으면 매출이 거의 없음)
+  if (hasMvp(s) && adSalesOn(s)) {
+    let i = s.product.roadmap.findIndex((r) => featuresOf(s.company.industry).find((f) => f.id === r.id)?.fx.adFormat);
+    while (i > 0) moveRoadmap(s, i--, -1);
   }
 }
 
@@ -78,7 +89,46 @@ function targetHeadcount(s: GameState): Partial<Record<DeptId, number>> {
   const out: Partial<Record<DeptId, number>> = { dev: share(0.4), design: share(0.1), sales: share(0.15), marketing: share(0.1) };
   if (st >= 2) Object.assign(out, { hr: n >= 12 ? share(0.04) : 0, cs: share(0.1) });
   if (st >= 3) Object.assign(out, { infra: share(0.05), finlegal: Math.max(1, share(0.03)), ai: share(0.05) });
+  // A-182 광고 판매 산업은 광고 운영 담당자를 먼저(사용자가 늘면 더). 목록 앞에 둬서 돈이 빠듯해도 먼저 뽑음
+  if (adSalesOn(s)) return { adops: Math.max(1, share(0.06), Math.round(Math.log10(Math.max(10, totalUsers(s))) - 3)), ...out };
   return out;
+}
+
+// A-182 광고주 흥정: 첫 제안의 1.4배를 부르고, 역제안과 반씩 좁혀 감. 역제안이 내 값에 가까우면 받음.
+// 재고의 85%까지만 팔아 사용자가 줄 때 위약금을 피함. 지금 시세의 60% 아래로 묶인 계약은 자동 연장을 꺼서 다시 팜(보통 플레이어는 첫 제안을 그대로 받음)
+function adStep(s: GameState) {
+  if (!adSalesOn(s)) return;
+  const fx = fxTotals(s);
+  for (const o of adSalesOf(s).offers.slice()) {
+    if (o.left) continue;
+    const f = formatSales(s, fx).find((x) => x.id === o.format)!;
+    if (f.sold + o.imps > f.inv * 0.85) {
+      declineAdOffer(s, o.id);
+      continue;
+    }
+    adNegotiation(s, o);
+    if (NOVICE) {
+      acceptAdCounter(s, o.id);
+      continue;
+    }
+    let ask = Math.round(o.open * 1.4);
+    let done = false;
+    for (let i = 0; i < 5 && !done && !o.left; i++) {
+      const r = negotiateAd(s, o.id, ask, o.months);
+      if (r.signed || !r.ok) done = true;
+      else {
+        const c = o.nego?.counter;
+        if (c && c.months === o.months && c.ecpm >= ask * 0.93) done = acceptAdCounter(s, o.id).ok;
+        else if (c) ask = Math.round((ask + c.ecpm) / 2);
+      }
+    }
+    if (!done && !o.left && o.nego?.counter) acceptAdCounter(s, o.id);
+  }
+  if (NOVICE) return;
+  for (const d of liveAdDeals(s)) {
+    const fair = adFormatDef(d.format).ecpm * adScale(totalUsers(s)) * (1 + fx.ecpm);
+    if (d.autoRenew && d.ecpm < fair * 0.6) setAdAutoRenew(s, d.id, false);
+  }
 }
 
 function monthlyBurn(s: GameState): number {
@@ -102,7 +152,8 @@ function hireStep(s: GameState) {
       // 신중한 채용: 이 사람까지 더해도 런웨이 12개월 이상
       // 빌린 돈(A-137)은 여유 자금이 아님: 전략 봇은 남은 빚을 빼고 셈
       const free = NOVICE ? s.cash : s.cash - debtBalance(s);
-      if (free / (burn + a.desiredSalary * 1.2) < (NOVICE ? 5 : 12)) return;
+      // 광고 운영(A-182)은 매출을 직접 데려오는 사람이라 런웨이 4개월이면 뽑음
+      if (free / (burn + a.desiredSalary * 1.2) < (d === 'adops' ? 4 : NOVICE ? 5 : 12)) return;
       if (offerJob(s, a.id, false).ok) burn += a.desiredSalary * 1.2;
     }
   }
@@ -224,16 +275,64 @@ function opsStep(s: GameState) {
     // 결제 기능(A-111)이 없으면 영업해 봐야 매출이 없으므로, 개발자가 없을 땐 결제까지 대표가 직접 만듭니다(유능한 플레이어)
     const devNeeded = !hasMvp(s) || (!NOVICE && !canCharge(s) && !s.employees.some((e) => e.dept === 'dev'));
     setCeoWork(s, s.contracts?.active && s.cash < 25000000 ? 'contract' : devNeeded ? 'dev' : 'sales');
-    for (const o of outings(s).filter((x) => x.status === 'offer')) if (o.cost * 20 < s.cash && energyOk(s)) acceptOuting(s, o.id);
+    for (const o of outings(s).filter((x) => x.status === 'offer' && x.kind !== 'review')) if (o.cost * 20 < s.cash && energyOk(s)) acceptOuting(s, o.id);
   } else {
     // 경영 모드(A-101): 결재가 밀리면 결재, 아니면 대기업 영업. 외출 초대는 실무 모드와 같이 수락
     setCeoWork(s, s.company.approveBalance < 0 ? 'approve' : 'enterprise');
-    for (const o of outings(s).filter((x) => x.status === 'offer')) if (o.cost * 20 < s.cash && energyOk(s)) acceptOuting(s, o.id);
+    for (const o of outings(s).filter((x) => x.status === 'offer' && x.kind !== 'review')) if (o.cost * 20 < s.cash && energyOk(s)) acceptOuting(s, o.id);
   }
   // ESOP
   if (!NOVICE && s.company.stage >= 2 && !s.flags.includes('esop') && s.fundingStage && stageIndex(s.fundingStage) >= stageIndex('A')) createEsop(s, 0.08);
   // M&A
   if (s.company.stage >= 4) for (const c of s.competitors) if (c.alive && !acquireBlock(s, c) && s.cash > 5e10) acquire(s, c.id);
+}
+
+// 약속(A-177): 유능한 봇은 지킬 수 있을 때만 받고(행사·투자사는 예상 범위 끝이 기한 안, 고객사·제휴사는 순서에 여유가 있을 때),
+// 늦을 것 같으면 기한 연장 → 몰아치기 순으로 조율. 보통 봇(novice)은 다 받고 조율하지 않음
+// 실험(계측): MS_ALL=1 다 받고 조율 안 함, MS_NONE=1 다 거절 — 약속 받기가 늘 이득인지(지배 전략) 재려고
+function milestoneStep(s: GameState) {
+  // 실험(계측): MS_NOREVIEW=1 점검 회의를 모두 거절 — 점검이 값어치가 있는지(A-181)
+  // 점검 회의는 1~3일 뒤라 매일 답함: 유능한 봇은 컨디션이 되면 감(겹치면 안 감)
+  for (const o of outings(s)) {
+    if (o.kind !== 'review' || o.status !== 'offer') continue;
+    if (process.env.MS_NOREVIEW || (!NOVICE && ceoEnergy(s) < 30)) declineOuting(s, o.id); // 사무실 안 한 시간이라 외출보다 문턱이 낮음
+    else acceptOuting(s, o.id);
+  }
+  for (const m of milestones(s)) {
+    if (m.status === 'offer' && process.env.MS_NONE) {
+      declineMilestone(s, m.id);
+      continue;
+    }
+    if (m.status === 'offer') {
+      if (NOVICE || process.env.MS_ALL) {
+        acceptMilestone(s, m.id, m.kind === 'goal' ? 1 : undefined);
+        continue;
+      }
+      if (m.kind === 'goal') {
+        const f = forecast(s, { ...m, level: 1 });
+        acceptMilestone(s, m.id, f.hi <= f.daysLeft ? 1 : 0);
+      } else if (m.kind === 'customer' || m.kind === 'partner') {
+        const f = forecast(s, m);
+        // MS_AGGR=1: 예상 가운데 값으로 받는 대담한 플레이어(계측용)
+        if (s.product.roadmap.length <= 5 && (process.env.MS_AGGR ? f.mid : f.hi) <= f.daysLeft) acceptMilestone(s, m.id);
+      } else {
+        const f = forecast(s, m);
+        if ((process.env.MS_AGGR ? f.mid : f.hi) <= f.daysLeft) acceptMilestone(s, m.id);
+      }
+    } else if (m.status === 'active' && !NOVICE && !process.env.MS_ALL) {
+      const risk = forecast(s, m).risk;
+      // 빠듯하거나 늦으면 먼저 약속 기능을 만드는 순서 앞으로(일찍 알수록 효과가 큼, A-181)
+      if (risk === 'tight' || risk === 'late')
+        for (const n of m.needs ?? []) {
+          let i = s.product.roadmap.findIndex((r) => r.id === n.id && r.level === n.level);
+          while (i > 0) moveRoadmap(s, i--, -1);
+        }
+      if (forecast(s, m).risk === 'late') {
+        if (canExtend(s, m)) extendDeadline(s, m.id);
+        else if (canPush(s, m)) pushTeam(s, m.id);
+      }
+    }
+  }
 }
 
 function decide(s: GameState) {
@@ -297,6 +396,63 @@ interface Milestones {
   [k: string]: number | null;
 }
 
+// 고객사 미팅(A-186): 유능한 봇은 직접 회의실에 들어가 질문으로 걱정을 찾고 맞는 카드로 풂(개발자 동행).
+// 보통 봇·MEET_AUTO=1(계측)은 알아서 진행(runDay가 처리) — 직접 하는 쪽이 나은지 재려고
+function meetingStep(s: GameState) {
+  if (NOVICE || process.env.MEET_AUTO) return;
+  for (const o of pendingMeetings(s)) {
+    const m = startMeeting(s, o.id);
+    if (!m) continue;
+    const mate = companionCandidates(s).sort((a, b) => b.skill - a.skill)[0];
+    if (mate) bringCompanion(s, mate.id);
+    for (let guard = 0; guard < 30 && !m.result; guard++) {
+      const ok = new Set(meetingHand(s).filter((h) => h.ok).map((h) => h.id));
+      const pickFor = (cid: string, k: string): CardId | null => {
+        for (const card of ['demo', 'case', 'companion', 'price'] as CardId[]) if (ok.has(card) && cardFits(s, m, card, k)) return card;
+        return ok.has('promise') && m.promised.length < 1 && promiseFor(s, m, cid) ? 'promise' : null;
+      };
+      let move: [CardId, string?] | null = null;
+      if (m.objection) {
+        const c = pickFor(m.objection.contactId, m.objection.concern);
+        if (c) move = [c, m.objection.contactId];
+      }
+      for (const a of m.attendees) {
+        if (move) break;
+        const c = contact(s, a.contactId)!;
+        const open = c.known.filter((k) => c.concerns.includes(k) && !a.resolved.includes(k));
+        for (const k of open) {
+          const card = pickFor(c.id, k);
+          if (card) {
+            move = [card, c.id];
+            break;
+          }
+        }
+        if (!move && ok.has('ask') && c.concerns.some((k) => !c.known.includes(k))) move = ['ask', c.id];
+      }
+      if (!move) move = meetingScore(s, m) >= DATA.meetings.outcome.closeReady && ok.has('close') ? ['close'] : null;
+      if (!move) {
+        autoFinish(s);
+        break;
+      }
+      if (playCard(s, move[0], move[1])) {
+        autoFinish(s);
+        break;
+      }
+    }
+    leaveMeeting(s);
+  }
+}
+
+// 미팅 결과 집계(A-186): 회사마다 won·warm·cold·lost
+const meetSeen = new Set<string>();
+let meetTally: Record<string, number> = { won: 0, warm: 0, cold: 0, lost: 0 };
+function tallyMeetings(s: GameState) {
+  for (const o of outings(s)) if (o.result && !meetSeen.has(o.id)) {
+    meetSeen.add(o.id);
+    meetTally[o.result] += 1;
+  }
+}
+
 const dumped = new Set<string>();
 
 function playCompany(s: GameState, log: (m: string) => void) {
@@ -310,8 +466,10 @@ function playCompany(s: GameState, log: (m: string) => void) {
     if (look) planRoadmap(s);
     if (look && s.day % 2 === 0) hireStep(s);
     if (look) fundStep(s);
+    if (look) adStep(s);
     if (s.day % 7 === 0) opsStep(s);
     decide(s);
+    if (!NOVICE || s.day % 5 === 0) milestoneStep(s);
     exitStep(s, log);
     if (s.ended) break;
     if (process.argv.includes('--rounds')) for (const r of s.rounds) {
@@ -322,7 +480,9 @@ function playCompany(s: GameState, log: (m: string) => void) {
         log(`   라운드 ${formatDate(s.day)} ${r.stage} ${r.status} 리드 ${r.leadId ?? '-'} 프리 ${(r.preValue / 1e8).toFixed(1)}억 | ${ps}`);
       }
     }
+    meetingStep(s);
     runDay(s);
+    tallyMeetings(s);
     meter.day(s);
     // --nan: 기업가치·주식 수가 처음 NaN이 되는 날을 남깁니다(계산 버그 찾기)
     if (process.argv.includes('--nan') && !dumped.has('nv') && (Number.isNaN(computeValuation(s).value) || s.capTable.some((c) => Number.isNaN(c.shares)))) { dumped.add('nv'); const cv = computeValuation(s); log(`   NV ${formatDate(s.day)} cash=${s.cash} b=${cv.business} loans=${JSON.stringify(s.loans)} cap=${JSON.stringify(s.capTable.slice(-3))} ledger=${JSON.stringify(s.ledger.slice(-4))}`); }
@@ -346,7 +506,7 @@ function playCompany(s: GameState, log: (m: string) => void) {
     }
     if (process.argv.includes('--pl') && s.plHistory.length && s.accrual.days === 0) {
       const m = s.plHistory[s.plHistory.length - 1];
-      log(`   PL ${m.month} 매출 ${(m.revenue / 1e6).toFixed(1)} (구독 ${(m.revSub / 1e6).toFixed(1)} 광고 ${(m.revAd / 1e6).toFixed(1)} 수수료 ${(m.revTake / 1e6).toFixed(1)} 대기업 ${(m.revEnt / 1e6).toFixed(1)}) 월급 ${(m.salary / 1e6).toFixed(1)} 광고비 ${(m.ads / 1e6).toFixed(1)} 인프라 ${(m.infra / 1e6).toFixed(1)} 월세 ${(m.rent / 1e6).toFixed(1)} 복지 ${(m.welfare / 1e6).toFixed(1)} AI ${(m.ai / 1e6).toFixed(1)} 기타 ${(m.other / 1e6).toFixed(1)} 채용 ${(m.recruiting / 1e6).toFixed(1)} 접대 ${(m.entertainment / 1e6).toFixed(1)} 순익 ${(m.netIncome / 1e6).toFixed(1)} 자금 ${(m.cashAfter / 1e6).toFixed(0)} 고객 ${m.usersEnd} 인지도 ${s.markets.kr.awareness.toFixed(3)} 점유 ${(shares(s, 'kr').player * 100).toFixed(1)}% 매력 ${appeal(s).toFixed(0)} 직원 ${s.employees.length} 만족 ${avgSat(s).toFixed(0)}`);
+      log(`   PL ${m.month} 매출 ${(m.revenue / 1e6).toFixed(1)} (구독 ${(m.revSub / 1e6).toFixed(1)} 광고 ${(m.revAd / 1e6).toFixed(1)} 수수료 ${(m.revTake / 1e6).toFixed(1)} 대기업 ${(m.revEnt / 1e6).toFixed(1)}) 월급 ${(m.salary / 1e6).toFixed(1)} 광고비 ${(m.ads / 1e6).toFixed(1)} 인프라 ${(m.infra / 1e6).toFixed(1)} 월세 ${(m.rent / 1e6).toFixed(1)} 복지 ${(m.welfare / 1e6).toFixed(1)} AI ${(m.ai / 1e6).toFixed(1)} 기타 ${(m.other / 1e6).toFixed(1)} 채용 ${(m.recruiting / 1e6).toFixed(1)} 접대 ${(m.entertainment / 1e6).toFixed(1)} 순익 ${(m.netIncome / 1e6).toFixed(1)} 자금 ${(m.cashAfter / 1e6).toFixed(0)} 고객 ${m.usersEnd} 인지도 ${s.markets.kr.awareness.toFixed(3)} 점유 ${(shares(s, 'kr').player * 100).toFixed(1)}% 매력 ${appeal(s).toFixed(0)} 직원 ${s.employees.length} 만족 ${avgSat(s).toFixed(0)}${adSalesOn(s) ? ` 광고계약 ${liveAdDeals(s).length}(월 ${(formatSales(s).reduce((x, f) => x + f.dealMonthly, 0) / 1e6).toFixed(1)}) 애드옵스 ${s.employees.filter((e) => e.dept === 'adops').length}` : ''}`);
     }
     if (process.argv.includes('--mk') && s.accrual.days === 0 && s.plHistory.length % 6 === 0) {
       const parts = (Object.keys(s.markets) as MarketId[]).filter((m) => s.markets[m].launched).map((m) => `${m}:${Math.round(s.markets[m].users)}/${Math.round(demand(s, m))} sh${(shares(s, m).player * 100).toFixed(0)}% aw${s.markets[m].awareness.toFixed(2)} ad${(s.markets[m].adBudget / 1e6).toFixed(0)}`);
@@ -382,7 +542,8 @@ for (let r = 0; r < runs; r++) {
     decisions += s.company.decisions;
     const res = s.result!;
     allM.push({ m, kind: res.kind, maxVal: res.maxValuation, ind: s.company.industry, ms });
-    log(`  끝: ${res.kind} ${formatDate(s.day)} (${(days / 365).toFixed(1)}년) 창업자 몫 ${(res.amount / 1e8).toFixed(1)}억 최대가치 ${(res.maxValuation / 1e8).toFixed(0)}억 최대고객 ${Math.round(res.peakUsers)} 최대직원 ${res.peakEmployees} 결정 ${s.company.decisions} 출시 ${s.product.shipped.length} 장애 ${s.stats.outages} 퇴사 ${s.stats.quits} 외주 ${s.contracts?.completed ?? 0}`);
+    log(`  끝: ${res.kind} ${formatDate(s.day)} (${(days / 365).toFixed(1)}년) 창업자 몫 ${(res.amount / 1e8).toFixed(1)}억 최대가치 ${(res.maxValuation / 1e8).toFixed(0)}억 최대고객 ${Math.round(res.peakUsers)} 최대직원 ${res.peakEmployees} 결정 ${s.company.decisions} 출시 ${s.product.shipped.length} 장애 ${s.stats.outages} 퇴사 ${s.stats.quits} 외주 ${s.contracts?.completed ?? 0} 약속 ${s.milestones?.kept ?? 0}/${s.milestones?.broken ?? 0} 신뢰 ${Math.round(s.milestones?.trust ?? 50)} 점검 ${s.milestones?.reviewsDone ?? 0} 일찍 ${s.milestones?.foundEarly ?? 0} 늦게 ${s.milestones?.foundLate ?? 0} 미팅 ${meetTally.won}/${meetTally.warm}/${meetTally.cold}/${meetTally.lost} 대기업 ${s.company.enterpriseCount}`);
+    meetTally = { won: 0, warm: 0, cold: 0, lost: 0 };
     log(`  마일스톤(일): ${Object.entries(ms).map(([a, b]) => `${a}=${b ?? '-'}`).join(' ')}`);
     void t0;
     if (oneCompany || founderAge(s) >= 63 || k >= 8) {

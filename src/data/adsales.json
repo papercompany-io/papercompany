@@ -1,0 +1,55 @@
+{
+  "_note": "A-182 광고 판매 [예시값]. 광고 판매가 있는 산업(industries.json adDeals)은 사용자당 광고 매출이 저절로 생기지 않습니다. 광고 형식 기능(features fx.adFormat)을 만들면 그 형식의 광고 자리가 생기고, 사용자 1명이 한 달에 보는 노출 imp회(프리미엄 구독자는 광고를 보지 않아 × (1 − 유료 비율))가 재고가 됩니다. 광고 운영팀(adops) '광고주 찾기'가 batchEveryDays일마다 광고주 제안을 받아 오고(출력 × perOutput개, batchMax까지 + 기능 fx.adOffers), 제안은 offerDays일 뒤 사라짐(최대 maxOffers개). 광고주는 등급(tiers)마다 그 형식 지금 재고의 share 범위만큼 월 노출을 months 범위 기간으로 사고 싶어 함(앱 사용자가 minUsers 이상이어야 그 등급이 옴, 가중치 w). 광고주가 낼 수 있는 최고 단가(eCPM, 노출 1000회당 원, 숨김) = 형식 ecpm × 광고 단가 배율(markets adScale, 전체 사용자) × (1 + 기능 fx.ecpm) × 등급 mult × 경기 adSpend × 품질(qualityMin + (1 − qualityMin) × 품질/100) × spread 범위 난수. 첫 제안 = 최고 단가 × openMin~openMax. 계약 = 월 노출 × 단가 ÷ 1000이 매달 매출(사용자가 줄어 재고가 모자라면 계약들이 나눠 받음). 계약 안 된 재고는 광고 네트워크가 형식 ecpm × remnant × 광고 단가 배율 × 시장 객단가 × (1 + fx.ecpm) × '남는 지면 최적화' 배수(1 + min(optimize.max, optimize.per × 출력^optimize.pow))로 채움. 협상(nego)은 채용 흥정(A-167)을 뒤집은 것: 내가 부른 단가를 광고주가 원하는 기간 기준으로 바꿔(÷ 기간 배율) 광고주의 지금 단가와 비교. 광고주는 부를 때마다 내 단가 쪽으로 남은 차이 × concede만큼 올라옴(숨은 최고 단가까지만). 내리지 않고 버티면 × stallMove, 최고 단가의 insult배를 넘게 부르면 × insultMove만큼만 움직임. 차이가 광고주 단가의 closeGap 안이면 내 단가로 계약. 인내심은 제안마다 dropBase, 최고 단가의 insult배를 넘게 부르면 insultDrop, 이전보다 올려 부르면 raisePenalty, 버틴 횟수 × stallDrop 더. 0%면 떠남. 기간 배율(monthsFactor) = 광고주가 원하는 기간과 다를 때 광고주가 낼 수 있는 단가 배수(monthsDev). 광고 계약은 광고 운영팀이 받아 온 제안으로만 생김(예전 저장에 주던 전환 계약 없음)",
+  "formats": [
+    { "id": "banner", "name": "배너", "imp": 250, "ecpm": 1500 },
+    { "id": "image", "name": "이미지", "imp": 90, "ecpm": 5000 },
+    { "id": "video", "name": "비디오", "imp": 30, "ecpm": 16000 }
+  ],
+  "remnant": 0.2,
+  "optimize": { "max": 0.6, "per": 0.2, "pow": 0.7 },
+  "batchEveryDays": 7,
+  "offerDays": 14,
+  "maxOffers": 6,
+  "perOutput": 1.2,
+  "batchMax": 3,
+  "monthsChoices": [3, 6, 12, 24],
+  "qualityMin": 0.8,
+  "spread": [0.85, 1.15],
+  "tiers": [
+    { "id": "local", "name": "동네 광고주", "minUsers": 1000, "w": 5, "share": [0.15, 0.3], "months": [3, 6], "mult": 1.0,
+      "names": ["동네책방", "우리동네 치킨", "새봄 필라테스", "하늘 안경원", "온누리 학원", "골목 베이커리", "바른 치과", "모아 꽃집", "한결 부동산", "다온 미용실"] },
+    { "id": "mid", "name": "중견 브랜드", "minUsers": 30000, "w": 4, "share": [0.15, 0.3], "months": [6, 12], "mult": 1.1,
+      "names": ["라온 화장품", "마루 가구", "솔빛 식품", "누리 여행", "한빛 게임즈", "바람 아웃도어", "꿈틀 출판", "별하 패션", "가온 생활건강", "초록 제약"] },
+    { "id": "big", "name": "대기업", "minUsers": 500000, "w": 3, "share": [0.2, 0.35], "months": [6, 12], "mult": 1.25,
+      "names": ["대성전자", "미래카드", "세종자동차", "청운유통", "누리통신", "해오름항공", "새벽보험", "나래식품"] },
+    { "id": "global", "name": "글로벌 브랜드", "minUsers": 5000000, "w": 2, "share": [0.25, 0.45], "months": [12, 24], "mult": 1.45,
+      "names": ["노바 모터스", "에이펙스 스포츠", "루미나 뷰티", "오르빗 폰", "베일리 음료", "스텔라 스트리밍"] }
+  ],
+  "nego": {
+    "patience": 100,
+    "openMin": 0.62,
+    "openMax": 0.78,
+    "concede": 0.5,
+    "dropBase": 12,
+    "insult": 1.5,
+    "insultDrop": 20,
+    "raisePenalty": 18,
+    "stallDrop": 8,
+    "stallMove": 0.5,
+    "insultMove": 0.3,
+    "closeGap": 0.03,
+    "finalStall": 3,
+    "finalPatience": 30,
+    "monthsDev": 0.12
+  },
+  "renewDefault": true,
+  "penalty": {
+    "_note": "A-182 위약금(사용자 요청: 'SC처럼 계속 연장하는 체크박스, 무한 계약, 계약 위반 시 위약금'). 계약은 기간이 끝날 때 자동 연장이 켜져 있으면 같은 조건(노출·단가·기간)으로 다시 이어짐(끄면 그 기간 끝에 위약금 없이 끝남). 계약 한 달(30일)마다 실제로 내보낸 노출을 셈: 약속한 노출의 tolerance 미만이면 못 내보낸 노출 × 단가 × shortMult를 위약금으로 냄, cancelBelow 미만이면 광고주가 계약을 끊고 월 계약금 × cancelMonths를 더 받아 감. 내가 기간 중에 해지하면 남은 기간(최대 breakMaxMonths개월) 계약금 × breakRate",
+    "tolerance": 0.9,
+    "shortMult": 2,
+    "cancelBelow": 0.5,
+    "cancelMonths": 1,
+    "breakRate": 0.5,
+    "breakMaxMonths": 6
+  }
+}

@@ -9,9 +9,10 @@ import { economyDay } from './economy';
 import { applySeatMoves } from './employees';
 import { eventsDay } from './events';
 import { contractsDay } from './contracts';
+import { adSalesDay } from './adsales';
 import { loansDay } from './loans';
 import { checkBankruptcy, checkBoard, exitDayEnd, inboundOfferMonth } from './exit';
-import { accrueDay, closeMonth } from './finance';
+import { accrueDay, closeMonth, settleDay } from './finance';
 import { paydayForecast } from './forecast';
 import { monthKey } from './calendar';
 import { founderAge, finishCompany } from './career';
@@ -20,12 +21,15 @@ import { roundDayEnd } from './funding';
 import { burningDay } from './burning';
 import { hiringArrivals, hiringDayEnd, startPendingHires } from './hiring';
 import { outingsDay } from './outings';
+import { milestonesDay } from './milestones';
+import { autoMeeting, meetingStartMs, meetingsDayEnd, pendingMeetings, startMeeting } from './meeting';
+import { contactsMonth } from './contacts';
 import { marketDay, totalUsers } from './market';
 import { marketingMonth } from './marketing';
 import { pruneMods } from './mods';
 import { notify } from './notify';
 import { officeDay } from './office';
-import { ordersDay } from './orders';
+import { contractSlot, ordersDay } from './orders';
 import { achievementsDay, missionsDay, updateStage } from './progress';
 import { publicDay, publicQuarter, resignPreview } from './public';
 import { staffDay, staffMonth } from './staff';
@@ -46,7 +50,7 @@ export function setSpeed(s: GameState, speed: number) {
 }
 
 export function isRunning(s: GameState): boolean {
-  return !s.ended && s.speed > 0 && !s.pauseReason;
+  return !s.ended && s.speed > 0 && !s.pauseReason && !s.meeting; // 고객사 미팅 중에는 시계가 멈춤(A-186)
 }
 
 // 밤 빨리 감기(A-159): 배속이 반영된 시간 1ms가 밤 시계를 몇 ms 움직일지. 1보다 작으면 안 됨(빨리 감기가 더 느려짐)
@@ -69,14 +73,23 @@ export function advance(s: GameState, realMs: number, nightFast = false) {
       if (s.nightMs >= T.nightMs - 1e-6) endDay(s);
       continue;
     }
+    // 고객사 미팅(A-186): 약속 시각이 되면 회의실에 들어가고 시계가 멈춤
+    const meets = pendingMeetings(s);
+    const due = meets.find((o) => meetingStartMs(o) <= s.msInDay + 1e-6);
+    if (due) {
+      startMeeting(s, due.id);
+      break;
+    }
+    const meetAt = Math.min(Infinity, ...meets.map(meetingStartMs));
     const nextSlot = s.slotsDone < T.slotsPerDay ? slotEnd(s.slotsDone) : T.dayMs;
-    const target = Math.min(nextSlot, T.dayMs);
+    const target = Math.min(nextSlot, T.dayMs, meetAt);
     const step = Math.min(ms, target - s.msInDay);
     s.msInDay += step;
     ms -= step;
     hiringArrivals(s, s.msInDay);
     if (s.slotsDone < T.slotsPerDay && s.msInDay >= slotEnd(s.slotsDone) - 1e-6) {
       runSlot(s, s.slotsDone);
+      contractSlot(s); // 개발팀 외주 작업은 칸마다(A-173)
       chatterSlot(s, s.slotsDone); // 직원 잡담(A-148)
       s.slotsDone += 1;
     }
@@ -86,8 +99,10 @@ export function advance(s: GameState, realMs: number, nightFast = false) {
 
 // 남은 칸을 모두 실행하고 하루를 끝냅니다(봇·시뮬레이터용).
 export function runDay(s: GameState) {
+  for (const o of pendingMeetings(s)) autoMeeting(s, o); // 봇이 직접 하지 않은 미팅은 알아서 진행(A-186)
   while (s.slotsDone < T.slotsPerDay) {
     runSlot(s, s.slotsDone);
+    contractSlot(s);
     chatterSlot(s, s.slotsDone);
     s.slotsDone += 1;
   }
@@ -95,6 +110,7 @@ export function runDay(s: GameState) {
 }
 
 export function endDay(s: GameState) {
+  meetingsDayEnd(s); // 직원이 대신 간 고객사 미팅(A-186)
   const revBefore = revenueSoFar(s);
   const push = ordersDay(s);
   marketDay(s, push);
@@ -102,6 +118,7 @@ export function endDay(s: GameState) {
   logDaily(s, revenueSoFar(s) - revBefore);
   aiDay(s);
   ceoDayEnd(s);
+  settleDay(s); // A-184 매출·고정비 하루치를 자금에 바로 반영
   s.day += 1;
   s.msInDay = 0;
   s.nightMs = undefined;
@@ -119,18 +136,21 @@ export function endDay(s: GameState) {
   officeDay(s);
   eventsDay(s);
   contractsDay(s);
+  adSalesDay(s); // 광고 판매(A-182)
   loansDay(s);
   bankruptcyWarning(s);
   economyDay(s);
   publicDay(s);
   updateStage(s);
   missionsDay(s);
+  milestonesDay(s); // 약속(A-173)
   if (s.day % 3 === 0) achievementsDay(s);
   pruneMods(s);
   if (isFirstOfMonth(s.day)) {
     const pl = closeMonth(s, totalUsers(s));
     s.company.profitStreak = pl.operatingProfit > 0 ? s.company.profitStreak + 1 : 0;
     competitorsMonth(s);
+    contactsMonth(s); // 오래 안 만난 연락처는 친밀도가 식음(A-186)
     marketingMonth(s); // 월초 고객 리포트·광고 맡기기(A-157)
     staffMonth(s, dateOf(s.day).getUTCMonth() === 0);
     aiMonth(s);

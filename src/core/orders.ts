@@ -14,7 +14,7 @@ import { workOnContract } from './contracts';
 import { allDeptOutputs, orderOutputs } from './staff';
 import { orderShare } from './assign';
 import { pick, rand, randInt, randRange } from './rng';
-import type { DeptId, GameState } from './types';
+import type { DeptId, GameState, MarketId } from './types';
 
 export function setOrder(s: GameState, d: DeptId, orderId: string): string | null {
   const o = orderDef(orderId);
@@ -63,6 +63,16 @@ function qualityWarn(s: GameState) {
   }
 }
 
+// 개발팀 "외주 작업" 지시의 하루 출력을 근무 칸마다 1/slotsPerDay씩 넣습니다(A-173). 외주가 없거나 끝나면 남는 몫은 제품 개발로.
+export function contractSlot(s: GameState) {
+  const byOrder = orderOutputs(s);
+  const day = byOrder['dev_contract'] ?? 0;
+  if (day <= 0) return;
+  const per = day / DATA.time.slotsPerDay;
+  const left = workOnContract(s, per);
+  if (left > 0) applyWork(s, left, 'dev', deptMembers(s, 'design').length === 0, devBugMult(s), Math.min(2, (byOrder['ai_research'] ?? 0) * 0.08));
+}
+
 // 하루 부서 출력 반영. 시장 처리에 넘길 값(DayPush)을 돌려줍니다.
 // A-147: 출력은 사람마다 하는 일(개인 업무 또는 팀 일)로 나뉩니다(byOrder). 개인 업무가 없으면 부서 출력 전부가 팀 일로 가서 예전과 같습니다.
 export function ordersDay(s: GameState): DayPush & { outputs: Record<DeptId, number> } {
@@ -78,10 +88,7 @@ export function ordersDay(s: GameState): DayPush & { outputs: Record<DeptId, num
     const used = applyWork(s, build, 'dev', !hasDesigners, devBugMult(s), aiBoost);
     if (used < build * 0.5 && s.product.roadmap.length === 0) fixBugs(s, (build - used) * 0.5, 'stabilize');
   }
-  if (amt('dev_contract') > 0) {
-    const left = workOnContract(s, amt('dev_contract'));
-    if (left > 0) applyWork(s, left, 'dev', !hasDesigners, devBugMult(s), aiBoost);
-  }
+  // 개발팀 "외주 작업"은 근무 한 칸마다 들어갑니다(contractSlot, A-173). 하루 끝에는 따로 넣지 않습니다.
   if (amt('dev_stabilize') > 0) fixBugs(s, amt('dev_stabilize'), 'stabilize');
   if (amt('dev_debt') > 0) fixBugs(s, amt('dev_debt'), 'debt');
   qualityWarn(s);
@@ -127,6 +134,12 @@ export function enterpriseThreshold(s: GameState): number {
 
 const ENT_NAMES = ['한빛전자', '대성그룹', '미래금융', '동해물산', '세종건설', '청운유통', '태백제약', '누리통신', '해오름항공', '백두화학', '가람자동차', '푸른에너지', '새벽보험', '나래식품', '은하조선'];
 
+// 대기업 계약 월액: 산업 entBase × (1 + 매력도/250) × mult × 시장 배율, 10만원 단위(A-186 미팅 계약도 씀)
+export function enterpriseMonthly(s: GameState, mult: number, m: MarketId): number {
+  const ind = industry(s.company.industry);
+  return Math.round((ind.entBase * (1 + appeal(s) / 250) * mult * (m === 'us' ? 2 : m === 'eu' ? 1.6 : m === 'jp' ? 1.3 : 1)) / 1e5) * 1e5;
+}
+
 function enterpriseDay(s: GameState) {
   const ind = industry(s.company.industry);
   if (!fxTotals(s).enterprise || ind.entBase <= 0) {
@@ -151,7 +164,7 @@ function enterpriseDay(s: GameState) {
     const name = ENT_NAMES.find((n) => !used.has(n) && rand(s) < 0.5) ?? pick(s, ENT_NAMES);
     const mkts = launchedMarkets(s);
     const m = pick(s, mkts);
-    const monthly = Math.round((ind.entBase * (1 + appeal(s) / 250) * randRange(s, 0.6, 1.6) * (m === 'us' ? 2 : m === 'eu' ? 1.6 : m === 'jp' ? 1.3 : 1)) / 1e5) * 1e5;
+    const monthly = enterpriseMonthly(s, randRange(s, 0.6, 1.6), m);
     const deal = { id: nextId(s, 'ent'), name: m === 'kr' ? name : `${name} ${m.toUpperCase()}`, monthly, startDay: s.day, endDay: s.day + randInt(s, 12, 36) * 30, market: m };
     s.enterprise.push(deal);
     s.company.enterpriseCount += 1;

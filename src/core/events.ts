@@ -22,6 +22,7 @@ import { avgHealth, avgSat, hasTrait, removeEmployee, rollTalent, startSkill } f
 import { takeDesk } from './office';
 import { onEmployeeJoined } from './messenger';
 import { applyLoanChoice } from './loans';
+import { tiredness } from './ceo';
 import { DATA } from './data';
 import type { DeptId, Employee, GameState, Grade, MarketId, PendingDecision } from './types';
 
@@ -50,6 +51,7 @@ export interface EventDef {
   urgent?: boolean;
   cond?: Cond;
   target?: string;
+  tenureMin?: number; // 대상 직원 최소 근속(일). 입사한 지 얼마 안 된 직원이 '1년간'을 말하지 않게
   texts: string[];
   choices: Choice[];
   deadline?: number;
@@ -168,9 +170,9 @@ export function condOk(s: GameState, c: Cond | undefined): boolean {
   return true;
 }
 
-function pickTarget(s: GameState, how: string | undefined): Employee | null | undefined {
+function pickTarget(s: GameState, how: string | undefined, tenureMin = 0): Employee | null | undefined {
   if (!how) return null;
-  const all = s.employees.filter((e) => e.leaving === null);
+  const all = s.employees.filter((e) => e.leaving === null && s.day - e.joinedDay >= tenureMin);
   let pool: Employee[] = [];
   switch (how) {
     case 'any':
@@ -337,7 +339,7 @@ export function trigger(s: GameState, forceId?: string, opts: { competitorId?: s
       if (!condOk(s, ev.cond)) continue;
       if (s.decisions.some((d) => !d.resolved && d.eventId === ev.id)) continue;
     }
-    const t = pickTarget(s, ev.target);
+    const t = pickTarget(s, ev.target, ev.tenureMin);
     if (t === undefined) continue;
     cands.push({ ev, target: t });
   }
@@ -422,7 +424,7 @@ export function resolveDecision(s: GameState, id: string, idx: number, auto = fa
     s.accrual.other += cost;
   }
   // A-146 지친 대표는 판단이 흐려짐: 컨디션이 낮으면 나쁜 결과가 더 잘 나옴
-  const tired = Math.max(0, 1 - (s.ceoEnergy ?? DATA.ceo.energy.start) / DATA.ceo.energy.lowAt);
+  const tired = tiredness(s);
   const oc = weighted(
     s,
     orig.outcomes,

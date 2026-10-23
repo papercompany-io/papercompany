@@ -3,7 +3,7 @@
 // 빚은 기업가치에서 빠지고(valuation.ts), 이자는 손익, 원금은 월급일 현금에서 나갑니다(finance.ts).
 import { DATA } from './data';
 import { yearOf } from './calendar';
-import { lastRevenue, runwayMonths, book } from './finance';
+import { lastRevenue, runwayMonths, book, spendNow } from './finance';
 import { trigger } from './events';
 import { hasMvp } from './product';
 import { clearFlag, hasFlag, setFlag } from './mods';
@@ -92,15 +92,58 @@ function offerLoan(s: GameState) {
         ch.enabled = false;
         ch.why = '이미 받았거나 심사 중';
       }
-      ch.hint = `최대 ${fmt(loanLimit(s, 'policy'))}, 심사 2~3주, 이자 낮음, ${L.policy.graceMonths}개월은 이자만`;
+      ch.hint = loanHint(s, 'policy');
     } else if (ch.label.startsWith('은행')) {
       if (!bankOpen(s)) {
         ch.enabled = false;
         ch.why = '이미 받은 대출이 있음';
       }
-      ch.hint = `최대 ${fmt(loanLimit(s, 'bank'))} 바로 입금, 이자 높음, 대표 개인 보증(파산하면 남은 빚을 대표가 갚음)`;
+      ch.hint = loanHint(s, 'bank');
     }
   }
+}
+
+// 선택지·재무 화면이 같이 쓰는 조건 설명(심사 확률·이자율 숫자는 보여 주지 않음)
+export function loanHint(s: GameState, kind: 'policy' | 'bank'): string {
+  return kind === 'policy'
+    ? `최대 ${fmt(loanLimit(s, 'policy'))}, 심사 2~3주, 이자 낮음, ${L.policy.graceMonths}개월은 이자만`
+    : `최대 ${fmt(loanLimit(s, 'bank'))} 바로 입금, 이자 높음, 대표 개인 보증(파산하면 남은 빚을 대표가 갚음)`;
+}
+
+// A-185 재무 화면에서 직접 신청: 메신저 제안과 같은 조건(제품 출시 뒤, 버틸 기간이 offerRunway개월 아래). 막히면 이유를 말로
+export function loanBlock(s: GameState, kind: 'policy' | 'bank'): string | null {
+  if (s.public) return '상장한 회사는 신청할 수 없습니다';
+  if (!hasMvp(s)) return '제품을 내놓은 뒤에 신청할 수 있습니다';
+  if (kind === 'policy') {
+    if (s.loanApp) return '심사 중입니다';
+    if ((s.loans ?? []).some((l) => l.kind === 'policy')) return '이미 받은 정책자금이 있습니다';
+    if (!policyOpen(s)) return `창업 ${L.policy.maxAgeYears}년이 지나 신청할 수 없습니다`;
+  } else if (!bankOpen(s)) return '이미 받은 은행 대출이 있습니다';
+  const rw = runwayMonths(s);
+  if (rw === null || rw >= L.offerRunway) return `버틸 기간이 ${L.offerRunway}개월 아래로 줄면 신청할 수 있습니다`;
+  return null;
+}
+
+export function applyForLoan(s: GameState, kind: 'policy' | 'bank') {
+  if (loanBlock(s, kind)) return;
+  applyLoanChoice(s, kind);
+}
+
+// A-185 미리 갚기: 남은 원금 + 중도상환수수료(earlyFee, 기타 비용)를 한 번에. 다 갚으면 같은 곳에서 다시 빌릴 수 있음
+export function earlyRepayCost(s: GameState, loan: Loan): { principal: number; fee: number } {
+  const principal = Math.round(loan.balance);
+  return { principal, fee: Math.round(principal * L[loan.kind].earlyFee) };
+}
+
+export function repayEarly(s: GameState, id: string): boolean {
+  const loan = (s.loans ?? []).find((l) => l.id === id);
+  if (!loan) return false;
+  const { principal, fee } = earlyRepayCost(s, loan);
+  if (s.cash < principal + fee) return false;
+  book(s, `${loan.lender} 대출 미리 상환`, -principal);
+  spendNow(s, `${loan.lender} 중도상환수수료`, fee, 'other');
+  s.loans = (s.loans ?? []).filter((l) => l.id !== id);
+  return true;
 }
 
 // 결정 결과(events.ts applyFx의 fx.loan)

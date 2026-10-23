@@ -1,5 +1,5 @@
 {
-  "_note": "EM-02 부서(A-06) + v2 새 부서(Claude 제안). 월급은 B등급 기준 월 원 [예시값]. stage = 이 부서를 둘 수 있는 회사 단계. cap = 직원 1명(B등급)이 감당하는 사용자 수(고객지원·인프라). capScale(A-156 규모의 경제 [예시값]) = B2C(소비자 앱·커머스·핀테크)만, 필요 인원이 from명까지는 사용자 수에 비례하고 그 뒤로는 사용자가 10배 늘 때마다 perDecade명씩만 늘어남(자동화·외주·도구). 소비자 앱 고객지원은 120만 명까지 20명, 1억 명이면 약 30명, 10억 명이면 약 35명. B2B(고객사)는 예전처럼 고객사 수에 비례(기업 고객은 담당자가 붙어야 함)",
+  "_note": "EM-02 부서(A-06) + v2 새 부서(Claude 제안). 월급은 B등급 기준 월 원 [예시값]. stage = 이 부서를 둘 수 있는 회사 단계. cap = 직원 1명(B등급)이 감당하는 사용자 수(고객지원·인프라). capScale(A-156 규모의 경제 [예시값]) = B2C(소비자 앱·커머스·핀테크)만, 필요 인원이 from명까지는 사용자 수에 비례하고 그 뒤로는 사용자가 10배 늘 때마다 perDecade명씩만 늘어남(자동화·외주·도구). 소비자 앱 고객지원은 120만 명까지 20명, 1억 명이면 약 30명, 10억 명이면 약 35명. B2B(고객사)는 예전처럼 고객사 수에 비례(기업 고객은 담당자가 붙어야 함). industries = 이 산업에서만 둘 수 있는 부서(A-182 광고 운영은 광고 판매가 있는 산업만)",
   "capScale": { "b2c": { "from": 20, "perDecade": 5 } },
   "departments": [
     { "id": "dev", "name": "개발", "role": "개발자", "color": "#4f8df5", "baseSalary": 4500000, "stage": 0 },
@@ -10,6 +10,7 @@
     { "id": "cs", "name": "고객지원", "role": "CS 매니저", "color": "#2fb5b5", "baseSalary": 3000000, "stage": 2, "cap": { "saas": 250, "consumer": 60000, "commerce": 25000, "fintech": 30000, "ai": 150 } },
     { "id": "infra", "name": "인프라", "role": "인프라 엔지니어", "color": "#7a8597", "baseSalary": 5000000, "stage": 3, "cap": { "saas": 2000, "consumer": 400000, "commerce": 150000, "fintech": 200000, "ai": 600 } },
     { "id": "finlegal", "name": "재무법무", "role": "재무·법무 담당", "color": "#a0785a", "baseSalary": 4800000, "stage": 3 },
-    { "id": "ai", "name": "AI연구", "role": "AI 연구원", "color": "#ff7a45", "baseSalary": 6500000, "stage": 3 }
+    { "id": "ai", "name": "AI연구", "role": "AI 연구원", "color": "#ff7a45", "baseSalary": 6500000, "stage": 3 },
+    { "id": "adops", "name": "광고 운영", "role": "애드옵스 매니저", "color": "#d9a400", "baseSalary": 4000000, "stage": 1, "industries": ["consumer"] }
   ]
 }

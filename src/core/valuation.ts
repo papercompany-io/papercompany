@@ -58,13 +58,33 @@ export function revenueGrowth(s: GameState): number | null {
   return Math.pow(b / a, 1 / n) - 1;
 }
 
+// 매출 기록 기간(A-165): 첫 매출이 난 달부터 센 개월 수
+export function revenueMonths(s: GameState): number {
+  const i = s.plHistory.findIndex((m) => m.revenue > 0);
+  return i < 0 ? 0 : s.plHistory.length - i;
+}
+
+// 매출 기록 기간 할인 계수(A-165): 첫 매출 base → months개월째 1. 매출이 막 생긴 회사는 성장률이 늘 높게 나와 배수를 과하게 받으므로 기록이 쌓일 때까지 깎음
+export function trackFactor(s: GameState): number {
+  const t = V.track;
+  return Math.min(1, t.base + ((1 - t.base) * revenueMonths(s)) / t.months);
+}
+
+// 고객 수 규모 할인 계수(A-169): 고객 수가 ref보다 적을수록 깎음. 소수 고객의 매출을 12배 해 높은 배수를 주는 것을 막음
+export function scaleFactor(users: number): number {
+  const t = V.scale;
+  return Math.min(1, Math.pow(Math.max(0, users) / t.ref, t.power));
+}
+
 export function revenueMultiple(s: GameState): { multiple: number; detail: string } {
   const base = industry(s.company.industry).valMult;
   const g = revenueGrowth(s);
   const gm = g === null ? 1.2 : g >= 0.15 ? 1.6 : g >= 0.08 ? 1.35 : g >= 0.03 ? 1.15 : g >= 0 ? 1.0 : 0.7;
   const e = econ(s, 'valuation');
-  const m = base * gm * e * (1 + mod(s, 'valuation'));
-  return { multiple: m, detail: `매출 배수 ${m.toFixed(1)}배 = 산업 기준 ${base} × 성장(${g === null ? '첫 매출' : (g * 100).toFixed(1) + '%/월'}) ${gm} × 경기 ${e.toFixed(2)}` };
+  const tf = trackFactor(s);
+  const sf = scaleFactor(totalUsers(s));
+  const m = base * gm * e * tf * sf * (1 + mod(s, 'valuation'));
+  return { multiple: m, detail: `매출 배수 ${m.toFixed(1)}배 = 산업 기준 ${base} × 성장(${g === null ? '첫 매출' : (g * 100).toFixed(1) + '%/월'}) ${gm} × 경기 ${e.toFixed(2)} × 매출 기록 ${tf.toFixed(2)}(${revenueMonths(s)}개월) × 규모 ${sf.toFixed(2)}` };
 }
 
 export function revenueMethod(s: GameState): { business: number; method: 'revenue' | 'profit'; detail: string[]; multiple: number } | null {
@@ -97,7 +117,7 @@ export function revenueMethod(s: GameState): { business: number; method: 'revenu
 export function userValue(s: GameState): number {
   const g = revenueGrowth(s);
   const gm = g === null ? 1 : g >= 0.1 ? 1.5 : g >= 0.03 ? 1.15 : g >= 0 ? 0.9 : 0.6;
-  return totalUsers(s) * industry(s.company.industry).userValue * gm * econ(s, 'valuation');
+  return totalUsers(s) * industry(s.company.industry).userValue * gm * econ(s, 'valuation') * trackFactor(s);
 }
 
 // 매출 전 실체 계수(A-81): 아이디어만 있는 회사는 가치가 거의 없고, 핵심 기능·MVP·팀·사용자가 생길수록 스코어카드 가치를 인정받습니다.

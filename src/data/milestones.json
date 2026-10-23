@@ -1,0 +1,115 @@
+{
+  "_note": "A-177 약속(마일스톤) [예시값]. 바깥(고객사·제휴사·행사·투자사)이 날짜를 제안하고 대표가 받을지 정함 + 분기마다 대표가 스스로 정하는 목표. 지키면 보상과 약속 신뢰, 늦으면 보상 일부, 크게 늦거나 포기하면 신뢰가 깎임. 신뢰는 투자 결정 확률과 고객사 계약 규모에 들어감. 형식은 docs/CONTENT_SCHEMA.md 약속 절",
+  "trust": {
+    "_note": "약속 신뢰 0~100(시작 start). 결과마다 더하고 뺌, 시간이 지나면 50 쪽으로 돌아감(decay). 투자 결정 확률 = (신뢰 − 50) ÷ 10 × investPer10(±investCap까지), 고객사 계약 월액 × (1 + (신뢰 − 50) ÷ 10 × dealPer10)",
+    "start": 50,
+    "early": 9,
+    "onTime": 7,
+    "late": -5,
+    "fail": -12,
+    "drop": -9,
+    "extend": -4,
+    "cut": -2,
+    "investPer10": 0.012,
+    "investCap": 0.06,
+    "dealPer10": 0.05,
+    "decay": 0.12,
+    "_decayNote": "한 달에 (신뢰 − 50)의 decay만큼 50 쪽으로 돌아감(지킨 기록도 오래되면 잊힘)"
+  },
+  "offerEveryDays": [35, 70],
+  "firstOfferDay": 25,
+  "maxOpen": 2,
+  "offerValidDays": 7,
+  "earlyFrac": 0.15,
+  "grace": 0.25,
+  "lateReward": 0.5,
+  "_kindsNote": "kind별 제안 조건과 보상. slack = 지금 속도로 끝나는 날수 × [최소, 최대] 만큼 기한을 줌(빠듯함~넉넉함). minDays·maxDays로 자름",
+  "customer": {
+    "_note": "B2B(entBase > 0) 산업, MVP 뒤. 아직 없는 기능 1~2개를 기한 안에 만들어 주면 연 계약. 월액 = entBase × (1 + 매력도/250) × monthlyMult × 신뢰 배율(대기업 파이프라인 계약보다 작은 시범 계약). 못 지키면 명성 − failRep, 소문이 나서 대기업 파이프라인 × (1 − failPipeline). slack 최소가 1보다 작아서 지금 속도로는 못 맞추는 제안도 옴",
+    "features": [1, 2],
+    "cats": ["enterprise", "infra", "retention", "growth", "monetize"],
+    "slack": [0.55, 1.3],
+    "minDays": 20,
+    "maxDays": 210,
+    "monthlyMult": [0.3, 0.6],
+    "months": [6, 12],
+    "failRep": 1,
+    "failPipeline": 0.3,
+    "cutReward": 0.6,
+    "names": ["한빛상사 구매팀", "오름물산 IT팀", "새솔유통 운영팀", "다온테크 기획팀", "가람제약 전산팀", "누리물류 운영팀"]
+  },
+  "partner": {
+    "_note": "B2C 산업(entBase = 0), MVP 뒤. 기능 1개를 기한 안에 만들면 제휴 홍보 — 국내 인지도 + awareness, 사용자 + users 비율. 못 지키면 국내 인지도 − failAwareness",
+    "features": [1, 1],
+    "cats": ["growth", "retention", "platform", "ai", "monetize"],
+    "slack": [0.55, 1.3],
+    "minDays": 20,
+    "maxDays": 180,
+    "awareness": 0.05,
+    "users": 0.03,
+    "failAwareness": 0.02,
+    "cutReward": 0.6,
+    "names": ["모아페이 제휴팀", "하루통신 마케팅팀", "새봄카드 제휴팀", "빛나라쇼핑 MD팀"]
+  },
+  "event": {
+    "_note": "행사 발표일 = 기한(미룰 수 없음). 받을 때 참가비 fee[회사 단계]를 냄(못 돌려받음). MVP 전에는 데모데이에서 MVP 공개(핵심 기능 전부), 뒤에는 만드는 순서 맨 앞 기능 발표. 지키면 IR·인지도·명성, 못 지키면(발표 펑크) 명성 − missRep, IR − missIr, 국내 인지도 − missAwareness",
+    "slack": [0.6, 1.3],
+    "fee": [3000000, 5000000, 10000000, 20000000, 40000000, 60000000],
+    "minDays": 14,
+    "maxDays": 150,
+    "ir": 6,
+    "awareness": 0.04,
+    "rep": 1,
+    "missRep": 2,
+    "missIr": 8,
+    "missAwareness": 0.02,
+    "names": ["스타트업 데모데이", "테크 컨퍼런스 발표", "투자사 데모데이", "업계 쇼케이스"]
+  },
+  "investor": {
+    "_note": "라운드를 마친 뒤 리드 투자사가 다음 목표를 제안(기한 days일). 지표 = 결제를 받으면 월 매출, 아니면 사용자. 목표 = 지금 × growth. 지키면 투자 결정 확률 + investBonus(investBonusDays일), 못 지키면 − investPenalty(같은 기간)",
+    "days": 180,
+    "growth": [1.6, 2.2],
+    "investBonus": 0.05,
+    "investBonusDays": 365,
+    "investPenalty": 0.06
+  },
+  "goal": {
+    "_note": "분기 목표(MVP 뒤, 분기 첫날 제안 · offerDays 안에 고름). 목표 = 지금 × (1 + 추세 성장 × mult). 추세 성장 = 최근 60일 기울기를 90일로 늘린 값(최소 minGrowth). 무난하게(추세 그대로)는 보상이 작아 낮게 잡기가 이득이 아니게",
+    "offerDays": 10,
+    "days": 90,
+    "minGrowth": 0.06,
+    "satDays": 45,
+    "levels": [
+      { "id": "safe", "name": "무난하게", "desc": "지금 추세 그대로", "mult": 1.0, "sat": 1, "trust": 1, "missSat": -1, "missTrust": 0 },
+      { "id": "real", "name": "해 볼 만하게", "desc": "추세보다 조금 더", "mult": 1.35, "sat": 4, "trust": 4, "missSat": -3, "missTrust": -3 },
+      { "id": "stretch", "name": "크게", "desc": "추세의 두 배 가까이", "mult": 1.9, "sat": 8, "trust": 7, "missSat": -6, "missTrust": -6 }
+    ]
+  },
+  "push": {
+    "_note": "조율: 팀 몰아치기 — 직원 출력 + output(days일), 만족 sat(days일), 대표 컨디션 − energy, 버그 + bugs. 약속 하나에 한 번",
+    "output": 0.2,
+    "days": 14,
+    "sat": -6,
+    "energy": 8,
+    "bugs": 6
+  },
+  "extendFrac": 0.3,
+  "extendMinLeft": 0.3,
+  "_extendNote": "기한 연장은 한 번, 기간의 extendFrac만큼. 기한까지 기간의 extendMinLeft 이상 남았을 때만 받아 줌(막판 부탁은 안 통함, A-181)",
+  "spread": { "_note": "화면의 예상 범위: 남은 일 비율 × [lo, hi]만큼 앞뒤로 벌림(진행할수록 좁아짐). 지표 약속(투자사·분기 목표)에 씀", "lo": 0.12, "hi": 0.4 },
+  "hidden": {
+    "_note": "A-181 숨은 일: 기능 약속을 받으면 조건 기능마다 chance[kind] 확률로 아무도 모르는 개발 일이 붙음(그 기능 개발 작업량 × extra[kind]). 점검 회의에서 일찍 드러나거나, 아니면 진행 autoAt 넘어서·출시 직전에 늦게 드러남. 드러나기 전 예상 범위는 unknown(뒤로 길게), 점검하면 known(좁게)",
+    "chance": { "customer": 0.7, "partner": 0.6, "event": 0.5 },
+    "extra": { "customer": [0.25, 0.7], "partner": [0.2, 0.6], "event": [0.1, 0.35] },
+    "autoAt": 0.95,
+    "unknown": { "lo": 0.1, "hi": 0.6 },
+    "known": { "lo": 0.04, "hi": 0.12 }
+  },
+  "review": {
+    "_note": "A-181 점검 회의: 숨은 일이 남았을 수 있는 기능 약속마다 개발자(개발팀이 있을 때)가 요청. 첫 요청은 약속 기간의 firstAt 비율쯤, 거절·지나가면 every일 뒤 다시. lead일 뒤 startHour 사이 1시간, 사무실 안(이동 없음)",
+    "firstAt": [0.03, 0.12],
+    "every": [18, 30],
+    "lead": [1, 2],
+    "startHour": [10, 16]
+  }
+}

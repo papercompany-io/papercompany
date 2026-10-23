@@ -10,6 +10,7 @@ import { addMod, mod } from './mods';
 import { news, notify } from './notify';
 import { coreFeatures, featureLevel, hasMvp } from './product';
 import { totalUsers } from './market';
+import { milestoneInvestFactor } from './milestones';
 import { legacyFx } from './career';
 import { rand, randInt } from './rng';
 import { computeValuation, revenueGrowth, updateStoredValuation } from './valuation';
@@ -272,6 +273,9 @@ export function decisionProbability(s: GameState, r: Round, investorId: string):
     const ago = s.day - s.lastMajorOutage;
     factors.push({ label: `최근 큰 서비스 장애(${ago}일 전)`, value: -OU.investPenalty * (1 - ago / OU.investDays) });
   }
+  // A-177 약속 신뢰: 바깥과 한 약속을 지켜 온 회사인지
+  const mf = milestoneInvestFactor(s);
+  if (Math.abs(mf) > 0.003) factors.push({ label: mf > 0 ? '약속을 지켜 온 회사' : '약속을 자주 어긴 회사', value: mf });
   if (stageIndex(r.stage) >= stageIndex('A')) {
     const g = revenueGrowth(s);
     if (g !== null && g >= 0.08) factors.push({ label: `매출 성장률 월 ${(g * 100).toFixed(1)}%`, value: P.growthGood });

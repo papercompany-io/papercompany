@@ -6,7 +6,7 @@ import { mod } from './mods';
 import { news, notify, sfx } from './notify';
 import { post } from './messenger';
 import { rand } from './rng';
-import type { GameState, MarketId, RoadmapItem } from './types';
+import type { AdFormatId, GameState, MarketId, RoadmapItem } from './types';
 
 export const ROADMAP_MAX = 8;
 
@@ -46,11 +46,13 @@ const IN = FEATURE_RULES.insight;
 export type InsightKind = 'insight' | 'pay';
 
 export function insightCost(f: FeatureDef, level: number): { kind: InsightKind; n: number } {
-  const kind: InsightKind = f.cat === 'monetize' ? 'pay' : 'insight';
-  // 핵심 기능과 첫 결제 기능은 무료(이게 없으면 출시도 매출도 없음)
-  if (f.cat === 'core' || f.fx.billing) return { kind, n: 0 };
+  // A-182 광고 기능(광고 자리·단가)은 돈 내는 고객이 아니라 쓰는 사람에게서 배우므로 고객 인사이트
+  const adFeat = !!(f.fx.adFormat || f.fx.ecpm || f.fx.adOffers);
+  const kind: InsightKind = f.cat === 'monetize' && !adFeat ? 'pay' : 'insight';
+  // 핵심 기능과 첫 결제 기능, 첫 광고 자리(배너, A-182)는 무료(이게 없으면 출시도 매출도 없음)
+  if (f.cat === 'core' || f.fx.billing || f.fx.adFormat === 'banner') return { kind, n: 0 };
   const w = featureWork(f, level);
-  const rate = (IN.rate as Record<string, number>)[f.cat] ?? 0.5;
+  const rate = adFeat ? IN.rate.ad : ((IN.rate as Record<string, number>)[f.cat] ?? 0.5);
   return { kind, n: Math.ceil((w.dev + w.design) * rate) };
 }
 
@@ -153,7 +155,22 @@ export function moveRoadmap(s: GameState, index: number, dir: -1 | 1) {
 }
 
 export function itemNeed(it: RoadmapItem) {
-  return featureWork(feature(it.id), it.level);
+  const w = featureWork(feature(it.id), it.level);
+  return it.extra ? { ...w, dev: w.dev + it.extra } : w; // 드러난 숨은 일(A-181)
+}
+
+// 숨은 일이 드러남(A-181): 점검 회의(review)에서 일찍, 아니면 마무리 무렵(late) 늦게. 드러난 만큼 개발 일이 늘어납니다
+export function revealHidden(s: GameState, it: RoadmapItem, how: 'review' | 'late'): number {
+  const h = it.hidden ?? 0;
+  if (h <= 0) return 0;
+  it.extra = (it.extra ?? 0) + h;
+  it.hidden = 0;
+  it.found = how;
+  if (how === 'late') {
+    const ch = s.channels.some((c) => c.id === 'team-dev') ? 'team-dev' : 'all';
+    post(s, ch, '개발팀', `"${feature(it.id).name}" 마무리하다 보니 생각보다 일이 더 남아 있습니다. 끝나는 날이 늦어집니다.`, 'npc');
+  }
+  return h;
 }
 
 // 지금까지 만든 기능의 작업량 합(코드베이스 크기). 버그 밀도 계산에 씁니다.
@@ -241,7 +258,11 @@ function shipReady(s: GameState) {
   const done: RoadmapItem[] = [];
   for (const it of s.product.roadmap) {
     const need = itemNeed(it);
-    if (it.devDone >= need.dev - 1e-6 && it.designDone >= need.design - 1e-6 && it.level === featureLevel(s, it.id) + 1) done.push(it);
+    if (it.devDone >= need.dev - 1e-6 && it.designDone >= need.design - 1e-6 && it.level === featureLevel(s, it.id) + 1) {
+      // 숨은 일이 아직 안 드러났으면 출시 대신 마무리하다 발견(A-181)
+      if (revealHidden(s, it, 'late') > 0) continue;
+      done.push(it);
+    }
   }
   for (const it of done) ship(s, it);
 }
@@ -287,14 +308,14 @@ function launchMvp(s: GameState) {
 }
 
 // 기능 효과 합(레벨 × 레벨당 효과)
-export type FxTotals = Required<Omit<FeatureFx, 'enterprise' | 'market' | 'ai' | 'billing'>> & { enterprise: boolean; billing: boolean; markets: MarketId[]; aiFeatures: number };
+export type FxTotals = Required<Omit<FeatureFx, 'enterprise' | 'market' | 'ai' | 'billing' | 'adFormat'>> & { enterprise: boolean; billing: boolean; markets: MarketId[]; aiFeatures: number; adFormats: AdFormatId[] };
 
 export function fxTotals(s: GameState): FxTotals {
-  const t: FxTotals = { appeal: 0, conv: 0, churn: 0, pay: 0, arpu: 0, ad: 0, take: 0, gmv: 0, viral: 0, infra: 0, stability: 0, bugs: 0, enterprise: false, billing: false, markets: ['kr'], aiFeatures: 0 };
+  const t: FxTotals = { appeal: 0, conv: 0, churn: 0, pay: 0, arpu: 0, ad: 0, take: 0, gmv: 0, viral: 0, infra: 0, stability: 0, bugs: 0, ecpm: 0, adOffers: 0, enterprise: false, billing: false, markets: ['kr'], aiFeatures: 0, adFormats: [] };
   for (const [id, lv] of Object.entries(s.product.features)) {
     if (lv <= 0) continue;
     const fx = feature(id).fx;
-    for (const k of ['appeal', 'conv', 'churn', 'pay', 'arpu', 'ad', 'take', 'gmv', 'viral', 'infra', 'stability'] as const) {
+    for (const k of ['appeal', 'conv', 'churn', 'pay', 'arpu', 'ad', 'take', 'gmv', 'viral', 'infra', 'stability', 'ecpm', 'adOffers'] as const) {
       const v = fx[k];
       if (typeof v === 'number') t[k] += v * lv;
     }
@@ -302,6 +323,7 @@ export function fxTotals(s: GameState): FxTotals {
     if (fx.billing) t.billing = true;
     if (fx.market && !t.markets.includes(fx.market)) t.markets.push(fx.market);
     if (fx.ai) t.aiFeatures += lv;
+    if (fx.adFormat && !t.adFormats.includes(fx.adFormat)) t.adFormats.push(fx.adFormat);
   }
   // 수확 체감(A-45): 기능을 많이 쌓을수록 같은 효과가 덜 붙습니다.
   const soft = (x: number, k: number) => k * Math.log(1 + Math.max(0, x) / k);
@@ -314,6 +336,7 @@ export function fxTotals(s: GameState): FxTotals {
   t.take = soft(t.take, 0.02);
   t.stability = soft(t.stability, 0.6);
   t.ad = soft(t.ad, 800);
+  t.ecpm = soft(t.ecpm, 0.8); // A-182
   t.churn = -(1 - Math.exp(t.churn));
   t.infra = -(1 - Math.exp(t.infra));
   return t;

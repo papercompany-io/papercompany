@@ -67,6 +67,7 @@ export function fairPrice(s: GameState): number {
 export function publicDay(s: GameState) {
   const p = s.public;
   if (!p) return;
+  p.prev = p.price;
   p.fair = fairPrice(s);
   p.sentiment += (1 - p.sentiment) * 0.004;
   const target = p.fair * p.sentiment;
