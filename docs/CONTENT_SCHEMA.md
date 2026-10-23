@@ -73,6 +73,7 @@ Event:
 | `urgent` | `true`면 시간이 멈추고 결정 창이 뜸(DT-04). 아니면 메신저 메시지 + 알림 |
 | `cond` | 등장 조건(아래). 모두 만족해야 후보 |
 | `target` | 대상 직원 고르는 방법: `any`(아무 직원) `staff`(코파운더 제외) `best`(능력 최고) `lowSat`(만족도 최저) `lowHealth`(건강 최저) `dev`/`sales` 등 부서 id(그 부서 아무나) `lead`(팀장 중) `aiSkeptic`(AI 회의적 특성) |
+| `tenureMin` | 대상 직원 최소 근속(일). 문구가 "지난 1년"처럼 기간을 말하면 맞춰 둠 |
 | `texts` | 질문 문장 변형 2~3개(DC-03). 치환자: `{target}` 직원 이름, `{dept}` 대상 부서 이름, `{company}` 회사 이름, `{competitor}` 경쟁사 이름, `{market}` 시장 이름, `{amount}` 선택지 금액 표시 |
 | `choices` | 선택지 2~4개 |
 | `deadline` | 답변 기한(일, 3~14). 지나면 `default` 선택 |
@@ -190,7 +191,7 @@ Choice:
 
 `tier`: `bronze` `silver` `gold` `platinum`. `hidden: true`면 달성 전 설명을 가립니다.
 
-`cond.metric` 목록(엔진이 계산): `users` 전체 사용자 · `mrr` 지난달 매출 · `valuation` 기업가치 · `employees` 직원 수 · `cash` 보유 자금 · `featuresDone` 완성한 기능 수(레벨 합) · `markets` 진출 시장 수 · `stage` 회사 단계 · `fundingIndex` 투자 단계 순번(엔젤 0 … 시리즈 G 9) · `marketCap` 상장사 시가총액 · `profitMonths` 연속 흑자 개월 · `officeTier` 사무실 등급(1~5) · `aiAdoption` 평균 AI 적용률 · `founderPct` 내 지분 · `wealth` 창업자 개인 자산(커리어) · `companies` 세운 회사 수(커리어) · `exits` 성공한 Exit 수(커리어) · `bankruptcies` 파산 수(커리어) · `ipos` 상장 수(커리어) · `exitAmount` 한 번의 Exit 결과 금액 최대 · `rep` 명성 · `age` 창업자 나이 · `acquisitions` 인수한 경쟁사 수 · `share` 국내 시장 점유율(0~1) · `eventsDecided` 결정한 이벤트 수 · `bootstrapExit` 무투자 Exit 수 · `leads` 팀장 수 · `enterprise` 대기업 계약 수 · `satAvg` 평균 만족도.
+`cond.metric` 목록(엔진이 계산): `users` 전체 사용자 · `mrr` 지난달 매출 · `valuation` 기업가치 · `employees` 직원 수 · `cash` 보유 자금 · `featuresDone` 완성한 기능 수(레벨 합) · `markets` 진출 시장 수 · `stage` 회사 단계 · `fundingIndex` 투자 단계 순번(엔젤 0 … 시리즈 G 9) · `marketCap` 상장사 시가총액 · `profitMonths` 연속 흑자 개월 · `officeTier` 사무실 등급(1~5) · `aiAdoption` 평균 AI 적용률 · `founderPct` 내 지분 · `wealth` 창업자 개인 자산(커리어) · `companies` 세운 회사 수(커리어) · `exits` 성공한 Exit 수(커리어) · `bankruptcies` 파산 수(커리어) · `ipos` 상장 수(커리어) · `exitAmount` 한 번의 Exit 결과 금액 최대 · `rep` 명성 · `age` 창업자 나이 · `acquisitions` 인수한 경쟁사 수 · `share` 국내 시장 점유율(0~1) · `eventsDecided` 결정한 이벤트 수 · `bootstrapExit` 무투자 Exit 수 · `leads` 팀장 수 · `enterprise` 대기업 계약 수 · `satAvg` 평균 만족도 · `promisesKept` 이 회사에서 지킨 약속 수(A-177).
 
 `gte`(이상) 또는 `lte`(이하) 중 하나. 상장사 시가총액이나 산업 조건이 필요하면 `industry` 키를 더할 수 있습니다.
 
@@ -235,6 +236,32 @@ Choice:
 경쟁사 `style`: `price`(가격으로 맞서는 곳) · `feature`(기능을 빨리 따라오는 곳) · `marketing`(광고를 크게 쓰는 곳). 화면에는 쓰지 않고 예고 뉴스 말투로만 드러납니다.
 
 사건 문구의 `{competitor}가` `{company}를`처럼 이름 바로 뒤 조사(이·가·을·를·은·는·과·와)는 이름 받침에 맞게 바뀝니다.
+
+## 시장 순위 채우기 `src/data/markets.json` → `field` (A-161)
+
+순위표에만 쓰는 이름 있는 현지 회사. 점유율 규칙은 바꾸지 않고, 현지 기업·대체재 몫(A-47) 일부를 나눠 보여 줍니다. 저장하지 않고 (커리어 시드·산업·시장·자리)의 해시로 정해서 게임 난수를 쓰지 않습니다(`src/core/field.ts`).
+
+| 키 | 뜻 |
+| --- | --- |
+| `size` | 시장 하나의 순위표 줄 수(우리·그 시장 경쟁사 자리를 빼고 남은 만큼 현지 회사로 채움) |
+| `pool` | 시장마다 만들어 두는 후보 회사 수(살아 있는 것 중 큰 순서로 씀) |
+| `namedShare` | 현지·대체재 몫 가운데 이름 있는 회사들이 나눠 갖는 비율(나머지는 이름 없는 대체재) |
+| `weightSigma` | 회사 덩치의 흩어짐(로그정규 σ) |
+| `drift` · `driftDays` | 덩치가 driftDays일 주기로 천천히 오르내리는 폭(로그). 순위가 몇 년에 걸쳐 바뀜 |
+| `established` · `foundedFrom` · `entrantsUntil` | 게임 시작 전에 이미 있던 회사 비율과 그 설립 해 범위, 나머지가 새로 생기는 마지막 해 |
+| `closeChance` · `closeAfter` | 문 닫을 확률과 세운 지 몇 년 뒤 `[최소, 최대]` |
+| `rampYears` · `fadeYears` | 새 회사가 다 크는 데 걸리는 해, 닫기 전 줄어드는 해 |
+| `listed` | 시장별 상장 확률 `{kr, jp, sea, us, eu}` |
+| `ipoAfter` | 세운 지 몇 년 뒤 상장 `[최소, 최대]` |
+| `rivalListed` · `rivalAge` | 경쟁사 상장 확률, 순위에 나오기 전 이미 있던 햇수 `[최소, 최대]` |
+| `valueSigma` | 회사 배수의 흩어짐(로그정규 σ). 같은 고객 수라도 기업가치가 다름 |
+| `baseValue` · `listedValue` | 고객과 상관없는 팀·기술 몫, 상장 때 더해지는 공모 자금(둘 다 × 회사 배수) |
+| `basePrice` | 상장 무렵 주가대 `[최소, 최대]`(로그 균등). 주식 수 = 상장 무렵 예상 몸값 ÷ 이 값 |
+| `vol.slow` · `vol.mid` · `vol.day` | 시장 심리 흔들림(240일·30일 주기, 하루) |
+| `names.{시장}.pre` · `names.{시장}.sep` | 시장별 회사 이름 앞부분, 뒷부분과 이을 문자 |
+| `words.{산업}` | 산업별 회사 이름 뒷부분. 경쟁사 이름(`industries.json` `competitorNames`)과 겹치면 다시 뽑음 |
+
+기업가치 = (고객 × 시장 `arpu` × 산업 `userValue` × 경기 + `baseValue` + 상장했으면 `listedValue`) × 회사 배수, 경쟁사는 + 보유 자금. 상장사는 이 값 × 시장 심리가 시가총액, 시가총액 ÷ 주식 수가 주가. 우리 회사는 화면 위 회사 가치(`computeValuation`)와 상장 뒤 주가를 그대로 씁니다.
 
 ## 사건 스토리텔러 `src/data/story.json` (A-141)
 
@@ -306,3 +333,48 @@ Choice:
 | `team.refreshAt` · `trial` · `awareValue` | 맡기기: 지침이 refreshAt 넘는 채널 소재 교체, 빈 일손이면 잘 맞는 새 채널에 총예산의 trial, 성과 = 데려온 고객 + 알린 사람 × awareValue |
 
 월초 고객 리포트(`src/core/marketing.ts`)는 지난달 들어온 길(스스로·입소문·영업·광고·캠페인)과 떠난 이유(원래 떠나는 고객·버그·가격·고객지원·기간 효과 이름·제품보다 많이 데려옴)를 마케팅팀 채널로, 마케터가 없으면 #전체에 비서가 짧게 보냅니다. 경기 탓 이탈은 "원래 떠나는 고객"에 넣어 말하지 않습니다(경기 문구는 뉴스로만).
+
+## 약속(마일스톤) `src/data/milestones.json` (A-177)
+
+| 키 | 뜻 |
+| --- | --- |
+| `trust` | 약속 신뢰 0~100: 시작값, 결과별 증감(`early`·`onTime`·`late`·`fail`·`drop`·`extend`·`cut`), 투자 확률(`investPer10`, ±`investCap`), 고객사 계약 배율(`dealPer10`), 한 달에 50 쪽으로 돌아가는 비율(`decay`) |
+| `offerEveryDays` · `firstOfferDay` · `maxOpen` · `offerValidDays` | 바깥 제안 간격, 첫 제안 날, 동시에 열린 바깥 약속 수, 답할 수 있는 날수 |
+| `earlyFrac` · `grace` · `lateReward` | 기한의 이 비율만큼 일찍이면 "일찍", 늦어도 받아 주는 기간(고객사·제휴사만), 늦었을 때 보상 비율 |
+| `customer` · `partner` | 기능 약속: 요청 기능 수(`features`), 고를 분류(`cats`), 기한 = 지금 속도로 끝나는 날수 × `slack`(1 아래면 지금 속도로는 못 맞춤), 보상(시범 계약 `monthlyMult`·`months` / 인지도 `awareness`·사용자 `users`), 범위 줄였을 때 보상(`cutReward`), 못 지킨 대가(`failRep`·`failPipeline` / `failAwareness`), 상대 이름(`names`) |
+| `event` | 행사 발표: 참가비(`fee`[회사 단계]), 보상 `ir`·`awareness`·`rep`, 펑크 대가 `missRep`·`missIr`·`missAwareness` |
+| `investor` | 라운드 뒤 리드 투자사 목표: 기한 `days`, 목표 = 지금 × `growth`, 투자 확률 `investBonus`/`investPenalty`(`investBonusDays`일) |
+| `goal` | 분기 목표: 수준 `levels`(목표 = 지금 × (1 + 추세 성장 × `mult`), 달성 `sat`·`trust`, 못 이룸 `missSat`·`missTrust`), 고를 날수 `offerDays`, 최소 추세 `minGrowth` |
+| `push` | 조율 "팀 몰아치기": 직원 출력 `output`(`days`일), 만족 `sat`, 대표 컨디션 − `energy`, 버그 + `bugs` |
+| `extendFrac` · `extendMinLeft` · `spread` | 기한 연장 길이(기간 × 비율), 연장을 받아 주는 최소 남은 기간 비율(A-181), 지표 약속의 화면 예상 범위 폭(남은 일 비율 × `lo`/`hi`) |
+| `hidden` | 숨은 일(A-181): 기능 약속을 받을 때 조건 기능마다 붙을 확률 `chance[kind]`, 크기(그 기능 개발 작업량 × `extra[kind]`), 저절로 드러나는 진행 `autoAt`, 점검 전/뒤 예상 범위 `unknown`/`known` |
+| `review` | 점검 회의(A-181): 첫 요청 시점(약속 기간 × `firstAt`), 다시 요청 간격 `every`, 며칠 뒤 `lead`, 시작 시각 `startHour`. 회의 자체는 `ceo.json` outings 템플릿 `review`(`internal: true` = 무작위 초대 아님) |
+
+## 광고 판매 `src/data/adsales.json` (A-182)
+
+`industries.json`의 `adDeals: true` 산업(지금은 소비자 앱)만. 사용자당 광고 매출(`adBase`) 대신 광고 형식 기능 + 광고주 계약으로 법니다.
+
+| 키 | 뜻 |
+| --- | --- |
+| `formats[]` `{id, name, imp, ecpm}` | 광고 형식(`banner`·`image`·`video`). 기능 `fx.adFormat`이 그 자리를 엶. `imp` = 사용자 1명이 한 달에 보는 노출(프리미엄 구독자는 빼고), `ecpm` = 노출 1000회당 기준 단가(원) |
+| `remnant` | 계약 안 된 자리를 광고 네트워크가 채우는 단가 = `ecpm` × remnant × 광고 단가 배율 × 시장 객단가 |
+| `optimize` `{max, per, pow}` | 광고 운영 "남는 지면 최적화" 출력 → 광고 네트워크 단가 × (1 + min(max, per × 출력^pow)) |
+| `batchEveryDays` · `offerDays` · `maxOffers` · `perOutput` · `batchMax` | 제안 묶음 주기, 제안이 남는 날, 목록 최대, "광고주 찾기" 출력 1당 제안 수, 한 번 최대(+ 기능 `fx.adOffers`) |
+| `tiers[]` `{minUsers, w, share, months, mult, names}` | 광고주 등급. 사용자가 minUsers 이상이면 옴(가중치 w), 지금 재고의 share 범위만큼 월 노출, 원하는 기간 months 범위, 단가 배수 mult |
+| `monthsChoices` | 계약 기간 선택지(개월) |
+| `qualityMin` · `spread` | 최고 단가 × (qualityMin + (1 − qualityMin) × 품질/100) × spread 범위 난수 |
+| `nego` | 흥정(채용 흥정을 뒤집은 것): `openMin~openMax` 첫 제안(최고 단가 대비), `concede` 부를 때마다 광고주가 내 단가(최고 단가까지) 쪽으로 남은 차이를 좁히는 비율, 버티면 × `stallMove`, 최고 단가의 `insult`배를 넘으면 × `insultMove`, 차이가 `closeGap` 안이면 내 단가로 계약, 인내심 `dropBase`·`insultDrop`·`raisePenalty`·`stallDrop`·`finalStall`·`finalPatience`, `monthsDev` 기간 배율 |
+| `renewDefault` | 새 계약의 자동 연장 기본값(켜면 기간이 끝날 때 같은 조건으로 계속) |
+| `penalty` | 위약금: 계약 한 달마다 내보낸 노출이 `tolerance` 미만이면 못 내보낸 노출 × 단가 × `shortMult`, `cancelBelow` 미만이면 광고주가 끊고 월 계약금 × `cancelMonths` 더. 내가 기간 중 해지하면 남은 기간(최대 `breakMaxMonths`개월) 계약금 × `breakRate` |
+
+기능 `fx`: `adFormat`(광고 자리), `ecpm`(광고주 단가 +비율, 수확 체감 0.8), `adOffers`(제안 +수). 광고 기능은 지불 의사 대신 고객 인사이트(`rules.insight.rate.ad`), 배너는 무료. 부서 `industries`(그 산업에만 있는 부서), 경기 `fx.adSpend`(광고주 단가 배수).
+
+## 고객사 미팅 `src/data/meetings.json` (A-186)
+
+- `stages[]`: 단계별 `minutes`(미팅 시간), `roles`(참석 역할, `gate` = `gateRoles` 중 하나), `start`(시작 분위기 덤). B2B 산업만 단계 수만큼 이어짐
+- `roles.{decider,user,buyer,skeptic}`: `name`, `titles`(직함 후보), `weight`(결과 점수 가중), `start`, `concerns`(뽑힐 수 있는 걱정)
+- `concerns.{id}`: `name`, `cats`(데모·약속으로 풀어 주는 기능 분류), `bugsMax`(버그가 이보다 많으면 데모로 못 풂), `caseFits`(고객 사례로 풂), `say`(참석자가 꺼내는 말)
+- `cards.{ask,demo,case,price,promise,companion,close}`: `name`, `minutes`, `desc`(화면 설명, 숫자 없이), 카드별 분위기 변화(`match`·`plain`·`miss`…)와 조건(`needUsers`, `maxDiscount`, `max`, `uses`)
+- `companionCovers`: 함께 갈 수 있는 부서 → 풀 수 있는 걱정
+- `objection`, `signals`(분위기 문턱 → 몸짓), `tired`, `outcome`(결과 문턱·마무리 요청), `reward`(파이프라인·계약·약속), `bond`(친밀도), `auto`(알아서 진행·위임), `inviteBond`/`inviteWeight`, `followLead`, `lines`(대사)
+- 상태: `GameState.contacts`(연락처, 회사가 바뀌어도 남음), `GameState.meeting`(진행 중인 미팅, 있으면 시계가 멈춤), `Outing.stage/result/promised/discount/companion`
