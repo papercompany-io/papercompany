@@ -2,6 +2,7 @@
 // 목록은 body에 띄워(창 overflow에 안 잘림) 버튼 아래(모자라면 위)에 붙고, 바깥을 누르거나 Esc·스크롤하면 닫힘. ↑↓ Enter 지원.
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { uiZoom, viewH, viewW } from './meta';
 
 export type DescOption = { value: string; label: string; desc?: string; note?: string; disabled?: boolean };
 
@@ -34,13 +35,18 @@ export function DescSelect({ value, options, onChange, className, testId, ariaLa
 
   useLayoutEffect(() => {
     if (!open || !btn.current) return;
-    const r = btn.current.getBoundingClientRect();
-    const below = window.innerHeight - r.bottom - 8;
+    // 화면 크기(A-241): 버튼 자리·화면 넓이는 화면 픽셀이라 zoom으로 나눠 CSS 픽셀로
+    const z = uiZoom();
+    const b = btn.current.getBoundingClientRect();
+    const r = { left: b.left / z, top: b.top / z, bottom: b.bottom / z, width: b.width / z };
+    const W = viewW();
+    const H = viewH();
+    const below = H - r.bottom - 8;
     const above = r.top - 8;
     const up = below < 220 && above > below;
     const width = Math.max(r.width, minWidth);
-    const left = Math.max(8, Math.min(r.left, window.innerWidth - width - 8));
-    setPos(up ? { left, width, bottom: window.innerHeight - r.top + 4, maxH: Math.min(420, above) } : { left, width, top: r.bottom + 4, maxH: Math.min(420, below) });
+    const left = Math.max(8, Math.min(r.left, W - width - 8));
+    setPos(up ? { left, width, bottom: H - r.top + 4, maxH: Math.min(420, above) } : { left, width, top: r.bottom + 4, maxH: Math.min(420, below) });
   }, [open, minWidth]);
 
   useEffect(() => {

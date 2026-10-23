@@ -1,6 +1,6 @@
 /* 화면(A-180): 사무실 직원 창 — 직원 상세(A-179) 톤. 부서색은 머리 왼쪽 띠와 아바타 바탕에만, 아래에 행동 버튼 묶음. 루트 .epm 아래로만 */
 
-.modal.emp-modal.epm { width: 440px; max-width: calc(100vw - 32px); padding: 0; gap: 0; overflow: hidden; border-radius: var(--r-lg); background: var(--surface); }
+.modal.emp-modal.epm { width: 440px; max-width: calc(var(--vw) - 32px); padding: 0; gap: 0; overflow: hidden; border-radius: var(--r-lg); background: var(--surface); }
 
 .epm-head { position: relative; display: flex; align-items: center; gap: 14px; padding: 18px 18px 14px; border-bottom: 1px solid var(--line); background: var(--surface); }
 .epm-avatar { width: 60px; height: 60px; flex: none; border-radius: var(--r-sm); background: color-mix(in srgb, var(--dc) 24%, var(--surface)); image-rendering: pixelated; overflow: hidden; }
@@ -35,7 +35,7 @@
 }
 
 /* 화면(A-191, A-209): 한 칸 창 + 탭 — 머리 · 탭(업무 / 직원 정보) · 내용. 내용만 스크롤 */
-.modal.emp-modal.epm.wide { width: min(860px, calc(100vw - 48px)); max-height: calc(100vh - 64px); display: flex; flex-direction: column; }
+.modal.emp-modal.epm.wide { width: min(860px, calc(var(--vw) - 48px)); max-height: calc(var(--vh) - 64px); display: flex; flex-direction: column; }
 .epm.wide .epm-body, .epm.wide .epm-foot { flex: none; }
 .epm.wide .epm-right { flex: 1 1 auto; min-width: 0; min-height: 0; overflow: auto; padding: 16px 18px 18px; background: var(--surface); }
 .epm.wide > .epm-body, .epm.wide > .epm-foot { overflow: visible; }

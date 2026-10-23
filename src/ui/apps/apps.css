@@ -140,7 +140,7 @@ table.pl td.b { font-weight: 800; }
 .pd-gauge { width: 170px; height: auto; }
 .pd-gauge-num { font-size: 18px; font-weight: 800; fill: var(--ink); }
 .pd-feat { display: grid; grid-template-columns: 340px 1fr; gap: 12px; align-items: start; }
-.pd-feat-list { gap: 4px; max-height: calc(100vh - 300px); overflow-y: auto; padding-right: 4px; }
+.pd-feat-list { gap: 4px; max-height: calc(var(--vh) - 300px); overflow-y: auto; padding-right: 4px; }
 .pd-cats { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 4px; }
 .pd-cats button { border: 1px solid var(--line); background: #fff; border-radius: 12px; padding: 2px 9px; font-size: 12px; font-weight: 700; color: var(--ink-2); }
 .pd-cats button.on { background: var(--blue); border-color: var(--blue); color: #fff; }

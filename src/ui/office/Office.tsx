@@ -9,6 +9,7 @@ import { isSick } from '../../core/staff';
 import { deskAt, furnitureAt, furnitureItems, itemSize, moveDesk, moveFurniture, nextRot, ownsFurniture, placeDesk, placeFurniture, removeDesk, rotateDesk, rotateFurniture, storeFurniture } from '../../core/office';
 import type { GameState } from '../../core/types';
 import { act, getGame, useGame } from '../store';
+import { uiZoom } from '../meta';
 import { wonShort } from '../../core/format';
 import { Pix } from './pixel';
 import { TH, TW, ZOOM_MAX, ZOOM_MIN, actors, clampCamera, defaultCamera, defaultZoom, drawOffice, editItem, makeView, setLayout, type Actor, type Camera, type EditState } from './scene';
@@ -166,8 +167,9 @@ export function Office({ onCeo, onEmployee, pulseCeo, keysEnabled, floats = [] }
   // 화면 좌표 → 바닥 칸(소수)
   const floorAt = (clientX: number, clientY: number) => {
     const r = wrap.current!.getBoundingClientRect();
-    const wx = (clientX - r.left) / view.scale - view.ox;
-    const wy = (clientY - r.top) / view.scale - view.oy;
+    const z = uiZoom(); // 화면 크기(A-241): 화면 픽셀 → CSS 픽셀
+    const wx = (clientX - r.left) / z / view.scale - view.ox;
+    const wy = (clientY - r.top) / z / view.scale - view.oy;
     const a = (2 * wx) / TW;
     const b = (2 * wy) / TH;
     return { x: (a + b) / 2, y: (b - a) / 2 };
@@ -253,8 +255,8 @@ export function Office({ onCeo, onEmployee, pulseCeo, keysEnabled, floats = [] }
         onEditMove(e.clientX, e.clientY);
         const d = drag.current;
         if (!d) return;
-        const dx = e.clientX - d.x;
-        const dy = e.clientY - d.y;
+        const dx = (e.clientX - d.x) / uiZoom();
+        const dy = (e.clientY - d.y) / uiZoom();
         if (!d.moved && Math.hypot(dx, dy) < 5) return;
         d.moved = true;
         setCam(clampCamera({ x: d.cam.x - dx / scale, y: d.cam.y - dy / scale }));
@@ -269,7 +271,7 @@ export function Office({ onCeo, onEmployee, pulseCeo, keysEnabled, floats = [] }
       onPointerLeave={() => (drag.current = null)}
       onWheel={(e) => {
         const r = wrap.current?.getBoundingClientRect();
-        zoomTo(scale + (e.deltaY < 0 ? 1 : -1), e.clientX - (r?.left ?? 0), e.clientY - (r?.top ?? 0));
+        zoomTo(scale + (e.deltaY < 0 ? 1 : -1), (e.clientX - (r?.left ?? 0)) / uiZoom(), (e.clientY - (r?.top ?? 0)) / uiZoom());
       }}
     >
       <canvas ref={cv} className="office-canvas" style={{ width: view.artW * sc, height: view.artH * sc }} />

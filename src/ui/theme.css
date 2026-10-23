@@ -311,7 +311,7 @@ input[type='checkbox'] { accent-color: var(--accent); width: 16px; height: 16px;
 .help-text { font-size: var(--fs-sm); color: var(--text-2); line-height: 1.45; max-width: 640px; }
 
 /* ══════════════ 5. 게임 화면 ══════════════ */
-:root { --top-h: 86px; --side-w: 152px; --cards-w: 216px; }
+:root { --top-h: 86px; --side-w: 152px; --cards-w: 216px; --vw: calc(100vw / var(--ui-z, 1)); --vh: calc(100vh / var(--ui-z, 1)); } /* 화면 크기(A-241): zoom 뒤 실제 화면 넓이 */
 
 /* 위 HUD: 화면 위 가운데 떠 있는 반투명 어두운 카드, 2줄(레퍼런스).
    윗줄 = 날짜 · 회사 · 대표 나이(아래 가는 선은 하루 진행), 아랫줄 = 배속 · 시각 · 자금·기업가치·고객·직원 · 저장
@@ -746,7 +746,7 @@ input[type='checkbox'] { accent-color: var(--accent); width: 16px; height: 16px;
 @keyframes cardIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 
 /* 연봉 협상 창(A-89, Startup Company 채용 협상): 회색 머리띠 카드 셋 — 프로필·제안 보내기(왼쪽), 협상 대화(오른쪽), 아래 뒤로 */
-.modal.nego { width: min(860px, calc(100vw - 48px)); padding: 16px; gap: 14px; background: var(--surface-sunk); }
+.modal.nego { width: min(860px, calc(var(--vw) - 48px)); padding: 16px; gap: 14px; background: var(--surface-sunk); }
 .nego-body { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; min-height: 420px; }
 .nego-left { display: flex; flex-direction: column; gap: 14px; }
 .nego-card { display: flex; flex-direction: column; background: var(--surface-tile); border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden; }
@@ -1372,10 +1372,10 @@ input[type='checkbox'] { accent-color: var(--accent); width: 16px; height: 16px;
 /* A-218: 가장자리에 끌어다 놓으면 붙을 자리 */
 .win-snap { position: absolute; border-radius: var(--r-md); border: 2px solid var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); pointer-events: none; transition: left 120ms var(--ease), top 120ms var(--ease), width 120ms var(--ease), height 120ms var(--ease); }
 /* 화면(A-124): 메신저에서 여는 투자 요약 팝업 */
-.inv-peek { width: 420px; max-width: calc(100vw - 32px); display: flex; flex-direction: column; gap: 12px; }
+.inv-peek { width: 420px; max-width: calc(var(--vw) - 32px); display: flex; flex-direction: column; gap: 12px; }
 .inv-peek-box { border: 1px solid var(--line); border-radius: var(--r-sm); padding: 4px 12px; background: var(--surface-sunk); }
 /* 화면(A-126): 멈춘 채로 공고·투자를 시작했을 때 묻는 팝업 */
-.wait-modal { width: 400px; max-width: calc(100vw - 32px); display: flex; flex-direction: column; gap: 10px; }
+.wait-modal { width: 400px; max-width: calc(var(--vw) - 32px); display: flex; flex-direction: column; gap: 10px; }
 .wait-modal p { margin: 0; color: var(--text-2); line-height: 1.5; }
 .wait-title { display: flex; align-items: center; gap: 8px; color: var(--text); }
 /* 화면(A-127): 일정이 겹치는 초대 안내 */
@@ -2154,7 +2154,7 @@ input[type='checkbox'] { accent-color: var(--accent); width: 16px; height: 16px;
 .fm-open b { font-size: var(--fs-md); font-weight: 700; color: var(--text); }
 .fm-open em { margin-left: auto; font-style: normal; font-size: var(--fs-sm); color: var(--text-3); }
 .fm-open:hover { background: var(--surface-hover); border-color: var(--accent); }
-.modal.fmod { width: min(720px, calc(100vw - 32px)); max-height: calc(100vh - 64px); padding: 0; gap: 0; overflow: hidden; border-radius: var(--r-lg); background: var(--surface); }
+.modal.fmod { width: min(720px, calc(var(--vw) - 32px)); max-height: calc(var(--vh) - 64px); padding: 0; gap: 0; overflow: hidden; border-radius: var(--r-lg); background: var(--surface); }
 .fmod-head { flex: none; display: flex; align-items: center; gap: 8px; padding: 14px 16px; border-bottom: 1px solid var(--line); }
 .fmod-head b { font-size: var(--fs-xl); font-weight: 700; }
 .fmod > .warn { margin: 8px 16px 0; }
@@ -2307,14 +2307,14 @@ input[type='checkbox'] { accent-color: var(--accent); width: 16px; height: 16px;
 .co-office { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); font-size: var(--fs-sm); color: var(--text-2); }
 .co-office span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .co-office .btn { flex: none; }
-.modal.of-modal { width: min(880px, calc(100vw - 32px)); max-height: calc(100vh - 48px); padding: 0; gap: 0; overflow: hidden; }
+.modal.of-modal { width: min(880px, calc(var(--vw) - 32px)); max-height: calc(var(--vh) - 48px); padding: 0; gap: 0; overflow: hidden; }
 .of-modal-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 14px 16px 12px; border-bottom: 1px solid var(--line); }
 .of-modal-head b { font-size: var(--fs-xl); font-weight: 800; }
 .of-modal-head .epm-x { position: static; }
 .of-modal-body { min-height: 0; overflow: auto; padding: 16px; }
 
 /* 화면(A-216): 페이퍼뉴스 띠 — 오른쪽 아래 모서리(카메라 안내 문구 자리), 위 자산·시간 카드(.hud-card)와 같은 어두운 판. 누르면 위로 지난 소식 목록 */
-.nt { position: absolute; right: 16px; bottom: 16px; z-index: 47; width: fit-content; max-width: min(460px, calc(100vw - var(--side-w, 200px) - 48px)); display: flex; flex-direction: column; align-items: flex-end; gap: 8px; } /* 띠는 글 길이만큼, 펼친 목록은 460px */
+.nt { position: absolute; right: 16px; bottom: 16px; z-index: 47; width: fit-content; max-width: min(460px, calc(var(--vw) - var(--side-w, 200px) - 48px)); display: flex; flex-direction: column; align-items: flex-end; gap: 8px; } /* 띠는 글 길이만큼, 펼친 목록은 460px */
 .nt-bar, .nt-list { background: rgba(37, 42, 55, 0.92); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: var(--r-lg); box-shadow: var(--sh-3); backdrop-filter: blur(6px); color: var(--chrome-text); }
 .nt-bar { display: flex; align-items: center; gap: 10px; max-width: 100%; height: 40px; padding: 0 12px 0 16px; text-align: left; cursor: pointer; animation: ntIn 900ms ease-out both; }
 .nt-bar:hover { border-color: rgba(255, 255, 255, 0.2); }
@@ -2330,7 +2330,7 @@ input[type='checkbox'] { accent-color: var(--accent); width: 16px; height: 16px;
 .nt-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-md); font-weight: 600; }
 .nt-date { flex: none; font-size: var(--fs-xs); color: var(--chrome-text-2); font-variant-numeric: tabular-nums; }
 .nt-caret { flex: none; font-size: 11px; color: var(--chrome-text-2); }
-.nt-list { display: flex; flex-direction: column; width: min(460px, calc(100vw - var(--side-w, 200px) - 48px)); max-height: min(360px, calc(100vh - 220px)); overflow: hidden; }
+.nt-list { display: flex; flex-direction: column; width: min(460px, calc(var(--vw) - var(--side-w, 200px) - 48px)); max-height: min(360px, calc(var(--vh) - 220px)); overflow: hidden; }
 .nt-list-head { display: flex; align-items: baseline; justify-content: space-between; padding: 10px 14px 8px; border-bottom: 1px solid var(--chrome-line); }
 .nt-list-head b { font-size: var(--fs-md); font-weight: 800; }
 .nt-list-head span { font-size: var(--fs-xs); color: var(--chrome-text-2); font-variant-numeric: tabular-nums; }

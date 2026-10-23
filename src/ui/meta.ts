@@ -46,10 +46,11 @@ export interface Settings {
   muteChatter: boolean; // 잡담 알림 끄기(A-201): 팀 채널·#전체 안 읽음을 뱃지에서 뺌
   autoSkipNight: AutoSkip; // 퇴근 뒤 자동 빨리 감기(A-149, A-159)
   autoSkipLast: Exclude<AutoSkip, 'off'>; // 위 막대 버튼으로 다시 켤 때 쓸 마지막 방식(A-159)
+  uiScale: number; // 화면 크기(A-241): 화면 전체 확대 배율
 }
 
 const SKEY = 'papercompany.settings';
-let settings: Settings = { autoPauseUrgent: true, defaultSpeed: 1, toasts: true, animations: true, muteChatter: false, autoSkipNight: 'off', autoSkipLast: 'always' };
+let settings: Settings = { autoPauseUrgent: true, defaultSpeed: 1, toasts: true, animations: true, muteChatter: false, autoSkipNight: 'off', autoSkipLast: 'always', uiScale: 1 };
 try {
   const raw = localStorage.getItem(SKEY);
   if (raw) settings = { ...settings, ...(JSON.parse(raw) as Partial<Settings>) };
@@ -57,6 +58,22 @@ try {
   /* 기본값 */
 }
 let sv = 0;
+
+// 화면 크기(A-241): html에 CSS zoom(웹·Electron 같음). 포인터 좌표(clientX)·getBoundingClientRect·innerWidth는 화면 픽셀이고
+// 창 위치·크기(style)는 CSS 픽셀이라, 그 둘을 섞는 곳은 uiZoom()으로 나눔. CSS의 100vw·100vh 대신 var(--vw)·var(--vh)
+export function uiZoom(): number {
+  return settings.uiScale > 0 ? settings.uiScale : 1;
+}
+export const viewW = () => window.innerWidth / uiZoom();
+export const viewH = () => window.innerHeight / uiZoom();
+function applyZoom() {
+  const h = document.documentElement;
+  const z = uiZoom();
+  h.style.zoom = z === 1 ? '' : String(z);
+  h.style.setProperty('--ui-z', String(z));
+  window.dispatchEvent(new Event('resize')); // 열린 창·목록이 새 넓이에 맞춰 다시 자리 잡게
+}
+applyZoom();
 const ssubs = new Set<() => void>();
 
 export function getSettings(): Settings {
@@ -65,6 +82,7 @@ export function getSettings(): Settings {
 
 export function setSettings(patch: Partial<Settings>) {
   settings = { ...settings, ...patch };
+  if (patch.uiScale !== undefined) applyZoom();
   sv++;
   ssubs.forEach((f) => f());
   try {

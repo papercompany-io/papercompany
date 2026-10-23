@@ -1,11 +1,11 @@
 // DT-02/03 앱: Startup Company처럼 왼쪽 메뉴에서 바로 열고, 사무실 위에 창으로 뜹니다(A-83).
 // 창은 여러 개 열 수 있고, 제목줄을 끌어 옮기고 네 변·모서리를 끌어 크기를 바꿉니다(A-124, A-218). 가장자리에 붙이면 반쪽 크기, Tab은 바로 전 창.
 // 회사 단계가 오르면 새 앱이 열리고(NEW 표시), 메뉴 버튼에 알림 배지(DT-04)가 붙습니다.
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { unreadTotal } from '../core/messenger';
 import { contractsOpen, hasActiveContract } from '../core/contracts';
 import { useGame } from './store';
-import { getSettings, useSettings } from './meta';
+import { getSettings, uiZoom, useSettings, viewH, viewW } from './meta';
 import { ScheduleApp } from './apps/ScheduleApp';
 import { EmployeesApp } from './apps/EmployeesApp';
 import { MessengerApp } from './apps/MessengerApp';
@@ -169,7 +169,7 @@ export function winArea() {
   const top = cssPx('--top-h', 86) + 12;
   const left = cssPx('--side-w', 84) + 14;
   const right = 14;
-  return { left, top, w: Math.max(MIN_W, window.innerWidth - left - right), h: Math.max(MIN_H, window.innerHeight - top - 14) };
+  return { left, top, w: Math.max(MIN_W, viewW() - left - right), h: Math.max(MIN_H, viewH() - top - 14) };
 }
 
 // 기본 크기는 화면을 다 덮지 않는 보통 크기(가로 960·세로 680까지, 화면의 70%·82%까지). 새 창은 열 때 최소 크기로 줄임(A-223, AppPanel).
@@ -190,8 +190,8 @@ export function wideBox(): WinBox {
 
 // 제목줄이 늘 화면 안에 남게(끌어서 화면 밖으로 잃어버리지 않게). min = 그 창 내용이 들어가는 최소 크기(A-124)
 export function clampBox(b: WinBox, min: { w: number; h: number } = { w: MIN_W, h: MIN_H }): WinBox {
-  const W = window.innerWidth;
-  const H = window.innerHeight;
+  const W = viewW();
+  const H = viewH();
   const w = Math.max(Math.min(W, min.w), Math.min(W, b.w));
   const h = Math.max(Math.min(H, min.h), Math.min(H, b.h));
   return { w, h, x: Math.max(120 - w, Math.min(W - 120, b.x)), y: Math.max(0, Math.min(H - 48, b.y)) };
@@ -224,9 +224,9 @@ function snapBox(px: number, py: number): WinBox | null {
   const a = winArea();
   const gap = 6;
   const L = px <= a.left - 4;
-  const R = px >= window.innerWidth - SNAP_PX;
+  const R = px >= viewW() - SNAP_PX;
   const T = py <= a.top - 4;
-  const B = py >= window.innerHeight - SNAP_PX;
+  const B = py >= viewH() - SNAP_PX;
   if (!L && !R && !T && !B) return null;
   const halfW = Math.round((a.w - gap) / 2);
   const halfH = Math.round((a.h - gap) / 2);
@@ -306,6 +306,23 @@ export function AppPanel({
     onBox({ x, y, w, h });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  // 화면 넓이가 바뀌면(브라우저 크기·화면 크기 A-241) 창을 창 놓는 곳 안으로 줄이고 당김
+  const now = useRef({ box, onBox });
+  now.current = { box, onBox };
+  useEffect(() => {
+    const fit = () => {
+      const { box: b, onBox: set } = now.current;
+      if (!b || !set) return;
+      const a = winArea();
+      const w = Math.min(b.w, a.w);
+      const h = Math.min(b.h, a.h);
+      const x = Math.max(a.left, Math.min(b.x, a.left + a.w - w));
+      const y = Math.max(a.top, Math.min(b.y, a.top + a.h - h));
+      if (x !== b.x || y !== b.y || w !== b.w || h !== b.h) set({ x, y, w, h });
+    };
+    window.addEventListener('resize', fit);
+    return () => window.removeEventListener('resize', fit);
+  }, []);
   const grab = (kind: 'move' | Edge) => (e: React.PointerEvent) => {
     if (!box || !onBox || e.button !== 0) return;
     if (kind === 'move' && (e.target as HTMLElement).closest('button')) return;
@@ -313,13 +330,15 @@ export function AppPanel({
     e.stopPropagation();
     e.currentTarget.setPointerCapture(e.pointerId);
     if (kind !== 'move') restore.current = null; // 붙은 창의 크기를 직접 바꾸면 그 크기가 새 기준
-    drag.current = { kind, px: e.clientX, py: e.clientY, b: box, min: fitMin(), snap: null };
+    drag.current = { kind, px: e.clientX / uiZoom(), py: e.clientY / uiZoom(), b: box, min: fitMin(), snap: null };
   };
   const follow = (e: React.PointerEvent) => {
     const d = drag.current;
     if (!d || !onBox) return;
-    const dx = e.clientX - d.px;
-    const dy = e.clientY - d.py;
+    const px = e.clientX / uiZoom(); // 화면 크기(A-241): 화면 픽셀 → CSS 픽셀
+    const py = e.clientY / uiZoom();
+    const dx = px - d.px;
+    const dy = py - d.py;
     if (d.kind !== 'move') return onBox(clampBox(resizeBox(d.b, d.kind, dx, dy, d.min), d.min));
     // 붙은 창을 떼면 붙이기 전 크기로, 잡은 곳이 제목줄 같은 비율 위치에 오게
     const r = restore.current;
@@ -329,7 +348,7 @@ export function AppPanel({
       restore.current = null;
     }
     onBox(clampBox({ ...d.b, x: d.b.x + dx, y: d.b.y + dy }, d.min));
-    d.snap = snapBox(e.clientX, e.clientY);
+    d.snap = snapBox(px, py);
     setGhost(d.snap);
   };
   const drop = () => {
