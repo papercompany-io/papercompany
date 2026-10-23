@@ -55,6 +55,42 @@ export function isSick(s: GameState, e: Employee) {
   return e.sickUntil !== null && e.sickUntil > s.day;
 }
 
+// 집에 보냄·휴가 중(A-231)
+export function isOff(s: GameState, e: Employee) {
+  return !!e.offUntil && e.offUntil > s.day;
+}
+
+export type LeaveId = 'home' | 'vacation';
+const LEAVE = DATA.welfare.leave;
+
+export function leaveOption(id: LeaveId) {
+  return LEAVE.options.find((o) => o.id === id)!;
+}
+
+// 쉬게 할 수 없는 이유(없으면 null)
+export function leaveBlock(s: GameState, e: Employee): string | null {
+  if (isSick(s, e)) return '병가 중입니다.';
+  if (isOff(s, e)) return '이미 쉬는 중입니다.';
+  if (e.leaving !== null) return '퇴사 예정입니다.';
+  if (e.leaveDay !== undefined && s.day - e.leaveDay < LEAVE.coolDays) return `최근에 쉬었습니다(${LEAVE.coolDays - (s.day - e.leaveDay)}일 뒤 다시).`;
+  return null;
+}
+
+// 집에 보내기(오늘 하루)·3일 휴가(A-231): 쉬는 동안 일을 하지 않는 대신 건강·만족이 바로 오름
+export function sendLeave(s: GameState, empId: string, id: LeaveId): string | null {
+  const e = employee(s, empId);
+  if (!e) return '직원을 찾을 수 없습니다.';
+  const why = leaveBlock(s, e);
+  if (why) return why;
+  const o = leaveOption(id);
+  e.offUntil = s.day + o.days;
+  e.leaveDay = s.day;
+  e.health = Math.min(100, e.health + o.health);
+  e.sat = Math.min(100, e.sat + o.sat);
+  float(s, id === 'home' ? '퇴근' : '휴가', 'good', e.seatId ?? undefined);
+  return null;
+}
+
 // 시장 월급(등급·물가 상승 반영): 직원 월급이 이보다 낮으면 만족도가 떨어집니다.
 export function marketSalary(s: GameState, d: DeptId, g: Grade): number {
   const years = Math.max(0, yearOf(s.day) - 2027);
@@ -76,7 +112,7 @@ export function leadInfo(s: GameState, d: DeptId) {
 
 // 직원 한 명의 하루 작업량(B등급 보통 상태 = 1)
 export function output(s: GameState, e: Employee, cache?: Map<DeptId, ReturnType<typeof leadInfo>>): number {
-  if (isSick(s, e) || (e.leaving !== null && e.leaving <= s.day)) return 0;
+  if (isSick(s, e) || isOff(s, e) || (e.leaving !== null && e.leaving <= s.day)) return 0;
   const li = cache?.get(e.dept) ?? leadInfo(s, e.dept);
   const skillF = 0.7 + (e.skill / 100) * 0.6;
   const satF = 0.75 + (e.sat / 100) * 0.4;
@@ -186,6 +222,7 @@ export function staffDay(s: GameState) {
     const mentor = deptMembers(s, e.dept).some((o) => o.id !== e.id && hasTrait(o, 'mentor')) ? 0.5 : 0;
     e.skill = Math.min(100, e.skill + 0.035 * (1 + train + mentor + traitFx(e, 'skill')) * (1 - e.skill / 105));
     if (e.sickUntil !== null && e.sickUntil <= s.day) e.sickUntil = null;
+    if (e.offUntil && e.offUntil <= s.day) e.offUntil = null;
     if (e.sickUntil === null && e.health < 35 && rand(s) < (35 - e.health) / 600) {
       const fast = s.company.welfare.includes('medical');
       e.sickUntil = s.day + randInt(s, fast ? 2 : 4, fast ? 5 : 10);
@@ -277,10 +314,13 @@ export function giveRaise(s: GameState, empId: string, rate: number): string | n
   return null;
 }
 
-// 보너스(A-180): 월급 몇 달치를 한 번에 주고 만족도를 100으로. 만족도는 staffDay에서 목표로 다시 내려가므로
+// 보너스(A-180): 한 번에 주고 만족도를 100으로. 만족도는 staffDay에서 목표로 다시 내려가므로
 // 처우·근무 문제를 고치는 대신 잠깐 버티게 하는 돈 — 퇴사 판정(달마다) 직전에 쓸 만함
+// 값(A-225): 채울 만족도만큼만 — 월급 × months × (100 − 만족도)/100, 최소 minCost
 export function bonusCost(e: Employee): number {
-  return Math.round((e.salary * DATA.hiring.bonus.months) / 10000) * 10000;
+  const B = DATA.hiring.bonus;
+  const missing = Math.max(0, 100 - e.sat) / 100;
+  return Math.max(B.minCost, Math.round((e.salary * B.months * missing) / 10000) * 10000);
 }
 
 // 줄 수 없으면 이유, 줄 수 있으면 null. 화면 버튼(disabled·title)과 giveBonus가 같이 씀

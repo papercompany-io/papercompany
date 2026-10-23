@@ -57,9 +57,6 @@
 .epm .emd-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
 /* 화면(A-209): 업무 창(.wk) 짜임과 맞춤 — 머리 오른쪽에 탭(업무 창 머리와 같은 자리), 막대·숫자는 회색 요약 칸 */
-.epm-head .epm-tabs { margin-left: auto; margin-right: 34px; min-width: 0; }
-.epm-head .epm-tabs .tabs { margin: 0; border-bottom: 0; }
-.epm-head:has(.epm-tabs) .epm-id { padding-right: 0; }
 .epm .emd-meters > div, .epm .emd-stats > div { padding: 12px 14px; border: none; border-radius: var(--r-lg); background: var(--surface-tile); }
 .epm .emd-meters { gap: 8px; }
 .epm .emd-meters > div { gap: 8px !important; }
@@ -68,3 +65,25 @@
 .epm .emd-stats > div b { font-size: var(--fs-lg); font-weight: 800; }
 .epm .emd-body, .epm-body { padding-top: 14px; }
 @media (max-width: 700px) { .epm .emd-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } .epm .emd-meters { grid-template-columns: 1fr; } }
+
+/* 화면(A-230): 머리 오른쪽 위에 행동 버튼(모양은 theme.css .act-row), 탭은 머리 아래 한 줄. 좁은 창에선 버튼이 이름 아래로 내려감 */
+.epm-head { flex-wrap: wrap; align-items: flex-start; padding-right: 52px; }
+.epm-id { flex: 1 1 200px; padding-right: 0; }
+.epm-head .epm-acts { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px; margin-left: auto; }
+.epm-fire-ask { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px; font-size: var(--fs-sm); color: var(--negative-press); }
+.epm > .epm-msg { margin: 10px 18px 0; }
+.epm-tabs { flex: none; padding: 0 18px; border-bottom: 1px solid var(--line); }
+.epm-tabs .tabs { margin: 0; border-bottom: 0; }
+.epm-info { padding-bottom: 16px; }
+.modal.emp-modal.epm:not(.wide) { width: 560px; }
+@media (max-width: 700px) { .epm-head .epm-acts { flex-basis: 100%; justify-content: flex-start; } }
+
+/* 화면(A-234): 행동 버튼은 머리 아래 창 폭 한 줄 — 보상 · 역할 · 쉼 · 대화 묶음을 얇은 선으로 나누고, 해고는 오른쪽 끝에 따로 */
+.modal.emp-modal.epm:not(.wide) { width: 640px; }
+.epm-head .epm-acts { flex-basis: calc(100% + 34px); flex-wrap: wrap; justify-content: flex-start; gap: 6px 0; margin: 4px -34px 0 0; padding-top: 12px; border-top: 1px solid var(--line); }
+.epm-grp { display: inline-flex; align-items: center; gap: 6px; padding: 0 8px; }
+.epm-grp:first-child { padding-left: 0; }
+.epm-grp + .epm-grp { border-left: 1px solid var(--line); }
+.epm-head .epm-acts .btn { min-height: 32px; padding: 6px 11px; white-space: nowrap; }
+.epm-head .epm-acts .act-danger { margin-left: auto; }
+.epm-head .epm-fire-ask { flex: 1; justify-content: flex-end; }

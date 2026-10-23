@@ -19,6 +19,14 @@
     "afterSat": -8,
     "cooldownDays": 30
   },
+  "leave": {
+    "_note": "A-231 직원 쉬게 하기 [예시값]: 집에 보내기(오늘 하루)·휴가(3일). 쉬는 동안 일을 하지 않고(작업량 0), 보내는 순간 건강·만족이 오름. 한 사람에게 coolDays일에 한 번",
+    "options": [
+      { "id": "home", "name": "집에 보내기", "days": 1, "health": 8, "sat": 4 },
+      { "id": "vacation", "name": "3일 휴가", "days": 3, "health": 22, "sat": 12 }
+    ],
+    "coolDays": 30
+  },
   "workPolicies": [
     { "id": "relaxed", "name": "정시 퇴근", "output": 0.92, "health": 10, "sat": 6, "desc": "출력은 조금 줄지만 건강과 만족도가 좋아집니다." },
     { "id": "normal", "name": "보통", "output": 1.0, "health": 0, "sat": 0, "desc": "기본 근무." },
