@@ -43,12 +43,13 @@ export interface Settings {
   defaultSpeed: number;
   toasts: boolean;
   animations: boolean;
+  muteChatter: boolean; // 잡담 알림 끄기(A-201): 팀 채널·#전체 안 읽음을 뱃지에서 뺌
   autoSkipNight: AutoSkip; // 퇴근 뒤 자동 빨리 감기(A-149, A-159)
   autoSkipLast: Exclude<AutoSkip, 'off'>; // 위 막대 버튼으로 다시 켤 때 쓸 마지막 방식(A-159)
 }
 
 const SKEY = 'papercompany.settings';
-let settings: Settings = { autoPauseUrgent: true, defaultSpeed: 1, toasts: true, animations: true, autoSkipNight: 'off', autoSkipLast: 'always' };
+let settings: Settings = { autoPauseUrgent: true, defaultSpeed: 1, toasts: true, animations: true, muteChatter: false, autoSkipNight: 'off', autoSkipLast: 'always' };
 try {
   const raw = localStorage.getItem(SKEY);
   if (raw) settings = { ...settings, ...(JSON.parse(raw) as Partial<Settings>) };

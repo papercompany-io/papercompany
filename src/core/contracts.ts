@@ -29,6 +29,7 @@ export interface ContractState {
   nextOfferDay: number;
   completed: number;
   trust?: number; // A-144: 외주 평판. 예전 저장은 없음 = 0
+  alert?: boolean; // A-208: 제안 목록이 새로 바뀌면 알림. 플레이어가 외주 창에서 켬(기본 끔)
 }
 
 export type ContractOutcome = 'early' | 'onTime' | 'late' | 'drop' | 'cancel';
@@ -59,8 +60,8 @@ function changeTrust(s: GameState, outcome: ContractOutcome, a: Contract) {
   const before = trustLevel(s).index;
   c.trust = Math.max(0, (c.trust ?? 0) + trustDelta(outcome, a));
   const after = trustLevel(s);
-  if (after.index > before) notify(s, `외주 평판이 올라 "${after.name}"가 됐습니다. 거래처 사이에 소문이 나서 더 큰 일감이 들어옵니다.`, 'good', 'product', 'contract');
-  else if (after.index < before) notify(s, `외주 평판이 떨어져 "${after.name}"로 내려갔습니다. 큰 일감 제안이 줄어듭니다.`, 'bad', 'product', 'contract');
+  if (after.index > before) notify(s, `외주 평판이 올라 "${after.name}"가 됐습니다. 거래처 사이에 소문이 나서 더 큰 일감이 들어옵니다.`, 'good', 'contract');
+  else if (after.index < before) notify(s, `외주 평판이 떨어져 "${after.name}"로 내려갔습니다. 큰 일감 제안이 줄어듭니다.`, 'bad', 'contract');
 }
 
 export function contractsOpen(s: GameState): boolean {
@@ -92,13 +93,14 @@ export function contractsDay(s: GameState) {
     const lv = trustLevel(s).index;
     c.offers = Array.from({ length: K.offers }, (_, i) => makeOffer(s, i === 0 ? lv : randInt(s, 0, lv)));
     c.nextOfferDay = s.day + K.offerEveryDays;
+    if (c.alert) notify(s, `새 외주 제안 ${c.offers.length}건이 들어왔습니다.`, 'info', 'contract'); // A-208
   }
   if (!contractsOpen(s)) c.offers = [];
   const a = c.active;
   if (a && a.deadline !== null && s.day > a.deadline + a.days) {
     c.active = null;
     s.career.rep = Math.max(0, s.career.rep - 2);
-    notify(s, `외주 "${a.title}"(${a.client})가 마감을 크게 넘겨 취소됐습니다. 대금을 받지 못했고 명성이 떨어졌습니다.`, 'bad', 'product', 'contract');
+    notify(s, `외주 "${a.title}"(${a.client})가 마감을 크게 넘겨 취소됐습니다. 대금을 받지 못했고 명성이 떨어졌습니다.`, 'bad', 'contract');
     changeTrust(s, 'cancel', a);
   }
 }
@@ -111,7 +113,7 @@ export function acceptContract(s: GameState, id: string): string | null {
   o.deadline = s.day + o.days;
   c.active = o;
   c.offers = c.offers.filter((x) => x.id !== id);
-  notify(s, `외주 "${o.title}"(${o.client})를 받았습니다. 사무실의 대표(나)를 눌러 "외주" 칸을 넣거나 개발팀에 "외주 작업"을 맡기세요.`, 'info', 'product', 'contract');
+  notify(s, `외주 "${o.title}"(${o.client})를 받았습니다. 사무실의 대표(나)를 눌러 "외주" 칸을 넣거나 개발팀에 "외주 작업"을 맡기세요.`, 'info', 'contract');
   return null;
 }
 
@@ -121,9 +123,14 @@ export function dropContract(s: GameState): string | null {
   const a = c.active;
   c.active = null;
   s.career.rep = Math.max(0, s.career.rep - 1);
-  notify(s, `외주 "${a.title}"를 포기했습니다. 명성이 조금 떨어졌습니다.`, 'bad', 'product', 'contract');
+  notify(s, `외주 "${a.title}"를 포기했습니다. 명성이 조금 떨어졌습니다.`, 'bad', 'contract');
   changeTrust(s, 'drop', a);
   return null;
+}
+
+// A-208: 외주 창 왼쪽 아래 "새 제안 알림 받기"
+export function setContractAlert(s: GameState, on: boolean) {
+  ensure(s).alert = on;
 }
 
 export function hasActiveContract(s: GameState): boolean {
@@ -150,11 +157,11 @@ function finish(s: GameState) {
   book(s, `외주 대금: ${a.title}(${a.client})`, pay);
   if (late) {
     s.career.rep = Math.max(0, s.career.rep - 1);
-    notify(s, `외주 "${a.title}"를 늦게 끝내 대금을 ${Math.round(K.latePayMult * 100)}%만 받았습니다: ${Math.round(pay / 1e4).toLocaleString('ko-KR')}만원`, 'bad', 'product', 'contract');
+    notify(s, `외주 "${a.title}"를 늦게 끝내 대금을 ${Math.round(K.latePayMult * 100)}%만 받았습니다: ${Math.round(pay / 1e4).toLocaleString('ko-KR')}만원`, 'bad', 'contract');
   } else {
     s.career.rep += 0.5;
     s.networkPoints += 2;
-    notify(s, `외주 "${a.title}" 완료! 대금 ${Math.round(pay / 1e4).toLocaleString('ko-KR')}만원이 들어왔습니다.`, 'good', 'product', 'contract');
+    notify(s, `외주 "${a.title}" 완료! 대금 ${Math.round(pay / 1e4).toLocaleString('ko-KR')}만원이 들어왔습니다.`, 'good', 'contract');
     s.events.push({ type: 'float', text: `+${Math.round(pay / 1e4).toLocaleString('ko-KR')}만`, kind: 'money', seat: 'ceo' });
   }
   // 마감까지 기간의 30% 이상 남기고 끝내면 "일찍"

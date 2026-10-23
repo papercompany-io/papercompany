@@ -1,5 +1,5 @@
 // 고객 흐름 부품(A-158): 규모 사다리, 제품이 받쳐 주는 고객(A-196, Startup Company의 잠재 사용자 — 숫자 + 막대), 들어오는 길·떠나는 이유 막대.
-// 업무 창 대시보드와 시장·광고 창이 같이 씁니다.
+// 업무 창 대시보드와 시장 창이 같이 씁니다.
 import { growthRoom, launchedMarkets, scaleSteps, totalUsers, unitWord } from '../../core/market';
 import { CLOSED_LINE, lossName, ROOM_LINE } from '../../core/marketing';
 import { industry } from '../../core/data';
@@ -28,6 +28,15 @@ export function ScaleLadder({ s }: { s: GameState }) {
   const lo = Math.log10(idx ? steps[idx - 1] : steps[0] / 10);
   const hi = idx < steps.length ? Math.log10(steps[idx]) : lo + 1;
   const p = Math.max(0, Math.min(1, (Math.log10(u) - lo) / (hi - lo)));
+  return (
+      <div className="sc-next" data-testid="scale-ladder" title={`${countShort(u)}${unitWord(s)}`}>
+        <span>{idx ? countShort(steps[idx - 1]) : 0}</span>
+        <span className="sc-bar">
+          <i style={{ width: `${idx < steps.length ? p * 100 : 100}%` }} />
+        </span>
+        <b>{idx < steps.length ? countShort(steps[idx]) : '최고 단계'}</b>
+      </div>
+    );
   return (
     <div className="sc-ladder" data-testid="scale-ladder" title={`${countShort(u)}${unitWord(s)}`}>
       {steps.map((n, i) => (
@@ -92,7 +101,8 @@ export function LossBars({ why, lost }: { why: Partial<Record<string, number>>; 
 }
 
 // 들어오는 길 막대(한 달 환산 명 수) + 떠나는 이유 막대, 두 칸
-export function FlowBars({ flow, unit }: { flow: Flow; unit: string }) {
+// A-202 simple: 막대 없이 세 줄 — 한 달 순증감 · 가장 큰 들어오는 길 · 가장 큰 떠나는 이유
+export function FlowBars({ flow, unit, simple }: { flow: Flow; unit: string; simple?: boolean }) {
   const gains: [string, number][] = [
     ['스스로 찾아옴', flow.inbound],
     ['입소문', flow.viral],
@@ -102,6 +112,28 @@ export function FlowBars({ flow, unit }: { flow: Flow; unit: string }) {
   const gTotal = gains.reduce((a, [, v]) => a + v, 0);
   const net = (gTotal - flow.lost) * 30;
   const fmt = (v: number) => (v * 30 >= 10 ? countShort(v * 30) : (v * 30).toFixed(1));
+  if (simple) {
+    const topIn = [...gains].sort((x, y) => y[1] - x[1])[0];
+    const topLoss = Object.entries(flow.why ?? {}).sort((x, y) => (y[1] ?? 0) - (x[1] ?? 0))[0];
+    const netText = `${net >= 0 ? '+' : '−'}${Math.abs(net) >= 10 ? countShort(Math.abs(net)) : Math.abs(net).toFixed(1)}`;
+    return (
+      <div className="cf-simple">
+        <div className={`cf-net-big ${net >= 0 ? 'fin-good' : 'fin-bad'}`}>
+          한 달에 {unit} <b>{netText}</b>
+        </div>
+        <div className="cf-line">
+          <span>들어옴</span>
+          <b className="fin-good">+{fmt(gTotal)}</b>
+          <em>{gTotal > 0 ? `주로 ${topIn[0]}` : '-'}</em>
+        </div>
+        <div className="cf-line">
+          <span>떠남</span>
+          <b className="fin-bad">−{fmt(flow.lost)}</b>
+          <em>{topLoss && flow.lost > 0 ? `주로 ${lossName(topLoss[0])}` : '-'}</em>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="cf-cols">
       <div className="col" style={{ gap: 4 }}>

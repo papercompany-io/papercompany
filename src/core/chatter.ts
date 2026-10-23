@@ -10,7 +10,10 @@ import { isSick } from './staff';
 import { moodOf, type Mood } from './talk';
 import type { Employee, GameState } from './types';
 
-type Topic = { id: string; when: string | null; ask: string[]; answer: Record<Mood, string[]>; follow: string[]; chime: string[] };
+// 대화 묶음(A-211): 같은 질문을 조금씩 다르게 쓴 ask와 그 질문에 맞는 답·마무리(B의 무드별)·거들기를 한데 묶음.
+// 예전엔 주제 안에서 질문·답을 따로 뽑아 "영화 보셨어요?" → "요리 배우는 게 즐거워요"처럼 어긋났음
+type Thread = { ask: string[]; answer: Record<Mood, string[]>; follow: Record<Mood, string[]>; chime: string[] };
+type Topic = { id: string; when: string | null; threads: Thread[] };
 const C = chatter as unknown as {
   fx: { slotChance: number; perEmployee: number; maxChance: number; teamShare: number; followChance: number; chimeChance: number; recentDays: number; newHireDays: number; growth: number; situationWeight: number };
   topics: Topic[];
@@ -85,9 +88,12 @@ export function chatterSlot(s: GameState, slot: number) {
     ch.messages.push({ id: `chat-${s.day}-${slot}-${n++}`, day: s.day, at: Math.round(s.msInDay), from: who.name, text: fill(t, who), kind: 'npc' });
     if (ch.messages.length > 120) ch.messages.splice(0, ch.messages.length - 120);
   };
-  say(a, pick(topic.ask));
-  say(b, pick(topic.answer[moodOf(s, b)]));
-  if (r() < F.followChance) say(a, pick(topic.follow));
+  // 묶음 하나 안에서만 뽑음: 질문 → 그 질문에 맞는 B의 답(무드) → 같은 무드의 A 마무리 → C 거들기
+  const th = pick(topic.threads);
+  const mood = moodOf(s, b);
+  say(a, pick(th.ask));
+  say(b, pick(th.answer[mood]));
+  if (r() < F.followChance) say(a, pick(th.follow[mood]));
   const rest = pool.filter((e) => e.id !== a.id && e.id !== b.id);
-  if (rest.length && r() < F.chimeChance) say(pick(rest), pick(topic.chime));
+  if (rest.length && th.chime.length && r() < F.chimeChance) say(pick(rest), pick(th.chime));
 }

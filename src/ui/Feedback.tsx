@@ -219,7 +219,7 @@ function ContractStackCard({ s, onOpen }: { s: GameState; onOpen: (app: string, 
   const due = contractDue(s)!;
   const late = due.late;
   return (
-    <button className={`ss-card contract ${late ? 'late' : ''}`} data-testid="stack-contract" onClick={() => onOpen('product', 'contract')}>
+    <button className={`ss-card contract ${late ? 'late' : ''}`} data-testid="stack-contract" onClick={() => onOpen('contract')}>
       <div className="ss-head">
         <PxIcon id="case" size={16} />
         <b className="ss-from">외주 · {a.title}</b>

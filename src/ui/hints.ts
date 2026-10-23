@@ -18,7 +18,7 @@ export function nextHint(s: GameState, desktopOpenedOnce: boolean): string {
   if (!desktopOpenedOnce) return '왼쪽 메뉴에서 일을 고릅니다. 창업하자마자 대표가 MVP(핵심 기능)를 만들기 시작합니다. "업무"에서 출시까지 남은 날을 확인하세요.';
   if (s.pauseReason) return `일시정지: ${s.pauseReason}. 확인한 뒤 ▶ 버튼(스페이스)으로 시간을 다시 흐르게 하세요.`;
   const open = s.decisions.filter((d) => !d.resolved);
-  if (s.exitAttempt?.status === 'offer') return `${s.exitAttempt.buyer ?? '인수 희망 기업'}의 인수 제안이 와 있습니다. Exit 메뉴에서 수락하거나 거절하세요.`;
+  if (s.exitAttempt?.status === 'offer') return `${s.exitAttempt.buyer ?? '인수 희망 기업'}의 인수 제안이 와 있습니다. 투자 메뉴의 Exit 탭에서 수락하거나 거절하세요.`;
   const r = activeRound(s);
   if (r?.status === 'offer') return '투자 제안서가 와 있습니다. 투자 메뉴에서 수락하거나 거절하세요.';
   const fc = paydayForecast(s);
@@ -40,7 +40,7 @@ export function nextHint(s: GameState, desktopOpenedOnce: boolean): string {
     if (s.product.roadmap.length === 0) return '제품 메뉴의 만드는 순서가 비었습니다. 핵심 기능을 넣으세요. 핵심 기능을 모두 만들면 MVP가 출시됩니다.';
     if (ceoWork(s) !== 'dev' && !todayOuting(s) && !s.employees.some((e) => e.dept === 'dev')) return '개발할 사람이 없습니다. 사무실의 대표(나)를 눌러 주 업무를 "개발"로 바꾸거나 개발자를 뽑으세요.';
     if (s.contracts?.active && ceoWork(s) !== 'contract' && s.company.orders.dev !== 'dev_contract') return `받은 외주 "${s.contracts.active.title}"가 멈춰 있습니다. 사무실의 대표(나)를 눌러 주 업무를 "외주"로 바꾸거나 개발팀에 맡기세요.`;
-    if (!s.contracts?.active && s.contracts?.offers.length && s.cash < 30000000) return '돈이 빠듯합니다. "업무" 창의 외주 탭에서 일감을 받고 주 업무를 "외주"로 바꾸면 MVP를 만드는 동안 대금으로 버틸 수 있습니다.';
+    if (!s.contracts?.active && s.contracts?.offers.length && s.cash < 30000000) return '돈이 빠듯합니다. "외주" 창에서 일감을 받고 주 업무를 "외주"로 바꾸면 MVP를 만드는 동안 대금으로 버틸 수 있습니다.';
     return 'MVP를 만드는 중입니다. 제품 메뉴에서 출시까지 남은 날을 확인하세요. 그동안 투자 유치(엔젤·SAFE)나 채용을 준비할 수 있습니다.';
   }
   // A-111: 출시했어도 결제 기능이 없으면 무료로만 씁니다
@@ -54,14 +54,14 @@ export function nextHint(s: GameState, desktopOpenedOnce: boolean): string {
     const fx = fxTotals(s);
     const banner = featuresOf(s.company.industry).find((f) => f.fx.adFormat === 'banner');
     if (!fx.adFormats.length && !s.product.roadmap.some((r) => r.id === banner?.id)) return `광고 자리가 없어 매출이 거의 없습니다. 이 앱은 광고로 법니다. 제품 메뉴 기능 탭에서 "${banner?.name ?? '배너 광고'}"부터 만드세요.`;
-    if (fx.adFormats.length && s.company.stage >= 1 && !s.employees.some((e) => e.dept === 'adops')) return '광고 자리가 생겼지만 광고주와 계약하지 않은 자리는 광고 네트워크가 싸게 채웁니다. 채용 메뉴에서 "광고 운영"(애드옵스 매니저)을 뽑으면 광고주가 직접 계약을 제안합니다.';
+    if (fx.adFormats.length && s.company.stage >= 1 && !s.employees.some((e) => e.dept === 'adops')) return '광고 자리가 생겼지만 광고주와 계약하지 않은 자리는 광고 네트워크가 싸게 채웁니다. 직원 관리 창 채용 탭에서 "광고 운영"(애드옵스 매니저)을 뽑으면 광고주가 직접 계약을 제안합니다.';
     const offers = adSalesOf(s).offers.filter((o) => !o.left).length;
-    if (offers) return `오늘의 광고주 제안이 ${offers}건 있습니다. 시장·광고 메뉴 "광고 판매" 탭에서 단가와 기간을 흥정하세요. 흥정하지 않은 제안은 내일 새 제안으로 바뀝니다.`;
+    if (offers) return `오늘의 광고주 제안이 ${offers}건 있습니다. 직원 관리 창 팀 탭의 광고 운영팀 화면에서 단가와 기간을 흥정하세요. 흥정하지 않은 제안은 내일 새 제안으로 바뀝니다.`;
   }
   const waiting = s.applicants.filter((a) => a.status === 'waiting').length;
-  if (waiting > 0) return `채용 메뉴에 지원자 ${waiting}명이 기다리고 있습니다. 오래 두면 다른 회사로 떠납니다.`;
+  if (waiting > 0) return `직원 관리 창 채용 탭에 지원자 ${waiting}명이 기다리고 있습니다. 오래 두면 다른 회사로 떠납니다.`;
   if (s.product.roadmap.length === 0) return '로드맵이 비었습니다. 제품 메뉴에서 다음 기능을 넣으세요. 경쟁사는 계속 따라옵니다.';
-  if (totalUsers(s) < 1) return 'MVP가 나왔습니다! 시장·광고 메뉴에서 광고 예산을 정하거나, 사무실의 대표(나)를 눌러 주 업무를 "영업"으로 바꿔 첫 고객을 모으세요.';
+  if (totalUsers(s) < 1) return 'MVP가 나왔습니다! 시장 메뉴에서 광고 예산을 정하거나, 사무실의 대표(나)를 눌러 주 업무를 "영업"으로 바꿔 첫 고객을 모으세요.';
   if (s.product.bugs > 40) return `버그가 많습니다(품질 ${Math.round(100 - s.product.bugs)}점). 개발팀에 "안정화·버그 수정"을 맡기세요. 버그는 이탈과 장애를 부릅니다.`;
   const kr = s.markets.kr;
   if (kr.flow && kr.users >= kr.flow.target * 0.9 && kr.awareness < 0.1 && s.plHistory.length >= 2) {
@@ -73,10 +73,10 @@ export function nextHint(s: GameState, desktopOpenedOnce: boolean): string {
     const r = growthRoom(s);
     return `제품이 받쳐 주는 ${industry(s.company.industry).unit}${josa(industry(s.company.industry).unit, '이')} ${Math.round((r.users / Math.max(1, r.target)) * 100)}% 찼습니다. 제품 메뉴 기능 탭에서 기능 카드의 "레벨업"을 누르면 매력도가 올라 더 받을 수 있습니다.${r.closed.length && s.company.stage >= 3 ? ' 해외 시장 진출도 방법입니다.' : ''}`;
   }
-  if (isFull(s) && s.company.officeTier < 5) return '책상을 더 놓을 수 없습니다. 사무실 메뉴에서 더 큰 사무실로 옮기세요.';
+  if (isFull(s) && s.company.officeTier < 5) return '책상을 더 놓을 수 없습니다. 오른쪽 위 회사 카드의 "이사가기"로 더 큰 사무실로 옮기세요.';
   for (const d of DATA.depts.departments.map((x) => x.id as DeptId)) {
     const li = leadInfo(s, d);
-    if (li.needed > li.have) return `${DATA.depts.departments.find((x) => x.id === d)!.name}팀이 커져서 팀장이 필요합니다. 직원 관리 메뉴에서 팀장을 세우세요.`;
+    if (li.needed > li.have) return `${DATA.depts.departments.find((x) => x.id === d)!.name}팀이 커져서 팀장이 필요합니다. 직원 관리 창에서 팀장을 세우세요.`;
   }
   if (s.employees.length >= 2 && (s.company.placed?.length ?? 1) === 0) return '사무실이 휑합니다. 상점에서 화분·정수기 같은 가구를 사서 놓으면 쾌적도가 올라 직원 만족·건강이 좋아집니다.';
   if (s.employees.length >= 5 && avgSat(s) < 50) return `직원 만족도가 낮습니다(평균 ${Math.round(avgSat(s))}). 월급·복지·근무 방침을 살펴보세요. 낮으면 퇴사가 늘어납니다.`;
@@ -87,9 +87,9 @@ export function nextHint(s: GameState, desktopOpenedOnce: boolean): string {
   if (s.company.stage >= 2 && ent && !fx.enterprise && industry(s.company.industry).entBase > 0) return `대기업 계약은 한 건이 큰 매출입니다. 제품 메뉴에서 대기업용 기능(${ent.name} 등)을 만들고 세일즈팀에 "대기업 영업"을 맡겨 보세요.`;
   if (s.company.stage >= 2 && fx.enterprise && s.enterprise.length === 0 && s.company.orders.sales !== 'sales_enterprise' && ceoWork(s) !== 'enterprise') return '대기업용 기능이 준비됐습니다. 세일즈팀에 "대기업 영업"을 맡기거나, 경영 모드에서 대표 주 업무를 "대기업 영업"으로 하세요.';
   const foreign = launchedMarkets(s).length;
-  if (s.company.stage >= 3 && foreign === 1) return '국내 시장만으로는 점유율 상한이 있습니다. 제품 메뉴의 현지화 기능을 만들고 시장·광고 메뉴에서 해외 시장(일본·동남아부터)에 진출해 보세요.';
+  if (s.company.stage >= 3 && foreign === 1) return '국내 시장만으로는 점유율 상한이 있습니다. 제품 메뉴의 현지화 기능을 만들고 시장 메뉴에서 해외 시장(일본·동남아부터)에 진출해 보세요.';
   if (s.company.stage >= 3 && !s.public && s.company.ipoReady < 50) return `상장하려면 재무법무팀의 "상장 준비"가 필요합니다(지금 준비도 ${Math.round(s.company.ipoReady)}). 재무법무 직원을 뽑고 지시하세요.`;
   const rw2 = runwayMonths(s);
   if (!s.public && rw2 !== null && rw2 < 9 && !r) return `런웨이 ${rw2.toFixed(1)}개월. 성장 중이라면 다음 라운드를 미리 여세요 — 런웨이가 짧을수록 협상력(매각가·투자 확률)이 떨어집니다.`;
-  return '미션을 따라가 보세요. 로드맵·채용·마케팅으로 회사를 키우고, 기업가치가 충분히 크면 Exit 메뉴에서 매각이나 IPO를 시도할 수 있습니다.';
+  return '미션을 따라가 보세요. 로드맵·채용·마케팅으로 회사를 키우고, 기업가치가 충분히 크면 투자 메뉴의 Exit 탭에서 매각이나 IPO를 시도할 수 있습니다.';
 }

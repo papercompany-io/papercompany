@@ -23,8 +23,8 @@
 .hud-cash { display: flex; align-items: center; gap: 5px; font-size: 16px; }
 .hud-cash .money { color: #fff; }
 .hud-cash .money.neg { color: #ff8a80; }
-.hud-cash .up { color: #4cdb6a; font-size: 11px; }
-.hud-cash .down { color: #ff6b5e; font-size: 11px; }
+.hud-cash .up { color: #4cdb6a; font-size: 13px; }
+.hud-cash .down { color: #ff6b5e; font-size: 13px; }
 
 /* 다음 할 일 */
 .hint {
@@ -32,7 +32,7 @@
   max-width: min(700px, calc(100% - 600px)); background: #fff; color: var(--ink); border-radius: 6px; padding: 6px 12px 6px 6px;
   font-size: 13px; font-weight: 600; display: flex; gap: 8px; align-items: center; box-shadow: 0 4px 14px rgba(8, 12, 28, 0.3);
 }
-.hint-tag { flex: none; background: var(--blue); color: #fff; font-weight: 800; font-size: 11px; border-radius: 4px; padding: 3px 7px; }
+.hint-tag { flex: none; background: var(--blue); color: #fff; font-weight: 800; font-size: 13px; border-radius: 4px; padding: 3px 7px; }
 .hint.urgent { background: #fff1ef; color: var(--red-d); }
 .hint.urgent .hint-tag { background: var(--red); }
 
@@ -52,8 +52,8 @@
 .cc-tile.wide .cc-value { font-size: 15px; }
 .cc-label { font-size: 10px; font-weight: 800; color: var(--ink-3); }
 .cc-value { font-size: 13px; font-weight: 800; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
-.cc-value small { color: #a96a00; font-size: 11px; }
-.cc-forecast { display: flex; justify-content: space-between; gap: 8px; background: #eef7ff; border-radius: 5px; padding: 6px 8px; font-size: 11px; color: var(--ink-2); font-weight: 700; }
+.cc-value small { color: #a96a00; font-size: 13px; }
+.cc-forecast { display: flex; justify-content: space-between; gap: 8px; background: #eef7ff; border-radius: 5px; padding: 6px 8px; font-size: 13px; color: var(--ink-2); font-weight: 700; }
 .cc-forecast > div { display: flex; flex-direction: column; gap: 1px; }
 .cc-forecast .money { font-size: 15px; }
 .cc-forecast.bad { background: #fff0ec; }
@@ -75,7 +75,7 @@
 .dev-panel { position: fixed; right: 12px; top: 12px; bottom: 12px; width: 520px; overflow: auto; background: rgba(13, 18, 28, 0.96); color: #dfe6f5; border: 1px solid #3a4562; border-radius: 8px; padding: 12px; z-index: 80; font-size: 12px; font-family: ui-monospace, Menlo, Consolas, monospace; }
 .dev-panel table.t td, .dev-panel table.t th { color: #dfe6f5; border-color: #2c3650; padding: 3px 6px; }
 .dev-block { border-top: 1px solid #2c3650; padding: 6px 0; display: flex; flex-direction: column; gap: 2px; }
-.hud-econ { font-size: 11px; font-weight: 800; border-radius: 3px; padding: 1px 6px; background: #3a3e58; color: #c9cce0; }
+.hud-econ { font-size: 13px; font-weight: 800; border-radius: 3px; padding: 1px 6px; background: #3a3e58; color: #c9cce0; }
 .hud-econ.boom { background: #1f6b3a; color: #c9f5d6; }
 .hud-econ.recession { background: #7a2a24; color: #ffd6d2; }
 .cc-tile.link, .cc-forecast { cursor: pointer; }

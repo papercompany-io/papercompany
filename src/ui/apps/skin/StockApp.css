@@ -1,9 +1,9 @@
 /* 화면(A-179): 상장사 주가·지분 — 가운데 큰 주가, 납작한 회색 칸, 그래프 한 판, 실적·매각·자사주 카드 격자, 칸칸이 차는 신뢰 막대 */
 .st2 { width: 100%; max-width: 860px; min-width: 320px; margin: 0 auto; gap: 14px; container-type: inline-size; }
 .st2-head { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 0 2px; text-align: center; }
-.st2-kicker { font-family: var(--pixel); font-size: 11px; font-weight: 400; color: var(--accent-text); -webkit-font-smoothing: none; }
+.st2-kicker { font-family: var(--pixel); font-size: 13px; font-weight: 400; color: var(--accent-text); -webkit-font-smoothing: none; }
 .st2-big { margin: 0; font-size: 40px; font-weight: 800; line-height: 1.15; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; word-break: keep-all; }
-.st2-chg { display: inline-block; vertical-align: middle; padding: 3px 8px; border-radius: var(--r-xs); font-family: var(--pixel); font-size: 11px; font-weight: 400; letter-spacing: 0; -webkit-font-smoothing: none; }
+.st2-chg { display: inline-block; vertical-align: middle; padding: 3px 8px; border-radius: var(--r-xs); font-family: var(--pixel); font-size: 13px; font-weight: 400; letter-spacing: 0; -webkit-font-smoothing: none; }
 .st2-chg.up { background: var(--positive-soft); color: var(--positive-press); }
 .st2-chg.down { background: var(--negative-soft); color: var(--negative-press); }
 .st2-lead { margin: 0; font-size: var(--fs-md); color: var(--text-3); font-variant-numeric: tabular-nums; cursor: help; }
@@ -11,7 +11,7 @@
 .st2-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .st2-stats > div { position: relative; display: flex; flex-direction: column; gap: 4px; min-width: 0; padding: 38px 16px 14px; border-radius: var(--r-lg); background: var(--surface-tile); }
 .st2-stats .px { position: absolute; left: 14px; top: 12px; }
-.st2-stats span { font-family: var(--pixel); font-size: 11px; color: var(--text-3); -webkit-font-smoothing: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.st2-stats span { font-family: var(--pixel); font-size: 13px; color: var(--text-3); -webkit-font-smoothing: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .st2-stats b { font-size: var(--fs-xl); font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .st2-stats .money { font-size: inherit; font-weight: inherit; }
 
@@ -19,7 +19,7 @@
 .st2-card-head { display: flex; align-items: center; gap: 8px; }
 .st2-card-head b { font-size: var(--fs-lg); font-weight: 700; }
 .st2-card-head[title] { cursor: help; }
-.st2-card-head .chip { margin-left: auto; font-family: var(--pixel); font-size: 11px; font-weight: 400; -webkit-font-smoothing: none; }
+.st2-card-head .chip { margin-left: auto; font-family: var(--pixel); font-size: 13px; font-weight: 400; -webkit-font-smoothing: none; }
 .st2-line { font-size: var(--fs-md); line-height: 1.5; color: var(--text-2); word-break: keep-all; }
 .st2-line b { color: var(--text); font-weight: 800; font-variant-numeric: tabular-nums; }
 .st2-line.muted { color: var(--text-3); }
@@ -47,7 +47,7 @@
 
 /* 주주 신뢰: 칸칸이 차는 막대 */
 .st2.st2 .emp-bar.stock-trust { grid-template-columns: 64px minmax(0, 1fr) 28px; margin-top: 2px; }
-.st2 .stock-trust > span { font-family: var(--pixel); font-size: 11px; color: var(--text-3); -webkit-font-smoothing: none; }
+.st2 .stock-trust > span { font-family: var(--pixel); font-size: 13px; color: var(--text-3); -webkit-font-smoothing: none; }
 .st2 .stock-trust b { font-variant-numeric: tabular-nums; }
 .st2.st2 .stock-trust .meter { height: 12px; border: 1px solid var(--line-strong); border-radius: 0; background: repeating-linear-gradient(90deg, var(--surface-tile) 0 6px, var(--surface) 6px 8px); }
 .st2.st2 .stock-trust .meter > div { height: 100%; border-radius: 0; background: repeating-linear-gradient(90deg, var(--positive) 0 6px, transparent 6px 8px); }

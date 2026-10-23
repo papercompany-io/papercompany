@@ -2,7 +2,7 @@
 .slot { color: #fff; border-radius: 6px; padding: 6px; font-size: 12px; font-weight: 700; display: flex; flex-direction: column; gap: 2px; min-height: 56px; position: relative; opacity: 0.95; }
 .slot.done { opacity: 0.45; }
 .slot.now { outline: 3px solid #1f2a3c; }
-.slot-hour { font-size: 11px; opacity: 0.85; }
+.slot-hour { font-size: 13px; opacity: 0.85; }
 .slot-lock { position: absolute; right: 4px; top: 4px; background: rgba(0, 0, 0, 0.35); border-radius: 4px; padding: 0 4px; font-size: 10px; }
 .alloc-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
 .alloc { display: flex; flex-direction: column; gap: 6px; }
@@ -20,7 +20,7 @@ tr.sel td { background: #e3efff; }
 .messenger { display: flex; flex: 1; min-height: 0; border-top: 1px solid var(--line); }
 .msg-side { width: 220px; background: #2b2f45; color: #cfd6ea; padding: 10px 8px; overflow: auto; flex: none; }
 .ws-name { color: #fff; font-weight: 900; font-size: 16px; padding: 4px 8px 10px; border-bottom: 1px solid #3c4260; margin-bottom: 6px; }
-.side-title { font-size: 11px; font-weight: 800; color: #8d94b4; margin: 10px 8px 4px; display: flex; justify-content: space-between; }
+.side-title { font-size: 13px; font-weight: 800; color: #8d94b4; margin: 10px 8px 4px; display: flex; justify-content: space-between; }
 .side-title .mini { background: transparent; color: #cfd6ea; border: 1px solid #555c80; border-radius: 4px; padding: 0 6px; }
 .side-item { display: block; width: 100%; text-align: left; background: transparent; border: none; color: #cfd6ea; padding: 4px 8px; border-radius: 6px; font-size: 13px; }
 .side-item.on { background: #3e7ce0; color: #fff; }
@@ -73,7 +73,7 @@ table.pl td.b { font-weight: 800; }
 .feat { text-align: left; background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; display: flex; flex-direction: column; gap: 3px; }
 .feat:hover:not(:disabled) { border-color: var(--blue); }
 .feat:disabled { opacity: 0.55; cursor: not-allowed; }
-.feat .fx { font-size: 11px; color: var(--green-d); font-weight: 700; }
+.feat .fx { font-size: 13px; color: var(--green-d); font-weight: 700; }
 .cat { font-size: 10px; font-weight: 900; border-radius: 3px; padding: 1px 5px; color: #fff; background: #8a90a3; }
 .cat.core { background: #e8604c; } .cat.growth { background: #3fbf7f; } .cat.monetize { background: #f0a020; } .cat.retention { background: #2d8fd5; }
 .cat.infra { background: #7a8597; } .cat.enterprise { background: #b5651d; } .cat.global { background: #11a3a6; } .cat.ai { background: #ff7a45; } .cat.platform { background: #8b63e8; }
@@ -82,7 +82,7 @@ table.pl td.b { font-weight: 800; }
 .mk-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
 .mk { background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 4px; }
 .mk.off { background: var(--panel-2); }
-.mk-flag { font-family: var(--pixel); font-size: 11px; background: var(--ui-2); color: #fff; border-radius: 3px; padding: 1px 5px; }
+.mk-flag { font-family: var(--pixel); font-size: 13px; background: var(--ui-2); color: #fff; border-radius: 3px; padding: 1px 5px; }
 .share-bar { display: flex; height: 16px; border-radius: 4px; overflow: hidden; background: #e6eaf2; }
 .share-bar > div { height: 100%; }
 .kpi { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
@@ -106,7 +106,7 @@ table.pl td.b { font-weight: 800; }
 .pd-hero { display: flex; gap: 12px; background: #fff; border: 1px solid var(--line); border-left: 4px solid var(--blue); border-radius: 8px; padding: 12px 14px; }
 .pd-hero.bad { border-left-color: var(--red); }
 .pd-hero-main { flex: 1; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-.pd-stage { font-size: 11px; font-weight: 800; color: var(--blue-d); }
+.pd-stage { font-size: 13px; font-weight: 800; color: var(--blue-d); }
 .pd-headline { font-size: 18px; font-weight: 800; color: var(--ink); }
 .pd-steps { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
 .pd-step { font-size: 12px; font-weight: 700; padding: 3px 8px; border-radius: 12px; background: var(--panel-2); color: var(--ink-2); border: 1px solid var(--line); }
@@ -115,7 +115,7 @@ table.pl td.b { font-weight: 800; }
 .pd-step.missing { border-style: dashed; color: var(--red); }
 .pd-step.goal { background: transparent; border-color: transparent; color: var(--ink-3); }
 .pd-who { width: 210px; flex: none; display: flex; flex-direction: column; gap: 4px; border-left: 1px solid var(--line); padding-left: 12px; }
-.pd-who-title { font-size: 11px; font-weight: 800; color: var(--ink-3); }
+.pd-who-title { font-size: 13px; font-weight: 800; color: var(--ink-3); }
 .pd-who-row { display: flex; justify-content: space-between; font-size: 12px; }
 .pd-who .btn { align-self: flex-start; margin-top: 4px; }
 /* 제품 창(Startup Company식): 위 띠·타일·계기판·기능 비교 */
@@ -148,7 +148,7 @@ table.pl td.b { font-weight: 800; }
 .pd-fi:hover { border-color: var(--c-blue-300); }
 .pd-fi.on { border-color: var(--blue); box-shadow: inset 3px 0 0 var(--blue); background: var(--c-blue-50); }
 .pd-fi.locked { opacity: 0.55; }
-.pd-lv { font-size: 11px; font-weight: 800; color: var(--ink-3); background: var(--panel-2); border-radius: 4px; padding: 1px 6px; white-space: nowrap; }
+.pd-lv { font-size: 13px; font-weight: 800; color: var(--ink-3); background: var(--panel-2); border-radius: 4px; padding: 1px 6px; white-space: nowrap; }
 .pd-lv.has { color: var(--blue-d); background: var(--c-blue-50); }
 .pd-lv.big { font-size: 13px; padding: 3px 8px; }
 .pd-feat-detail { background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; position: sticky; top: 0; }
@@ -165,7 +165,7 @@ table.pl td.b { font-weight: 800; }
 .pd-work-chip.dev { background: #4f8df5; }
 .pd-work-chip.design { background: #c46be0; }
 .pd-up { padding-left: 22px; padding-right: 22px; }
-.pd-order { width: 20px; height: 20px; border-radius: 50%; background: var(--panel-3); font-size: 11px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; flex: none; }
+.pd-order { width: 20px; height: 20px; border-radius: 50%; background: var(--panel-3); font-size: 13px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; flex: none; }
 .rm-item.first .pd-order { background: var(--blue); color: #fff; }
 .pd-who select { max-width: 120px; font-size: 12px; }
 /* 오른쪽 위 제품 카드 */
@@ -190,10 +190,6 @@ table.pl td.b { font-weight: 800; }
 .pd-card.locked { opacity: 0.6; }
 .pd-card-fx { font-size: 12px; font-weight: 700; color: var(--green-d); }
 .pd-card .row.tiny { margin-top: auto; }
-.pd-dots { display: inline-flex; gap: 3px; }
-.pd-dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--c-gray-200); }
-.pd-dots i.on { background: var(--blue); }
-.pd-dots i.q { background: var(--c-blue-200); }
 .pd-money { width: 100%; border-top: 1px solid var(--line); padding-top: 6px; display: flex; flex-direction: column; gap: 3px; text-align: left; }
 /* 기능 탭(Startup Company식): 위 요약 + 기능 카드 줄 */
 .fs-top { display: grid; grid-template-columns: 1fr 1fr 150px; gap: 16px; background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 12px 16px; }
@@ -216,8 +212,8 @@ table.pl td.b { font-weight: 800; }
 .fc.locked { opacity: 0.55; }
 .fc-art { position: relative; height: 124px; background: var(--panel-2); border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: center; }
 .fc-art img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.fc-lv { position: absolute; top: 6px; left: 6px; font-size: 11px; font-weight: 800; color: #fff; background: var(--blue); border-radius: 4px; padding: 1px 6px; }
-.fc-q { position: absolute; top: 6px; right: 6px; font-size: 11px; font-weight: 800; color: var(--blue-d); background: var(--c-blue-50); border: 1px solid var(--blue); border-radius: 4px; padding: 0 6px; }
+.fc-lv { position: absolute; top: 6px; left: 6px; font-size: 13px; font-weight: 800; color: #fff; background: var(--blue); border-radius: 4px; padding: 1px 6px; }
+.fc-q { position: absolute; top: 6px; right: 6px; font-size: 13px; font-weight: 800; color: var(--blue-d); background: var(--c-blue-50); border: 1px solid var(--blue); border-radius: 4px; padding: 0 6px; }
 .fc-body { padding: 8px 10px 4px; display: flex; flex-direction: column; gap: 4px; flex: 1; }
 .fc-name { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .fc-fx { font-size: 12px; font-weight: 500; color: var(--text-2); line-height: 1.45; word-break: keep-all; }

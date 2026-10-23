@@ -1,4 +1,4 @@
-// F12 Exit 메뉴: EX-03 원하는 시점에 시도, EX-01 IPO, EX-02 매각, EX-04 성공·실패(DEC-021)
+// F12 Exit(A-215부터 투자 창의 탭): EX-03 원하는 시점에 시도, EX-01 IPO, EX-02 매각, EX-04 성공·실패(DEC-021)
 // 화면(A-179): 업무·커리어와 같은 톤 — 가운데 큰 "받을 돈", 납작한 회색 칸, 제안·준비·무산은 카드 하나, 매각·IPO는 색 타일 + 흰 픽셀 그림 카드. 긴 설명은 title로
 import { useState } from 'react';
 import { DATA } from '../../core/data';

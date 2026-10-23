@@ -2,14 +2,14 @@
 .fn2 { gap: 14px; min-width: 320px; container-type: inline-size; }
 
 /* 알약 탭(.rk .tab, .cr .tab과 같은 모양) */
-.fn2 > .tabs { flex-wrap: wrap; justify-content: center; gap: 6px; margin: 0; border-bottom: none; overflow: visible; }
+.fn2 > .tabs { flex-wrap: wrap; justify-content: flex-start; gap: 6px; margin: 0; border-bottom: none; overflow: visible; }
 .fn2 > .tabs .tab { margin: 0; padding: 7px 13px; border: none; border-radius: var(--r-full); background: var(--surface-tile); color: var(--text-2); font-size: var(--fs-md); }
 .fn2 > .tabs .tab:hover { background: var(--surface-sel); color: var(--text); }
 .fn2 > .tabs .tab.on { background: var(--text); color: var(--surface); border: none; }
 
 /* 맨 위: 가운데 큰 숫자 + 작은 회색 한 줄 */
 .fn2-head { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 4px 0 2px; text-align: center; }
-.fn2-kicker { font-family: var(--pixel); font-size: 11px; font-weight: 400; color: var(--positive-press); -webkit-font-smoothing: none; }
+.fn2-kicker { font-family: var(--pixel); font-size: 13px; font-weight: 400; color: var(--positive-press); -webkit-font-smoothing: none; }
 .fn2-head.bad .fn2-kicker { color: var(--negative-press); }
 .fn2-big { margin: 0; font-size: 40px; font-weight: 800; line-height: 1.15; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
 .fn2-big .money { font-size: inherit; font-weight: inherit; color: inherit; }
@@ -22,7 +22,7 @@
 .fn2.fn2 .fb-panel { min-height: 220px; padding: 14px 16px; border: none; border-radius: var(--r-lg); }
 .fn2.fn2 .fb-panel.out { background: var(--negative-soft); }
 .fn2.fn2 .fb-panel.in { background: var(--positive-soft); }
-.fn2 .fb-head { padding-bottom: 8px; margin-bottom: 6px; border-bottom: 1px solid var(--line); font-family: var(--pixel); font-size: 11px; font-weight: 400; -webkit-font-smoothing: none; }
+.fn2 .fb-head { padding-bottom: 8px; margin-bottom: 6px; border-bottom: 1px solid var(--line); font-family: var(--pixel); font-size: 13px; font-weight: 400; -webkit-font-smoothing: none; }
 .fn2 .fb-panel.out .fb-head { color: var(--negative-press); }
 .fn2 .fb-panel.in .fb-head { color: var(--positive-press); }
 .fn2 .fb-line { padding: 5px 0; }
@@ -38,21 +38,21 @@
 .fn2 .fin-bank .fb-row[title] { cursor: help; }
 
 /* A-185 대출 판: 통장 판과 같은 면, 줄 오른쪽에 버튼 */
-.fn2 .fin-loans .fb-head { padding: 8px 0 2px; font-family: var(--pixel); font-size: 11px; color: var(--text-3); -webkit-font-smoothing: none; }
+.fn2 .fin-loans .fb-head { padding: 8px 0 2px; font-family: var(--pixel); font-size: 13px; color: var(--text-3); -webkit-font-smoothing: none; }
 .fn2 .fin-loans .fb-row { gap: 12px; }
 .fn2 .fin-loans .fb-row .btn { flex: none; }
 
 /* 접고 펴기: 가운데 알약 */
-.fn2.fn2 .fin-more { align-self: center; padding: 8px 14px; border: none; border-radius: var(--r-full); background: var(--surface-tile); color: var(--text-2); box-shadow: none; font-family: var(--pixel); font-size: 11px; font-weight: 400; -webkit-font-smoothing: none; }
+.fn2.fn2 .fin-more { align-self: center; padding: 8px 14px; border: none; border-radius: var(--r-full); background: var(--surface-tile); color: var(--text-2); box-shadow: none; font-family: var(--pixel); font-size: 13px; font-weight: 400; -webkit-font-smoothing: none; }
 .fn2.fn2 .fin-more:hover { background: var(--surface-sel); color: var(--text); }
 
 /* 표: 1px 테두리 면, 머리는 픽셀 글꼴 */
 .fn2 table.t { width: 100%; border: 1px solid var(--line); border-radius: var(--r-lg); border-collapse: separate; border-spacing: 0; overflow: hidden; }
-.fn2 table.t th { padding: 8px 10px; background: var(--surface-sunk); border-bottom: 1px solid var(--line); font-family: var(--pixel); font-size: 11px; font-weight: 400; -webkit-font-smoothing: none; }
+.fn2 table.t th { padding: 8px 10px; background: var(--surface-sunk); border-bottom: 1px solid var(--line); font-family: var(--pixel); font-size: 13px; font-weight: 400; -webkit-font-smoothing: none; }
 .fn2 table.t td { padding: 8px 10px; }
 .fn2 table.t tbody tr:last-child td { border-bottom: none; }
 .fn2 .pl { display: block; overflow-x: auto; }
-.fn2 .fin-ledger td.muted { font-family: var(--pixel); font-size: 11px; white-space: nowrap; -webkit-font-smoothing: none; }
+.fn2 .fin-ledger td.muted { font-family: var(--pixel); font-size: 13px; white-space: nowrap; -webkit-font-smoothing: none; }
 .fn2 .fin-dot { width: 8px; height: 8px; border-radius: 0; }
 
 /* 거래 내역 거르기: 알약 */
@@ -67,7 +67,7 @@
 .fn2.fn2 .fn2-value .fin-big { font-size: 40px; }
 .fn2 .fn2-value .hf-summary { justify-content: center; gap: 8px; margin: 0; padding: 0; border: none; flex-wrap: wrap; }
 .fn2 .fn2-value .hf-sum { min-width: 120px; padding: 12px 14px; border-radius: var(--r-lg); background: var(--surface-tile); }
-.fn2 .fn2-value .hf-sum span { font-family: var(--pixel); font-size: 11px; font-weight: 400; -webkit-font-smoothing: none; }
+.fn2 .fn2-value .hf-sum span { font-family: var(--pixel); font-size: 13px; font-weight: 400; -webkit-font-smoothing: none; }
 .fn2 .fn2-value .hf-sum b { font-size: var(--fs-xl); font-weight: 800; }
 
 .fn2 .empty-note { border-radius: var(--r-lg); background: var(--surface-sunk); color: var(--text-3); }

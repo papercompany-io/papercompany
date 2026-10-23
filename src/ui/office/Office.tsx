@@ -324,7 +324,6 @@ export function Office({ onCeo, onEmployee, pulseCeo, keysEnabled, floats = [] }
         >
           ⌂
         </button>
-        <div className="cam-hint">끌어서 이동 · 휠로 확대</div>
       </div>
     </div>
   );

@@ -1,16 +1,15 @@
 // F05 직원·조직 앱: EM-01 목록과 상세(만족도·건강·숙련·특성), EM-02 부서 배치, EM-04 퇴사·해고, 팀장, 부서 지시(MG-03),
 // WF-01~04 복지와 근무 방침, 연봉 인상, EQ-04 스톡옵션 지급
-// 화면(A-179): 커리어·업무와 같은 톤 — 가운데 큰 인원수, 납작한 회색 요약 칸, 알약 탭·거르기, 칸칸이 차는 막대, 작은 라벨은 픽셀 글꼴. 긴 설명은 title로
+// 화면(A-179): 커리어·업무와 같은 톤 — 알약 탭, 칸칸이 차는 막대, 작은 라벨은 픽셀 글꼴. 긴 설명은 title로
+// 화면(A-213): 채용(HireTab)·팀(TeamApp)·AI 도입(AiApp)을 이 창의 탭으로 합침. 직원 탭은 왼쪽 줄 + 오른쪽 한 명(시장 창 짜임)
 import { burningActive, burningBlock, burningCost, startBurning } from '../../core/burning';
 import { useState } from 'react';
-import { DATA, DEPT_IDS, dept, ordersFor, trait } from '../../core/data';
+import { DATA, DEPT_IDS, dept, trait } from '../../core/data';
 import { formatDate } from '../../core/calendar';
-import { deptInIndustry, deptMembers, deptUnlocked, headcountByDept, moveDept, severance } from '../../core/employees';
-import { monthlySalary, payrollWithBenefits, welfareMonthly } from '../../core/finance';
-import { avgHealth, avgSat, bonusBlock, bonusCost, deptOutput, demoteLead, fire, giveBonus, giveRaise, healthTarget, isSick, leadInfo, marketSalary, output, promoteLead, satTarget, employeeSpeed } from '../../core/staff';
+import { deptInIndustry, deptUnlocked, moveDept, severance } from '../../core/employees';
+import { monthlySalary, payrollWithBenefits } from '../../core/finance';
+import { bonusBlock, bonusCost, demoteLead, fire, giveBonus, giveRaise, healthTarget, isSick, marketSalary, output, promoteLead, satTarget, employeeSpeed } from '../../core/staff';
 import { esopEntry, esopFree, grantOptions, unvestedOptions, vestedFraction } from '../../core/equity';
-import { orderOf } from '../../core/orders';
-import { commandOrder } from '../../core/reactions';
 import { act, useGame } from '../store';
 import { Tabs } from '../common';
 import { PixelAvatar } from '../office/Avatar';
@@ -18,6 +17,9 @@ import { wonShort } from '../../core/format';
 import type { DeptId, Employee, GameState, WorkPolicy } from '../../core/types';
 import './apps.css';
 import { EmpOrderSelect } from './MessengerApp';
+import { HireTab } from './HiringApp';
+import { TeamApp, type OpenApp } from './TeamApp';
+import { AiApp } from './AiApp';
 import { PixelCheck } from '../pixelMarks';
 import './skin/EmployeesApp.css';
 
@@ -169,221 +171,103 @@ export function EmployeeDetail({ e, openDm, compact }: { e: Employee; openDm?: (
   );
 }
 
-export function EmployeesApp({ openDm }: { openDm: (id: string) => void }) {
-  const s = useGame();
-  const [tab, setTab] = useState<'people' | 'depts' | 'welfare'>('people');
-  const [sort, setSort] = useState<'dept' | 'sat' | 'salary' | 'skill'>('dept');
-  const [filter, setFilter] = useState<DeptId | 'all'>('all');
-  const [sel, setSel] = useState<string | null>(null);
-  const pay = payrollWithBenefits(monthlySalary(s));
-  const counts = headcountByDept(s);
-  const list = s.employees
-    .filter((e) => filter === 'all' || e.dept === filter)
-    .slice()
-    .sort((a, b) => (sort === 'salary' ? b.salary - a.salary : sort === 'sat' ? a.sat - b.sat : sort === 'skill' ? b.skill - a.skill : a.dept.localeCompare(b.dept) || Number(b.lead) - Number(a.lead)));
-  const e = s.employees.find((x) => x.id === sel);
-  const n = s.employees.length;
+// 화면(A-213): 채용·팀·AI 도입 앱을 직원 관리 한 창의 탭으로. 위 큰 인원수·요약 칸은 빼고 알약 탭부터.
+// initial = 다른 창·알림이 연 탭('hire', 'team', 'team-dev', 'ai', 'welfare'). 예전 앱 id는 Desktop의 appRoute가 여기로 보냄
+type EmpTab = 'people' | 'hire' | 'team' | 'welfare' | 'ai';
 
+// 인자 없이 열었을 때 처음 보이는 탭
+function defaultTab(s: GameState): EmpTab {
+  // TODO(human)
+  return 'people';
+}
+
+export function EmployeesApp({ openDm, initial, openApp }: { openDm: (id: string) => void; initial?: string; openApp: OpenApp }) {
+  const s = useGame();
+  const [tab, setTab] = useState<EmpTab>(() => (initial ? (initial.split('-')[0] as EmpTab) : defaultTab(s)));
+  const [sel, setSel] = useState<string | null>(null);
+  const waiting = s.applicants.filter((a) => a.status === 'waiting').length;
   return (
-    <div className="col emp em2">
-      {/* 위: 가운데 큰 인원수 + 한 달 월급 한 줄, 아래 납작한 회색 요약 칸 */}
-      <div className="em2-head">
-        <span className="em2-kicker">우리 회사 직원</span>
-        <h2 className="em2-big" data-testid="emp-total">
-          {n}명
-        </h2>
-        <p className="em2-lead" title="4대보험·퇴직연금 회사 부담 포함">
-          한 달 월급 {wonShort(pay.total)}
-        </p>
-      </div>
-      <div className="em2-stats">
-        <div>
-          <span>한 달 복지비</span>
-          <b>{wonShort(welfareMonthly(s))}</b>
-        </div>
-        <div>
-          <span>평균 만족</span>
-          <b className={n && avgSat(s) < 40 ? 'neg' : ''}>{n ? Math.round(avgSat(s)) : '-'}</b>
-        </div>
-        <div>
-          <span>평균 건강</span>
-          <b className={n && avgHealth(s) < 40 ? 'neg' : ''}>{n ? Math.round(avgHealth(s)) : '-'}</b>
-        </div>
-        <div title="이 회사에서 지금까지">
-          <span>나간 · 뽑은 사람</span>
-          <b>
-            {s.stats.quits + s.stats.fired} · {s.stats.hires}
-          </b>
-        </div>
-      </div>
+    <div className="col emp em2 em3">
       <Tabs
         tabs={[
-          { id: 'people', label: `직원 (${n})` },
-          { id: 'depts', label: '부서·지시' },
+          { id: 'people', label: `직원 ${s.employees.length}` },
+          { id: 'hire', label: waiting ? `채용 · 지원자 ${waiting}` : '채용' },
+          { id: 'team', label: '팀' },
           { id: 'welfare', label: '복지·근무' },
+          ...(s.company.stage >= 1 ? [{ id: 'ai' as const, label: 'AI 도입' }] : []),
         ]}
         value={tab}
         onChange={setTab}
       />
-      {tab === 'people' &&
-        (n === 0 ? (
-          <div className="em2-empty">
-            <b>아직 직원이 없습니다</b>
-            <span>채용 메뉴에서 공고를 올려 직원을 뽑으세요.</span>
-          </div>
-        ) : (
-          <>
-            <div className="row emp-tools">
-              <div className="seg applicant-filter">
-                <button className={filter === 'all' ? 'on' : ''} onClick={() => setFilter('all')}>
-                  전체 {n}
-                </button>
-                {DEPT_IDS.filter((d) => counts[d] > 0).map((d) => (
-                  <button key={d} className={filter === d ? 'on' : ''} onClick={() => setFilter(d)}>
-                    {dept(d).name} {counts[d]}
-                  </button>
-                ))}
-              </div>
-              <span className="grow" />
-              <select value={sort} onChange={(ev) => setSort(ev.target.value as typeof sort)} aria-label="정렬">
-                <option value="dept">부서 순</option>
-                <option value="sat">만족도 낮은 순</option>
-                <option value="skill">숙련 높은 순</option>
-                <option value="salary">월급 높은 순</option>
-              </select>
-            </div>
-            <div className="emp-layout">
-              <div className="applicant-grid emp-grid">
-                {list.map((x) => (
-                  <button key={x.id} className={`applicant-card emp-card ${x.id === sel ? 'on' : ''}`} data-testid={`emp-row-${x.id}`} style={{ ['--dc' as string]: dept(x.dept).color }} onClick={() => setSel(x.id)}>
-                    <div className="ac-head">
-                      <PixelAvatar id={x.id} color={dept(x.dept).color} size={40} />
-                      <div className="ac-id">
-                        <b>{x.name}</b>
-                        <span>
-                          {dept(x.dept).name}팀{x.lead ? ' 팀장' : ''}
-                          {x.kind === 'cofounder' ? ' · 코파운더' : ''}
-                        </span>
-                      </div>
-                      <div className="ac-traits">
-                        {isSick(s, x) && <span className="chip red">병가</span>}
-                        {x.leaving !== null && <span className="chip red">퇴사 예정</span>}
-                      </div>
-                    </div>
-                    <MiniBar label="만족" v={x.sat} />
-                    <MiniBar label="건강" v={x.health} />
-                    <div className="ac-stats">
-                      <div>
-                        <span>속도</span>
-                        <b>{employeeSpeed(x)}%</b>
-                      </div>
-                      <div>
-                        <span>월급</span>
-                        <b>{Math.round(x.salary / 1e4).toLocaleString()}만</b>
-                      </div>
-                      <div>
-                        <span>숙련</span>
-                        <b>{Math.round(x.skill)}</b>
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-              <aside className="emp-side">
-                {e ? (
-                  <div className="post-card emp-detail" style={{ ['--dc' as string]: dept(e.dept).color }}>
-                    <div className="ac-head">
-                      <PixelAvatar id={e.id} color={dept(e.dept).color} size={48} />
-                      <div className="ac-id">
-                        <b>{e.name}</b>
-                        <span>
-                          {dept(e.dept).name}팀{e.lead ? ' 팀장' : ''}
-                        </span>
-                      </div>
-                      <button className="em2-x" onClick={() => setSel(null)} title="닫기" aria-label="닫기">
-                        ×
-                      </button>
-                    </div>
-                    <EmployeeDetail e={e} openDm={openDm} />
-                  </div>
-                ) : (
-                  <div className="em2-empty small" title="직원 카드를 누르면 자세한 정보와 할 수 있는 일이 여기 나옵니다.">
-                    직원을 고르면 여기 나옵니다
-                  </div>
-                )}
-              </aside>
-            </div>
-          </>
-        ))}
-      {tab === 'depts' && <Depts />}
+      {tab === 'people' && <People openDm={openDm} sel={sel} setSel={setSel} goHire={() => setTab('hire')} />}
+      {tab === 'hire' && <HireTab />}
+      {tab === 'team' && (
+        <TeamApp
+          initial={initial?.startsWith('team-') ? initial.slice(5) : undefined}
+          openApp={openApp}
+          onEmployee={(id) => {
+            setSel(id);
+            setTab('people');
+          }}
+        />
+      )}
       {tab === 'welfare' && <Welfare />}
+      {tab === 'ai' && <AiApp />}
     </div>
   );
 }
 
-// 카드 속 얇은 막대(만족·건강): 낮으면 빨강
-function MiniBar({ label, v }: { label: string; v: number }) {
-  return (
-    <div className="emp-bar">
-      <span>{label}</span>
-      <div className={`meter ${meterCls(v)}`}>
-        <div style={{ width: `${v}%` }} />
-      </div>
-      <b className={v < 35 ? 'fin-bad' : ''}>{Math.round(v)}</b>
-    </div>
-  );
-}
-
-// 부서 카드: 채용 공고 카드처럼 색 점 · 숫자 줄 · 맡은 일. 아직 안 열린 부서는 보이지 않음
-function Depts() {
+// 직원 탭: 시장 창처럼 왼쪽 부서별 짧은 줄(얼굴·이름·만족도) + 오른쪽 고른 한 명. 고르지 않았으면 맨 위 사람
+function People({ openDm, sel, setSel, goHire }: { openDm: (id: string) => void; sel: string | null; setSel: (id: string) => void; goHire: () => void }) {
   const s = useGame();
-  const open = DEPT_IDS.filter((d) => deptUnlocked(s, d));
-  return (
-    <div className="col">
-      <div className="em2-sect">부서 {open.length}곳</div>
-      <div className="emp-depts">
-        {open.map((d) => {
-          const li = leadInfo(s, d);
-          const n = deptMembers(s, d).length;
-          return (
-            <div key={d} className={`post-card ${n ? '' : 'closed'}`} style={{ ['--dc' as string]: dept(d).color }}>
-              <div className="pc-head">
-                <span className="pc-dot" />
-                <b>{dept(d).name}</b>
-                <span className="pc-hired">{n}명</span>
-              </div>
-              <div className="pc-stats">
-                <span>
-                  팀장 <b>{li.have}{li.needed > 0 ? ` / ${li.needed}` : ''}</b>
-                </span>
-                <span>
-                  하루 작업량 <b>{deptOutput(s, d).toFixed(1)}</b>
-                </span>
-                {li.span < 1 && <span className="chip red">팀장 부족 −{Math.round((1 - li.span) * 100)}%</span>}
-              </div>
-              {n > 0 ? (
-                <>
-                  <select className="emp-order" data-testid={`order-${d}`} value={orderOf(s, d)} onChange={(e) => act((g) => commandOrder(g, d, e.target.value))}>
-                    {ordersFor(d).map((o) => (
-                      <option key={o.id} value={o.id} disabled={s.company.stage < o.stage}>
-                        {o.name}
-                        {s.company.stage < o.stage ? ` (단계 ${o.stage})` : ''}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="pc-foot">
-                    <span>{ordersFor(d).find((o) => o.id === orderOf(s, d))?.desc}</span>
-                  </div>
-                </>
-              ) : (
-                <div className="pc-foot" title="채용에서 뽑으면 일을 맡길 수 있습니다.">
-                  <span>아직 사람이 없습니다</span>
-                </div>
-              )}
-            </div>
-          );
-        })}
+  const n = s.employees.length;
+  if (!n)
+    return (
+      <div className="wk-empty">
+        <b>아직 직원이 없습니다</b>
+        <span>채용 탭에서 공고를 올려 첫 직원을 뽑으세요.</span>
+        <button className="btn small" onClick={goHire}>
+          채용 탭으로
+        </button>
       </div>
+    );
+  const groups = DEPT_IDS.map((d) => ({ d, list: s.employees.filter((x) => x.dept === d).sort((a, b) => Number(b.lead) - Number(a.lead)) })).filter((g) => g.list.length);
+  const e = s.employees.find((x) => x.id === sel) ?? groups[0].list[0];
+  return (
+    <div className="em3-split">
+      <nav className="em3-list">
+        <div className="em3-total" title="4대보험·퇴직연금 회사 부담 포함">
+          <b data-testid="emp-total">{n}명</b>
+          <span>한 달 월급 {wonShort(payrollWithBenefits(monthlySalary(s)).total)}</span>
+        </div>
+        {groups.map(({ d, list }) => (
+          <div key={d} className="em3-group" style={{ ['--dc' as string]: dept(d).color }}>
+            <div className="em3-gname">
+              <i />
+              {dept(d).name}
+              <em>{list.length}</em>
+            </div>
+            {list.map((x) => (
+              <button key={x.id} className={`em3-row ${x.id === e.id ? 'on' : ''}`} data-testid={`emp-row-${x.id}`} onClick={() => setSel(x.id)}>
+                <PixelAvatar id={x.id} color={dept(x.dept).color} size={26} />
+                <b>{x.name}</b>
+                {x.lead && <span className="em3-tag">팀장</span>}
+                {isSick(s, x) ? <span className="chip red">병가</span> : x.leaving !== null && <span className="chip red">퇴사 예정</span>}
+                <span className={`em3-sat ${x.sat < 35 ? 'fin-bad' : ''}`} title="만족도">
+                  {Math.round(x.sat)}
+                </span>
+              </button>
+            ))}
+          </div>
+        ))}
+      </nav>
+      <section className="em3-detail" style={{ ['--dc' as string]: dept(e.dept).color }}>
+        <div className="em3-title">
+          <PixelAvatar id={e.id} color={dept(e.dept).color} size={44} />
+          <h3>{e.name}</h3>
+        </div>
+        <EmployeeDetail key={e.id} e={e} openDm={openDm} />
+      </section>
     </div>
   );
 }

@@ -23,7 +23,7 @@
 .epm-acts .btn { justify-content: center; min-height: 44px; padding: 8px 10px; font-weight: 700; }
 .epm-acts .btn:disabled { opacity: 0.45; cursor: not-allowed; }
 .epm-main { display: flex; flex-direction: column; align-items: center; gap: 1px; line-height: 1.2; }
-.epm-main small { font-family: var(--pixel); font-size: 11px; font-weight: 400; opacity: 0.85; -webkit-font-smoothing: none; }
+.epm-main small { font-family: var(--pixel); font-size: 13px; font-weight: 400; opacity: 0.85; -webkit-font-smoothing: none; }
 
 .epm-sub { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-top: 10px; border-top: 1px solid var(--line); }
 .epm-link { padding: 0; border: none; background: none; color: var(--accent-text); font-size: var(--fs-sm); cursor: pointer; }
@@ -34,20 +34,37 @@
   .epm-main { grid-column: 1 / -1; }
 }
 
-/* 화면(A-191): 한 줄 짜임 — 왼쪽 직원 정보(예전 창 그대로), 오른쪽 그 부서가 하는 일(DeptPage). 두 칸은 각자 스크롤 */
-.modal.emp-modal.epm.wide { width: min(1180px, calc(100vw - 48px)); max-height: calc(100vh - 64px); display: grid; grid-template-columns: 420px minmax(0, 1fr); }
-.epm.wide .epm-left { display: flex; flex-direction: column; min-height: 0; overflow: auto; border-right: 1px solid var(--line); }
-.epm.wide .epm-right { min-width: 0; min-height: 0; overflow: auto; padding: 16px 18px 18px; background: var(--surface); }
-/* 좁은 오른쪽 칸 안에서는 부서 화면의 두 칸 짜임(판 + 카드 목록)을 한 칸으로 */
+/* 화면(A-191, A-209): 한 칸 창 + 탭 — 머리 · 탭(업무 / 직원 정보) · 내용. 내용만 스크롤 */
+.modal.emp-modal.epm.wide { width: min(860px, calc(100vw - 48px)); max-height: calc(100vh - 64px); display: flex; flex-direction: column; }
+.epm.wide .epm-body, .epm.wide .epm-foot { flex: none; }
+.epm.wide .epm-right { flex: 1 1 auto; min-width: 0; min-height: 0; overflow: auto; padding: 16px 18px 18px; background: var(--surface); }
+.epm.wide > .epm-body, .epm.wide > .epm-foot { overflow: visible; }
+.epm.wide .epm-info { flex: 1 1 auto; min-height: 0; overflow: auto; }
+/* 부서 화면의 두 칸 짜임(판 + 카드 목록)은 이 폭에서 한 칸으로 */
 .epm-right .hire-layout { grid-template-columns: 1fr; }
-@media (max-width: 1000px) {
-  .modal.emp-modal.epm.wide { grid-template-columns: 1fr; overflow: auto; }
-  .epm.wide .epm-left { overflow: visible; border-right: none; border-bottom: 1px solid var(--line); }
-  .epm.wide .epm-right { overflow: visible; }
-}
 
 /* 화면(A-193): AI 카드 티 빼기 — 아래 상세의 직무 줄은 머리로 옮겨 숨기고, 숫자 네 칸은 회색 타일 대신 이름·값 줄(선으로만 나눔) */
 .epm .emd-meta { display: none; }
 .epm .emd-stats { gap: 0 20px; }
 .epm .emd-stats > div { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 7px 0; border: none; border-bottom: 1px solid var(--line); border-radius: 0; background: none; }
 .epm .emd-stats > div b { font-size: var(--fs-md); font-variant-numeric: tabular-nums; }
+
+/* 화면(A-209): 만족도·건강·숙련은 한 줄 세 칸의 작은 막대, 숫자 칸은 네 칸 한 줄 */
+.epm .emd-meters { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.epm .emd-meters .row.tiny { font-size: var(--fs-sm); gap: 6px; }
+.epm .emd-meters .row .muted { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.epm .emd-meters .meter, .epm.epm .emd.emd .meter { height: 8px; }
+.epm .emd-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+/* 화면(A-209): 업무 창(.wk) 짜임과 맞춤 — 머리 오른쪽에 탭(업무 창 머리와 같은 자리), 막대·숫자는 회색 요약 칸 */
+.epm-head .epm-tabs { margin-left: auto; margin-right: 34px; min-width: 0; }
+.epm-head .epm-tabs .tabs { margin: 0; border-bottom: 0; }
+.epm-head:has(.epm-tabs) .epm-id { padding-right: 0; }
+.epm .emd-meters > div, .epm .emd-stats > div { padding: 12px 14px; border: none; border-radius: var(--r-lg); background: var(--surface-tile); }
+.epm .emd-meters { gap: 8px; }
+.epm .emd-meters > div { gap: 8px !important; }
+.epm .emd-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.epm .emd-stats > div { flex-direction: column; align-items: flex-start; gap: 4px; }
+.epm .emd-stats > div b { font-size: var(--fs-lg); font-weight: 800; }
+.epm .emd-body, .epm-body { padding-top: 14px; }
+@media (max-width: 700px) { .epm .emd-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } .epm .emd-meters { grid-template-columns: 1fr; } }

@@ -35,7 +35,7 @@ export const ROOM_LINE: Record<RoomState, string> = {
 };
 
 // 받쳐 주는 만큼 찼을 때 아직 안 나간 시장이 있으면(A-196: 어디서 하는지까지)
-export const CLOSED_LINE = ' 아직 나가지 않은 해외 시장도 있습니다. 현지화 기능을 만든 뒤 시장·광고 메뉴에서 진출하면 그 시장 고객이 더해집니다.';
+export const CLOSED_LINE = ' 아직 나가지 않은 해외 시장도 있습니다. 현지화 기능을 만든 뒤 시장 메뉴에서 진출하면 그 시장 고객이 더해집니다.';
 
 function sum(o: Partial<Record<string, number>>): number {
   return Object.values(o).reduce<number>((a, v) => a + (v ?? 0), 0);

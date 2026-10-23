@@ -1,4 +1,4 @@
-// OF-07 사무실 메뉴: 이전(DEC-020, 단계별 넓이·보증금·월세). 책상·가구는 상점에서 사서 직접 놓습니다(A-87).
+// OF-07 사무실(A-214부터 왼쪽 메뉴가 아니라 오른쪽 위 회사 카드의 이사가기 모달): 이전(DEC-020, 단계별 넓이·보증금·월세). 책상·가구는 상점에서 사서 직접 놓습니다(A-87).
 // 화면 짜임(A-104): 위 회색 판(지금 사무실 · 책상 칸), 아래 매물 카드(몇 명 앉나 · 보증금·월세 · 이사 버튼)
 // 화면(A-179): 커리어·업무와 같은 톤 — 가운데 큰 사무실 이름, 칸칸이 놓인 책상 칸, 납작한 회색 요약 칸, 매물 카드는 1px 테두리 납작한 면
 import { useState } from 'react';
@@ -22,11 +22,6 @@ export function OfficeApp() {
   const cap = deskCapacity(cur.id);
   return (
     <div className="col of of2">
-      <div className="of2-head">
-        <span className="of2-kicker">지금 사무실</span>
-        <h2 className="of2-big">{cur.name}</h2>
-        <p className="of2-lead">{cur.desc}</p>
-      </div>
       <section className="of2-seats">
         <div className="of-seats" aria-label={`책상 ${all.length}개 중 ${used}개에 사람이 앉음, 더 놓을 수 있는 책상 ${room}개`}>
           {Array.from({ length: Math.min(cap, 50) }, (_, i) => (

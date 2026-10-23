@@ -1,5 +1,5 @@
-/* 화면(A-179): 업무 창 출시 뒤 상태 대시보드 · 출시 기록 — MVP 전 화면(A-171)과 같은 톤. 가운데 큰 사용자 수, 납작한 회색 요약 칸, 1px 테두리 카드, 칸칸이 막대·계기판, 작은 라벨은 픽셀 글꼴 */
-.wk .pl { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 860px; margin: 0 auto; min-width: 0; }
+/* 화면(A-179): 업무 창 출시 뒤 상태 대시보드 — MVP 전 화면(A-171)과 같은 톤. 가운데 큰 사용자 수, 납작한 회색 요약 칸, 1px 테두리 카드, 칸칸이 막대·계기판, 작은 라벨은 픽셀 글꼴 */
+.wk .pl { display: flex; flex-direction: column; gap: 12px; width: 100%; min-width: 0; }
 .wk .pl .pos { color: var(--positive-press); font-weight: 800; }
 .wk .pl .neg { color: var(--negative-press); font-weight: 800; }
 
@@ -13,7 +13,7 @@
 .wk .pl-hero .wk-sub b.neg { color: var(--negative-press); }
 .wk .pl-dot { margin: 0 6px; color: var(--text-off); }
 .wk .pl-scale { display: flex; flex-direction: column; gap: 8px; width: min(100%, 440px); margin-top: 8px; }
-.wk .pl-scale .sc-step b { font-family: var(--pixel); font-size: 11px; font-weight: 400; -webkit-font-smoothing: none; }
+.wk .pl-scale .sc-step b { font-family: var(--pixel); font-size: 13px; font-weight: 400; -webkit-font-smoothing: none; }
 .wk .pl-scale .sc-bar { height: 10px; border-radius: 0; background: var(--surface-tile); }
 .wk .pl-scale .sc-bar i { border-radius: 0; -webkit-mask-image: repeating-linear-gradient(90deg, #000 0 6px, transparent 6px 8px); mask-image: repeating-linear-gradient(90deg, #000 0 6px, transparent 6px 8px); }
 .wk .pl-scale .sc-room { padding: 8px 12px; border-radius: var(--r-md); font-size: var(--fs-sm); }
@@ -28,7 +28,7 @@
 .wk .pl-card { display: flex; flex-direction: column; gap: 10px; min-width: 0; padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface); box-shadow: none; }
 .wk .pl-head { display: flex; align-items: baseline; gap: 8px; margin: 0; font-size: var(--fs-lg); font-weight: 700; }
 .wk .pl-head[title] { cursor: help; }
-.wk .pl-head em { font-style: normal; font-family: var(--pixel); font-size: 11px; font-weight: 400; color: var(--text-3); -webkit-font-smoothing: none; }
+.wk .pl-head em { font-style: normal; font-family: var(--pixel); font-size: 13px; font-weight: 400; color: var(--text-3); -webkit-font-smoothing: none; }
 .wk .pl .pd-kv { font-size: var(--fs-md); color: var(--text-2); }
 .wk .pl .pd-kv[title] { cursor: help; }
 .wk .pl .pd-kv b { color: var(--text); font-variant-numeric: tabular-nums; }
@@ -41,7 +41,7 @@
 .wk .pl-parts { font-size: var(--fs-sm); color: var(--text-3); cursor: help; word-break: keep-all; }
 .wk .pl-alert { padding: 8px 12px; border-radius: var(--r-md); background: var(--negative-soft); color: var(--negative-press); font-size: var(--fs-sm); font-weight: 600; line-height: 1.45; word-break: keep-all; }
 .wk .pl-price { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: auto; padding-top: 10px; border-top: 1px solid var(--line); cursor: help; }
-.wk .pl-lab { font-family: var(--pixel); font-size: 11px; color: var(--text-3); -webkit-font-smoothing: none; }
+.wk .pl-lab { font-family: var(--pixel); font-size: 13px; color: var(--text-3); -webkit-font-smoothing: none; }
 .wk .pl-price .seg { gap: 4px; padding: 0; border: none; background: none; }
 .wk .pl-price .seg button { padding: 6px 12px; border-radius: var(--r-full); background: var(--surface-tile); color: var(--text-2); font-size: var(--fs-sm); font-weight: 600; box-shadow: none; }
 .wk .pl-price .seg button:hover { background: var(--surface-sel); color: var(--text); }
@@ -54,16 +54,16 @@
 .wk .pl .pd-gauge-num { font-size: 18px; font-weight: 800; fill: var(--text); }
 .wk .pl .pd-stab-bar { width: 10px; border-radius: 0; background: repeating-linear-gradient(0deg, transparent 0 6px, var(--surface) 6px 8px), linear-gradient(to top, var(--negative) 0 33%, var(--caution) 33% 66%, var(--positive) 66% 100%); }
 .wk .pl .pd-stab-bar i { left: 14px; }
-.wk .pl .pd-stab-lab { padding-left: 12px; font-family: var(--pixel); font-size: 11px; font-weight: 400; -webkit-font-smoothing: none; }
+.wk .pl .pd-stab-lab { padding-left: 12px; font-family: var(--pixel); font-size: 13px; font-weight: 400; -webkit-font-smoothing: none; }
 
 /* 그래프·흐름 막대(CustomerFlow 부품은 고치지 않고 이 창 안에서만 모양을 맞춤) */
-.wk .pl .ax-y, .wk .pl .ax-x { font-family: var(--pixel); font-size: 11px; -webkit-font-smoothing: none; }
+.wk .pl .ax-y, .wk .pl .ax-x { font-family: var(--pixel); font-size: 13px; -webkit-font-smoothing: none; }
 .wk .pl .cf-head { font-size: var(--fs-md); }
 .wk .pl .cf-row { font-size: var(--fs-md); }
 .wk .pl .cf-bar { height: 10px; border-radius: 0; background: var(--surface-tile); }
 .wk .pl .cf-bar i { border-radius: 0; -webkit-mask-image: repeating-linear-gradient(90deg, #000 0 6px, transparent 6px 8px); mask-image: repeating-linear-gradient(90deg, #000 0 6px, transparent 6px 8px); }
 .wk .pl-tags { display: flex; flex-wrap: wrap; gap: 6px; }
-.wk .pl-tags span { padding: 3px 8px; border-radius: var(--r-xs); background: var(--surface-tile); color: var(--text-2); font-family: var(--pixel); font-size: 11px; -webkit-font-smoothing: none; }
+.wk .pl-tags span { padding: 3px 8px; border-radius: var(--r-xs); background: var(--surface-tile); color: var(--text-2); font-family: var(--pixel); font-size: 13px; -webkit-font-smoothing: none; }
 .wk .pl-tags span.ok { background: var(--positive-soft); color: var(--positive-press); }
 .wk .pl-tags span.mid { background: var(--caution-soft); color: var(--caution-text); }
 .wk .pl-tags span.bad { background: var(--negative-soft); color: var(--negative-press); }
@@ -75,32 +75,58 @@
 .wk .pl-now-head { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .wk .pl-now-head > b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-xl); font-weight: 800; cursor: help; }
 .wk .pl-tile { flex: none; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: var(--r-sm); background: var(--accent); }
-.wk .pl-chip { flex: none; padding: 3px 8px; border-radius: var(--r-xs); background: var(--accent); color: var(--text-on-accent); font-family: var(--pixel); font-size: 11px; white-space: nowrap; -webkit-font-smoothing: none; }
+.wk .pl-chip { flex: none; padding: 3px 8px; border-radius: var(--r-xs); background: var(--accent); color: var(--text-on-accent); font-family: var(--pixel); font-size: 13px; white-space: nowrap; -webkit-font-smoothing: none; }
 .wk .pl-now-prog { display: flex; align-items: center; gap: 10px; }
 .wk .pl-now-prog .pbar { flex: 1; height: 14px; }
 .wk .pl-now-prog b { min-width: 40px; text-align: right; font-size: var(--fs-lg); font-weight: 800; font-variant-numeric: tabular-nums; }
 .wk .pl-build .pd-who select { max-width: 130px; }
 
-/* 출시 기록 */
-.wk .pl-ships { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
-.wk .pl-ship { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto auto; align-items: center; gap: 12px; padding: 10px 14px; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface); }
-.wk .pl-ship > b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-md); font-weight: 700; }
-.wk .pl-ship time { font-family: var(--pixel); font-size: 11px; color: var(--text-3); white-space: nowrap; -webkit-font-smoothing: none; }
-.wk .pl-ship .chip { font-family: var(--pixel); font-size: 11px; font-weight: 400; white-space: nowrap; -webkit-font-smoothing: none; }
-.wk .pl-ship.ok .pl-tile { background: var(--positive); }
-.wk .pl-ship.mid .pl-tile { background: var(--caution-soft); }
-.wk .pl-ship.bad .pl-tile { background: var(--negative-soft); }
-
-/* 좁은 창: 두 칸 → 한 칸, 출시 기록 줄은 날짜를 이름 아래로 */
+/* 좁은 창: 두 칸 → 한 칸 */
 @container (max-width: 520px) {
   .wk .pl-two, .wk .pl-build { grid-template-columns: minmax(0, 1fr); }
   .wk .pl-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .wk .pl .cf-cols { grid-template-columns: minmax(0, 1fr); }
   .wk .pl .cf-row { grid-template-columns: 88px minmax(0, 1fr) 52px; }
-  .wk .pl-ship { grid-template-columns: 32px minmax(0, 1fr) auto; grid-template-areas: 'i n c' 'i d c'; row-gap: 2px; }
-  .wk .pl-ship > .pl-tile { grid-area: i; }
-  .wk .pl-ship > b { grid-area: n; }
-  .wk .pl-ship > time { grid-area: d; }
-  .wk .pl-ship > .chip { grid-area: c; }
   .wk .pl-price { flex-wrap: wrap; }
 }
+
+/* A-202 지금 사용자 / 제품이 받쳐 주는 최대: 회사 가치 칸 자리에 */
+.wk .pl-users b small { margin-left: 2px; font-size: var(--fs-md); font-weight: 700; color: var(--text-3); }
+.wk .pl-users .pl-max { margin-left: 6px; font-size: var(--fs-md); font-weight: 700; color: var(--text-3); }
+.wk .pl-users .pl-max .pl-max-note { margin-left: 4px; font-size: var(--fs-xs, 11px); font-weight: 500; color: var(--text-3); }
+.wk .pl-users .pl-max.full { color: var(--caution-text); }
+.wk .pl-users .pl-max.over { color: var(--negative-press); }
+.wk .pl-users em i { font-style: normal; font-weight: 700; }
+.wk .pl-users em i.pos { color: var(--positive-press); }
+.wk .pl-users em i.neg { color: var(--negative-press); }
+
+/* A-202 들고 나는 길 세 줄: 순증감 크게, 들어옴·떠남은 한 줄씩 */
+.wk .cf-simple { display: flex; flex-direction: column; gap: 6px; }
+.wk .cf-net-big { font-size: var(--fs-md); color: var(--text-2); }
+.wk .cf-net-big b { font-size: var(--fs-xl); font-weight: 800; margin-left: 4px; font-variant-numeric: tabular-nums; }
+.wk .cf-line { display: grid; grid-template-columns: 48px 72px 1fr; align-items: baseline; gap: 8px; font-size: var(--fs-md); color: var(--text-2); }
+.wk .cf-line b { font-variant-numeric: tabular-nums; }
+.wk .cf-line em { font-style: normal; color: var(--text-3); font-size: var(--fs-sm); }
+
+/* A-202 지금 만드는 기능: 맨 위 큰 카드 + 나머지 한 줄 목록 */
+.wk .nl { gap: 6px; }
+.wk .nl-hero { display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; border-radius: var(--r-lg); background: var(--accent-soft); }
+.wk .nl-hero .pl-now-head b { font-size: var(--fs-lg); }
+.wk .nl-hero .pl-now-prog { display: flex; align-items: center; gap: 10px; }
+.wk .nl-hero .pl-now-prog .pbar { flex: 1; height: 14px; background: var(--surface); }
+.wk .nl-hero .pl-now-prog b { min-width: 40px; text-align: right; font-variant-numeric: tabular-nums; }
+.wk .nl-row { display: flex; align-items: center; gap: 10px; padding: 8px 6px 8px 10px; border-bottom: 1px solid var(--line); font-size: var(--fs-md); }
+.wk .nl-row:last-child { border-bottom: none; }
+.wk .nl-date { color: var(--text-3); font-variant-numeric: tabular-nums; font-size: var(--fs-sm); min-width: 44px; text-align: right; }
+.wk .nl-ctl { display: inline-flex; gap: 2px; opacity: 0.35; transition: opacity 120ms var(--ease); }
+.wk .nl-row:hover .nl-ctl, .wk .nl-row:focus-within .nl-ctl { opacity: 1; }
+.wk .pl-two.one { grid-template-columns: minmax(0, 1fr); }
+.wk .pl-money { margin-bottom: 4px; }
+
+/* 제품 창 머리: 탭은 오른쪽 위(예전 칩 자리), 매력도·품질·사용자는 상태 탭 요약 칸 */
+.pd-band .pd-tabs { min-width: 0; }
+.pd-band .pd-tabs .tabs { margin: 0; border-bottom: 0; }
+.wk .pl-stats.pl-meta { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.wk .pl-meta .wk-stat > b.pos { color: var(--positive-press); }
+.wk .pl-meta .wk-stat > b.mid { color: var(--caution-text); }
+.wk .pl-meta .wk-stat > b.neg { color: var(--negative-press); }

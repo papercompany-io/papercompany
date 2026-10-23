@@ -98,7 +98,7 @@ function slop(s: GameState, d: DeptId) {
     s.modifiers.push({ key: 'output', value: -0.03, until: s.day + 14, label: 'AI 실수 수습' });
     notify(s, `AI 슬롭: ${name}팀이 AI 실수를 수습하느라 2주간 일이 느려집니다.`, 'bad', 'ai');
   }
-  post(s, teamChannelId(d), '시스템', 'AI 부작용(슬롭)이 발생했습니다. AI 도입 메뉴에서 적용률을 조정하거나 AI연구팀의 "사내 AI 도구 고도화"로 줄일 수 있습니다.', 'system');
+  post(s, teamChannelId(d), '시스템', 'AI 부작용(슬롭)이 발생했습니다. 직원 관리 창 AI 도입 탭에서 적용률을 조정하거나 AI연구팀의 "사내 AI 도구 고도화"로 줄일 수 있습니다.', 'system');
   float(s, 'AI 슬롭', 'bad');
 }
 
@@ -108,7 +108,7 @@ export function aiMonth(s: GameState) {
     const d = dayOfMonthKey(m.release);
     if (d > s.day - 31 && d <= s.day) {
       news(s, `[AI] ${aiVendor(m.vendor).name}, 새 모델 ${m.name} 공개`, 'ai');
-      if (s.company.stage >= 1) notify(s, `새 AI 모델 ${aiVendor(m.vendor).name} ${m.name}이(가) 나왔습니다. AI 도입 메뉴에서 바꿀 수 있습니다.`, 'info', 'ai');
+      if (s.company.stage >= 1) notify(s, `새 AI 모델 ${aiVendor(m.vendor).name} ${m.name}이(가) 나왔습니다. 직원 관리 창 AI 도입 탭에서 바꿀 수 있습니다.`, 'info', 'ai');
     }
   }
   // 쓰는 모델 업데이트로 효과가 조금 흔들립니다(분산).

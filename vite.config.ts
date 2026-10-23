@@ -1,36 +1,30 @@
 import { defineConfig, loadEnv, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import { viteSingleFile } from 'vite-plugin-singlefile';
+import { talkChat } from './electron/openrouter';
 
-// 자유 입력 DM(A-139): 개발 서버가 /api/jev 요청에 .env의 OPENROUTER_API_KEY를 붙여 OpenRouter Decisions(Jev)로 넘깁니다.
-// Jev는 글을 쓰지 않고 주어진 질문의 선택지를 고르는 모델입니다(의도·업무·말투·주제). 답 문장은 게임이 대사 묶음으로 만듭니다.
-// 키는 VITE_ 접두사가 없어 브라우저 번들에 들어가지 않습니다. 키가 없으면 503 → 게임은 키워드 규칙으로 읽습니다.
-function jevProxy(env: Record<string, string>): Plugin {
+// 자유 입력 대화(A-139 → A-199): 개발 서버가 /api/talk 요청에 .env의 OPENROUTER_API_KEY를 붙여 OpenRouter의 실제 LLM으로 넘깁니다.
+// LLM은 대표 말의 해석(의도·말투·업무)과 직원 답장을 한 번에 냅니다(electron/openrouter.ts, Electron과 같은 호출). 효과는 게임 규칙이 정합니다.
+// 키는 VITE_ 접두사가 없어 브라우저 번들에 들어가지 않습니다. 키가 없거나 실패하면 503·502 → 게임은 키워드 규칙과 대사 묶음으로 답합니다.
+function talkProxy(env: Record<string, string>): Plugin {
   return {
-    name: 'pc-jev-proxy',
+    name: 'pc-talk-proxy',
     configureServer(server) {
-      server.middlewares.use('/api/jev', async (req, res) => {
-        const key = env.OPENROUTER_API_KEY;
-        if (req.method !== 'POST' || !key) {
+      server.middlewares.use('/api/talk', async (req, res) => {
+        if (req.method !== 'POST' || !env.OPENROUTER_API_KEY) {
           res.statusCode = 503;
           return res.end('no key');
         }
         let body = '';
         for await (const chunk of req) body += chunk;
         try {
-          const { questions, state } = JSON.parse(body);
-          const r = await fetch('https://openrouter.ai/api/alpha/decisions', {
-            method: 'POST',
-            headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json', 'X-Title': 'PaperCompany' },
-            body: JSON.stringify({ model: env.OPENROUTER_MODEL || 'typesafe/jev-1.14', questions, state }),
-          });
-          const j = await r.json();
-          res.statusCode = r.ok ? 200 : 502;
+          const content = await talkChat(env, JSON.parse(body));
+          res.statusCode = content ? 200 : 502;
           res.setHeader('Content-Type', 'application/json');
-          res.end(JSON.stringify({ answers: j?.answers ?? null, model: j?.model, error: r.ok ? undefined : j?.error?.message }));
+          res.end(JSON.stringify({ content }));
         } catch (e) {
           res.statusCode = 502;
-          res.end(JSON.stringify({ answers: null, error: String(e) }));
+          res.end(JSON.stringify({ content: null, error: String(e) }));
         }
       });
     },
@@ -42,7 +36,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   return {
     base: './',
-    plugins: mode === 'web' ? [react(), viteSingleFile()] : [react(), jevProxy(env)],
+    plugins: mode === 'web' ? [react(), viteSingleFile()] : [react(), talkProxy(env)],
     build: { outDir: mode === 'web' ? 'dist-web' : 'dist', emptyOutDir: true },
   };
 });

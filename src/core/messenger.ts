@@ -20,8 +20,13 @@ export function markRead(s: GameState, channelId: string) {
   if (ch) ch.unread = 0;
 }
 
-export function unreadTotal(s: GameState): number {
-  return s.channels.reduce((a, c) => a + c.unread, 0);
+// 잡담이 오가는 채널(팀 채널·#전체). 잡담 알림을 끄면 이 채널들의 안 읽음은 뱃지에 세지 않음(A-201)
+export function isChatterChannel(c: Channel): boolean {
+  return c.kind === 'all' || c.kind === 'team';
+}
+
+export function unreadTotal(s: GameState, muteChatter = false): number {
+  return s.channels.reduce((a, c) => a + (muteChatter && isChatterChannel(c) ? 0 : c.unread), 0);
 }
 
 export function teamChannelId(d: DeptId) {

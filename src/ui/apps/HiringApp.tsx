@@ -1,4 +1,4 @@
-// F04 채용 메뉴(A-88 디자인 개편): HR-04 공고 등록, HR-05 지원자 목록과 프로필(EM-03 특성), HR-06 채용 확정과 입사 처리, HR-07 인사팀 위임 채용
+// F04 채용(A-88 디자인 개편, A-213부터 직원 관리 창의 채용 탭): HR-04 공고 등록, HR-05 지원자 목록과 프로필(EM-03 특성), HR-06 채용 확정과 입사 처리, HR-07 인사팀 위임 채용
 import { useEffect, useRef, useState } from 'react';
 import { DATA, DEPT_IDS, dept } from '../../core/data';
 import { formatDate } from '../../core/calendar';
@@ -9,16 +9,16 @@ import { PixelAvatar } from '../office/Avatar';
 import { marketSalary, maxSpeedOf, speedOf } from '../../core/staff';
 import { trait } from '../../core/data';
 import { act, timeHold, useGame } from '../store';
-import { Tabs, Help } from '../common';
 import type { Applicant, DeptId, Grade, Posting } from '../../core/types';
 import './apps.css';
 
-export function HiringApp() {
+// 채용 탭(A-213): 직원 관리 창 안. 왼쪽 새 공고 판, 오른쪽 지원자 줄 → 올린 공고 줄(외주 제안처럼 회색 줄).
+// 마감한 공고 기록·공고별 시간 막대·안쪽 탭(공고/지원자/위임)은 뺌. 위임 채용은 팀 탭 인사팀 페이지에 있음
+export function HireTab() {
   const s = useGame();
   const H = DATA.hiring;
   const waiting = s.applicants.filter((a) => a.status === 'waiting').sort((x, y) => y.arrivedDay - x.arrivedDay || (y.id > x.id ? 1 : -1));
   const open = s.postings.filter((p) => p.status === 'open');
-  const [tab, setTab] = useState<'postings' | 'applicants' | 'auto'>(waiting.length ? 'applicants' : 'postings');
   // 인원·기간은 고르지 않음(A-89: 무제한, 직접 마감할 때까지)
   const [form, setForm] = useState({ dept: 'dev' as DeptId, level: 'mid', promo: 'none' });
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -37,226 +37,161 @@ export function HiringApp() {
     const p = s.postings.find((x) => x.id === postingId);
     return !!p && postingFull(p);
   };
-  const shown = waiting;
 
   return (
-    <div className="col hiring">
-      <Tabs
-        tabs={[
-          { id: 'postings', label: `공고 (${open.length})` },
-          { id: 'applicants', label: `지원자 (${waiting.length})` },
-          { id: 'auto', label: '위임 채용(인사팀)' },
-        ]}
-        value={tab}
-        onChange={setTab}
-      />
-      {msg && <div className={msg.ok ? 'ok' : 'err'}>{msg.text}</div>}
-
-      {tab === 'postings' && (
-        <div className="hire-layout">
-          {/* 새 공고: 직군 타일 + 버튼 묶음, 아래 요약 줄 */}
-          <section className="hire-form">
-            <div className="hf-title">새 채용 공고</div>
-            <div className="hf-label">직군</div>
-            <DeptDropdown value={form.dept} onChange={(d) => setForm({ ...form, dept: d })} />
-            <div className="hf-row">
-              <div className="hf-field">
-                <div className="hf-label">등급</div>
-                <div className="seg" data-testid="post-level">
-                  {H.careerLevels.map((l) => (
-                    <button key={l.id} className={form.level === l.id ? 'on' : ''} onClick={() => setForm({ ...form, level: l.id })}>
-                      {l.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="hf-field">
-                <div className="hf-label">홍보</div>
-                <div className="seg" data-testid="post-promo">
-                  {H.promos.map((p) => (
-                    <button key={p.id} className={form.promo === p.id ? 'on' : ''} title={p.cost ? `${(p.cost / 1e4).toLocaleString()}만원` : '무료'} onClick={() => setForm({ ...form, promo: p.id })}>
-                      {p.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-            {warnings.map((w) => (
-              <div key={w} className="warn">
-                {w}
-              </div>
-            ))}
-            <div className="hf-summary">
-              <div className="hf-sum">
-                <span>예상 월급</span>
-                <b>
-                  {payLo}~{payHi}만원
-                </b>
-              </div>
-              <div className="hf-sum">
-                <span>홍보비</span>
-                <b>{promo.cost ? `${(promo.cost / 1e4).toLocaleString()}만원` : '무료'}</b>
-              </div>
-              <div className="hf-sum">
-                <span>예상 지원자</span>
-                <b>하루 약 {arrivalRate(s, preview).toFixed(1)}명</b>
-              </div>
-              <button
-                className="btn big"
-                data-testid="post-create"
-                disabled={seatsAvailable(s) === 0}
-                onClick={() => {
-                  const e = act((g) => createPosting(g, form));
-                  setMsg(e ? { ok: false, text: e } : { ok: true, text: `${dept(form.dept).name} 공고를 올렸습니다. 지원자는 하루 중 아무 때나 한 명씩 들어옵니다.` });
-                }}
-              >
-                공고 올리기
-              </button>
-            </div>
-          </section>
-
-          {/* 진행 중·지난 공고 카드 */}
-          <section className="post-list">
-            <div className="hf-title">공고 현황</div>
-            {s.postings.length === 0 && <div className="empty-note">아직 올린 공고가 없습니다.</div>}
-            {s.postings
-              .slice()
-              .reverse()
-              .map((p) => {
-                const total = s.applicants.filter((a) => a.postingId === p.id).length;
-                const wait = s.applicants.filter((a) => a.postingId === p.id && a.status === 'waiting').length;
-                const endless = postingOpenEnded(p);
-                const daysLeft = Math.max(0, p.endDay - s.day);
-                const timeFrac = Math.min(1, (s.day - p.startDay + s.msInDay / DATA.time.dayMs) / Math.max(1, p.endDay - p.startDay));
-                return (
-                  <div key={p.id} className={`post-card ${p.status}`} style={{ ['--dc' as string]: dept(p.dept).color }}>
-                    <div className="pc-head">
-                      <span className="pc-dot" />
-                      <b>{dept(p.dept).name}</b>
-                      <span className="pc-hired">{p.headcount > 0 ? `${p.hired}/${p.headcount}명 채용` : `${p.hired}명 채용`}</span>
-                      {p.status === 'open' ? (
-                        <button className="btn small ghost" onClick={() => act((g) => closePosting(g, p.id))}>
-                          마감
-                        </button>
-                      ) : (
-                        <span className="chip">마감</span>
-                      )}
-                    </div>
-                    <div className="pc-stats">
-                      <span>
-                        지원 <b>{total}</b>
-                      </span>
-                      <span>
-                        대기 <b>{wait}</b>
-                      </span>
-                      <span>
-                        {p.level ? (
-                          <>
-                            등급 <b>{careerLevel(p.level)?.name}</b>
-                          </>
-                        ) : (
-                          <>
-                            월급 <b>{H.salaryLevels.find((l) => l.id === p.salaryLevel)!.name}</b>
-                          </>
-                        )}
-                      </span>
-                      <span>
-                        홍보 <b>{H.promos.find((x) => x.id === p.promo)!.name}</b>
-                      </span>
-                    </div>
-                    {p.status === 'open' && (
-                      <>
-                        {!endless && (
-                          <div className="pc-time">
-                            <i style={{ width: `${timeFrac * 100}%` }} />
-                          </div>
-                        )}
-                        <div className="pc-foot">
-                          <span>{endless ? `상시 모집 · ${formatDate(p.startDay)}부터` : `${formatDate(p.endDay)} 마감 · D-${daysLeft}`}</span>
-                          <span>하루 약 {arrivalRate(s, p).toFixed(1)}명</span>
-                        </div>
-                      </>
-                    )}
-                    {p.status === 'open' && wait > 0 && (
-                      <button
-                        className="pc-link"
-                        onClick={() => setTab('applicants')}
-                      >
-                        대기 중인 지원자 {wait}명 보기 ›
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
-          </section>
+    <div className="em3-hire">
+      <section className="hire-form">
+        <h3 className="wk-sect">새 공고</h3>
+        <div className="hf-field">
+          <div className="hf-label">직군</div>
+          <DeptDropdown value={form.dept} onChange={(d) => setForm({ ...form, dept: d })} />
         </div>
-      )}
-
-      {tab === 'applicants' && (
-        <>
-          {shown.length === 0 && (
-            <div className="empty-note">{open.length ? '아직 지원자가 없습니다. 지원자는 하루 중 아무 때나 한 명씩 들어옵니다. 월급·홍보 수준을 올리면 더 자주 옵니다.' : '진행 중인 공고가 없습니다. 공고 탭에서 공고를 올리세요.'}</div>
-          )}
-          <div className="applicant-grid">
-            {shown.map((a) => {
-              const fresh = a.arrivedDay >= s.day - 1;
-              const staysLeft = Math.max(0, a.leaveDay - s.day);
-              const sp = applicantSpeed(a);
-              return (
-                <div key={a.id} className="applicant-card" data-testid={`applicant-${a.id}`} style={{ ['--dc' as string]: dept(a.dept).color }}>
-                  {fresh && <span className="ac-new">NEW</span>}
-                  <div className="ac-head">
-                    <PixelAvatar id={a.id} color={dept(a.dept).color} size={48} />
-                    <div className="ac-id">
-                      <b>{a.name}</b>
-                      <span>
-                        {roleName(a)} · <span className={staysLeft <= 2 ? 'ac-soon' : ''}>D-{staysLeft} 기다림</span>
-                      </span>
-                    </div>
-                    {/* 특성 태그: 오른쪽 위 */}
-                    <div className="ac-traits">
-                      {a.traits.map((t) => (
-                        <span key={t} className="chip amber" title={trait(t)?.desc}>
-                          {trait(t)?.name}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="ac-stats">
-                    <div>
-                      <span>경력</span>
-                      <b>{a.years}년</b>
-                    </div>
-                    <div>
-                      <span>희망 월급</span>
-                      <b>{a.nego?.revealed ? `${(a.desiredSalary / 1e4).toLocaleString()}만` : '?'}</b>
-                    </div>
-                    <div title={`개발 속도 ${sp}% · 숙련을 다 올리면 ${maxSpeedOf(a.grade, a.talent ?? 1)}%`}>
-                      <span>속도</span>
-                      <b>{sp}%</b>
-                    </div>
-                  </div>
-                  {full(a.postingId) ? (
-                    <button className="btn small" disabled>
-                      공고 모집 인원이 다 찼습니다
-                    </button>
-                  ) : (
-                    <div className="ac-actions">
-                      <button className="btn small green" data-testid={`hire-${a.id}`} onClick={() => setOfferFor(a.id)}>
-                        {a.nego ? '협상 이어가기' : '협상 시작'}
-                      </button>
-                      <button className="btn small ghost" onClick={() => act((g) => rejectApplicant(g, a.id))}>
-                        불합격
-                      </button>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+        <div className="hf-field">
+          <div className="hf-label">등급</div>
+          <div className="seg" data-testid="post-level">
+            {H.careerLevels.map((l) => (
+              <button key={l.id} className={form.level === l.id ? 'on' : ''} onClick={() => setForm({ ...form, level: l.id })}>
+                {l.name}
+              </button>
+            ))}
           </div>
-        </>
-      )}
-      {tab === 'auto' && <AutoHire />}
+        </div>
+        <div className="hf-field">
+          <div className="hf-label">홍보</div>
+          <div className="seg" data-testid="post-promo">
+            {H.promos.map((p) => (
+              <button key={p.id} className={form.promo === p.id ? 'on' : ''} title={p.cost ? `${(p.cost / 1e4).toLocaleString()}만원` : '무료'} onClick={() => setForm({ ...form, promo: p.id })}>
+                {p.name}
+              </button>
+            ))}
+          </div>
+        </div>
+        {warnings.map((w) => (
+          <div key={w} className="warn">
+            {w}
+          </div>
+        ))}
+        <div className="em3-sums">
+          <div>
+            <span>예상 월급</span>
+            <b>
+              {payLo}~{payHi}만원
+            </b>
+          </div>
+          <div>
+            <span>홍보비</span>
+            <b>{promo.cost ? `${(promo.cost / 1e4).toLocaleString()}만원` : '무료'}</b>
+          </div>
+          <div>
+            <span>지원자</span>
+            <b>하루 약 {arrivalRate(s, preview).toFixed(1)}명</b>
+          </div>
+        </div>
+        <button
+          className="btn big"
+          data-testid="post-create"
+          disabled={seatsAvailable(s) === 0}
+          title={seatsAvailable(s) === 0 ? '빈 자리가 없습니다. 사무실을 넓히거나 책상을 놓으세요.' : ''}
+          onClick={() => {
+            const e = act((g) => createPosting(g, form));
+            setMsg(e ? { ok: false, text: e } : { ok: true, text: `${dept(form.dept).name} 공고를 올렸습니다. 지원자는 하루 중 아무 때나 한 명씩 들어옵니다.` });
+          }}
+        >
+          공고 올리기
+        </button>
+        {msg && <div className={msg.ok ? 'ok' : 'err'}>{msg.text}</div>}
+      </section>
+
+      <section className="em3-hire-main">
+        <h3 className="wk-sect">
+          지원자 <em>{waiting.length}</em>
+        </h3>
+        {waiting.length === 0 && <div className="wk-empty small">{open.length ? '아직 지원자가 없습니다. 하루 중 아무 때나 한 명씩 들어옵니다.' : '공고를 올리면 지원자가 들어옵니다.'}</div>}
+        <div className="ct2-list">
+          {waiting.map((a) => {
+            const staysLeft = Math.max(0, a.leaveDay - s.day);
+            const sp = applicantSpeed(a);
+            return (
+              <div key={a.id} className="em3-ap" data-testid={`applicant-${a.id}`} style={{ ['--dc' as string]: dept(a.dept).color }}>
+                <PixelAvatar id={a.id} color={dept(a.dept).color} size={40} />
+                <div className="em3-ap-main">
+                  <div className="em3-ap-name">
+                    <b>{a.name}</b>
+                    {a.arrivedDay >= s.day - 1 && <span className="chip blue">새로 옴</span>}
+                    {a.traits.map((t) => (
+                      <span key={t} className="chip amber" title={trait(t)?.desc}>
+                        {trait(t)?.name}
+                      </span>
+                    ))}
+                  </div>
+                  <span>
+                    {roleName(a)} · 경력 {a.years}년 · <span className={staysLeft <= 2 ? 'fin-bad' : ''}>{staysLeft}일 더 기다림</span>
+                  </span>
+                </div>
+                <div className="em3-ap-val" title={`개발 속도 ${sp}% · 숙련을 다 올리면 ${maxSpeedOf(a.grade, a.talent ?? 1)}%`}>
+                  <span>속도</span>
+                  <b>{sp}%</b>
+                </div>
+                <div className="em3-ap-val">
+                  <span>희망 월급</span>
+                  <b>{a.nego?.revealed ? `${(a.desiredSalary / 1e4).toLocaleString()}만` : '?'}</b>
+                </div>
+                {full(a.postingId) ? (
+                  <span className="em3-ap-full">모집 인원이 다 찼습니다</span>
+                ) : (
+                  <div className="em3-ap-btns">
+                    <button className="btn small" data-testid={`hire-${a.id}`} onClick={() => setOfferFor(a.id)}>
+                      {a.nego ? '협상 이어가기' : '협상'}
+                    </button>
+                    <button className="btn small ghost" onClick={() => act((g) => rejectApplicant(g, a.id))}>
+                      불합격
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {open.length > 0 && (
+          <>
+            <h3 className="wk-sect">
+              올린 공고 <em>{open.length}</em>
+            </h3>
+            <div className="ct2-list">
+              {open
+                .slice()
+                .reverse()
+                .map((p) => {
+                  const wait = s.applicants.filter((a) => a.postingId === p.id && a.status === 'waiting').length;
+                  return (
+                    <div key={p.id} className="em3-post" style={{ ['--dc' as string]: dept(p.dept).color }}>
+                      <i className="em3-dot" />
+                      <div className="em3-ap-main">
+                        <b>
+                          {careerLevel(p.level)?.name ?? ''} {dept(p.dept).name}
+                        </b>
+                        <span>
+                          {postingOpenEnded(p) ? `${formatDate(p.startDay)}부터 상시 모집` : `${formatDate(p.endDay)} 마감 · D-${Math.max(0, p.endDay - s.day)}`} · 홍보 {H.promos.find((x) => x.id === p.promo)!.name}
+                        </span>
+                      </div>
+                      <div className="em3-ap-val">
+                        <span>대기 · 채용</span>
+                        <b>
+                          {wait} · {p.hired}
+                        </b>
+                      </div>
+                      <button className="btn small ghost" onClick={() => act((g) => closePosting(g, p.id))}>
+                        마감
+                      </button>
+                    </div>
+                  );
+                })}
+            </div>
+          </>
+        )}
+      </section>
+
       {offerFor && (
         <NegotiationDialog
           applicantId={offerFor}

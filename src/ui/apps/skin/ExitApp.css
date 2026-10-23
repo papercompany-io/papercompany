@@ -1,7 +1,7 @@
 /* 화면(A-179): 매각·IPO — 가운데 큰 "받을 돈", 납작한 회색 칸, 제안·준비·무산 카드, 매각·IPO 고르기 카드(색 타일 + 흰 픽셀 그림, 칸칸이 차는 가능성 막대) */
 .ex2 { width: 100%; max-width: 760px; min-width: 320px; margin: 0 auto; gap: 14px; container-type: inline-size; }
 .ex2-head { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 0 2px; text-align: center; }
-.ex2-kicker { font-family: var(--pixel); font-size: 11px; font-weight: 400; color: var(--accent-text); -webkit-font-smoothing: none; }
+.ex2-kicker { font-family: var(--pixel); font-size: 13px; font-weight: 400; color: var(--accent-text); -webkit-font-smoothing: none; }
 .ex2-big { margin: 0; font-size: 40px; font-weight: 800; line-height: 1.15; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; word-break: keep-all; cursor: help; }
 .ex2-big .money { font-size: inherit; font-weight: inherit; }
 .ex2-lead { margin: 0; max-width: 460px; font-size: var(--fs-md); line-height: 1.5; color: var(--text-3); word-break: keep-all; }
@@ -10,7 +10,7 @@
 .ex2-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .ex2-stats > div { position: relative; display: flex; flex-direction: column; gap: 4px; min-width: 0; padding: 38px 16px 14px; border-radius: var(--r-lg); background: var(--surface-tile); }
 .ex2-stats .px { position: absolute; left: 14px; top: 12px; }
-.ex2-stats span { font-family: var(--pixel); font-size: 11px; font-weight: 400; color: var(--text-3); -webkit-font-smoothing: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ex2-stats span { font-family: var(--pixel); font-size: 13px; font-weight: 400; color: var(--text-3); -webkit-font-smoothing: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ex2-stats b { font-size: var(--fs-xl); font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ex2-stats .money { font-size: inherit; font-weight: inherit; }
 
@@ -20,7 +20,7 @@
 .ex2-prep { border-color: var(--accent); background: var(--surface-hover); }
 .ex2-failed { border-color: var(--negative); background: var(--negative-soft); }
 .ex2-card-head { display: flex; align-items: center; gap: 12px; min-width: 0; }
-.ex2-card-head .chip { flex: none; margin-left: auto; font-family: var(--pixel); font-size: 11px; font-weight: 400; -webkit-font-smoothing: none; }
+.ex2-card-head .chip { flex: none; margin-left: auto; font-family: var(--pixel); font-size: 13px; font-weight: 400; -webkit-font-smoothing: none; }
 .ex2-card-title { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .ex2-card-title b { font-size: var(--fs-lg); font-weight: 800; word-break: keep-all; }
 .ex2-card-title span { font-size: var(--fs-sm); color: var(--text-3); word-break: keep-all; }
@@ -50,9 +50,9 @@
 .ex2-choice:hover { border-color: var(--line-strong); }
 .ex2-choice > .btn { align-self: stretch; }
 .ex2-tags { display: flex; flex-wrap: wrap; gap: 4px; }
-.ex2-tags span { padding: 3px 7px; border-radius: var(--r-xs); background: var(--surface-tile); color: var(--text-2); font-family: var(--pixel); font-size: 11px; -webkit-font-smoothing: none; }
+.ex2-tags span { padding: 3px 7px; border-radius: var(--r-xs); background: var(--surface-tile); color: var(--text-2); font-family: var(--pixel); font-size: 13px; -webkit-font-smoothing: none; }
 .ex2-chance { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: baseline; gap: 6px 10px; cursor: help; }
-.ex2-chance > span { font-family: var(--pixel); font-size: 11px; color: var(--text-3); -webkit-font-smoothing: none; }
+.ex2-chance > span { font-family: var(--pixel); font-size: 13px; color: var(--text-3); -webkit-font-smoothing: none; }
 .ex2-chance > b { justify-self: end; font-size: var(--fs-md); font-weight: 800; }
 .ex2-chance .ex2-bar { grid-column: 1 / -1; }
 .ex2-chance.good > b { color: var(--positive-press); }

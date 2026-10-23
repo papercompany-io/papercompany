@@ -407,7 +407,7 @@ function ship(s: GameState, it: RoadmapItem) {
   sfx(s, result === 'fail' ? 'warn' : 'coin');
   if (!hasMvp(s) && coreFeatures(s).every((c) => featureLevel(s, c.id) >= 1)) launchMvp(s);
   else notify(s, `기능 출시: ${name} (${label})`, result === 'fail' ? 'bad' : 'good', 'product');
-  if (f.fx.market) notify(s, `${DATA.markets.markets.find((m) => m.id === f.fx.market)!.name} 진출 준비가 됐습니다. 시장·광고 메뉴에서 진출할 수 있습니다.`, 'good', 'market');
+  if (f.fx.market) notify(s, `${DATA.markets.markets.find((m) => m.id === f.fx.market)!.name} 진출 준비가 됐습니다. 시장 메뉴에서 진출할 수 있습니다.`, 'good', 'market');
 }
 
 function launchMvp(s: GameState) {
@@ -423,7 +423,7 @@ function launchMvp(s: GameState) {
   const who = friends > 0 ? `대표의 지인 ${friends}${ind.unit === '고객사' ? '곳' : '명'}이 먼저 써 보기 시작했습니다` : '아직 아무도 모릅니다';
   notify(s, `MVP 출시! ${s.company.name}이(가) 국내 시장에 나왔습니다. ${who}. 고객을 늘리려면 광고·영업·콘텐츠로 알려야 합니다.`, 'mission', 'market');
   news(s, `[스타트업] ${s.company.name}, 첫 서비스 출시`, 'company');
-  post(s, 'all', '시스템', 'MVP를 출시했습니다. 홍보하지 않으면 지인 말고는 거의 들어오지 않습니다. 시장·광고 메뉴에서 광고 예산을 정하거나 대표 일정에 "영업"을 넣으세요.', 'system');
+  post(s, 'all', '시스템', 'MVP를 출시했습니다. 홍보하지 않으면 지인 말고는 거의 들어오지 않습니다. 시장 메뉴에서 광고 예산을 정하거나 대표 일정에 "영업"을 넣으세요.', 'system');
   s.events.push({ type: 'confetti' });
 }
 

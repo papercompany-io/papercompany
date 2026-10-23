@@ -14,7 +14,7 @@ interface PcSave {
   writeProfile?: (data: string) => Promise<boolean>;
   toggleFullscreen?: () => void;
   quit?: () => void;
-  jev?: (req: { questions: unknown; state: unknown }) => Promise<unknown>; // 자유 입력 DM(A-139): Jev 결정 답(answers)
+  talk?: (req: { system: string; user: string; schema: unknown; maxTokens: number }) => Promise<string | null>; // 자유 입력 대화(A-199): LLM 답(JSON 문자열)
 }
 
 declare global {

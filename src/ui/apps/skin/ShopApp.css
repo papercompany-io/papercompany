@@ -3,7 +3,7 @@
 .sh2 { gap: 14px; min-width: 320px; container-type: inline-size; }
 
 .sh2-head { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 0 2px; text-align: center; }
-.sh2-kicker { font-family: var(--pixel); font-size: 11px; font-weight: 400; color: var(--accent-text); -webkit-font-smoothing: none; }
+.sh2-kicker { font-family: var(--pixel); font-size: 13px; font-weight: 400; color: var(--accent-text); -webkit-font-smoothing: none; }
 .sh2-big { margin: 0; font-size: 36px; font-weight: 800; line-height: 1.15; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
 .sh2-lead { margin: 0; font-size: var(--fs-md); color: var(--text-3); cursor: help; word-break: keep-all; }
 
@@ -26,20 +26,20 @@
 .sh2.sh2 .shop-tile.placed .st-img { background: var(--surface); }
 .sh2-cap { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: 0 4px; }
 .sh2-cap b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-md); font-weight: 700; }
-.sh2-cap em { font-style: normal; font-family: var(--pixel); font-size: 11px; font-weight: 400; color: var(--text-3); -webkit-font-smoothing: none; }
+.sh2-cap em { font-style: normal; font-family: var(--pixel); font-size: 13px; font-weight: 400; color: var(--text-3); -webkit-font-smoothing: none; }
 .sh2 .shop-tile.placed .sh2-cap em { color: var(--accent-text); }
 .sh2 .shop-tile.stored .sh2-cap em { color: var(--caution-text); }
 .sh2 .shop-tile.blocked .sh2-cap { opacity: 0.6; }
 
 /* 배지: 토큰 색, 그림자 없음 */
-.sh2.sh2 .st-badge { top: -7px; right: -7px; min-width: 24px; height: 24px; padding: 0 7px; border-radius: var(--r-sm); background: var(--negative); color: var(--text-on-accent); box-shadow: 0 0 0 2px var(--surface); font-family: var(--pixel); font-size: 11px; font-weight: 400; -webkit-font-smoothing: none; }
+.sh2.sh2 .st-badge { top: -7px; right: -7px; min-width: 24px; height: 24px; padding: 0 7px; border-radius: var(--r-sm); background: var(--negative); color: var(--text-on-accent); box-shadow: 0 0 0 2px var(--surface); font-family: var(--pixel); font-size: 13px; font-weight: 400; -webkit-font-smoothing: none; }
 .sh2.sh2 .st-badge.placed { padding: 0; background: var(--accent); }
 .sh2.sh2 .st-badge.placed svg { width: 14px; height: 11px; }
 .sh2.sh2 .st-badge.stored { background: var(--caution); color: var(--text); }
 
 /* 말풍선: 그림자 대신 테두리 */
 .sh2.sh2 .st-tip { border-color: var(--line-strong); border-radius: var(--r-md); box-shadow: none; }
-.sh2.sh2 .st-meta { font-family: var(--pixel); font-size: 11px; font-weight: 400; -webkit-font-smoothing: none; }
+.sh2.sh2 .st-meta { font-family: var(--pixel); font-size: 13px; font-weight: 400; -webkit-font-smoothing: none; }
 
 @container (max-width: 520px) {
   .sh2-big { font-size: 30px; }

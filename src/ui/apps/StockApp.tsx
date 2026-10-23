@@ -41,7 +41,7 @@ export function StockApp() {
         <div className="st2-head">
           <span className="st2-kicker">주식</span>
           <h2 className="st2-big">상장사가 아닙니다</h2>
-          <p className="st2-lead">Exit 메뉴에서 IPO를 시도하세요.</p>
+          <p className="st2-lead">투자 메뉴의 Exit 탭에서 IPO를 시도하세요.</p>
         </div>
       </div>
     );

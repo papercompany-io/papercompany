@@ -13,5 +13,5 @@ contextBridge.exposeInMainWorld('pcSave', {
   writeProfile: (data: string) => ipcRenderer.invoke('profile:write', data) as Promise<boolean>,
   toggleFullscreen: () => ipcRenderer.send('app:toggle-fullscreen'),
   quit: () => ipcRenderer.send('app:quit'),
-  jev: (req: { questions: unknown; state: unknown }) => ipcRenderer.invoke('jev:decide', req) as Promise<unknown>,
+  talk: (req: { system: string; user: string; schema: unknown; maxTokens: number }) => ipcRenderer.invoke('talk:chat', req) as Promise<string | null>,
 });

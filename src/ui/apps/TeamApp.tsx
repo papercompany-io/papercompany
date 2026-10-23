@@ -1,4 +1,5 @@
 // 화면(A-191): 팀 앱 — 사람이 있는 부서마다 알약 탭, 탭마다 그 부서가 하는 일 페이지(DeptPage).
+// 화면(A-213): 따로 있던 팀 앱은 직원 관리 창의 "팀" 탭으로. 왼쪽 부서 줄 + 오른쪽 부서 페이지
 // DeptPage는 사무실 직원 창 오른쪽에도 그대로 들어갑니다(왼쪽 직원 정보 + 오른쪽 그 직원 부서의 일, 바로 조작 가능).
 // 화면(A-193): 위 띠는 색 바탕·왼쪽 색 줄 없이 밑줄 하나. 직원 창에서 혼자인 팀이면 사람 칩 줄을 뺌
 // 부서마다 이미 있는 화면을 그대로 씀: 개발·디자인 = 개발 일정, 마케팅 = 광고 집행, 광고 운영 = 광고 판매, 세일즈 = 대기업 계약, 인사 = 위임 채용, AI연구 = AI 도입
@@ -7,18 +8,17 @@ import { DEPT_IDS, dept, ordersFor } from '../../core/data';
 import { deptMembers, deptUnlocked } from '../../core/employees';
 import { deptOutput, leadInfo } from '../../core/staff';
 import { orderOf } from '../../core/orders';
-import { commandOrder } from '../../core/reactions';
+import { TeamOrderSelect } from './MessengerApp';
 import { deptCoverage } from '../../core/market';
 import type { DeptId, GameState } from '../../core/types';
-import { act, useGame } from '../store';
-import { Tabs } from '../common';
+import { useGame } from '../store';
 import { PixelAvatar } from '../office/Avatar';
 import type { AppId } from '../Desktop';
 import { Ads } from './AdsPanel';
 import { AdSales } from './AdSalesPanel';
 import { Enterprise } from './MarketApp';
 import { AutoHire } from './HiringApp';
-import { Roadmap, productView } from './ProductApp';
+import { NowBuilding, productView } from './ProductApp';
 import { AiApp } from './AiApp';
 import './skin/TeamApp.css';
 
@@ -29,25 +29,36 @@ export function teamDepts(s: GameState): DeptId[] {
   return DEPT_IDS.filter((d) => deptUnlocked(s, d) && deptMembers(s, d).length > 0);
 }
 
-export function TeamApp({ initial, openApp }: { initial?: string; openApp: OpenApp }) {
+export function TeamApp({ initial, openApp, onEmployee }: { initial?: string; openApp: OpenApp; onEmployee?: (id: string) => void }) {
   const s = useGame();
   const list = teamDepts(s);
   const [sel, setSel] = useState<DeptId | null>((initial as DeptId) ?? null);
   const d = sel && list.includes(sel) ? sel : list[0];
   if (!d)
     return (
-      <div className="dpg-empty">
+      <div className="wk-empty">
         <b>아직 팀이 없습니다</b>
-        <span>채용에서 첫 직원을 뽑으면 부서마다 하는 일을 여기서 보고 바꿉니다.</span>
+        <span>첫 직원을 뽑으면 부서마다 하는 일을 여기서 보고 바꿉니다.</span>
         <button className="btn small" data-testid="team-open-hiring" onClick={() => openApp('hiring')}>
-          채용 열기
+          채용 탭으로
         </button>
       </div>
     );
+  // A-213: 부서 알약 탭 대신 시장 창처럼 왼쪽 부서 줄 + 오른쪽 고른 부서 페이지
   return (
-    <div className="col">
-      <Tabs tabs={list.map((x) => ({ id: `dept-${x}`, label: `${dept(x).name} ${deptMembers(s, x).length}` }))} value={`dept-${d}`} onChange={(t) => setSel(t.slice(5) as DeptId)} />
-      <DeptPage d={d} openApp={openApp} />
+    <div className="em3-split">
+      <nav className="em3-list">
+        {list.map((x) => (
+          <button key={x} className={`em3-row dept ${x === d ? 'on' : ''}`} data-testid={`tab-dept-${x}`} style={{ ['--dc' as string]: dept(x).color }} onClick={() => setSel(x)}>
+            <i className="em3-dot" />
+            <b>{dept(x).name}</b>
+            <span className="em3-sat">{deptMembers(s, x).length}명</span>
+          </button>
+        ))}
+      </nav>
+      <section className="em3-detail">
+        <DeptPage d={d} openApp={openApp} onEmployee={onEmployee} />
+      </section>
     </div>
   );
 }
@@ -76,14 +87,7 @@ export function DeptPage({ d, openApp, focusId, onEmployee }: { d: DeptId; openA
         {orders.length > 0 && (
           <div className="dpg-order">
             <span className="hf-label">맡은 일</span>
-            <select data-testid={`dept-order-${d}`} value={orderOf(s, d)} onChange={(e) => act((g) => commandOrder(g, d, e.target.value))}>
-              {orders.map((o) => (
-                <option key={o.id} value={o.id} disabled={s.company.stage < o.stage}>
-                  {o.name}
-                  {s.company.stage < o.stage ? ` (단계 ${o.stage})` : ''}
-                </option>
-              ))}
-            </select>
+            <TeamOrderSelect d={d} testId={`dept-order-${d}`} onErr={setMsg} />
             {cur && <span className="dpg-desc">{cur.desc}</span>}
           </div>
         )}
@@ -114,7 +118,14 @@ function DeptWork({ d, setMsg, openApp }: { d: DeptId; setMsg: (m: string | null
   switch (d) {
     case 'dev':
     case 'design':
-      return <Roadmap s={s} v={productView(s)} openSchedule={() => openApp('schedule')} goFeatures={() => openApp('product', 'features')} />;
+      // A-209: 업무 창 상태 탭의 "지금 만드는 기능"과 같은 카드(.wk .pl 아래 스타일을 그대로 씀)
+      return (
+        <div className="wk">
+          <div className="pl">
+            <NowBuilding s={s} v={productView(s)} openSchedule={() => openApp('schedule')} goFeatures={() => openApp('product', 'features')} builders />
+          </div>
+        </div>
+      );
     case 'marketing':
       return <Ads setMsg={setMsg} />;
     case 'adops':
@@ -156,7 +167,7 @@ function Coverage({ d, openApp }: { d: 'cs' | 'infra'; openApp: OpenApp }) {
       </p>
       {short && (
         <button className="btn small" onClick={() => openApp('hiring')}>
-          채용 열기
+          채용 탭으로
         </button>
       )}
     </div>

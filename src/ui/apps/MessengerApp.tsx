@@ -13,12 +13,13 @@ import { DM_ACTIONS, commandOrder, dmAction } from '../../core/reactions';
 import { answerSaid, postSaid, setEmpOrder } from '../../core/talk';
 import { answerChannel, postChannelSaid } from '../../core/chat';
 import { empOrderOf } from '../../core/assign';
-import { readChannel, readTalk } from '../talkJev';
+import { readChannel, readTalk } from '../talkAi';
 import { delegateAway, isFullDay, outingEffect, outingRange, outingTravel, outings } from '../../core/outings';
 import { OutingOfferActions } from './ScheduleApp';
 import { MilestoneCard } from './MilestoneCard';
 import { milestones } from '../../core/milestones';
-import { createGroup, markRead, teamChannelId } from '../../core/messenger';
+import { createGroup, isChatterChannel, markRead, teamChannelId } from '../../core/messenger';
+import { setSettings, useSettings } from '../meta';
 import { deptMembers } from '../../core/employees';
 import { deptOutput, isSick } from '../../core/staff';
 import { act, getGame, useGame } from '../store';
@@ -76,6 +77,7 @@ export function MessengerApp({ initial, openInvest }: { initial?: string; openIn
   const [folded, setFolded] = useState<string[]>([]);
   const [peek, setPeek] = useState(false); // 투자 요약 팝업(A-124)
   const [showWorking, setShowWorking] = useState(false); // 일하는 중인 직원 목록(A-135)
+  const muteChatter = useSettings().muteChatter; // 잡담 알림 끄기(A-201)
   const list = useRef<HTMLDivElement>(null);
   const ch = s.channels.find((c) => c.id === sel) ?? s.channels[0];
 
@@ -203,11 +205,23 @@ export function MessengerApp({ initial, openInvest }: { initial?: string; openIn
                     +
                   </button>
                 )}
+                {/* 잡담 알림 끄기(A-201): 팀 채널·#전체에 새 말이 와도 뱃지·굵은 글씨를 띄우지 않음 */}
+                {g.title === '채널' && (
+                  <button className={`mg-read-all ${muteChatter ? 'on' : ''}`} data-testid="mute-chatter" aria-pressed={muteChatter} title={muteChatter ? '팀 채널·#전체 알림을 다시 켭니다' : '팀 채널·#전체에 새 말이 와도 알림 뱃지를 띄우지 않습니다'} onClick={() => setSettings({ muteChatter: !muteChatter })}>
+                    {muteChatter ? '알림 꺼짐' : '알림 끄기'}
+                  </button>
+                )}
+                {/* 외부 연락처 한 번에 읽기(A-201): 안 읽은 연락이 있을 때만 */}
+                {g.title === '외부 연락처' && items.some((c) => c.unread > 0) && (
+                  <button className="mg-read-all" data-testid="ext-read-all" title="외부 연락처를 모두 읽음으로" onClick={() => act((gs) => items.forEach((c) => markRead(gs, c.id)))}>
+                    모두 읽음
+                  </button>
+                )}
               </div>
               {!isFolded &&
                 items.map((c) => {
                   const e = c.kind === 'dm' ? s.employees.find((x) => x.id === c.memberIds[0]) : undefined;
-                  const unread = c.unread > 0 && c.id !== sel;
+                  const unread = c.unread > 0 && c.id !== sel && !(muteChatter && isChatterChannel(c));
                   return (
                     <button key={c.id} data-testid={`ch-${c.id}`} className={`mg-item ${c.id === sel ? 'on' : ''} ${unread ? 'unread' : ''}`} onClick={() => open(c.id)}>
                       {e ? (
@@ -354,11 +368,11 @@ export function MessengerApp({ initial, openInvest }: { initial?: string; openIn
         <div className="mg-compose">
           {ch.kind === 'team' && ch.dept ? (
             <>
-              <ChatInput channelId={ch.id} placeholder={`${ch.name}에 메시지 쓰기 — 예: 하늘님은 버그 수정, 나머지는 기능 개발해 주세요`} busy={!!typing || shown < total} onErr={setErr} />
+              <ChatInput channelId={ch.id} placeholder={`${ch.name}에 메시지 쓰기 — 예: 하늘님은 버그 수정, 나머지는 기능 개발해 주세요`} onErr={setErr} />
               <TeamOrders deptId={ch.dept} onErr={setErr} />
             </>
           ) : (ch.kind === 'all' || ch.kind === 'group') && s.employees.length > 0 ? (
-            <ChatInput channelId={ch.id} placeholder={ch.kind === 'all' ? '모두에게 메시지 쓰기 — 이름을 부르면 그 사람이, 팀 이름과 일을 말하면 그 팀이 답합니다' : '이 그룹에 메시지 쓰기'} busy={!!typing || shown < total} onErr={setErr} />
+            <ChatInput channelId={ch.id} placeholder={ch.kind === 'all' ? '모두에게 메시지 쓰기 — 이름을 부르면 그 사람이, 팀 이름과 일을 말하면 그 팀이 답합니다' : '이 그룹에 메시지 쓰기'} onErr={setErr} />
           ) : ch.kind === 'dm' && members[0] ? (
             <DmActions empId={members[0].id} name={members[0].name} busy={!!typing || shown < total} onErr={setErr} />
           ) : ch.kind === 'external' && DATA.investors.investors.some((i) => i.id === ch.memberIds[0]) ? (
@@ -428,23 +442,45 @@ export function MessengerApp({ initial, openInvest }: { initial?: string; openIn
   );
 }
 
+// 직접 쓴 말의 답 대기열(A-199): LLM 답(약 2초)을 기다리는 동안 보낸 말도 바로 올리고, 답은 보낸 차례대로 받음.
+// (예전에는 기다리는 동안 Enter가 소리 없이 무시돼 다음 말과 한 줄로 합쳐졌음)
+function useTalkQueue() {
+  const [waiting, setWaiting] = useState(false);
+  const queue = useRef<(() => Promise<void>)[]>([]);
+  const running = useRef(false);
+  const push = (job: () => Promise<void>) => {
+    queue.current.push(job);
+    if (running.current) return;
+    running.current = true;
+    setWaiting(true);
+    void (async () => {
+      while (queue.current.length) await queue.current.shift()!().catch(() => undefined);
+      running.current = false;
+      setWaiting(false);
+    })();
+  };
+  return { waiting, push };
+}
+
 // DM 보내기(A-94): 고른 말에 직원이 상태·회사 상황에 따라 다르게 답함. 답이 다 뜰 때까지(입력 중…) 잠금
-// 직접 쓰기(A-139): 쓴 문장의 뜻을 읽어 답함(근황·칭찬·분발·휴식으로 읽히면 버튼과 같은 효과)
+// 직접 쓰기(A-139, A-199): 실제 LLM이 쓴 문장의 뜻을 읽고 직원 답을 씀(근황·칭찬·분발·휴식으로 읽히면 버튼과 같은 효과).
+// 답을 기다리는 동안 버튼은 잠금(LLM에 넘긴 반응과 실제 효과가 어긋나지 않게)
 function DmActions({ empId, name, busy, onErr }: { empId: string; name: string; busy: boolean; onErr: (e: string | null) => void }) {
   const [text, setText] = useState('');
-  const [waiting, setWaiting] = useState(false);
-  const send = async () => {
+  const { waiting, push } = useTalkQueue();
+  // 직원이 "입력 중…"이어도 직접 쓴 말은 보낼 수 있음(대기열이 차례를 지킴). 빠른 버튼만 잠금
+  const send = () => {
     const said = text;
-    if (busy || waiting || !said.trim()) return;
+    if (!said.trim()) return;
     const err = act((g) => postSaid(g, empId, said)) ?? null;
     onErr(err);
     if (err) return;
     setText('');
-    setWaiting(true);
-    const g0 = getGame();
-    const read = g0 ? await readTalk(g0, empId, said) : null;
-    setWaiting(false);
-    act((g) => answerSaid(g, empId, said, read));
+    push(async () => {
+      const g0 = getGame();
+      const read = g0 ? await readTalk(g0, empId, said) : null;
+      act((g) => answerSaid(g, empId, said, read));
+    });
   };
   return (
     <div className="mg-box">
@@ -460,7 +496,7 @@ function DmActions({ empId, name, busy, onErr }: { empId: string; name: string; 
         }}
       >
         <input data-testid="dm-input" value={text} maxLength={200} placeholder={`${name}님에게 메시지 쓰기`} onChange={(ev) => setText(ev.target.value)} />
-        <button className="btn small" data-testid="dm-send" type="submit" disabled={busy || waiting || !text.trim()}>
+        <button className="btn small" data-testid="dm-send" type="submit" disabled={!text.trim()}>
           보내기
         </button>
       </form>
@@ -470,7 +506,7 @@ function DmActions({ empId, name, busy, onErr }: { empId: string; name: string; 
             key={a.id}
             className="mg-chip"
             data-testid={`dm-${a.id}`}
-            disabled={busy}
+            disabled={busy || waiting}
             title={a.say}
             onClick={() => onErr(act((g) => dmAction(g, empId, a.id)) ?? null)}
           >
@@ -483,21 +519,21 @@ function DmActions({ empId, name, busy, onErr }: { empId: string; name: string; 
 }
 
 // 팀·전체 채널 직접 쓰기(A-147): 쓴 말의 뜻을 읽어 부른 사람이나 팀이 답함. 사람별·팀 업무 지시도 여기서
-function ChatInput({ channelId, placeholder, busy, onErr }: { channelId: string; placeholder: string; busy: boolean; onErr: (e: string | null) => void }) {
+function ChatInput({ channelId, placeholder, onErr }: { channelId: string; placeholder: string; onErr: (e: string | null) => void }) {
   const [text, setText] = useState('');
-  const [waiting, setWaiting] = useState(false);
-  const send = async () => {
+  const { waiting, push } = useTalkQueue();
+  const send = () => {
     const said = text;
-    if (busy || waiting || !said.trim()) return;
+    if (!said.trim()) return;
     const err = act((g) => postChannelSaid(g, channelId, said)) ?? null;
     onErr(err);
     if (err) return;
     setText('');
-    setWaiting(true);
-    const g0 = getGame();
-    const read = g0 ? await readChannel(g0, channelId, said) : null;
-    setWaiting(false);
-    act((g) => answerChannel(g, channelId, said, read));
+    push(async () => {
+      const g0 = getGame();
+      const read = g0 ? await readChannel(g0, channelId, said) : null;
+      act((g) => answerChannel(g, channelId, said, read));
+    });
   };
   return (
     <form
@@ -508,7 +544,7 @@ function ChatInput({ channelId, placeholder, busy, onErr }: { channelId: string;
       }}
     >
       <input data-testid="ch-input" value={text} maxLength={200} placeholder={waiting ? '답을 기다리는 중…' : placeholder} onChange={(ev) => setText(ev.target.value)} />
-      <button className="btn small" data-testid="ch-send" type="submit" disabled={busy || waiting || !text.trim()}>
+      <button className="btn small" data-testid="ch-send" type="submit" disabled={!text.trim()}>
         보내기
       </button>
     </form>
@@ -540,6 +576,32 @@ export function EmpOrderSelect({ e, onErr }: { e: Employee; onErr?: (m: string |
           </option>
         ))}
     </select>
+  );
+}
+
+// 팀 맡은 일 고르기(A-200): 팀 앱·직원 창·제품·시장이 같은 부품을 씀. 팀이 거절하면 select가 원래 일로 돌아가므로
+// 이유를 onErr로 알리고(없으면 옆에 한 줄), 거절된 일은 "다시 고르면 강행"으로 표시합니다.
+export function TeamOrderSelect({ d, testId, className, onErr }: { d: DeptId; testId?: string; className?: string; onErr?: (m: string | null) => void }) {
+  const s = useGame();
+  const [err, setErr] = useState<string | null>(null);
+  const pb = s.company.orderPushback;
+  const refused = pb && pb.dept === d && s.day - pb.day <= 2 ? pb.order : null;
+  const report = onErr ?? setErr;
+  return (
+    <>
+      <select className={className} data-testid={testId} value={orderOf(s, d)} onChange={(ev) => report(act((g) => commandOrder(g, d, ev.target.value)) ?? null)}>
+        {ordersFor(d).map((o) => {
+          const locked = s.company.stage < o.stage;
+          return (
+            <option key={o.id} value={o.id} disabled={locked}>
+              {o.name}
+              {locked ? ` (단계 ${o.stage})` : refused === o.id ? ' (거절됨 · 다시 고르면 강행)' : ''}
+            </option>
+          );
+        })}
+      </select>
+      {!onErr && err && <span className="order-err">{err}</span>}
+    </>
   );
 }
 

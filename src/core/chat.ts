@@ -1,29 +1,33 @@
-// 팀·전체 채널에 대표가 직접 쓴 말(A-147). Jev(ui/talkJev.ts) 또는 키워드 규칙으로 읽어:
+// 팀·전체 채널에 대표가 직접 쓴 말(A-147). LLM(A-199, core/talkPrompt.ts) 또는 키워드 규칙으로 읽어:
 // - 사람별 업무 지정: "민수님은 버그 잡고 지영님은 기능 개발해 주세요"처럼 한 문장에 여러 사람·여러 일 → 개인 업무(setEmpOrder)
-// - 팀 업무 변경: "개발팀은 안정화에 집중합시다" → 팀 지시(commandOrder, 거절 가능). "다 같이·모두"면 개인 업무도 팀 일로 되돌림
+// - 팀 업무 변경: "개발팀은 안정화에 집중합시다" → 팀 지시(commandOrder, 거절 가능). 한 문장에 여러 팀도 됨. "다 같이·모두"면 개인 업무도 팀 일로 되돌림
 // - 사람을 부른 말: 그 사람이 DM처럼 답하고 같은 효과(공개 칭찬·질책 포함, 재사용 대기도 DM과 같음)
 // - 모두에게 한 말: 한 사람이 대표로 답하고 가끔 다른 사람이 거듦. 효과는 사람마다 DM보다 약하게, DM과 같은 재사용 대기를 씀
 //   (모두 칭찬은 +2지만 그 주에는 DM 칭찬이 "또"가 되어 약해짐 → 넓게 약하게 vs 좁게 세게 고르는 선택)
+// LLM이 읽었으면 답도 LLM이 쓴 말(미리 해 둔 판정에 맞춤)을 올리고, 없으면 대사 묶음으로 답합니다.
 import { DATA, orderDef } from './data';
 import { teamOrder } from './assign';
 import { getChannel, post } from './messenger';
-import { commandOrder } from './reactions';
+import { commandOrder, type OrderVerdict } from './reactions';
 import { pick, rand } from './rng';
 import { hasTrait, isSick } from './staff';
-import { INTENT_IDS, T, best, classify, compose, fill, moodOf, norm, ordersForEmp, respond, setEmpOrder, type Mood, type TalkRead } from './talk';
+import { INTENT_IDS, T, best, classify, cleanReply, compose, fill, moodOf, norm, ordersForEmp, respond, setEmpOrder, type Mood, type TalkRead } from './talk';
 import type { DeptId, Employee, GameState } from './types';
 
 const ME = '나(대표)';
 
-// Jev가 고른 채널 말의 뜻(ui/talkJev.ts)
+// 채널 말의 뜻(LLM 또는 키워드)
 export interface ChannelRead {
   intent: string | null;
   tone: number;
   topic: string | null;
-  teamOrder: string | null; // 팀 단위로 바꿀 일
+  teamOrders: string[]; // 팀 단위로 바꿀 일(팀마다 하나)
   everyone: boolean; // 개인 업무를 가진 사람까지 모두 팀 일로
   speaker: string | null; // 부른 사람(직원 id)
   assigns: Record<string, string>; // 직원 id → 일 id 또는 'team'(팀 일로 돌아감)
+  replies?: { from: string; text: string }[]; // LLM이 쓴 답(직원 id, 말, A-199)
+  verdicts?: Record<string, OrderVerdict>; // LLM에 넘긴 팀 지시 판정
+  gist?: string;
 }
 
 type GroupLines = Record<string, Record<Mood, string[]>>;
@@ -57,8 +61,8 @@ export function postChannelSaid(s: GameState, chId: string, raw: string): string
   return null;
 }
 
-// 키워드 규칙으로 읽기(Jev가 없을 때)
-function ruleRead(s: GameState, chId: string, members: Employee[], text: string): ChannelRead {
+// 키워드 규칙으로 읽기(LLM이 없을 때)
+export function ruleRead(s: GameState, chId: string, members: Employee[], text: string): ChannelRead {
   const t = norm(text);
   const ch = getChannel(s, chId)!;
   const ref = members.find((e) => e.lead) ?? members[0];
@@ -84,70 +88,91 @@ function ruleRead(s: GameState, chId: string, members: Employee[], text: string)
     intent: tOrd || Object.keys(assigns).length ? 'order' : c?.intent ?? 'unknown',
     tone: 0,
     topic: c?.topic?.id ?? null,
-    teamOrder: tOrd,
+    teamOrders: tOrd ? [tOrd] : [],
     everyone: T.teamKeys.some((k) => t.includes(k)),
     speaker: named.length === 1 ? named[0].e.id : null,
     assigns,
   };
 }
 
-// 올라간 대표 말에 채널 사람들이 답하고 효과를 냅니다. read = Jev가 고른 뜻(null이면 키워드 규칙)
+// 올라간 대표 말에 채널 사람들이 답하고 효과를 냅니다. read = LLM이 읽은 뜻과 답(null이면 키워드 규칙)
 export function answerChannel(s: GameState, chId: string, raw: string, read: ChannelRead | null) {
   const text = raw.trim().slice(0, T.fx.maxLen);
   const ch = getChannel(s, chId);
   const members = channelMembers(s, chId);
   if (!ch || !members.length) return;
-  const rr = ruleRead(s, chId, members, text);
+  // LLM이 읽었으면 그 해석을 통째로 따름(키워드와 섞지 않음)
+  const rd = read ?? ruleRead(s, chId, members, text);
   const byId = (id: string | null) => (id ? members.find((e) => e.id === id) ?? null : null);
-  const intent: string = (read?.intent && INTENT_IDS.includes(read.intent) ? read.intent : null) ?? rr.intent ?? 'unknown';
+  const intent: string = rd.intent && INTENT_IDS.includes(rd.intent) ? rd.intent : 'unknown';
   const tone = read ? read.tone : 0;
+  // LLM 답: 이 채널 사람만, 병가 중이면 빼고, 최대 3개
+  const replies = (read?.replies ?? [])
+    .map((r) => ({ e: byId(r.from), text: r.text }))
+    .filter((r): r is { e: Employee; text: string } => !!r.e && !isSick(s, r.e))
+    .map((r) => ({ e: r.e, text: cleanReply(r.text, r.e.name) }))
+    .filter((r): r is { e: Employee; text: string } => !!r.text)
+    .slice(0, 3);
+  const quiet = replies.length > 0;
+  const speak = (rs: typeof replies) => rs.forEach((r) => post(s, chId, r.e.name, fill(s, r.e, r.text), 'npc'));
 
   // 1) 사람별 업무
-  const assigns = read && Object.keys(read.assigns).length ? read.assigns : rr.assigns;
   let handled = false;
-  for (const [id, o] of Object.entries(assigns)) {
+  for (const [id, o] of Object.entries(rd.assigns)) {
     if (!byId(id)) continue;
-    setEmpOrder(s, id, o === 'team' ? null : o, chId);
+    setEmpOrder(s, id, o === 'team' ? null : o, chId, quiet);
     handled = true;
   }
-  // 2) 팀 업무
-  const tOrd = handled ? null : read?.teamOrder ?? (intent === 'order' ? rr.teamOrder : null);
-  const od = tOrd ? orderDef(tOrd) : undefined;
-  if (od && s.company.stage >= od.stage) {
+  // 2) 팀 업무(팀마다 하나)
+  const tOrds = handled ? [] : rd.teamOrders.filter((id, i, a) => a.findIndex((x) => orderDef(x)?.dept === orderDef(id)?.dept) === i);
+  for (const id of tOrds) {
+    const od = orderDef(id);
+    if (!od) continue;
     const d = od.dept as DeptId;
     const inTeam = ch.kind === 'team' && ch.dept === d;
+    const lead = s.employees.find((e) => e.dept === d && e.lead) ?? s.employees.find((e) => e.dept === d);
+    const R = T.orderReplies;
+    handled = true;
+    // 아직 못 맡는 일: 효과 없이 "아직 어렵다"
+    if (s.company.stage < od.stage) {
+      if (!quiet && lead) post(s, chId, lead.name, fill(s, lead, pick(s, R.cant)), 'npc');
+      continue;
+    }
     const already = teamOrder(s, d) === od.id;
-    if (!already) commandOrder(s, d, od.id, !inTeam);
+    // 팀 채널이면 LLM 답이 팀장 답을 대신함. #전체에서 내린 지시는 그 팀 채널에 팀장 답이 따로 남음
+    if (!already) commandOrder(s, d, od.id, !inTeam, read?.verdicts?.[od.id], quiet && inTeam);
     const applied = teamOrder(s, d) === od.id;
-    const everyone = applied && (read ? read.everyone : rr.everyone);
+    const everyone = applied && rd.everyone;
     const cleared = everyone ? s.employees.filter((e) => e.dept === d && e.order) : [];
     for (const e of cleared) e.order = null;
     // 전체 채널에서 내린 지시는 그 팀 사람이 여기서도 답함(팀 채널에는 commandOrder가 답함).
     // 이미 팀 일이었으면 commandOrder가 말하지 않으니 여기서 답함(따로 하던 사람이 돌아오면 "돌아감")
-    const lead = s.employees.find((e) => e.dept === d && e.lead) ?? s.employees.find((e) => e.dept === d);
-    const R = T.orderReplies;
-    if (lead && (!inTeam || already)) post(s, chId, lead.name, fill(s, lead, pick(s, already ? (cleared.length ? R.back : R.same) : applied ? R.ok : R.no)), 'npc');
-    handled = true;
+    if (!quiet && lead && (!inTeam || already)) post(s, chId, lead.name, fill(s, lead, pick(s, already ? (cleared.length ? R.back : R.same) : applied ? R.ok : R.no)), 'npc');
   }
-  if (handled) return groupTone(s, members, tone, intent);
+  if (handled) {
+    speak(replies);
+    return groupTone(s, members, tone, intent);
+  }
 
-  // 3) 사람을 부른 말: 그 사람이 DM처럼 답함
-  const target = byId(read?.speaker ?? null) ?? byId(rr.speaker);
+  // 3) 사람을 부른 말: 그 사람이 DM처럼 답함(다른 사람이 거든 말은 그 뒤에)
+  const target = byId(rd.speaker);
   if (target) {
-    const r: TalkRead | null = read ? { intent, order: null, tone, topic: read.topic, scope: 'team' } : null;
-    return respond(s, target, chId, text, r);
+    const own = replies.find((r) => r.e.id === target.id);
+    const r: TalkRead | null = read ? { intent, order: null, tone, topic: read.topic, scope: 'team', reply: own?.text ?? null } : null;
+    respond(s, target, chId, text, r);
+    return speak(replies.filter((x) => x !== own));
   }
 
   // 4) 모두에게 한 말
   groupEffect(s, members, intent);
   groupTone(s, members, tone, intent);
+  if (quiet) return speak(replies);
   const awake = members.filter((e) => !isSick(s, e));
   if (!awake.length) return;
   const first = (ch.kind === 'team' ? awake.find((e) => e.lead) : null) ?? pickTalker(s, awake);
-  const topicId = read?.topic ?? rr.topic;
-  groupSay(s, chId, first, intent, topicId);
+  groupSay(s, chId, first, intent, rd.topic);
   const others = awake.filter((e) => e.id !== first.id);
-  if (others.length && rand(s) < T.group.chimeChance) groupSay(s, chId, pickTalker(s, others), intent, topicId);
+  if (others.length && rand(s) < T.group.chimeChance) groupSay(s, chId, pickTalker(s, others), intent, rd.topic);
 }
 
 // 사교적인 사람이 먼저 말할 확률이 높음
@@ -187,8 +212,10 @@ function groupEffect(s: GameState, members: Employee[], intent: string) {
     } else if (intent === 'rest' && cool(e, 'rest', g.restCool)) {
       e.health = Math.min(100, e.health + g.restHealth);
       e.sat = Math.min(100, e.sat + g.restSat);
-    } else if (intent === 'scold') {
-      e.sat = Math.max(0, e.sat - (hasTrait(e, 'hothead') ? g.scoldSatHothead : g.scoldSat));
+    } else if (intent === 'scold' || intent === 'insult') {
+      // 모두에게 한 모욕은 질책보다 크게(A-199)
+      const hot = hasTrait(e, 'hothead');
+      e.sat = Math.max(0, e.sat - (intent === 'insult' ? (hot ? g.insultSatHothead : g.insultSat) : hot ? g.scoldSatHothead : g.scoldSat));
       (e.dmDay ??= {})['talk-scold'] = s.day;
     } else if (intent === 'apology') {
       const last = e.dmDay?.['talk-scold'];
@@ -200,10 +227,10 @@ function groupEffect(s: GameState, members: Employee[], intent: string) {
   }
 }
 
-// 거친 말투는 모두의 만족을 조금 깎음(질책은 이미 깎았으니 제외). 따뜻한 말투는 모두에게는 효과 없음
+// 거친 말투는 모두의 만족을 조금 깎음(질책·모욕은 이미 깎았으니 제외). 따뜻한 말투는 모두에게는 효과 없음
 function groupTone(s: GameState, members: Employee[], tone: number, intent: string) {
   const t = Math.max(-2, Math.min(2, Math.round(tone || 0)));
-  if (t >= 0 || intent === 'scold') return;
+  if (t >= 0 || intent === 'scold' || intent === 'insult') return;
   for (const e of members) e.sat = Math.max(0, e.sat + t * T.group.rudeSat);
 }
 
@@ -213,4 +240,3 @@ export function freeChannel(s: GameState, chId: string, raw: string): string | n
   if (!err) answerChannel(s, chId, raw, null);
   return err;
 }
-

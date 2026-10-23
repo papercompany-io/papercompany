@@ -7,7 +7,7 @@
   position: absolute; left: 14px; bottom: 14px; z-index: 6; background: rgba(23, 27, 44, 0.86); border-radius: 6px; padding: 8px 10px;
   display: flex; gap: 12px; align-items: center; color: #e8eaf4; font-size: 12px; font-weight: 700; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
-.zl-title { font-family: var(--pixel); font-weight: 400; color: #b9c0d8; font-size: 11px; }
+.zl-title { font-family: var(--pixel); font-weight: 400; color: #b9c0d8; font-size: 13px; }
 .zl-item { display: flex; align-items: center; gap: 5px; cursor: default; }
 .zl-item b { font-weight: 800; color: #fff; font-variant-numeric: tabular-nums; }
 .zone-dot { width: 9px; height: 9px; border-radius: 2px; background: var(--dc); }
@@ -25,7 +25,7 @@
   content: ''; position: absolute; left: 50%; bottom: -4px; transform: translateX(-50%);
   border: 4px solid transparent; border-bottom: 0; border-top-color: #fff;
 }
-.tag-name { font-size: 11px; font-weight: 800; color: #2d3142; display: flex; align-items: center; justify-content: center; gap: 4px; line-height: 1.3; }
+.tag-name { font-size: 13px; font-weight: 800; color: #2d3142; display: flex; align-items: center; justify-content: center; gap: 4px; line-height: 1.3; }
 .tag-dept { width: 8px; height: 8px; border-radius: 2px; background: var(--dc); flex: none; }
 .tag-badge { font-size: 9px; font-weight: 800; color: #8a5b00; background: #ffe7b0; border-radius: 3px; padding: 0 3px; }
 .tag-sub { font-size: 10px; font-weight: 700; color: #2b8a4b; letter-spacing: -0.01em; line-height: 1.25; }
@@ -40,7 +40,7 @@
 .nametag.pulse { animation: tagpulse 1.1s ease-in-out infinite; }
 .tag-arrow {
   position: absolute; left: 50%; top: -24px; transform: translateX(-50%); background: #ffcf3f; color: #3b2a00;
-  font-size: 11px; font-weight: 900; border-radius: 4px; padding: 1px 6px; animation: tagbounce 0.9s ease-in-out infinite;
+  font-size: 13px; font-weight: 900; border-radius: 4px; padding: 1px 6px; animation: tagbounce 0.9s ease-in-out infinite;
 }
 @keyframes tagpulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(45, 143, 213, 0.9); } 50% { box-shadow: 0 0 0 6px rgba(45, 143, 213, 0); } }
 @keyframes tagbounce { 0%, 100% { transform: translate(-50%, 0); } 50% { transform: translate(-50%, -4px); } }
@@ -53,8 +53,7 @@
 }
 .round-btn:hover { background: #f2f6fb; }
 .round-btn:disabled { color: #b9bdc8; cursor: default; }
-.cam-hint { font-size: 11px; color: #fff; background: rgba(23, 27, 44, 0.7); border-radius: 4px; padding: 3px 7px; white-space: nowrap; }
-.tag-emoji { font-size: 11px; }
+.tag-emoji { font-size: 13px; }
 .tag-mood { height: 3px; background: #e6eaf2; border-radius: 2px; overflow: hidden; margin-top: 2px; }
 .tag-mood i { display: block; height: 100%; }
 .nametag.ceo .tag-mood { background: rgba(255, 255, 255, 0.3); } /* A-189: 대표 컨디션 막대 */

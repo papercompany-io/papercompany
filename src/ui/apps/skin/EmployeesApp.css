@@ -4,7 +4,7 @@
 
 /* 위: 가운데 큰 인원수 */
 .em2-head { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 0 2px; text-align: center; }
-.em2-kicker { font-family: var(--pixel); font-size: 11px; font-weight: 400; color: var(--accent-text); -webkit-font-smoothing: none; }
+.em2-kicker { font-family: var(--pixel); font-size: 13px; font-weight: 400; color: var(--accent-text); -webkit-font-smoothing: none; }
 .em2-big { margin: 0; font-size: 40px; font-weight: 800; line-height: 1.1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
 .em2-lead { margin: 0; font-size: var(--fs-md); color: var(--text-3); cursor: help; }
 
@@ -12,18 +12,18 @@
 .em2-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
 .em2-stats > div { display: flex; flex-direction: column; gap: 4px; min-width: 0; padding: 12px 14px; border-radius: var(--r-lg); background: var(--surface-tile); }
 .em2-stats > div[title] { cursor: help; }
-.em2-stats span { font-family: var(--pixel); font-size: 11px; font-weight: 400; color: var(--text-3); -webkit-font-smoothing: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.em2-stats span { font-family: var(--pixel); font-size: 13px; font-weight: 400; color: var(--text-3); -webkit-font-smoothing: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .em2-stats b { font-size: 18px; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .em2-stats b.neg { color: var(--negative-press); }
 
 /* 알약 탭(.rk .tab 모양) */
-.em2.em2 .tabs { flex-wrap: wrap; justify-content: center; gap: 6px; margin: 0; border-bottom: none; overflow: visible; }
+.em2.em2 .tabs { flex-wrap: wrap; justify-content: flex-start; gap: 6px; margin: 0; border-bottom: none; overflow: visible; }
 .em2.em2 .tab { margin: 0; padding: 7px 13px; border: none; border-radius: var(--r-full); background: var(--surface-tile); color: var(--text-2); font-size: var(--fs-md); }
 .em2.em2 .tab:hover { background: var(--surface-sel); color: var(--text); }
 .em2.em2 .tab.on { background: var(--text); color: var(--surface); border: none; }
 
 .em2-sect { margin: 4px 2px 0; font-size: var(--fs-lg); font-weight: 700; }
-.em2-sect em { font-style: normal; margin-left: 4px; font-family: var(--pixel); font-size: 11px; font-weight: 400; color: var(--text-3); -webkit-font-smoothing: none; }
+.em2-sect em { font-style: normal; margin-left: 4px; font-family: var(--pixel); font-size: 13px; font-weight: 400; color: var(--text-3); -webkit-font-smoothing: none; }
 
 .em2-empty { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 32px 16px; border-radius: var(--r-lg); background: var(--surface-sunk); text-align: center; color: var(--text-3); font-size: var(--fs-md); }
 .em2-empty b { font-size: var(--fs-lg); color: var(--text-2); }
@@ -46,12 +46,12 @@
 .em2.em2 .emp-card.on { border-color: var(--accent); background: var(--surface-hover); box-shadow: none; }
 .em2.em2 .ac-head .pixel-avatar { border-radius: var(--r-sm); box-shadow: none; background: color-mix(in srgb, var(--dc) 22%, var(--surface)); }
 .em2 .ac-id span { font-size: var(--fs-sm); }
-.em2 .ac-traits .chip { font-family: var(--pixel); font-size: 11px; font-weight: 400; -webkit-font-smoothing: none; }
+.em2 .ac-traits .chip { font-family: var(--pixel); font-size: 13px; font-weight: 400; -webkit-font-smoothing: none; }
 .em2.em2 .emp-bar { grid-template-columns: 30px minmax(0, 1fr) 26px; }
-.em2.em2 .emp-bar > span { font-family: var(--pixel); font-size: 11px; font-weight: 400; -webkit-font-smoothing: none; }
+.em2.em2 .emp-bar > span { font-family: var(--pixel); font-size: 13px; font-weight: 400; -webkit-font-smoothing: none; }
 .em2 .emp-bar b.fin-bad { color: var(--negative-press); }
 .em2.em2 .ac-stats > div { border-radius: var(--r-sm); padding: 7px 4px; }
-.em2.em2 .ac-stats span { font-family: var(--pixel); font-size: 11px; font-weight: 400; -webkit-font-smoothing: none; }
+.em2.em2 .ac-stats span { font-family: var(--pixel); font-size: 13px; font-weight: 400; -webkit-font-smoothing: none; }
 
 /* 칸칸이 차는 막대(카드·상세 공용) */
 .em2.em2 .meter, .emd.emd .meter { height: 12px; border: 1px solid var(--line-strong); border-radius: 0; background: repeating-linear-gradient(90deg, var(--surface-tile) 0 6px, var(--surface) 6px 8px); }
@@ -71,19 +71,19 @@
 .emd { gap: 10px; min-width: 0; }
 .emd-meta { font-size: var(--fs-sm); color: var(--text-3); line-height: 1.5; }
 .emd-chips { display: flex; flex-wrap: wrap; gap: 4px; }
-.emd-chips .chip { font-family: var(--pixel); font-size: 11px; font-weight: 400; -webkit-font-smoothing: none; cursor: help; }
+.emd-chips .chip { font-family: var(--pixel); font-size: 13px; font-weight: 400; -webkit-font-smoothing: none; cursor: help; }
 .emd-meters { display: flex; flex-direction: column; gap: 8px; }
 .emd-meters .row.tiny { font-size: var(--fs-sm); }
-.emd-meters .row .muted { font-family: var(--pixel); font-size: 11px; -webkit-font-smoothing: none; }
+.emd-meters .row .muted { font-family: var(--pixel); font-size: 13px; -webkit-font-smoothing: none; }
 .emd-meters .row b { font-variant-numeric: tabular-nums; }
 .emd-why { font-size: var(--fs-xs); color: var(--text-3); line-height: 1.5; }
 .emd-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
 .emd-stats > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: 9px 12px; border-radius: var(--r-md); background: var(--surface-tile); }
-.emd-stats span { font-family: var(--pixel); font-size: 11px; font-weight: 400; color: var(--text-3); -webkit-font-smoothing: none; }
+.emd-stats span { font-family: var(--pixel); font-size: 13px; font-weight: 400; color: var(--text-3); -webkit-font-smoothing: none; }
 .emd-stats b { font-size: var(--fs-md); font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .emd-line { font-size: var(--fs-sm); color: var(--text-2); }
 .emd-field { display: grid; grid-template-columns: 64px minmax(0, 1fr); align-items: center; gap: 8px; }
-.emd-field > span { font-family: var(--pixel); font-size: 11px; color: var(--text-3); -webkit-font-smoothing: none; }
+.emd-field > span { font-family: var(--pixel); font-size: 13px; color: var(--text-3); -webkit-font-smoothing: none; }
 .emd-field select { width: 100%; min-width: 0; }
 .emd-acts { display: flex; flex-wrap: wrap; gap: 6px; padding-top: 4px; }
 .emd-fire { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; width: 100%; padding: 8px 10px; border-radius: var(--r-md); background: var(--negative-soft); }
@@ -94,8 +94,8 @@
 .em2 .emp-depts { gap: 8px; }
 .em2.em2 .emp-depts .post-card { gap: 10px; padding: 14px; border-radius: var(--r-lg); }
 .em2.em2 .emp-depts .pc-dot { width: 14px; height: 14px; border-radius: var(--r-xs); }
-.em2.em2 .emp-depts .pc-hired { font-family: var(--pixel); font-size: 11px; font-weight: 400; -webkit-font-smoothing: none; }
-.em2.em2 .emp-depts .pc-stats .chip { font-family: var(--pixel); font-size: 11px; font-weight: 400; -webkit-font-smoothing: none; }
+.em2.em2 .emp-depts .pc-hired { font-family: var(--pixel); font-size: 13px; font-weight: 400; -webkit-font-smoothing: none; }
+.em2.em2 .emp-depts .pc-stats .chip { font-family: var(--pixel); font-size: 13px; font-weight: 400; -webkit-font-smoothing: none; }
 .em2.em2 .emp-depts .pc-foot { font-size: var(--fs-sm); font-weight: 500; line-height: 1.45; }
 .em2.em2 .emp-depts .pc-foot[title] { cursor: help; }
 
@@ -104,7 +104,7 @@
 .em2-wf-list { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
 .em2-wf-side { display: flex; flex-direction: column; gap: 14px; padding: 16px; border-radius: var(--r-lg); background: var(--surface-sunk); min-width: 0; }
 .em2-wf-side .em2-sect { margin: 0; }
-.em2.em2 .hf-label { font-family: var(--pixel); font-size: 11px; font-weight: 400; letter-spacing: 0; -webkit-font-smoothing: none; }
+.em2.em2 .hf-label { font-family: var(--pixel); font-size: 13px; font-weight: 400; letter-spacing: 0; -webkit-font-smoothing: none; }
 .em2 .hf-label[title] { cursor: help; }
 .em2 .ew-note[title] { cursor: help; }
 .em2 .emp-welfare-grid { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; }

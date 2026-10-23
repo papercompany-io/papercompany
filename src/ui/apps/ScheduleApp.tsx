@@ -5,7 +5,6 @@
 // A-168: 대표는 회사의 개발 사이클 일정을 관리 — 왼쪽 판(지금·컨디션·주 업무·쌓인 것) + 오른쪽 8주 타임라인(만드는 순서의 시작~끝·출시·외주 마감·대표 외출). 점수·효율 숫자는 말로
 import { DATA, dept, feature } from '../../core/data';
 import { slotParts, actionDef, approveMultiplier, ceoEnergy, ceoWork, efficiency, executiveBlock, setCeoMode, setCeoWork, workChoices } from '../../core/ceo';
-import { acceptContract, contractsOpen, dropContract, trustLevel } from '../../core/contracts';
 import { dateOf } from '../../core/calendar';
 import { openRound } from '../../core/funding';
 import { enterpriseThreshold, orderOf } from '../../core/orders';
@@ -19,7 +18,6 @@ import { forecast, KIND_NAME, milestones, openMilestones, trustWord } from '../.
 import { delegates, acceptOuting, awayOuting, cancelOuting, dayName, declineOuting, hhmm, isFullDay, outingConflict, outingRange, outingTravel, outings, outingTpl, todayOutings } from '../../core/outings';
 import { useState } from 'react';
 import { act, useGame } from '../store';
-import { Money, Help } from '../common';
 import type { ActionId, GameState, Outing } from '../../core/types';
 import './apps.css';
 
@@ -562,121 +560,4 @@ export function contractDue(s: ReturnType<typeof useGame>) {
   const late = overdue || (pace.total > 0 && a.work - a.done > capacity + 1e-6);
   const text = overdue ? `마감 ${-dl}일 지남` : hours > 0 ? `마감까지 근무 ${workTimeText(hours)}` : '마감일 근무 끝남';
   return { dl, hours, overdue, late, text, tip: '마감은 근무 시간(9~18시)만 셉니다. 퇴근 뒤 밤에는 줄지 않습니다.' };
-}
-
-export function ContractsCard() {
-  const s = useGame();
-  const c = s.contracts;
-  const a = c?.active ?? null;
-  if (!a && !contractsOpen(s)) return null;
-  const pace = contractPace(s);
-  return (
-    <div className="card col" data-testid="contracts">
-      <div className="row">
-        <div className="section-title grow">외주 일감</div>
-        {!!c?.completed && <span className="chip">완료 {c.completed}건</span>}
-      </div>
-      <Help text="대표 주 업무 &quot;외주&quot;나 개발팀 &quot;외주 작업&quot; 지시로 일을 하면 끝냈을 때 대금이 들어옵니다. 그만큼 제품 개발은 늦어집니다. 마감은 근무 시간으로 세서 퇴근 뒤 밤에는 줄지 않습니다. 마감을 넘기면 대금이 깎이고, 많이 넘기면 취소됩니다. 제때 끝낼수록 외주 평판이 올라 더 크고 비싼 일감이 들어옵니다." />
-      {(() => {
-        // A-144: 외주 평판 — 단계 이름과 다음 단계까지 막대만(점수·단가는 숨김)
-        const t = trustLevel(s);
-        return (
-          <div className="ct-trust" data-testid="contract-trust">
-            <span>외주 평판</span>
-            <b>{t.name}</b>
-            <div className="bar grow" title={t.next ? `다음 단계: ${t.next}` : '가장 높은 단계'}>
-              <div style={{ width: `${t.progress * 100}%`, background: COLORS.contract }} />
-            </div>
-            <span className="tiny muted">{t.next ? `다음: ${t.next}` : '최고 단계'}</span>
-          </div>
-        );
-      })()}
-      {a && a.deadline !== null && (() => {
-        const pct = Math.min(100, (a.done / a.work) * 100);
-        const left = Math.max(0, a.work - a.done);
-        const eta = pace.total > 0 ? left / pace.total : null;
-        const due = contractDue(s)!;
-        const late = due.late;
-        const who = [pace.ceo > 0 ? '대표' : null, pace.team > 0 ? `개발팀 ${pace.devs}명` : null].filter(Boolean).join(' · ');
-        return (
-          <div className="ct-active" style={{ ['--ac' as string]: COLORS.contract }}>
-            <div className="row">
-              <b className="grow">
-                {a.title} · {a.client}
-              </b>
-              <span className={`chip ${due.overdue ? 'red' : due.dl <= 3 ? 'amber' : 'blue'}`} title={due.tip}>
-                {due.text}
-              </span>
-            </div>
-            <div className="ct-progress">
-              <b>{Math.floor(pct)}%</b>
-              <div className="bar grow">
-                <div style={{ width: `${pct}%`, background: COLORS.contract }} />
-              </div>
-            </div>
-            <div className="ct-facts">
-              <div>
-                <span>끝나는 때</span>
-                <b className={eta === null || late ? 'bad' : ''}>{eta === null ? '아무도 안 하는 중' : `${daysText(eta)}${late ? ' · 마감보다 늦음' : ''}`}</b>
-              </div>
-              <div>
-                <span>하는 사람</span>
-                <b>{who || '없음'}</b>
-              </div>
-              <div>
-                <span>대금</span>
-                <b>
-                  <Money v={a.pay} />
-                </b>
-              </div>
-            </div>
-            {eta === null && <div className="tiny warn">대표 주 업무를 "외주"로 하거나, 개발팀 채널에서 "외주 작업"을 맡기세요.</div>}
-            <div className="row">
-              <div className="grow" />
-              <button className="btn small ghost" data-testid="contract-drop" onClick={() => act((g) => dropContract(g))}>
-                포기
-              </button>
-            </div>
-          </div>
-        );
-      })()}
-      {!a && !c?.offers.length && (
-        // A-136: 업무 창에서 탭이 늘 보이므로, 제안이 없을 때는 다음 제안이 언제 오는지 알려 줌
-        <div className="tiny muted" data-testid="contracts-empty">
-          지금 들어온 외주 제안이 없습니다. {c && c.nextOfferDay > s.day ? `${c.nextOfferDay - s.day}일 뒤에 새 제안이 들어옵니다.` : '곧 새 제안이 들어옵니다.'}
-        </div>
-      )}
-      {!!c?.offers.length && (
-        <div className="furn-grid">
-          {c.offers.map((o) => {
-            const solo = o.work / pace.ceoFull;
-            const ok = Math.ceil(solo) <= o.days;
-            return (
-              <div key={o.id} className="card furn">
-                <div className="row">
-                  <b className="grow">{o.title}</b>
-                  {(o.tier ?? 0) >= 2 && <span className="chip amber">큰 일감</span>}
-                </div>
-                <div className="tiny muted">
-                  {o.client} · 기간 근무 {o.days}일
-                </div>
-                <div className={`tiny ${ok ? '' : 'warn'}`} title="대표가 하루 내내 외주만 할 때">
-                  대표 혼자 {daysText(solo)} 걸림{ok ? '' : ' · 기간 안에 혼자는 어려움'}
-                </div>
-                <div className="row">
-                  <b className="grow">
-                    <Money v={o.pay} />
-                  </b>
-                  <button className="btn small" data-testid={`contract-take-${o.id}`} disabled={!!a} title={a ? '진행 중인 외주를 먼저 끝내세요.' : ''} onClick={() => act((g) => acceptContract(g, o.id))}>
-                    받기
-                  </button>
-                </div>
-                <div className="tiny muted">{o.offeredUntil - s.day}일 뒤 마감되는 제안</div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
 }

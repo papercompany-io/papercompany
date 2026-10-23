@@ -111,7 +111,7 @@ export function AdSales({ setMsg, inTeam }: { setMsg: (m: string | null) => void
         {!inTeam && <div className="hf-title">광고 운영팀</div>}
         {ao.length === 0 ? (
           <div className="warn" data-testid="adops-none">
-            광고 운영 담당자가 없어 광고주 제안이 오지 않습니다. 채용 창에서 "광고 운영"(애드옵스 매니저)을 뽑으면 광고주를 찾아 매일 계약 제안을 받아 옵니다.
+            광고 운영 담당자가 없어 광고주 제안이 오지 않습니다. 직원 관리 창 채용 탭에서 "광고 운영"(애드옵스 매니저)을 뽑으면 광고주를 찾아 매일 계약 제안을 받아 옵니다.
           </div>
         ) : (
           <div className="fb-row">

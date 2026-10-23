@@ -2,6 +2,7 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
+import { talkChat, type TalkChatRequest } from './openrouter';
 
 // 플레이테스트에서 판마다 저장 폴더를 분리할 수 있게 환경 변수로 바꿀 수 있습니다.
 if (process.env.PC_USER_DATA) app.setPath('userData', path.resolve(process.env.PC_USER_DATA));
@@ -56,9 +57,9 @@ ipcMain.handle('profile:write', (_e, data: string) => {
   return true;
 });
 
-// 자유 입력 DM(A-139): OpenRouter Decisions(Jev) 호출은 키가 렌더러에 닿지 않게 메인 프로세스에서 합니다.
-// Jev는 질문의 선택지를 고르는 모델입니다(의도·업무·말투·주제). 답 문장은 게임이 대사 묶음으로 만듭니다.
-// 키는 사용자 데이터 폴더의 .env, 없으면 실행 폴더의 .env(OPENROUTER_API_KEY, OPENROUTER_MODEL). 없으면 null → 게임은 키워드 규칙으로 답합니다.
+// 자유 입력 대화(A-139 → A-199): OpenRouter 호출은 키가 렌더러에 닿지 않게 메인 프로세스에서 합니다.
+// 실제 LLM(openrouter.ts)이 대표 말의 해석과 직원 답장을 한 번에 냅니다. 효과는 게임 규칙이 정합니다.
+// 키는 사용자 데이터 폴더의 .env, 없으면 실행 폴더의 .env(OPENROUTER_API_KEY, OPENROUTER_TALK_MODEL). 없으면 null → 게임은 키워드 규칙으로 답합니다.
 function readEnv(): Record<string, string> {
   const out: Record<string, string> = {};
   for (const f of [path.join(process.cwd(), '.env'), path.join(saveDir(), '.env')]) {
@@ -74,17 +75,9 @@ function readEnv(): Record<string, string> {
   return { ...out, ...(process.env.OPENROUTER_API_KEY ? { OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY } : {}) };
 }
 
-ipcMain.handle('jev:decide', async (_e, req: { questions: unknown; state: unknown }) => {
-  const env = readEnv();
-  if (!env.OPENROUTER_API_KEY) return null;
+ipcMain.handle('talk:chat', async (_e, req: TalkChatRequest) => {
   try {
-    const r = await fetch('https://openrouter.ai/api/alpha/decisions', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${env.OPENROUTER_API_KEY}`, 'Content-Type': 'application/json', 'X-Title': 'PaperCompany' },
-      body: JSON.stringify({ model: env.OPENROUTER_MODEL || 'typesafe/jev-1.14', questions: req.questions, state: req.state }),
-    });
-    if (!r.ok) return null;
-    return ((await r.json()) as { answers?: unknown }).answers ?? null;
+    return await talkChat(readEnv(), req);
   } catch {
     return null;
   }

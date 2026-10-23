@@ -34,22 +34,27 @@ import { externalChannelId } from '../../core/messenger';
 import { computeValuation } from '../../core/valuation';
 import { act, useGame } from '../store';
 import { Tabs, chanceLabel } from '../common';
+import { ExitApp } from './ExitApp';
 import { esopEntry, esopFree, investorPct, topUpEsop } from '../../core/equity';
-import type { GameState, Round, StageId } from '../../core/types';
+import type { GameState, LetterThread, Round, StageId } from '../../core/types';
 import './apps.css';
 import './skin/InvestApp.css';
 
-type Tab = 'round' | 'investors' | 'cap';
+type Tab = 'round' | 'investors' | 'cap' | 'exit';
 
 function founderPct(s: GameState): number {
   const total = totalShares(s.capTable) || 1;
   return s.capTable.filter((c) => c.kind === 'founder').reduce((a, c) => a + c.shares, 0) / total;
 }
 
-export function InvestApp({ initialStage, openChat }: { initialStage?: string; openChat?: (channelId: string) => void }) {
+// initial = 다른 창·알림이 연 곳: 'exit'면 Exit 탭, 그 밖엔 라운드 단계 id(A-215)
+export function InvestApp({ initial, openChat }: { initial?: string; openChat?: (channelId: string) => void }) {
   const s = useGame();
   const r = activeRound(s);
-  const [tab, setTab] = useState<Tab>('round');
+  // A-215: Exit 메뉴를 네 번째 탭으로. 예전 메뉴처럼 1단계부터, 상장하면 주식 메뉴가 대신함
+  const exitOn = s.company.stage >= 1 && !s.public;
+  const [tab, setTab] = useState<Tab>(initial === 'exit' && exitOn ? 'exit' : 'round');
+  const initialStage = initial === 'exit' ? undefined : initial;
   return (
     <div className="col inv-app iv2">
       <Ladder />
@@ -58,6 +63,7 @@ export function InvestApp({ initialStage, openChat }: { initialStage?: string; o
           { id: 'round', label: r ? (r.status === 'offer' ? '라운드 · 제안서 도착' : '라운드 · 진행 중') : '라운드' },
           { id: 'investors', label: '투자사' },
           { id: 'cap', label: '지분' },
+          ...(exitOn ? [{ id: 'exit' as const, label: s.exitAttempt?.status === 'offer' ? 'Exit · 인수 제안' : 'Exit' }] : []),
         ]}
         value={tab}
         onChange={setTab}
@@ -65,6 +71,7 @@ export function InvestApp({ initialStage, openChat }: { initialStage?: string; o
       {tab === 'round' && <RoundTab key={`${s.fundingStage}-${s.rounds.length}`} initialStage={initialStage} goInvestors={() => setTab('investors')} />}
       {tab === 'investors' && <InvestorsTab openChat={openChat} />}
       {tab === 'cap' && <CapTab />}
+      {tab === 'exit' && exitOn && <ExitApp />}
     </div>
   );
 }
@@ -498,6 +505,24 @@ function InvestorsTab({ openChat }: { openChat?: (channelId: string) => void }) 
   );
 }
 
+// 투자사 패널 맨 위 "지금 할 일"(A-220). 사람들이 레터 넷 앞에서 무엇부터 해야 할지 헤매서, 상태에서 다음 행동 하나만 고름
+interface NextCtx {
+  open: Round | null;
+  t: LetterThread | undefined; // 이 투자사와 주고받은 기록(레터를 하나도 안 보냈으면 없음)
+  fit: boolean; // 이번 라운드 단계에 맞는 투자사인지
+  isLead: boolean;
+  waitingName: string | null; // 다른 투자사의 결정 답을 기다리는 중이면 그 이름
+  canDecide: boolean; // 지금 "투자 결정 요청" 버튼이 보이는지
+  canCoInvest: boolean; // 지금 "같이 투자하자고 제안" 버튼이 보이는지
+  replyDue: boolean; // 아직 안 온 답장이 있는지
+}
+type NextTone = 'go' | 'wait' | 'done' | 'warn';
+
+function nextStep(c: NextCtx): { text: string; tone: NextTone } {
+  // TODO(human)
+  return { text: '', tone: 'go' };
+}
+
 function InvestorPanel({ inv, open, openChat }: { inv: Inv; open: Round | null; openChat?: (channelId: string) => void }) {
   const s = useGame();
   const [err, setErr] = useState<string | null>(null);
@@ -519,6 +544,7 @@ function InvestorPanel({ inv, open, openChat }: { inv: Inv; open: Round | null; 
   const cp = open && t && t.sent.length && open.leadId && !isLead && !t.coInvest ? coInvestProbability(s, open, inv.id) : null;
   const canWrite = !!open && !t?.decision && !isLead && !t?.coInvest;
   const st = invStatus(open, inv.id);
+  const now = nextStep({ open, t, fit, isLead, waitingName: waiting && waiting !== t ? investor(waiting.investorId).name : null, canDecide: !!dp, canCoInvest: cp !== null, replyDue: !!t?.pendingReplies.length });
   return (
     <section className="hire-form inv-panel iv2-main">
       <div className="inv-head">
@@ -539,6 +565,14 @@ function InvestorPanel({ inv, open, openChat }: { inv: Inv; open: Round | null; 
       </div>
       {open && !fit && <div className="warn">이 투자사는 {stage(open.stage).name} 단계에 잘 투자하지 않습니다. 맞는 투자사를 고르는 게 좋습니다.</div>}
 
+      {/* 지금 할 일 한 줄(A-220): 패널 맨 위에서 다음 행동 하나만 말함 */}
+      {open && (
+        <div className={`inv-now ${now.tone}`} data-testid={`inv-now-${inv.id}`}>
+          <span className="inv-now-k">지금 할 일</span>
+          <b>{now.text}</b>
+        </div>
+      )}
+
       {open && (
         <div className="inv-interest-big iv2-hero">
           <span className="iv2-kicker">이 투자사의 관심</span>
@@ -548,43 +582,17 @@ function InvestorPanel({ inv, open, openChat }: { inv: Inv; open: Round | null; 
           <div className="meter iv2-meter" title={`관심 ${t?.interest ?? 0} / 100`}>
             <div style={{ width: `${t?.interest ?? 0}%` }} />
           </div>
+          <span className="iv2-sub">레터를 보내면 오릅니다. 높을수록 투자 결정 요청이 잘 통합니다.</span>
+        </div>
+      )}
+      {gain && (
+        <div className={`inv-gain ${gain.v > 0 ? 'up' : gain.v < 0 ? 'down' : ''}`}>
+          {gain.name}: 관심 {gain.v > 0 ? `+${gain.v}` : gain.v} {gain.v >= 20 ? '· 아주 반깁니다!' : gain.v < 0 ? '· 반기지 않습니다' : gain.v === 0 ? '· 별 반응이 없습니다' : ''}
+          <span>답장은 내일 메신저로 옵니다.</span>
         </div>
       )}
 
-      {canWrite && (
-        <>
-          <div className="iv2-sect" title="보낼수록 관심이 올라갑니다">
-            레터 보내기
-          </div>
-          <div className="inv-letters">
-            {DATA.funding.letters.map((l, li) => {
-              const sent = t?.sent.includes(l.id);
-              return (
-                <div key={l.id} className={`inv-letter ${sent ? 'sent' : ''}`}>
-                  <span className="iv2-tile">{sent ? <PixelCheck /> : li + 1}</span>
-                  <div className="inv-letter-text">
-                    <b>{l.name}</b>
-                    <span title={l.desc}>{l.desc}</span>
-                    {l.id === 'proposal' && !sent && (
-                      <div className="seg inv-ask">
-                        {DATA.funding.valuationAsks.map((a) => (
-                          <button key={a.id} className={ask === a.id ? 'on' : ''} data-testid={`ask-${inv.id}-${a.id}`} onClick={() => setAsk(a.id)} title={a.pAdj < 0 ? '높게 부르면 투자받기 어려워집니다' : a.pAdj > 0 ? '낮게 부르면 투자받기 쉬워집니다' : ''}>
-                            {a.name}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  <button className="btn small" data-testid={`letter-${inv.id}-${l.id}`} disabled={sent} onClick={() => send(l.id, l.name)}>
-                    {sent ? '보냄' : '보내기'}
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        </>
-      )}
-
+      {/* 레터를 보낸 뒤의 목표 행동은 레터 목록보다 위에(A-220) */}
       {dp && (
         <div className="inv-decide">
           <div>
@@ -605,11 +613,6 @@ function InvestorPanel({ inv, open, openChat }: { inv: Inv; open: Round | null; 
           투자 결정을 검토하고 있습니다. 답은 {Math.max(1, (t.decisionDue ?? s.day) - s.day)}일 안에 메신저로 옵니다.
         </div>
       )}
-      {open && waiting && waiting !== t && !open.leadId && t?.sent.length && !t.decision ? (
-        <div className="inv-hint">{investor(waiting.investorId).name}의 답을 기다리는 중입니다. 답을 받은 뒤 결정을 요청할 수 있습니다.</div>
-      ) : null}
-      {open && t && !t.sent.length && !open.leadId && <div className="inv-hint">레터를 하나 이상 보내야 투자 결정을 요청할 수 있습니다.</div>}
-      {open && !t && !open.leadId && <div className="inv-hint">먼저 레터를 보내 이야기를 시작하세요.</div>}
       {cp !== null && (
         <div className="inv-decide">
           <div>
@@ -623,14 +626,41 @@ function InvestorPanel({ inv, open, openChat }: { inv: Inv; open: Round | null; 
           </button>
         </div>
       )}
-      {gain && (
-        <div className={`inv-gain ${gain.v > 0 ? 'up' : gain.v < 0 ? 'down' : ''}`}>
-          {gain.name}: 관심 {gain.v > 0 ? `+${gain.v}` : gain.v} {gain.v >= 20 ? '· 아주 반깁니다!' : gain.v < 0 ? '· 반기지 않습니다' : gain.v === 0 ? '· 별 반응이 없습니다' : ''}
-          <span>답장은 내일 메신저로 옵니다.</span>
-        </div>
-      )}
-      {isLead && <div className="ok tiny">이 투자사가 리드를 맡았습니다. 다른 투자사에 같이 투자하자고 제안하거나, 라운드 탭에서 마감하고 제안서를 받으세요.</div>}
       {err && <div className="err">{err}</div>}
+
+      {canWrite && (
+        <>
+          <div className="iv2-sect">
+            레터 보내기 <span className="inv-sect-sub">순서는 자유 · 투자사마다 반기는 레터가 다르고, 답장에 힌트가 옵니다</span>
+          </div>
+          <div className="inv-letters">
+            {DATA.funding.letters.map((l, li) => {
+              const sent = t?.sent.includes(l.id);
+              return (
+                <div key={l.id} className={`inv-letter ${sent ? 'sent' : ''}`}>
+                  <span className="iv2-tile">{sent ? <PixelCheck /> : li + 1}</span>
+                  <div className="inv-letter-text">
+                    <b>{l.name}</b>
+                    <span>{l.desc}</span>
+                    {l.id === 'proposal' && !sent && (
+                      <div className="seg inv-ask">
+                        {DATA.funding.valuationAsks.map((a) => (
+                          <button key={a.id} className={ask === a.id ? 'on' : ''} data-testid={`ask-${inv.id}-${a.id}`} onClick={() => setAsk(a.id)} title={a.pAdj < 0 ? '높게 부르면 투자받기 어려워집니다' : a.pAdj > 0 ? '낮게 부르면 투자받기 쉬워집니다' : ''}>
+                            {a.name}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <button className="btn small ghost" data-testid={`letter-${inv.id}-${l.id}`} disabled={sent} onClick={() => send(l.id, l.name)}>
+                    {sent ? '보냄' : '보내기'}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
 
       {/* 주고받은 말은 메신저에서(투자사 채널) */}
       {msgs.length > 0 && openChat && (

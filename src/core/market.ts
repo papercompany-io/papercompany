@@ -342,7 +342,7 @@ function scaleMilestone(s: GameState, u: number) {
   const who = `${unit} ${countShort(n)}${unitWord(s)}`;
   news(s, `[성장] ${s.company.name}, ${who} 돌파`, 'company');
   const opened = opensAt(s, n);
-  notify(s, `${who}을 넘었습니다.${opened.length ? ` 이제 ${opened.map((x) => `"${x}"`).join(', ')}을(를) 할 수 있습니다(시장·광고).` : ''}`, 'mission', 'market');
+  notify(s, `${who}을 넘었습니다.${opened.length ? ` 이제 ${opened.map((x) => `"${x}"`).join(', ')}을(를) 할 수 있습니다(시장).` : ''}`, 'mission', 'market');
   if (n >= scaleSteps(s)[Math.max(0, scaleSteps(s).length - 2)]) s.events.push({ type: 'confetti' });
 }
 

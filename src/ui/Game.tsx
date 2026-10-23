@@ -17,9 +17,11 @@ import { activeMissions, missionProgress, STAGE_NAMES } from '../core/progress';
 import { founderAge } from '../core/career';
 import { burningActive } from '../core/burning';
 import { act, getGame, timeHold, touch, useGame } from './store';
-import { AppPanel, Sidebar, defaultBox, type AppId, type WinBox } from './Desktop';
+import { AppPanel, Sidebar, appOpen, appRoute, defaultBox, type AppId, type WinBox } from './Desktop';
 import { Office } from './office/Office';
 import { EmployeeModal } from './EmployeeModal';
+import { OfficeApp } from './apps/OfficeApp';
+import { currentTier } from '../core/office';
 import { MeetingModal } from './MeetingModal';
 import { DevPanel } from './DevPanel';
 import { Money, useTween } from './common';
@@ -29,6 +31,7 @@ import { requestAutosave } from './autosave';
 import { countShort, pct, wonShort } from '../core/format';
 import { play, type Sfx } from './sound';
 import { getSettings, toggleAutoSkip, useSettings } from './meta';
+import { NewsTicker } from './NewsTicker';
 import { Toasts, DecisionModal, Confetti, SideStack } from './Feedback';
 import type { GameState } from '../core/types';
 import { PxIcon } from './icons';
@@ -65,10 +68,13 @@ export function Game({ continued, notice, clearNotice, onEnded }: Props) {
   const settings = useSettings();
   const [wins, setWins] = useState<Win[]>([]);
   const zTop = useRef(0);
+  const winCount = useRef(0);
+  winCount.current = wins.length; // 단축키(빈 의존성 effect)가 지금 창 수를 보게
   const front = wins.length ? wins.reduce((a, b) => (a.z > b.z ? a : b)) : null;
   // 창 열기: 이미 열려 있으면 앞으로(인자가 있으면 그 내용으로), 없으면 새 창
-  const showApp = (app: AppId, arg?: string) =>
+  const showApp = (to: AppId, toArg?: string) =>
     setWins((ws) => {
+      const [app, arg] = appRoute(to, toArg); // A-213: 채용·팀·AI 도입 → 직원 관리 창의 탭
       const z = ++zTop.current;
       const i = ws.findIndex((w) => w.app === app);
       if (i < 0) return [...ws, { app, arg, z, nonce: 0, box: defaultBox(ws.length) }];
@@ -79,6 +85,7 @@ export function Game({ continued, notice, clearNotice, onEnded }: Props) {
   const closeApp = (app: AppId) => setWins((ws) => ws.filter((w) => w.app !== app));
   const [openedOnce, setOpenedOnce] = useState(continued);
   const [empModal, setEmpModal] = useState<string | null>(null);
+  const [officeModal, setOfficeModal] = useState(false); // A-214: 사무실은 메뉴 창 대신 회사 카드의 이사가기 모달
   const [dev, setDev] = useState(false);
   const [urgentId, setUrgentId] = useState<string | null>(null);
   const [floats, setFloats] = useState<FloatFx[]>([]);
@@ -185,9 +192,20 @@ export function Game({ continued, notice, clearNotice, onEnded }: Props) {
         act((g) => setSpeed(g, g.speed > 0 && !g.pauseReason ? 0 : g.speed || settingsSpeed()));
       } else if (e.key === '1' || e.key === '2' || e.key === '3') {
         act((g) => setSpeed(g, [1, 2, 4][Number(e.key) - 1]));
+      } else if (e.key === 'Tab' && !e.altKey && !e.ctrlKey && !e.metaKey && winCount.current >= 2) {
+        // A-218: Tab = 뒤에 가려진 창 중 가장 최근에 쓴 창을 앞으로(두 창 사이를 오감). Shift+Tab = 가장 오래 안 쓴 창(차례로 다 돎)
+        setWins((ws) => {
+          if (ws.length < 2) return ws;
+          const byRecent = [...ws].sort((a, b) => b.z - a.z);
+          const pick = e.shiftKey ? byRecent[byRecent.length - 1] : byRecent[1];
+          const z = ++zTop.current;
+          return ws.map((w) => (w === pick ? { ...w, z } : w));
+        });
+        e.preventDefault();
       } else if (e.key === 'Escape') {
         // 맨 앞 창부터 하나씩 닫음
         setEmpModal(null);
+        setOfficeModal(false);
         setWins((ws) => (ws.length ? ws.filter((w) => w !== ws.reduce((a, b) => (a.z > b.z ? a : b))) : ws));
       }
     };
@@ -198,6 +216,12 @@ export function Game({ continued, notice, clearNotice, onEnded }: Props) {
   if (!s) return null;
 
   const openDesktop = (app: AppId, arg?: string) => {
+    if (app === 'office') {
+      setOfficeModal(true); // A-214: 사무실 알림(이사 시작·자리 없음)도 이사가기 모달로
+      play('open');
+      return;
+    }
+    if (app === 'product' && arg === 'contract') [app, arg] = ['contract', undefined]; // A-207: 예전 저장의 알림(업무 창 외주 탭)은 외주 창으로
     showApp(app, arg);
     setOpenedOnce(true);
     play('open');
@@ -261,8 +285,10 @@ export function Game({ continued, notice, clearNotice, onEnded }: Props) {
             <span>{nextHint(s, openedOnce)}</span>
           </div>
         )}
-        {!wins.length && <SideCards s={s} onOpen={(a) => openDesktop(a)} />}
+        {/* A-219: 창이 열려 있어도 오른쪽 카드는 늘 보임 */}
+        <SideCards s={s} onOpen={(a, arg) => openDesktop(a, arg)} />
         <SideStack s={s} onOpen={(app, arg) => openDesktop(app as AppId, arg)} />
+        <NewsTicker s={s} />
         <Toasts s={s} enabled={settings.toasts} onOpen={(app, arg) => openDesktop(app as AppId, arg)} />
         {notice && (
           <div className="notice">
@@ -285,6 +311,21 @@ export function Game({ continued, notice, clearNotice, onEnded }: Props) {
             openDesktop('messenger', urgent.channelId);
           }}
         />
+      )}
+      {officeModal && (
+        <div className="modal-bg" onClick={() => setOfficeModal(false)}>
+          <div className="modal of-modal" data-testid="office-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="of-modal-head">
+              <b>사무실 이사</b>
+              <button className="epm-x" data-testid="office-modal-close" onClick={() => setOfficeModal(false)} title="닫기 (Esc)" aria-label="닫기">
+                ×
+              </button>
+            </div>
+            <div className="of-modal-body">
+              <OfficeApp />
+            </div>
+          </div>
+        </div>
       )}
       {empModal && (
         <EmployeeModal
@@ -528,22 +569,30 @@ function TopBar({ s }: { s: GameState }) {
 }
 
 // 오른쪽 위: 지금 단계의 목표(튜토리얼·마일스톤)
-function SideCards({ s, onOpen }: { s: GameState; onOpen: (a: AppId) => void }) {
+function SideCards({ s, onOpen }: { s: GameState; onOpen: (a: AppId, arg?: string) => void }) {
   const next = activeMissions(s)[0];
   const p = next ? missionProgress(s, next) : 1;
+  const cta = next ? missionCta(s, next.metric) : null;
   return (
     <aside className="side-cards" onPointerDown={(e) => e.stopPropagation()}>
       {/* 회사 정보: 로고 + 이름 */}
+      {/* A-214: 왼쪽 메뉴의 사무실 대신 여기서 지금 사무실을 보고 이사가기 모달을 엶 */}
       <div className="co-card" data-testid="company-card">
         <div className="co-name">
           <ServiceLogo service={s.company.service} fallback={s.company.name} size={16} />
           <b>{s.company.name}</b>
         </div>
+        <div className="co-office">
+          <span>{s.company.movingUntil !== null ? `${currentTier(s).name}(으)로 이사 중` : currentTier(s).name}</span>
+          <button className="btn small ghost" data-testid="office-move-open" onClick={() => onOpen('office')}>
+            이사가기
+          </button>
+        </div>
       </div>
       {/* 제품 카드: 출시 전 MVP 진행, 출시 후 순위·품질·사용자 */}
       <ProductCard onOpen={() => onOpen('product')} />
-      {/* 다음 마일스톤: 누르면 전체 목표 */}
-      <button className="ms-card" data-testid="missions" onClick={() => onOpen('career')}>
+      {/* 다음 마일스톤: 누르면 전체 목표. A-219: 바로 할 수 있는 일이 있으면 그 창·모달을 여는 버튼(안에 버튼이 있어 카드는 div) */}
+      <div className="ms-card" role="button" tabIndex={0} data-testid="missions" onClick={() => onOpen('career')} onKeyDown={(e) => e.key === 'Enter' && onOpen('career')}>
         <span className="ms-label">다음 목표</span>
         <b className="ms-title">{next ? next.name : '모든 목표를 달성했습니다'}</b>
         {next && <span className="ms-desc">{next.guide}</span>}
@@ -552,10 +601,45 @@ function SideCards({ s, onOpen }: { s: GameState; onOpen: (a: AppId) => void }) 
             <i style={{ width: `${p * 100}%` }} />
           </span>
         )}
-      </button>
+        {cta && (
+          <button
+            className="btn small ms-cta"
+            data-testid="mission-cta"
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpen(cta.app, cta.arg);
+            }}
+          >
+            {cta.label}
+          </button>
+        )}
+      </div>
       <RankCard s={s} onOpen={() => onOpen('ranking')} />
     </aside>
   );
+}
+
+// 다음 목표 카드의 바로가기(A-219): 목표 지표마다 그 일을 하는 창·탭. 아직 열리지 않은 창이거나 맞는 곳이 없으면 버튼 없음
+const MISSION_CTA: Record<string, { label: string; app: AppId; arg?: string }> = {
+  featuresDone: { label: '기능 만들기', app: 'product' },
+  stage: { label: '기능 만들기', app: 'product' },
+  users: { label: '마케팅 하기', app: 'product' },
+  mrr: { label: '결제 기능 만들기', app: 'product' },
+  markets: { label: '시장 보기', app: 'market' },
+  share: { label: '시장 보기', app: 'market' },
+  staff: { label: '채용하기', app: 'employees', arg: 'hire' },
+  deptHr: { label: '채용하기', app: 'employees', arg: 'hire' },
+  welfare: { label: '복지 정하기', app: 'employees', arg: 'welfare' },
+  aiAdoption: { label: 'AI 도입하기', app: 'employees', arg: 'ai' },
+  officeTier: { label: '이사가기', app: 'office' },
+  fundingIndex: { label: '투자 유치하기', app: 'invest' },
+  valuation: { label: '투자 보기', app: 'invest' },
+  marketCap: { label: '투자 보기', app: 'invest' },
+  profitMonths: { label: '재무 보기', app: 'finance' },
+};
+function missionCta(s: GameState, metric: string) {
+  const c = MISSION_CTA[metric];
+  return c && appOpen(s, c.app) ? c : null;
 }
 
 // 오른쪽 아래: 시장 랭킹 요약(누르면 시장 랭킹 창). 가장 고객이 많은 시장의 순위를 보여 줍니다.

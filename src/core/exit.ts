@@ -154,7 +154,7 @@ export function inboundOfferMonth(s: GameState) {
   const buyer = pick(s, BUYERS);
   s.exitAttempt = { method: 'sale', startedDay: s.day, readyDay: s.day, price, valuationAtStart: v, p: null, status: 'offer', inbound: true, buyer, deadline: s.day + 14 };
   s.pauseReason = '인수 제안이 들어왔습니다';
-  notify(s, `${buyer}이(가) ${s.company.name} 인수를 제안했습니다: ${Math.round(price / 1e8).toLocaleString('ko-KR')}억원. 내 몫 약 ${Math.round((price * founderPct(s)) / 1e8).toLocaleString('ko-KR')}억원. 14일 안에 답하세요(Exit 메뉴).${dm < 1 ? ' 자금난을 아는 인수자라 값을 깎아 불렀습니다.' : ''}`, 'urgent', 'exit');
+  notify(s, `${buyer}이(가) ${s.company.name} 인수를 제안했습니다: ${Math.round(price / 1e8).toLocaleString('ko-KR')}억원. 내 몫 약 ${Math.round((price * founderPct(s)) / 1e8).toLocaleString('ko-KR')}억원. 14일 안에 답하세요(투자 → Exit 탭).${dm < 1 ? ' 자금난을 아는 인수자라 값을 깎아 불렀습니다.' : ''}`, 'urgent', 'exit');
 }
 
 // FL-01 월급일 정산 뒤 자금이 0 이하이면 파산(DEC-021)
