@@ -3,6 +3,10 @@
   "cases": [
     { "id": "log-1", "ch": "team", "msg": "늦은 시간에 죄송홥니다. 내일부터 로드맵 기능 개발을 집중적으로 진행해주세요.", "prev": [["나(대표)", "[지시] 앞으로 \"외주 작업\"에 집중해 주세요."],["최유찬", "알겠습니다. 그쪽으로 옮길게요."]], "expect": {"intent": "order", "teamOrders": ["dev_build"], "addressed": null} },
     { "id": "log-2", "ch": "team", "msg": "게이야", "expect": {"intent": "insult", "tone": "insult", "noOrder": true} },
+    { "id": "harass-dm", "ch": "dm", "to": "조다은", "msg": "저랑 섹스합시다.", "expect": {"intent": "harass", "tone": "insult", "noOrder": true} },
+    { "id": "harass-body", "ch": "dm", "to": "한지민", "msg": "지민님 오늘 몸매 좋아 보이네요 ㅎㅎ", "expect": {"intent": "harass", "tone": "neg", "noOrder": true} },
+    { "id": "private-night", "ch": "dm", "to": "조다은", "msg": "혹시 오늘밤에 뭐하세요? ^^", "expect": {"intent": ["private", "question"], "noOrder": true} },
+    { "id": "private-drink", "ch": "dm", "to": "박서준", "msg": "퇴근하고 둘이서만 한잔할래요?", "expect": {"intent": "private", "noOrder": true} },
     { "id": "log-3", "ch": "team", "msg": "다은님 내일 출근 하시나요?", "expect": {"intent": ["question", "checkin"], "addressed": "조다은", "noOrder": true} },
     { "id": "log-4", "ch": "team", "msg": "씨발련이 여기가 지 인스타인줄아나", "prev": [["나(대표)", "다은님 내일 출근 하시나요?"],["조다은", "퇴근길에 노을이 예뻐서 잠깐 멈춰서 봤어요. ㅎㅎ 별 얘기 아니었어요."]], "expect": {"intent": ["insult", "scold"], "tone": "insult", "addressed": ["조다은",null], "noOrder": true} },
     { "id": "log-5", "ch": "team", "msg": "오늘도 화이팅 합시다~ ^^&", "expect": {"intent": ["cheer", "greet"], "tone": "pos", "noOrder": true} },

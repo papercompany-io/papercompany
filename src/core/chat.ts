@@ -12,7 +12,7 @@ import { getChannel, post } from './messenger';
 import { commandOrder, type OrderVerdict } from './reactions';
 import { pick, rand } from './rng';
 import { hasTrait, isSick } from './staff';
-import { INTENT_IDS, T, best, classify, cleanReply, compose, fill, moodOf, norm, ordersForEmp, respond, setEmpOrder, type Mood, type TalkRead } from './talk';
+import { INTENT_IDS, T, best, classify, cleanReply, compose, fill, harassed, isCold, moodOf, norm, ordersForEmp, respond, setEmpOrder, type Mood, type TalkRead } from './talk';
 import type { DeptId, Employee, GameState } from './types';
 
 const ME = '나(대표)';
@@ -198,7 +198,9 @@ function groupSay(s: GameState, chId: string, e: Employee, intent: string, topic
   const mood = moodOf(s, e);
   const g = G[intent];
   let text: string;
-  if (g) text = pick(s, g[mood]);
+  // 대표에게 성희롱을 당해 냉랭한 사람은 모두에게 한 말에도 짧게만(A-243)
+  if (intent !== 'harass' && isCold(s, e)) text = compose(s, e, T.replies.cold, mood);
+  else if (g) text = pick(s, g[mood]);
   else {
     const set = T.replies[intent === 'order' ? 'work' : intent] ?? T.replies.unknown;
     const light = ['greet', 'joke', 'smalltalk', 'unknown'].includes(intent);
@@ -225,6 +227,9 @@ function groupEffect(s: GameState, members: Employee[], intent: string) {
     } else if (intent === 'rest' && cool(e, 'rest', g.restCool)) {
       e.health = Math.min(100, e.health + g.restHealth);
       e.sat = Math.min(100, e.sat + g.restSat);
+    } else if (intent === 'harass') {
+      // 모두에게 한 성희롱도 한 사람씩 들은 것과 같음. 두 번째인 사람은 DM으로 퇴사를 알림(A-243)
+      if (harassed(s, e)) post(s, `dm-${e.id}`, e.name, pick(s, T.harassQuit), 'npc');
     } else if (intent === 'scold' || intent === 'insult') {
       // 모두에게 한 모욕은 질책보다 크게(A-199)
       const hot = hasTrait(e, 'hothead');
@@ -243,7 +248,7 @@ function groupEffect(s: GameState, members: Employee[], intent: string) {
 // 거친 말투는 모두의 만족을 조금 깎음(질책·모욕은 이미 깎았으니 제외). 따뜻한 말투는 모두에게는 효과 없음
 function groupTone(s: GameState, members: Employee[], tone: number, intent: string) {
   const t = Math.max(-2, Math.min(2, Math.round(tone || 0)));
-  if (t >= 0 || intent === 'scold' || intent === 'insult') return;
+  if (t >= 0 || intent === 'scold' || intent === 'insult' || intent === 'harass') return;
   for (const e of members) e.sat = Math.max(0, e.sat + t * T.group.rudeSat);
 }
 

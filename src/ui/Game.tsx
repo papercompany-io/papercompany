@@ -35,6 +35,7 @@ import { NewsTicker } from './NewsTicker';
 import { Toasts, DecisionModal, Confetti, SideStack } from './Feedback';
 import type { GameState } from '../core/types';
 import { PxIcon } from './icons';
+import { Guide, Tutorial, TOUR_EVENT, shouldStartTutorial } from './Tutorial';
 import './game.css';
 
 interface Props {
@@ -84,6 +85,16 @@ export function Game({ continued, notice, clearNotice, onEnded }: Props) {
     });
   const closeApp = (app: AppId) => setWins((ws) => ws.filter((w) => w.app !== app));
   const [openedOnce, setOpenedOnce] = useState(continued);
+  // 게임 시작 튜토리얼(A-242): 처음 들어올 때 자동으로, 설정 창 "다시 보기"로도 (열린 창은 닫고 시작)
+  const [tour, setTour] = useState(() => !!getGame() && shouldStartTutorial(getGame()!, continued, getSettings().tutorialDone));
+  useEffect(() => {
+    const start = () => {
+      setWins([]);
+      setTour(true);
+    };
+    window.addEventListener(TOUR_EVENT, start);
+    return () => window.removeEventListener(TOUR_EVENT, start);
+  }, []);
   const [empModal, setEmpModal] = useState<string | null>(null);
   const [officeModal, setOfficeModal] = useState(false); // A-214: 사무실은 메뉴 창 대신 회사 카드의 이사가기 모달
   const [dev, setDev] = useState(false);
@@ -110,7 +121,7 @@ export function Game({ continued, notice, clearNotice, onEnded }: Props) {
       const g = getGame();
       const dt = now - last;
       last = now;
-      if (g && isRunning(g) && !timeHold.nego) {
+      if (g && isRunning(g) && !timeHold.nego && !timeHold.tutorial) {
         const day = g.day;
         advance(g, dt, autoSkipDue(g, getSettings().autoSkipNight)); // 퇴근 뒤 자동 빨리 감기(A-159)
         const important = g.day !== day || g.events.length > 0 || !isRunning(g);
@@ -360,6 +371,8 @@ export function Game({ continued, notice, clearNotice, onEnded }: Props) {
           }}
         />
       )}
+      <Guide blocked={tour || !!empModal || officeModal || !!urgent || !!s.meeting || !!waitAsk} />
+      {tour && <Tutorial onClose={() => setTour(false)} />}
       {dev && <DevPanel onClose={() => setDev(false)} />}
     </div>
   );

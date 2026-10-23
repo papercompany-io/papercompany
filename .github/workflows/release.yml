@@ -1,0 +1,91 @@
+# main에 push하면 Electron 앱을 Windows·macOS·Linux로 패키징해 GitHub Release에 올립니다.
+# OpenRouter 키는 번들에 넣지 않습니다(사용자 데이터 폴더의 .env를 읽음, electron/main.ts).
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# 연속 push가 같은 태그를 두고 다투지 않게 한 번에 하나씩 돌립니다.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+      tag: ${{ steps.v.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: v
+        run: |
+          BASE=$(node -p "require('./package.json').version")
+          # TODO(human): 릴리스 버전과 태그 정하기
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: version
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            args: --win nsis --x64
+          - os: macos-latest
+            args: --mac dmg --x64 --arm64
+          - os: ubuntu-latest
+            args: --linux AppImage --x64
+    runs-on: ${{ matrix.os }}
+    env:
+      # 코드 서명 인증서가 없으므로 서명을 건너뜁니다.
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      # 타입 검사 + vite 빌드(dist/, dist-electron/)
+      - run: npm run build
+      # package.json의 build 설정은 그대로 두고, 대상과 버전만 명령줄로 덮어씁니다.
+      - run: >
+          npx electron-builder ${{ matrix.args }}
+          --publish never
+          -c.extraMetadata.version=${{ needs.version.outputs.version }}
+          -c.artifactName='${productName}-${version}-${os}-${arch}.${ext}'
+        shell: bash
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.os }}
+          path: |
+            release/*.exe
+            release/*.dmg
+            release/*.AppImage
+          if-no-files-found: error
+
+  release:
+    needs: [version, build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: out
+          pattern: release-*
+          merge-multiple: true
+      - name: GitHub Release 만들기
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ needs.version.outputs.tag }}" out/* \
+            --repo "${{ github.repository }}" \
+            --target "${{ github.sha }}" \
+            --title "PaperCompany ${{ needs.version.outputs.version }}" \
+            --generate-notes

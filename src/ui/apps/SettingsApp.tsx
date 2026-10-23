@@ -7,6 +7,7 @@ import { setAutoSkip, setSettings, useSettings } from '../meta';
 import { saveNow } from '../autosave';
 import { toggleFullscreen, isElectron } from '../../platform/save';
 import { APP_COLORS, AppIcon } from '../icons';
+import { replayTutorial } from '../Tutorial';
 import './apps.css';
 import './skin/SettingsApp.css';
 
@@ -133,6 +134,12 @@ export function SettingsApp() {
         <Row title="전체 화면">
           <button className="btn small ghost" onClick={toggleFullscreen}>
             켜기 / 끄기
+          </button>
+        </Row>
+        {/* A-242: 게임 시작 튜토리얼 다시 보기 */}
+        <Row title="튜토리얼" sub="화면 곳곳을 차례로 짚어 설명합니다.">
+          <button className="btn small ghost" data-testid="tutorial-replay" onClick={replayTutorial}>
+            다시 보기
           </button>
         </Row>
       </section>

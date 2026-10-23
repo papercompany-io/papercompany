@@ -10,7 +10,8 @@
 import talk from '../data/talk.json';
 import { DATA, dept, orderDef } from './data';
 import { runwayMonths } from './finance';
-import { post } from './messenger';
+import { getChannel, post } from './messenger';
+import { notify } from './notify';
 import { orderOf } from './orders';
 import { empOrderOf, groupOrder } from './assign';
 import { DM_ACTIONS, commandOrder, dmAction, type DmAction, type OrderVerdict } from './reactions';
@@ -24,7 +25,7 @@ export type Mood = 'good' | 'neutral' | 'bad';
 type Pieces = { open: string[]; body: string[]; close: string[] };
 export type ReplySet = Record<Mood, Pieces> & { trait?: Record<string, string[]>; again?: string[] };
 type IntentDef = { id: string; dm?: string | null; keys: string[] };
-export type TopicDef = { id: string; keys: string[]; lines: Record<Mood, string[]> };
+export type TopicDef = { id: string; keys: string[]; lines: Record<Mood, string[]>; follow?: Record<Mood, string[]> };
 
 export const T = talk as unknown as {
   fx: {
@@ -42,8 +43,18 @@ export const T = talk as unknown as {
     replyMax: number;
     personalRecentDays: number;
     personalRecentSat: number;
+    harassSat: number;
+    harassColdDays: number;
+    harassQuitDays: number;
+    harassLeaveDays: number;
+    privateSat: number;
+    privateDays: number;
   };
   intents: IntentDef[];
+  followKeys: string[];
+  harassQuit: string[];
+  coldApology: string[];
+  coldWork: string[];
   ackExact: string[];
   orderVerbs: string[];
   orderKeys: Record<string, string[]>;
@@ -69,8 +80,8 @@ export interface TalkRead {
   gist?: string; // LLM이 이해한 뜻 한 줄(평가·디버깅용)
 }
 
-// 효과가 있는 의도: 근황·칭찬·분발·휴식(DM 버튼과 같음), 업무 변경, 질책, 모욕, 사과. 나머지는 말투 효과만
-export const INTENT_IDS = ['checkin', 'praise', 'push', 'rest', 'order', 'scold', 'insult', 'apology', 'work', 'idea', 'pay', 'question', 'request', 'cheer', 'ack', 'greet', 'bye', 'joke', 'smalltalk', 'unknown'];
+// 효과가 있는 의도: 근황·칭찬·분발·휴식(DM 버튼과 같음), 업무 변경, 질책, 모욕, 성희롱, 사적 접근, 사과. 나머지는 말투 효과만
+export const INTENT_IDS = ['checkin', 'praise', 'push', 'rest', 'order', 'scold', 'insult', 'harass', 'private', 'apology', 'work', 'idea', 'pay', 'question', 'request', 'cheer', 'ack', 'greet', 'bye', 'joke', 'smalltalk', 'unknown'];
 
 // 띄어쓰기·문장부호를 지운 소문자. 키워드도 띄어쓰기 없이 적혀 있습니다
 export function norm(text: string): string {
@@ -107,7 +118,8 @@ export function classify(s: GameState, e: Employee, text: string): { intent: str
   }
   // 메시지 전체가 짧은 맞장구거나 이모지뿐이면 맞장구
   if (T.ackExact.includes(t) || (text.trim() && !text.replace(EMOJI, '').trim())) return { intent: 'ack', ...none };
-  // 욕설이 하나라도 있으면 모욕(질책·농담 키워드보다 먼저)
+  // 성적인 말은 성희롱, 욕설이 하나라도 있으면 모욕(질책·농담 키워드보다 먼저, A-243)
+  if (hasKey(t, 'harass')) return { intent: 'harass', ...none };
   if (hasSlur(text)) return { intent: 'insult', ...none };
   const it = best(t, T.intents);
   const tp = best(t, T.topics);
@@ -151,8 +163,58 @@ export function compose(s: GameState, e: Employee, set: ReplySet, mood: Mood, bo
 
 // 답에 섞이면 안 되는 욕설(대표 말을 따라 하는 경우 등). 키워드 사전의 모욕 말과 같음
 function hasSlur(text: string): boolean {
-  const t = norm(text);
-  return T.intents.find((i) => i.id === 'insult')!.keys.some((k) => t.includes(k));
+  return hasKey(norm(text), 'insult') || hasKey(norm(text), 'harass');
+}
+
+function hasKey(t: string, intent: string): boolean {
+  return T.intents.find((i) => i.id === intent)!.keys.some((k) => t.includes(k));
+}
+
+// 성희롱(A-243): 만족이 크게 떨어지고 harassColdDays일 동안 냉랭함(칭찬·사과·따뜻한 말로 안 풀림).
+// harassQuitDays일 안에 또 하면 바로 퇴사 통보. 판정(harassQuits)은 부작용 없이 LLM 반응 표와 효과가 같이 씀
+export function isCold(s: GameState, e: Employee): boolean {
+  const last = e.dmDay?.['talk-harass'];
+  return last !== undefined && s.day - last < T.fx.harassColdDays;
+}
+
+export function harassQuits(s: GameState, e: Employee): boolean {
+  const last = e.dmDay?.['talk-harass'];
+  return e.leaving === null && last !== undefined && s.day - last <= T.fx.harassQuitDays;
+}
+
+// 효과를 내고, 퇴사 통보를 했으면 true
+export function harassed(s: GameState, e: Employee): boolean {
+  const quit = harassQuits(s, e);
+  e.sat = Math.max(0, e.sat - T.fx.harassSat);
+  (e.dmDay ??= {})['talk-harass'] = s.day;
+  if (!quit) return false;
+  e.leaving = s.day + T.fx.harassLeaveDays;
+  e.bubble = { text: 'box', until: e.leaving };
+  notify(s, `${e.name}님이 대표의 부적절한 발언을 이유로 퇴사 의사를 밝혔습니다(${T.fx.harassLeaveDays}일 뒤).`, 'bad', 'employees');
+  return true;
+}
+
+// 되묻는 말(무슨 책이요? 왜요? 진짜요?)
+function isFollow(t: string): boolean {
+  return T.followKeys.some((k) => t.includes(k));
+}
+
+// 이 채널에서 이 직원이 오늘 마지막으로 한 말의 주제(되물음에 이어서 답하려고)
+function lastTopic(s: GameState, e: Employee, ch: string): TopicDef | null {
+  const m = [...(getChannel(s, ch)?.messages ?? [])].reverse().find((x) => x.kind !== 'player');
+  return m && m.from === e.name && m.day === s.day ? best(norm(m.text), T.topics)?.def ?? null : null;
+}
+
+// 오늘 이 채널에서 대표가 이미 한 말(방금 올린 말은 빼고)
+function saidBefore(s: GameState, ch: string): string[] {
+  const ms = (getChannel(s, ch)?.messages ?? []).filter((m) => m.kind === 'player' && m.day === s.day);
+  return ms.slice(0, -1).map((m) => norm(m.text));
+}
+
+// 같은 말을 되풀이했는지. prev·cur는 norm()을 거친 글(띄어쓰기·문장부호 없음)
+export function isRepeat(prev: string, cur: string): boolean {
+  // TODO(human)
+  return prev === cur;
 }
 
 // LLM 답 다듬기(A-199): 이모지·따옴표·마크다운·"이름:" 머리말을 지우고 길이를 자름. 쓸 수 없으면 null(대사 묶음으로)
@@ -209,6 +271,18 @@ export function respond(s: GameState, e: Employee, ch: string, raw: string, read
   const say = (t: string) => post(s, ch, e.name, fill(s, e, t), 'npc');
   const sick = isSick(s, e);
 
+  // 성희롱: 다른 무엇보다 먼저. 두 번째면 퇴사 통보(A-243)
+  if (intent === 'harass') {
+    const quit = harassed(s, e);
+    return say(llm ?? (quit ? pick(s, T.harassQuit) : compose(s, e, T.replies.harass, moodOf(s, e))));
+  }
+  // 냉랭한 동안은 업무 지시만 따르고, 나머지 말은 효과 없이 짧게 받음(칭찬·사과·따뜻한 말로 안 풀림). 질책·모욕은 그대로 깎임
+  if (isCold(s, e) && !['order', 'scold', 'insult'].includes(intent)) {
+    const cold = intent === 'apology' ? T.coldApology : intent === 'work' ? T.coldWork : null;
+    say(llm ?? (cold ? pick(s, cold) : compose(s, e, T.replies.cold, moodOf(s, e))));
+    return applyTone(s, e, read, intent);
+  }
+
   const dm = asDm(intent);
   if (dm) {
     dmAction(s, e.id, dm, null, ch, llm && (sick ? sickLine(llm) : llm));
@@ -239,19 +313,27 @@ export function respond(s: GameState, e: Employee, ch: string, raw: string, read
 
   const key = `talk-${intent}`;
   const light = ['greet', 'joke', 'smalltalk', 'unknown'].includes(intent);
-  const topic = light && rule ? rule.topic : null;
-  const again = e.dmDay?.[key] === s.day && !topic;
+  const t = norm(text);
+  // 되물음("무슨 책이요?")이면 그 주제, 주제어가 없으면 직원이 방금 한 말의 주제를 이어서 자세히 답함(A-243)
+  const asks = !!rule && (light || intent === 'question') && isFollow(t);
+  const topic = rule && (light || asks) ? rule.topic ?? (asks ? best(t, T.topics)?.def ?? lastTopic(s, e, ch) : null) : null;
+  const follow = asks && topic?.follow ? topic.follow : null;
+  // again은 같은 말을 되풀이했을 때만. 인사·작별은 같은 날 두 번째부터
+  const repeated = saidBefore(s, ch).some((p) => isRepeat(p, t));
+  const again = !topic && (repeated || (['greet', 'bye'].includes(intent) && e.dmDay?.[key] === s.day));
   const lastScold = e.dmDay?.['talk-scold'];
+  const lastSame = e.dmDay?.[key];
   (e.dmDay ??= {})[key] = s.day;
   if (llm) say(llm);
   else {
     const set = T.replies[intent] ?? T.replies.unknown;
+    const mood = moodOf(s, e);
     if (again && set.again?.length) say(pick(s, set.again));
-    else {
-      const mood = moodOf(s, e);
-      say(compose(s, e, set, mood, topic?.lines[mood]));
-    }
+    else if (follow) say(pick(s, follow[mood]));
+    else say(compose(s, e, set, mood, topic?.lines[mood]));
   }
+  // 사적 접근: 한 번은 피하고 말지만 며칠 안에 또 하면 불편해함(A-243)
+  if (intent === 'private' && lastSame !== undefined && s.day - lastSame <= T.fx.privateDays) e.sat = Math.max(0, e.sat - T.fx.privateSat);
 
   if (intent === 'scold' || intent === 'insult') {
     // 모욕은 질책보다 크게 깎임. 둘 다 며칠 안의 사과로 일부만 회복(질책 + 사과 = 손해, 공짜 이득 없음)
@@ -314,7 +396,7 @@ function applyTone(s: GameState, e: Employee, read: TalkRead | null, intent: str
   if (!read) return;
   const tone = Math.max(-2, Math.min(2, Math.round(read.tone || 0)));
   if (tone < 0 && intent !== 'scold' && intent !== 'insult') e.sat = Math.max(0, e.sat + tone * T.fx.rudeSat);
-  if (tone > 0 && !asDm(intent)) {
+  if (tone > 0 && !asDm(intent) && !isCold(s, e)) {
     const last = e.dmDay?.['talk-warm'];
     if (last === undefined || s.day - last >= T.fx.warmDays) {
       e.sat = Math.min(100, e.sat + T.fx.warmSat);

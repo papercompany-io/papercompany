@@ -11,7 +11,7 @@ import { getChannel } from './messenger';
 import { orderOf } from './orders';
 import { empOrderOf } from './assign';
 import { DM_ACTIONS, WHY_NOTE, dmReaction, orderVerdict, type OrderVerdict } from './reactions';
-import { INTENT_IDS, T, empOrderVerdict, moodOf, type TalkRead } from './talk';
+import { INTENT_IDS, T, empOrderVerdict, harassQuits, isCold, moodOf, type TalkRead } from './talk';
 import { channelMembers, namedIn, type ChannelRead } from './chat';
 import { hasTrait, isSick, marketSalary } from './staff';
 import type { DeptId, Employee, GameState } from './types';
@@ -40,13 +40,15 @@ const SYSTEM = `너는 한국 스타트업 경영 게임 "페이퍼컴퍼니"에
 대표가 방금 보낸 메시지를 읽고 정해진 JSON 하나만 낸다.
 - understanding: 대표가 무슨 뜻으로 말했는지 짧은 한 줄(40자 안팎, 앞 대화 흐름까지 반영).
 - 해석(intent, tone, 업무 필드): 게임은 이 해석대로 직원 기분과 업무를 바꾼다. 메시지에 실제로 있는 뜻만 고른다.
-- reaction: 답장을 쓰기 전에, 고른 해석에 해당하는 [반응 표] 줄을 키까지 그대로 옮겨 적는다(예: "order·team·dev_stabilize: 팀이 거절하고…"). 효과가 있는 의도(checkin, praise, push, rest, scold, insult, apology, order)는 표에 줄이 반드시 있으니 찾아서 적는다. 그 밖의 의도면 "없음".
+- reaction: 답장을 쓰기 전에, 고른 해석에 해당하는 [반응 표] 줄을 키까지 그대로 옮겨 적는다(예: "order·team·dev_stabilize: 팀이 거절하고…"). 효과가 있는 의도(checkin, praise, push, rest, scold, insult, harass, private, apology, order)는 표에 줄이 반드시 있으니 찾아서 적는다. 그 밖의 의도면 "없음".
 - 답장: 직원이 메신저에 실제로 보낼 말. reaction과 어긋나면 안 된다(거절이면 받아들인다고 쓰지 않는다).
 
 ## intent (하나만)
 게임 효과가 있는 것
 - order: 팀이나 특정 사람이 앞으로 맡을 일을 정하거나 바꾸라는 지시. [맡을 수 있는 일] 가운데 하나를 하라는 말이어야 한다. "팀 일로 돌아가라"도 order.
-- insult: 욕설·비속어·혐오 표현·성적인 말·외모 평가·인신공격. 사람을 깎아내리는 호칭("게이야", "병신아", "~련아", "~새끼야")만 던져도 insult. 일 이야기가 섞여 있어도 욕이 들어가면 insult.
+- harass: 성희롱. 성적인 말·성적 농담·몸이나 외모를 성적으로 평가·스킨십이나 잠자리 요구("저랑 자요", "몸매 좋네요"). 장난처럼 말해도 harass.
+- private: 성적인 말 없이 선을 넘는 사적 접근. 같이 시간을 보내자는 뜻으로 오늘 밤·퇴근 뒤 계획을 묻거나 단둘이 만나자고 함, 연애·애인·이상형, 연락처·사는 곳을 물음("오늘 밤에 뭐 해요?", "애인 있어요?", "둘이서 한잔해요").
+- insult: 욕설·비속어·혐오 표현·외모 비하·인신공격. 사람을 깎아내리는 호칭("게이야", "병신아", "~련아", "~새끼야")만 던져도 insult. 일 이야기가 섞여 있어도 욕이 들어가면 insult.
 - scold: 일에 대한 질책·실망·꾸중·비꼼·위협("왜 이렇게 늦어요?", "실망이에요", "못 맞추면 각오하세요", "와 일 진짜 잘하시네요^^ 이걸 이제야 하다니").
 - apology: 대표가 사과함.
 - push: 더 열심히·더 빨리 하라고 압박하거나 조름("속도 좀 내 주세요", "조금만 더 힘내 줍시다", "좀 집중해요").
@@ -66,9 +68,10 @@ const SYSTEM = `너는 한국 스타트업 경영 게임 "페이퍼컴퍼니"에
 
 헷갈리기 쉬운 것
 - 일 이름이 나와도 그 일을 하라는 말이 없으면 order가 아니다. "외주 일감 들어온 거 있어요?"는 work, "버그가 왜 이렇게 많아요?"는 scold.
-- 뜻이 여러 개면 게임 효과가 큰 쪽: order > insult > scold > apology > push > rest > praise > checkin > 나머지.
+- 뜻이 여러 개면 게임 효과가 큰 쪽: order > harass > insult > scold > apology > push > rest > praise > checkin > 나머지.
+  "주말에 뭐 했어요?" 같은 가벼운 안부는 question, "오늘 밤에 뭐 해요? ^^"처럼 만나자는 뜻이 보이면 private.
   "늦게 죄송한데 내일부터 로드맵 기능 개발해 주세요"는 order, "잘했는데 다음엔 더 빨리요"는 push.
-- tone: -2 욕설·모욕, -1 무례·짜증·비꼼·압박, 0 보통, 1 친절·밝음, 2 아주 따뜻함(진심 어린 칭찬·위로).
+- tone: -2 욕설·모욕·성희롱, -1 무례·짜증·비꼼·압박, 0 보통, 1 친절·밝음, 2 아주 따뜻함(진심 어린 칭찬·위로).
 
 ## 답장
 - 직원은 실제 사람이다. 대표의 말 내용에 바로 답한다. 질문엔 답하고, 부탁엔 할지 말지, 지시엔 받아들이는지 말한다.
@@ -150,9 +153,10 @@ function person(s: GameState, e: Employee): string {
   const scolded = e.dmDay?.['talk-scold'];
   const hurt = scolded !== undefined && s.day - scolded <= T.fx.apologyDays;
   const mood = moodOf(s, e);
-  const flags = [isSick(s, e) && '지금 병가 중(아파서 집에 있음)', e.leaving !== null && '곧 퇴사함(이미 마음이 떠남)', hurt && '최근 대표에게 질책이나 막말을 들음'].filter(Boolean);
+  const cold = isCold(s, e);
+  const flags = [isSick(s, e) && '지금 병가 중(아파서 집에 있음)', e.leaving !== null && '곧 퇴사함(이미 마음이 떠남)', cold && '최근 대표에게 성희롱 발언을 들어 대표를 경계함', hurt && '최근 대표에게 질책이나 막말을 들음'].filter(Boolean);
   // 지금 말투: 설명을 읽고도 밝게 쓰는 일이 많아 직접 적어 줌
-  const tone = hurt ? '대표에게 서운해서 짧고 건조하게, 밝은 말투 없이' : e.leaving !== null || mood === 'bad' ? '지쳐 있어 짧고 건조하게' : mood === 'good' ? '밝게' : '차분하게';
+  const tone = cold ? '대표를 경계해 업무 이야기만 아주 짧고 사무적으로, 잡담·웃음 없이' : hurt ? '대표에게 서운해서 짧고 건조하게, 밝은 말투 없이' : e.leaving !== null || mood === 'bad' ? '지쳐 있어 짧고 건조하게' : mood === 'good' ? '밝게' : '차분하게';
   const work = `${orderDef(empOrderOf(s, e))?.name ?? '없음'}${e.order ? '(혼자 따로 맡은 일)' : '(팀 일)'}`;
   return `${e.name} — ${dept(e.dept).name}팀 ${e.lead ? '팀장' : '팀원'}, ${tenure}. 성격: ${traits}. 말버릇: ${T.voices[hash(e.id) % T.voices.length]}. 기분: ${MOOD_WORD[mood]}. 컨디션: ${health}. 처우: ${payWord}. 지금 하는 일: ${work}.${flags.length ? ` ${flags.join(', ')}.` : ''} 지금 말투: ${tone}.`;
 }
@@ -234,12 +238,16 @@ function talkNotes(s: GameState, e: Employee, key: string): string[] {
   const scolded = e.dmDay?.['talk-scold'];
   const recent = scolded !== undefined && s.day - scolded <= T.fx.apologyDays;
   const sick = isSick(s, e);
+  // 냉랭한 동안은 업무 지시 말고는 효과 없이 짧게 받음(A-243, talk.ts respond와 같음)
+  const cold = isCold(s, e) && '대표를 경계해 업무 얘기만 하겠다며 사무적으로 짧게 답함(효과 없음)';
   return [
+    `${key}harass: ${harassQuits(s, e) ? '두 번째라 더는 못 다니겠다며 퇴사하겠다고 함' : hot ? '불쾌함을 숨기지 않고 성희롱이라고 강하게 경고함' : '불쾌하다며 단호하게 선을 긋고, 다시는 그러지 말라고 함'}`,
+    `${key}private: ${cold || (moodOf(s, e) === 'bad' ? '불편해하며 사적인 질문은 하지 말라고 함' : '사적인 일이라며 정중하게 피하고 업무 이야기로 돌림')}`,
     // 병가 중이면 근황·칭찬·분발·휴식 효과가 없음(dmAction과 같음)
-    ...DM_ACTIONS.map((a) => `${key}${a.id}: ${sick ? '아파서 집에서 쉬는 중이라 짧게 답함' : dmReaction(s, e, a.id).note}`),
+    ...DM_ACTIONS.map((a) => `${key}${a.id}: ${cold || (sick ? '아파서 집에서 쉬는 중이라 짧게 답함' : dmReaction(s, e, a.id).note)}`),
     `${key}scold: ${hot ? '발끈하며 서운함을 드러냄' : '기분이 상해 시무룩해지지만 받아들임'}`,
     `${key}insult: 크게 불쾌해하고 상처받음${hot ? '(참지 않고 맞받아침)' : '(선을 그음)'}`,
-    `${key}apology: ${recent ? '사과를 받아 주지만 마음이 다 풀리진 않음' : '괜찮다며 사과를 가볍게 받아 줌'}`,
+    `${key}apology: ${cold ? '사과는 들었지만 쉽게 잊히지 않는다며 거리를 둠(효과 없음)' : recent ? '사과를 받아 주지만 마음이 다 풀리진 않음' : '괜찮다며 사과를 가볍게 받아 줌'}`,
   ];
 }
 
@@ -317,6 +325,7 @@ export function planChannel(s: GameState, chId: string, said: string): ChannelPl
     `모두·rest: ${cooled('rest', g.restCool) ? '지난번에 쉬어서 괜찮다고 함' : '다들 고마워함'}`,
     '모두·scold: 분위기가 가라앉고 다들 위축됨',
     '모두·insult: 다들 크게 불쾌해하고 분위기가 얼어붙음',
+    '모두·harass: 다들 경악하고 분위기가 얼어붙음, 누군가 성희롱이라고 선을 그음',
     `모두·apology: ${scolded ? '사과를 받아들이지만 분위기가 아직 어색함' : '괜찮다며 가볍게 받아 줌'}`,
     ...teamNotes(s, ds, verdicts, '팀일'),
     ...close.flatMap((e) => talkNotes(s, e, `${label(e)}·`)),
