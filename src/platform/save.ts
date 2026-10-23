@@ -71,6 +71,8 @@ function parse(text: string | null): GameState | null {
       migrateSeats(s);
       // 예전 저장 보정: 평면에 고정된 가구 → 직접 놓는 가구(A-87)
       migrateFurniture(s);
+      // 예전 저장 보정: 그룹 메시지 채널은 없앰(A-226, 부서 안의 팀 채널로 바뀜)
+      s.channels = s.channels.filter((c) => (c.kind as string) !== 'group');
       // 예전 저장 보정: 창업 직후 비어 있던 로드맵에 MVP 핵심 기능(A-95)
       if (!s.ended && s.product.launchedDay === null && s.product.roadmap.length === 0 && Object.keys(s.product.features).length === 0) seedMvpRoadmap(s);
       return s;

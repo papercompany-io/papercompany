@@ -57,7 +57,7 @@ function qualityWarn(s: GameState) {
     const has = s.flags.includes(key);
     if (!has && q < th) {
       s.flags.push(key);
-      const stab = orderOf(s, 'dev') === 'dev_stabilize';
+      const stab = orderShare(s, 'dev', 'dev_stabilize') > 0; // 부서 안의 팀·개인 업무로 맡겨도(A-226)
       notify(s, `제품 품질이 ${Math.round(q)}점으로 떨어졌습니다. 버그는 이탈·장애를 부릅니다.${stab ? '' : ' 개발팀 채널에서 "안정화·버그 수정"을 맡기세요.'}`, th <= 40 ? 'urgent' : 'bad', 'messenger', teamChannelId('dev'));
     } else if (has && q >= th + 10) s.flags = s.flags.filter((f) => f !== key);
   }

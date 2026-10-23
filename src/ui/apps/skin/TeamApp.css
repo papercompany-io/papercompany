@@ -32,3 +32,35 @@
 
 /* 화면(A-193): 부서 페이지 안의 빈 목록은 하늘색 가운데 띠 대신 왼쪽 정렬 회색 글 */
 .dpg .empty-note { padding: 6px 0 10px; text-align: left; font-size: var(--fs-sm); color: var(--text-3); background: none; border-radius: 0; }
+
+/* 화면(A-226): 부서 안의 팀 칸. 팀 한 줄 = 이름(누르면 이름 바꾸기) · 맡은 일 · 없애기, 아래 사람마다 소속 팀 */
+.dpg-pick { display: flex; gap: 6px; min-width: 0; }
+.dpg-pick select { flex: 1; }
+.dpg-squads { display: flex; flex-direction: column; gap: 10px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+.dpg-sq-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.dpg-sq-head .hf-label { margin: 0; }
+.dpg-sq-new { display: flex; gap: 6px; align-items: center; }
+.dpg-sq-new input { width: 180px; }
+.dpg-sq-list { display: flex; flex-direction: column; gap: 6px; }
+.dpg-sq { display: grid; grid-template-columns: minmax(120px, auto) minmax(0, 260px) auto; align-items: center; gap: 10px; padding: 6px 8px; border-radius: var(--r-sm); background: var(--surface-tile); }
+.dpg-sq-name { display: inline-flex; align-items: baseline; gap: 6px; padding: 0; border: none; background: none; color: var(--text); font: inherit; cursor: pointer; text-align: left; }
+.dpg-sq-name span { font-size: var(--fs-sm); color: var(--text-3); }
+.dpg-sq-name:hover b { text-decoration: underline; }
+.dpg-sq-people { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 6px; }
+.dpg-sq-person { display: flex; align-items: center; gap: 6px; font-size: var(--fs-sm); color: var(--text-2); }
+.dpg-sq-person span { flex: none; }
+.dpg-sq-person select { flex: 1; min-width: 0; }
+@media (max-width: 760px) { .dpg-sq { grid-template-columns: 1fr; } .dpg-sq-new input { width: 100%; } }
+
+/* 화면(A-233): 직원 관리 팀 탭 왼쪽 줄 — 직무 아래 만든 부서는 들여 쓰고, 맨 아래 "+ 부서 만들기". 새 부서 양식은 직무·이름·사람 세 칸 */
+.em3-group { display: flex; flex-direction: column; gap: 4px; }
+.em3-row.dept.sub { margin-left: 18px; width: calc(100% - 18px); padding: 6px 12px; border-left: 3px solid var(--dc); }
+.em3-row.dept.sub b { font-size: var(--fs-sm); }
+.em3-row.dept.add { border-style: dashed; color: var(--text-2); justify-content: center; }
+.em3-row.dept.add b { flex: none; }
+.em3-row.dept.add:hover { color: var(--text); }
+.dpg-new { max-width: 560px; }
+.dpg-field { display: flex; flex-direction: column; gap: 6px; }
+.dpg-field .hf-label { margin: 0; }
+.dpg-field select, .dpg-field input { max-width: 280px; }
+.dpg-sq-tools { margin-left: auto; display: flex; gap: 6px; }

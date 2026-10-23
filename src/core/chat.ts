@@ -7,6 +7,7 @@
 // LLM이 읽었으면 답도 LLM이 쓴 말(미리 해 둔 판정에 맞춤)을 올리고, 없으면 대사 묶음으로 답합니다.
 import { DATA, orderDef } from './data';
 import { teamOrder } from './assign';
+import { setSquadOrder, squad } from './squads';
 import { getChannel, post } from './messenger';
 import { commandOrder, type OrderVerdict } from './reactions';
 import { pick, rand } from './rng';
@@ -37,6 +38,7 @@ export function channelMembers(s: GameState, chId: string): Employee[] {
   const ch = getChannel(s, chId);
   if (!ch) return [];
   if (ch.kind === 'all') return s.employees.filter((e) => e.leaving === null || e.leaving > s.day);
+  if (ch.kind === 'team' && ch.squadId) return s.employees.filter((e) => e.squadId === ch.squadId); // 부서 안의 팀(A-226)
   if (ch.kind === 'team' && ch.dept) return s.employees.filter((e) => e.dept === ch.dept);
   return s.employees.filter((e) => ch.memberIds.includes(e.id));
 }
@@ -136,6 +138,15 @@ export function answerChannel(s: GameState, chId: string, raw: string, read: Cha
     // 아직 못 맡는 일: 효과 없이 "아직 어렵다"
     if (s.company.stage < od.stage) {
       if (!quiet && lead) post(s, chId, lead.name, fill(s, lead, pick(s, R.cant)), 'npc');
+      continue;
+    }
+    // 부서 안의 팀 채널에서 그 부서 일을 말하면 그 팀의 맡은 일만 바꿈(A-226)
+    if (ch.squadId && ch.dept === d) {
+      const q = squad(s, ch.squadId);
+      const who = members.find((e) => e.lead) ?? members[0];
+      if (q && q.order === od.id) {
+        if (!quiet && who) post(s, chId, who.name, fill(s, who, pick(s, R.same)), 'npc');
+      } else setSquadOrder(s, ch.squadId, od.id, false, quiet);
       continue;
     }
     const already = teamOrder(s, d) === od.id;

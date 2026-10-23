@@ -12,7 +12,7 @@ import { DATA, dept, orderDef } from './data';
 import { runwayMonths } from './finance';
 import { post } from './messenger';
 import { orderOf } from './orders';
-import { empOrderOf } from './assign';
+import { empOrderOf, groupOrder } from './assign';
 import { DM_ACTIONS, commandOrder, dmAction, type DmAction, type OrderVerdict } from './reactions';
 import { pick, rand } from './rng';
 import { hasTrait, isSick } from './staff';
@@ -278,7 +278,7 @@ function changeOrder(s: GameState, e: Employee, target: string, say: (t: string)
 // 개인 업무 판정(A-147, A-199): 효과 전에 결과를 정함(부작용 없음). LLM에 넘기는 반응과 실제 효과가 같은 판정을 씀
 export type EmpOrderKind = 'other' | 'early' | 'same' | 'self' | 'back';
 export function empOrderVerdict(s: GameState, e: Employee, orderId: string | null): { kind: EmpOrderKind; next: string | null; recent: boolean } {
-  const team = orderOf(s, e.dept);
+  const team = groupOrder(s, e); // 부서 안의 팀에 맡은 일이 있으면 그것이 "팀 일"(A-226)
   const next = orderId && orderId !== team ? orderId : null;
   if (next) {
     const o = orderDef(next);

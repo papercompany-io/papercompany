@@ -13,6 +13,14 @@ export function teamOrder(s: GameState, d: DeptId): string {
 export function empOrderOf(s: GameState, e: Employee): string {
   const o = e.order ? orderDef(e.order) : undefined;
   if (o && o.dept === e.dept && s.company.stage >= o.stage) return o.id;
+  return groupOrder(s, e);
+}
+
+// 이 직원이 개인 업무 없이 따르는 일(A-226): 부서 안의 팀에 맡은 일이 있으면 그것, 없으면 부서 맡은 일
+export function groupOrder(s: GameState, e: Employee): string {
+  const q = e.squadId ? s.company.squads?.find((x) => x.id === e.squadId) : undefined;
+  const o = q && q.dept === e.dept && q.order ? orderDef(q.order) : undefined;
+  if (o && o.dept === e.dept && s.company.stage >= o.stage) return o.id;
   return teamOrder(s, e.dept);
 }
 

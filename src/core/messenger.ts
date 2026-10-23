@@ -1,4 +1,4 @@
-// MG-01 사내 메신저와 채널 구성(DEC-014): #전체, 부서 팀 채널, 그룹 메시지, DM, 외부 연락처
+// MG-01 사내 메신저와 채널 구성(DEC-014): #전체, 부서 팀 채널과 그 안의 팀 채널(A-226, squads.ts), DM, 외부 연락처. 그룹 메시지는 없앰(A-226)
 import { dept, investor } from './data';
 import { nextId } from './ids';
 import type { Channel, DeptId, Employee, GameState, Message } from './types';
@@ -59,23 +59,6 @@ export function onEmployeeLeft(s: GameState, e: Employee, why: 'quit' | 'fired' 
   s.channels = s.channels.filter((c) => c.id !== `dm-${e.id}`);
   const verb = why === 'fired' ? '회사를 떠났습니다(해고)' : '퇴사했습니다';
   post(s, 'all', '시스템', `${e.name}님(${dept(e.dept).name}팀)이 ${verb}.`, 'system');
-}
-
-export function onDeptChanged(s: GameState, e: Employee, from: DeptId) {
-  const old = getChannel(s, teamChannelId(from));
-  if (old) old.memberIds = old.memberIds.filter((id) => id !== e.id);
-  ensureTeamChannel(s, e.dept);
-  getChannel(s, teamChannelId(e.dept))!.memberIds.push(e.id);
-  post(s, teamChannelId(e.dept), '시스템', `${e.name}님이 ${dept(from).name}팀에서 이동해 왔습니다.`, 'system');
-}
-
-export function createGroup(s: GameState, memberIds: string[]): string | null {
-  if (memberIds.length < 2) return null;
-  const names = memberIds.map((id) => s.employees.find((e) => e.id === id)?.name ?? '?');
-  const id = nextId(s, 'grp');
-  s.channels.push({ id, kind: 'group', name: names.join(', '), memberIds: [...memberIds], messages: [], unread: 0 });
-  post(s, id, '시스템', `그룹 메시지를 만들었습니다: ${names.join(', ')}`, 'system');
-  return id;
 }
 
 export function externalChannelId(investorId: string) {

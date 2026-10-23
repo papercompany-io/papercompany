@@ -6,7 +6,7 @@
 import M from '../data/milestones.json';
 import { feature, industry, investor } from './data';
 import { ceoDevPerDay, ceoEnergy } from './ceo';
-import { orderOf } from './orders';
+import { orderShare } from './assign';
 import { hasActiveContract } from './contracts';
 import { deptOutput } from './staff';
 import { addToRoadmap, appeal, availableFeatures, coreFeatures, etaDays, featureLevel, featureLock, hasMvp, itemNeed, revealHidden, ROADMAP_MAX, upkeepShare, canCharge } from './product';
@@ -55,9 +55,10 @@ function dealTrustMult(s: GameState): number {
 // ── 개발 속도(업무 창과 같은 계산) ──
 export function devRates(s: GameState) {
   const ceo = ceoDevPerDay(s);
-  const devBuilding = orderOf(s, 'dev') === 'dev_build' || (orderOf(s, 'dev') === 'dev_contract' && !hasActiveContract(s));
-  const team = devBuilding ? deptOutput(s, 'dev') : 0;
-  const design = orderOf(s, 'design') === 'design_build' ? deptOutput(s, 'design') : 0;
+  // 기능 개발을 하는 사람 비율(개인 업무·부서 안의 팀 일 포함, A-147·A-226). 외주가 없으면 외주 맡은 사람도 기능 개발
+  const devBuilding = orderShare(s, 'dev', 'dev_build') + (hasActiveContract(s) ? 0 : orderShare(s, 'dev', 'dev_contract'));
+  const team = devBuilding * deptOutput(s, 'dev');
+  const design = orderShare(s, 'design', 'design_build') * deptOutput(s, 'design');
   const upkeep = upkeepShare(s);
   return { ceo, team, design, dev: (ceo + team) * (1 - upkeep), upkeep };
 }
