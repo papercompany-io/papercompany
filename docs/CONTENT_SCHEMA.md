@@ -17,6 +17,8 @@
 { "industries": { "saas": [ Feature, ... ], "consumer": [...], "commerce": [...], "fintech": [...], "ai": [...] } }
 ```
 
+`rules.grow`(A-196 기능 레벨): `cap`[회사 단계 0~5] = 올릴 수 있는 최고 Lv, `step` = 한 번 누를 때 올리는 레벨(10, 20…에 맞춤), 레벨 L 하나 작업 = (dev+design) × `work` × (1 + L/`ramp`), 레벨마다 매력 점수 + (fx.appeal × 버전, 없으면 `base`) × `appealPer`, 착수 인사이트 = 작업 × `insight`, 코드베이스 + 작업 × `code`.
+
 Feature:
 
 | 키 | 뜻 |
@@ -25,7 +27,7 @@ Feature:
 | `name`, `desc` | 이름, 한 줄 설명(효과가 짐작되게) |
 | `cat` | `core`(MVP 필수) · `growth` · `monetize` · `retention` · `infra` · `enterprise` · `global` · `ai` · `platform` |
 | `dev`, `design` | 1레벨 작업량. core는 합계 60~110, 중반 80~400, 후반 400~3000 |
-| `levels` | 최대 레벨(1~5). 레벨이 오를 때마다 작업량 ×1.8, 효과는 레벨마다 같은 값을 더함 |
+| `levels` | 최대 버전(1~5, 화면 "v2"). 버전이 오를 때마다 작업량 ×1.8, 효과는 버전마다 같은 값을 더함. 기능 레벨(Lv 1~600)과 다름 — `rules.grow` |
 | `req` | 선행 기능 id 목록(같은 산업, 레벨 1 완료면 충족) |
 | `year` | 이 해 1월부터 개발 가능(2027~2040). 생략 시 2027 |
 | `stage` | 최소 회사 단계. 생략 시 0 |
@@ -315,7 +317,7 @@ Choice:
 | `industries.json` 산업 `tamMult` | 이 산업만 쓰는 해외 시장 잠재 고객 배수 `{jp, sea, us, eu}`(없으면 `markets.json` 시장 값). B2C(소비자 앱·커머스·핀테크)만 큼 |
 | `departments.json` → `capScale.b2c` `{from, perDecade}` | B2C 고객지원·인프라 필요 인원: `from`명까지는 사용자에 비례, 그 뒤로는 사용자 10배마다 `perDecade`명씩. B2B는 키가 없어 예전처럼 비례 |
 | `markets.json` → `scale.b2c` · `scale.b2b` | 규모 사다리(사용자 수). 처음 넘으면 뉴스·알림, 업무 창 대시보드에 위치 |
-| `markets.json` → `scale.room` `{near, full, over}` | 제품 여유 판정: 사용자 ÷ 받쳐 주는 고객 수(잠재 고객 × 점유율, 화면에 숫자 없음) |
+| `markets.json` → `scale.room` `{near, full, over}` | 제품 여유 판정: 사용자 ÷ 받쳐 주는 고객 수(잠재 고객 × 점유율, A-196부터 화면에 숫자·막대) |
 
 ## 마케팅팀·광고 확장 `src/data/ads.json` (A-157)
 

@@ -190,10 +190,11 @@ export interface DailyRates {
 }
 
 // A-184 이번 달 한 달치 손익: 고정비는 한 달치 전부, 매출·인프라·AI·광고는 지금 하루 흐름이 남은 날에도 이어진다고 봅니다.
-export function monthOutlook(s: GameState, rates: DailyRates, futureEntertainment = 0): Omit<MonthPL, 'cashAfter'> {
+// recurringOnly(A-195): 한 번 낸 돈(채용 홍보비·기타·광고 캠페인)은 빼고 달마다 오가는 돈만
+export function monthOutlook(s: GameState, rates: DailyRates, futureEntertainment = 0, recurringOnly = false): Omit<MonthPL, 'cashAfter'> {
   const dim = daysInMonthOf(s.day);
   const left = dim - s.accrual.days;
-  const a = s.accrual;
+  const a = recurringOnly ? { ...s.accrual, recruiting: 0, other: 0, ads: s.accrual.ads - (s.accrual.adsOnce ?? 0) } : s.accrual;
   const pendingUnits = s.pendingHires.reduce((sum, h) => sum + h.salary * Math.max(0, left - Math.max(0, h.startDay - s.day)), 0);
   const full: MonthAccrual = {
     ...a,

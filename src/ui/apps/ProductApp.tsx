@@ -14,7 +14,7 @@ import { activeCampaigns } from '../../core/ads';
 import { contractsOpen } from '../../core/contracts';
 import { Fragment, useEffect, useState } from 'react';
 import { DATA, feature, gradeOutput, industry, featuresOf, featureWork, priceTierDef, type FeatureDef, type FeatureFx } from '../../core/data';
-import { addToRoadmap, appeal, appealBreakdown, canCharge, coreFeatures, etaDays, featureLevel, featureLock, hasMvp, insightCost, insightHave, itemNeed, moveRoadmap, quality, removeFromRoadmap, ROADMAP_MAX } from '../../core/product';
+import { addGrow, addToRoadmap, appeal, appealBreakdown, canCharge, coreFeatures, etaDays, featureLevel, featureLock, growCap, growLevel, growPlan, growTarget, hasMvp, insightCost, insightHave, itemName, itemNeed, moveRoadmap, quality, removeFromRoadmap, ROADMAP_MAX } from '../../core/product';
 import { orderOf } from '../../core/orders';
 import { formatDate, formatMonth } from '../../core/calendar';
 import { launchedMarkets, liveUsers, revenuePerUser, totalUsers, unitWord } from '../../core/market';
@@ -184,7 +184,7 @@ export function ProductCard({ onOpen }: { onOpen: () => void }) {
               {Math.abs(delta) >= 1e5 ? countShort(delta) : num(delta)}
             </span>
           </div>
-          <div className="pc-foot">{cur ? `만드는 중: ${feature(cur.id).name}${feature(cur.id).levels > 1 ? ` Lv${cur.level}` : ''} · ${dayText(v.etas[0])}` : '만들 기능이 없습니다'}</div>
+          <div className="pc-foot">{cur ? `만드는 중: ${itemName(cur)} · ${dayText(v.etas[0])}` : '만들 기능이 없습니다'}</div>
         </>
       )}
     </button>
@@ -614,10 +614,7 @@ function LiveStatus({ s, v, openSchedule }: { s: GameState; v: View; openSchedul
                 <span className="pl-tile">
                   <PixelFlag />
                 </span>
-                <b title={curF.desc}>
-                  {curF.name}
-                  {curF.levels > 1 ? ` Lv${cur.level}` : ''}
-                </b>
+                <b title={curF.desc}>{itemName(cur)}</b>
                 <span className="pl-chip">{isFinite(v.etas[0]) ? `${dayText(v.etas[0])} 뒤 출시` : '멈춤'}</span>
               </div>
               <div className="pl-now-prog">
@@ -715,7 +712,7 @@ const FEAT_ART = Object.fromEntries(
   ).map(([path, url]) => [path.split('/').pop()!.replace('.png', ''), url]),
 );
 
-// 기능 탭(Startup Company식): 위 요약(잠재 고객·사용자·매력도 구성 / 다음 출시·작업량·기능 수) + 기능 카드 줄(그림·레벨·업그레이드)
+// 기능 탭(Startup Company식): 위 요약(사용자·매력도 구성 / 다음 출시·작업량·기능 수) + 제품이 받쳐 주는 고객(A-196) + 기능 카드 줄(그림·레벨·레벨업·버전)
 function Features({ s, v }: { s: GameState; v: View }) {
   const all = featuresOf(s.company.industry);
   const [msg, setMsg] = useState<string | null>(null);
@@ -724,12 +721,12 @@ function Features({ s, v }: { s: GameState; v: View }) {
   const bd = appealBreakdown(s);
   const alive = s.competitors.filter((c) => c.alive);
   const compAvg = alive.length ? alive.reduce((a, c) => a + c.appeal, 0) / alive.length : 0;
-  const queuedOf = (f: FeatureDef) => s.product.roadmap.filter((r) => r.id === f.id).length;
+  const queuedOf = (f: FeatureDef) => s.product.roadmap.filter((r) => r.id === f.id && !r.grow).length;
   const mine = all.filter((f) => featureLevel(s, f.id) > 0 || queuedOf(f) > 0);
   const can = all.filter((f) => !mine.includes(f) && !featureLock(s, f));
   const locked = all.filter((f) => !mine.includes(f) && featureLock(s, f));
   const builtCount = Object.keys(s.product.features).length;
-  const maxLv = Math.max(0, ...Object.values(s.product.features));
+  const cap = growCap(s);
   const featPts = bd.parts.reduce((a, x) => a + x.pts, 0) + bd.bonus;
   const pctOf = (x: number) => (featPts > 0 ? `${Math.round((x / featPts) * 100)}%` : '-');
   const signed = (x: number) => `${x >= 0 ? '+' : ''}${Math.round(x * 100)}%`;
@@ -737,6 +734,11 @@ function Features({ s, v }: { s: GameState; v: View }) {
 
   const add = (f: FeatureDef) => {
     const err = act((g) => addToRoadmap(g, f.id));
+    setMsg(err ?? null);
+    if (!err) play('click');
+  };
+  const grow = (f: FeatureDef) => {
+    const err = act((g) => addGrow(g, f.id));
     setMsg(err ?? null);
     if (!err) play('click');
   };
@@ -754,17 +756,38 @@ function Features({ s, v }: { s: GameState; v: View }) {
     const nowIt = qi === 0 ? s.product.roadmap[0] : null;
     const nowNeed = nowIt ? itemNeed(nowIt) : null;
     const nowPct = nowIt && nowNeed ? ((nowIt.devDone + nowIt.designDone) / (nowNeed.dev + nowNeed.design)) * 100 : 0;
+    // A-196 기능 레벨: 만든 기능만. 지금 레벨 / 일정에 잡힌 목표 / 회사 단계 상한
+    const gl = growLevel(s, f.id);
+    const gt = growTarget(s, f.id);
+    const gp = lv > 0 ? growPlan(s, f.id) : null;
+    const growDays = gp && !gp.block ? etaDays([{ id: f.id, level: 0, grow: { from: gp.from, to: gp.to }, devDone: 0, designDone: 0 }], v.rate.dev, v.rate.design)[0] : 0;
+    const nextVer = !lock && lv > 0 && f.levels > lv + q;
     return (
       <div key={f.id} className={`fc ${lv > 0 ? 'own' : ''} ${qi === 0 ? 'now' : q > 0 ? 'queued' : ''} ${lock && !lv && !q ? 'locked' : ''}`} data-testid={`feat-${f.id}`}>
         <div className="fc-art">{art ? <img src={art} alt="" draggable={false} /> : <span className={`cat ${f.cat}`}>{CAT_NAME[f.cat]}</span>}</div>
         <div className="fc-body">
           <div className="fc-top">
             <b className="fc-name">{f.name}</b>
-            {lv > 0 && <span className="fc-lv">Lv {lv}</span>}
+            {lv > 0 && (
+              <span className="fc-lv" data-testid={`feat-lv-${f.id}`} title={`기능 레벨 ${gl} / 지금 상한 ${cap}`}>
+                Lv {gl}
+              </span>
+            )}
             {q > 0 && <span className="fc-q">{qi === 0 ? '만드는 중' : `순서 ${qi + 1}번`}</span>}
           </div>
+          {lv > 0 && (
+            <span className="fc-gline" title={`기능 레벨 ${gl} / 지금 상한 ${cap}(회사 단계가 오르면 커짐)${gt > gl ? ` · Lv ${gt}까지 개발 일정에 있음` : ''}`}>
+              <span className="fc-gbar">
+                <i className="q" style={{ width: `${Math.min(100, (gt / cap) * 100)}%` }} />
+                <i style={{ width: `${Math.min(100, (gl / cap) * 100)}%` }} />
+              </span>
+              <em>
+                {gl}/{cap}
+              </em>
+            </span>
+          )}
           {f.levels > 1 && (
-            <span className="pd-dots" title={`레벨 ${lv}/${f.levels}`}>
+            <span className="pd-dots" title={`버전 ${lv}/${f.levels}: 새 버전은 기능에 새 내용이 붙습니다`}>
               {Array.from({ length: f.levels }, (_, i) => (
                 <i key={i} className={i < lv ? 'on' : i < lv + q ? 'q' : ''} />
               ))}
@@ -780,24 +803,42 @@ function Features({ s, v }: { s: GameState; v: View }) {
             </div>
           )}
         </div>
-        {!(lock && q > 0) && (
+        {gp ? (
           <div className="fc-foot">
-            {lock ? (
-              <span className="tiny muted" data-testid={`feat-lock-${f.id}`}>
-                {lv + q >= f.levels ? (lv >= f.levels ? (f.levels > 1 ? '최고 레벨' : '완성') : f.levels > 1 ? '최고 레벨까지 순서에 있음' : '만드는 순서에 있음') : cost.n > insightHave(s, cost.kind) && lock.endsWith('부족') ? `${costName} ${num(cost.n)} 필요 · 지금 ${num(insightHave(s, cost.kind))}` : lock}
-              </span>
-            ) : (
-              <>
-                <span className="tiny muted grow">
-                  {dayText(days)}
-                  {cost.n > 0 && ` · ${costName} ${num(cost.n)}`}
-                </span>
-                <button className="btn small" onClick={() => add(f)}>
-                  {lv + q === 0 ? '만들기' : '업그레이드'}
-                </button>
-              </>
+            <span className="tiny muted grow" data-testid={`feat-grow-note-${f.id}`}>
+              {gp.block ?? `Lv ${gp.to}까지 ${dayText(growDays)}${gp.insight > 0 ? ` · 인사이트 ${num(gp.insight)}` : ''}`}
+            </span>
+            {nextVer && (
+              <button className="btn small ghost" title={`버전 ${lv + q + 1}: 기능에 새 내용이 붙습니다. ${dayText(days)}${cost.n > 0 ? ` · ${costName} ${num(cost.n)}` : ''}`} onClick={() => add(f)}>
+                v{lv + q + 1}
+              </button>
+            )}
+            {!gp.block && (
+              <button className="btn small" data-testid={`feat-grow-${f.id}`} onClick={() => grow(f)}>
+                레벨업
+              </button>
             )}
           </div>
+        ) : (
+          !(lock && q > 0) && (
+            <div className="fc-foot">
+              {lock ? (
+                <span className="tiny muted" data-testid={`feat-lock-${f.id}`}>
+                  {lv + q >= f.levels ? (f.levels > 1 ? '최고 버전까지 순서에 있음' : '만드는 순서에 있음') : cost.n > insightHave(s, cost.kind) && lock.endsWith('부족') ? `${costName} ${num(cost.n)} 필요 · 지금 ${num(insightHave(s, cost.kind))}` : lock}
+                </span>
+              ) : (
+                <>
+                  <span className="tiny muted grow">
+                    {dayText(days)}
+                    {cost.n > 0 && ` · ${costName} ${num(cost.n)}`}
+                  </span>
+                  <button className="btn small" onClick={() => add(f)}>
+                    {lv + q === 0 ? '만들기' : `v${next}`}
+                  </button>
+                </>
+              )}
+            </div>
+          )
         )}
       </div>
     );
@@ -894,10 +935,10 @@ function Features({ s, v }: { s: GameState; v: View }) {
             <b className="neg">{Math.round(v.rate.upkeep * 100)}%</b>
           </div>
         )}
-        <div className="wk-stat">
-          <span>만든 기능 · 최고 레벨</span>
+        <div className="wk-stat" data-testid="grow-cap" title="기능 레벨을 올릴 수 있는 한계입니다. 회사 단계가 오르면 커집니다(MVP·팀 Lv 100, 조직 Lv 200, 스케일업부터 Lv 600).">
+          <span>만든 기능 · 레벨 상한</span>
           <b>
-            {builtCount}개 · Lv {maxLv}
+            {builtCount}개 · Lv {cap}
           </b>
         </div>
       </div>
@@ -912,10 +953,9 @@ function Features({ s, v }: { s: GameState; v: View }) {
               </span>
             );
           })}
-          <span className="grow" />
-          <RoomNote s={s} />
         </div>
       )}
+      {hasMvp(s) && <RoomNote s={s} />}
       {msg && <div className="warn">{msg}</div>}
       <h3 className="wk-sect">
         우리 제품 기능 <em>{mine.length}</em>
@@ -1014,10 +1054,7 @@ export function Roadmap({ s, v, openSchedule, goFeatures }: { s: GameState; v: V
               <div className="row">
                 <span className="pd-order">{i + 1}</span>
                 <span className={`cat ${f.cat}`}>{CAT_NAME[f.cat]}</span>
-                <b className="grow">
-                  {f.name}
-                  {f.levels > 1 ? ` Lv${it.level}` : ''}
-                </b>
+                <b className="grow">{itemName(it)}</b>
                 {(() => {
                   // 약속(A-177): 이 기능을 조건으로 쥔 약속과 기한. 기한보다 늦게 끝나면 빨강
                   const pm = promiseFor(s, it.id, it.level);
@@ -1102,7 +1139,7 @@ function ShipLog({ s }: { s: GameState }) {
               <span className="pl-tile">{st === 'ok' ? <PixelCheck /> : <PxIcon id={st === 'mid' ? 'warn' : 'siren'} size={18} />}</span>
               <b>
                 {f.name}
-                {f.levels > 1 ? ` Lv${x.level}` : ''}
+                {f.levels > 1 ? ` v${x.level}` : ''}
               </b>
               <time>{formatDate(x.day)}</time>
               {x.result === 'full' ? <span className="chip green">완전 수행</span> : x.result === 'partial' ? <span className="chip amber">부분 수행(버그 조금)</span> : <span className="chip red">버그 많음</span>}

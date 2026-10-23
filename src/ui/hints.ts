@@ -4,9 +4,10 @@ import { todayOuting } from '../core/outings';
 import { paydayForecast } from '../core/forecast';
 import { runwayMonths } from '../core/finance';
 import { formatDate } from '../core/calendar';
+import { josa } from '../core/format';
 import { openRound, activeRound } from '../core/funding';
 import { availableFeatures, canCharge, fxTotals, hasMvp, insightHave } from '../core/product';
-import { launchedMarkets, totalUsers } from '../core/market';
+import { growthRoom, launchedMarkets, totalUsers } from '../core/market';
 import { isFull } from '../core/office';
 import { leadInfo, avgSat } from '../core/staff';
 import { DATA, featuresOf, industry } from '../core/data';
@@ -55,7 +56,7 @@ export function nextHint(s: GameState, desktopOpenedOnce: boolean): string {
     if (!fx.adFormats.length && !s.product.roadmap.some((r) => r.id === banner?.id)) return `광고 자리가 없어 매출이 거의 없습니다. 이 앱은 광고로 법니다. 제품 메뉴 기능 탭에서 "${banner?.name ?? '배너 광고'}"부터 만드세요.`;
     if (fx.adFormats.length && s.company.stage >= 1 && !s.employees.some((e) => e.dept === 'adops')) return '광고 자리가 생겼지만 광고주와 계약하지 않은 자리는 광고 네트워크가 싸게 채웁니다. 채용 메뉴에서 "광고 운영"(애드옵스 매니저)을 뽑으면 광고주가 직접 계약을 제안합니다.';
     const offers = adSalesOf(s).offers.filter((o) => !o.left).length;
-    if (offers) return `광고주 제안 ${offers}건이 기다리고 있습니다. 시장·광고 메뉴 "광고 판매" 탭에서 단가와 기간을 흥정하세요.`;
+    if (offers) return `오늘의 광고주 제안이 ${offers}건 있습니다. 시장·광고 메뉴 "광고 판매" 탭에서 단가와 기간을 흥정하세요. 흥정하지 않은 제안은 내일 새 제안으로 바뀝니다.`;
   }
   const waiting = s.applicants.filter((a) => a.status === 'waiting').length;
   if (waiting > 0) return `채용 메뉴에 지원자 ${waiting}명이 기다리고 있습니다. 오래 두면 다른 회사로 떠납니다.`;
@@ -65,8 +66,12 @@ export function nextHint(s: GameState, desktopOpenedOnce: boolean): string {
   const kr = s.markets.kr;
   if (kr.flow && kr.users >= kr.flow.target * 0.9 && kr.awareness < 0.1 && s.plHistory.length >= 2) {
     const hasMkt = s.employees.some((e) => e.dept === 'marketing');
-    // A-158: 받쳐 주는 고객 수는 숫자로 말하지 않음(규모 사다리·제품 여유 한 줄로)
     return `고객이 지금 알려진 만큼은 거의 다 왔습니다. 인지도 ${(kr.awareness * 100).toFixed(1)}% — ${hasMkt ? '광고 예산을 늘리거나 디자인팀에 "브랜드 디자인"을 맡기세요' : '마케터를 뽑아 "콘텐츠·PR"을 맡기거나 광고 예산을 쓰세요'}. 업무 창 상태 탭에서 고객이 들고 나는 길과 떠나는 이유를 볼 수 있습니다.`;
+  }
+  // A-196 받쳐 주는 만큼 찼는데 기능 레벨을 올리는 중이 아니면: 어디서 올리는지
+  if (s.plHistory.length >= 2 && growthRoom(s).state !== 'room' && growthRoom(s).state !== 'near' && !s.product.roadmap.some((r) => r.grow)) {
+    const r = growthRoom(s);
+    return `제품이 받쳐 주는 ${industry(s.company.industry).unit}${josa(industry(s.company.industry).unit, '이')} ${Math.round((r.users / Math.max(1, r.target)) * 100)}% 찼습니다. 제품 메뉴 기능 탭에서 기능 카드의 "레벨업"을 누르면 매력도가 올라 더 받을 수 있습니다.${r.closed.length && s.company.stage >= 3 ? ' 해외 시장 진출도 방법입니다.' : ''}`;
   }
   if (isFull(s) && s.company.officeTier < 5) return '책상을 더 놓을 수 없습니다. 사무실 메뉴에서 더 큰 사무실로 옮기세요.';
   for (const d of DATA.depts.departments.map((x) => x.id as DeptId)) {

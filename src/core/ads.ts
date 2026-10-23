@@ -266,6 +266,7 @@ export function startCampaign(s: GameState, defId: string, m: MarketId, toneId: 
   const def = campaignDef(defId)!;
   const cost = campaignCost(s, def, m);
   spendNow(s, `광고 캠페인: ${def.name}`, cost, 'ads');
+  s.accrual.adsOnce = (s.accrual.adsOnce ?? 0) + cost; // A-195
   if (extra(def).refresh) {
     s.markets[m].adFatigue = {};
     (s.campaigns ??= []).push({ id: nextId(s, 'cp'), def: defId, market: m, tone: toneId, startDay: s.day, endDay: s.day, cost, mult: 1, risk: false, got: 0, aware: 0, done: true });

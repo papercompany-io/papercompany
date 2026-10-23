@@ -1,7 +1,8 @@
-// 고객 흐름 부품(A-158): 규모 사다리(Startup Company의 잠재 사용자를 숫자 대신 말로), 들어오는 길·떠나는 이유 막대.
-// 업무 창 대시보드와 시장·광고 창이 같이 씁니다. 받쳐 주는 고객 수(잠재 고객 × 점유율)는 숫자로 보여 주지 않습니다(SCREEN_GUIDE 3절).
+// 고객 흐름 부품(A-158): 규모 사다리, 제품이 받쳐 주는 고객(A-196, Startup Company의 잠재 사용자 — 숫자 + 막대), 들어오는 길·떠나는 이유 막대.
+// 업무 창 대시보드와 시장·광고 창이 같이 씁니다.
 import { growthRoom, launchedMarkets, scaleSteps, totalUsers, unitWord } from '../../core/market';
-import { lossName, ROOM_LINE } from '../../core/marketing';
+import { CLOSED_LINE, lossName, ROOM_LINE } from '../../core/marketing';
+import { industry } from '../../core/data';
 import { countShort } from '../../core/format';
 import type { GameState, MarketState } from '../../core/types';
 
@@ -41,13 +42,28 @@ export function ScaleLadder({ s }: { s: GameState }) {
   );
 }
 
-// 제품 여유 한 줄: 더 알리면 더 옴 / 거의 참(기능·새 시장) / 너무 많이 데려옴
+// 제품이 받쳐 주는 고객(A-196): 숫자 + 지금 사용자가 얼마나 찼는지 막대 + 할 일 한 줄(더 알리면 더 옴 / 거의 참 — 기능 레벨·새 시장 / 너무 많이 데려옴)
 export function RoomNote({ s }: { s: GameState }) {
   const r = growthRoom(s);
+  const w = unitWord(s);
+  const fill = r.target > 0 ? r.users / r.target : 0;
   return (
-    <div className={`sc-room ${r.state}`} data-testid="growth-room">
-      {ROOM_LINE[r.state]}
-      {r.state === 'full' && r.closed.length > 0 ? ' 아직 나가지 않은 해외 시장도 있습니다.' : ''}
+    <div className={`sc-cap ${r.state}`} data-testid="growth-room">
+      <div className="sc-cap-head" title="매력도(기능·기능 레벨·UX·품질)와 인지도가 오르면 커집니다. 해외 시장에 나가면 그 시장 몫이 더해집니다. 이보다 많이 데려온 고객은 빠져나갑니다.">
+        <span>제품이 받쳐 주는 {industry(s.company.industry).unit}</span>
+        <b data-testid="growth-cap">
+          약 {countShort(r.target)}
+          <small>{w}</small>
+        </b>
+        <em>{Math.round(fill * 100)}% 찼음</em>
+      </div>
+      <span className="sc-cap-bar">
+        <i style={{ width: `${Math.min(100, fill * 100)}%` }} />
+      </span>
+      <div className={`sc-room ${r.state}`}>
+        {ROOM_LINE[r.state]}
+        {r.state === 'full' && r.closed.length > 0 ? CLOSED_LINE : ''}
+      </div>
     </div>
   );
 }

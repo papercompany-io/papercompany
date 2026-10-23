@@ -346,7 +346,7 @@ function scaleMilestone(s: GameState, u: number) {
   if (n >= scaleSteps(s)[Math.max(0, scaleSteps(s).length - 2)]) s.events.push({ type: 'confetti' });
 }
 
-// 제품 여유(A-156, SC의 잠재 사용자를 말로): 지금 사용자 ÷ 지금 제품이 받쳐 주는 고객 수(잠재 고객 × 점유율, 화면에 숫자로 안 보임)
+// 제품 여유(A-156): 지금 사용자 ÷ 지금 제품이 받쳐 주는 고객 수(잠재 고객 × 점유율). A-196부터 화면에 숫자·막대로 보임(SC의 잠재 사용자)
 export type RoomState = 'room' | 'near' | 'full' | 'over';
 export function roomState(users: number, target: number): RoomState {
   const R = DATA.markets.scale.room;
@@ -354,14 +354,14 @@ export function roomState(users: number, target: number): RoomState {
   return r > R.over ? 'over' : r >= R.full ? 'full' : r >= R.near ? 'near' : 'room';
 }
 
-export function growthRoom(s: GameState): { state: RoomState; closed: MarketId[] } {
+export function growthRoom(s: GameState): { state: RoomState; closed: MarketId[]; users: number; target: number } {
   let users = 0;
   let target = 0;
   for (const m of launchedMarkets(s)) {
     users += s.markets[m].users;
     target += demand(s, m) * shares(s, m).player;
   }
-  return { state: roomState(users, target), closed: MARKET_IDS.filter((m) => !s.markets[m].launched) };
+  return { state: roomState(users, target), closed: MARKET_IDS.filter((m) => !s.markets[m].launched), users, target };
 }
 
 // 해외 진출(시장 메뉴): 현지화 기능 + 진출 비용

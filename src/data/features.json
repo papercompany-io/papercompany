@@ -10,7 +10,18 @@
       "start": 30
     },
     "upkeep": { "maxShare": 0.45, "half": 3000 },
-    "complexity": { "base": 15, "perPolish": 100, "perLevel": 0.01, "max": 0.3 }
+    "complexity": { "base": 15, "perPolish": 100, "perLevel": 0.01, "max": 0.3 },
+    "grow": {
+      "_note": "A-196 기능 레벨(Startup Company식) [예시값]. 만든 기능은 Lv1부터 회사 단계별 상한 cap[단계](차고·MVP·팀·조직·스케일업·상장사)까지 올림. 버전(levels, 새 내용)과 따로. 한 번 누르면 step 레벨을 개발 일정에 넣고, 작업이 쌓이는 대로 한 레벨씩 오름. 레벨 L 하나에 드는 작업 = (기능 개발+디자인) × work × (1 + L/ramp). 레벨이 하나 오를 때마다 그 기능 매력 점수(매력 효과가 없는 기능은 base) × appealPer만큼 매력 점수가 더해짐(합은 기존 수확 체감). 착수 때 인사이트 = 작업 × insight. 올린 작업 × code만큼 코드베이스(유지보수·버그 밀도)에 더함. 복잡도에는 세지 않음",
+      "cap": [1, 100, 100, 200, 600, 600],
+      "step": 10,
+      "work": 0.1,
+      "ramp": 50,
+      "appealPer": 0.01,
+      "base": 2,
+      "insight": 0.3,
+      "code": 0.5
+    }
   },
   "industries": {
     "saas": [

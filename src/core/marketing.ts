@@ -30,9 +30,12 @@ const LOSS_LINE: Record<string, string> = {
 export const ROOM_LINE: Record<RoomState, string> = {
   room: '제품은 고객을 더 받을 수 있습니다. 더 알리면 더 옵니다.',
   near: '제품이 받쳐 주는 만큼 차 가고 있습니다.',
-  full: '제품이 받쳐 주는 만큼 거의 찼습니다. 기능을 더 만들어 매력을 높여야 더 큽니다.',
+  full: '제품이 받쳐 주는 만큼 거의 찼습니다. 제품 메뉴 기능 탭에서 기능 레벨을 올리거나 새 기능을 만들어 매력을 높여야 더 큽니다.',
   over: '제품이 받쳐 주는 것보다 많이 데려왔습니다. 광고·영업으로 온 고객이 빠져나가고 있습니다.',
 };
+
+// 받쳐 주는 만큼 찼을 때 아직 안 나간 시장이 있으면(A-196: 어디서 하는지까지)
+export const CLOSED_LINE = ' 아직 나가지 않은 해외 시장도 있습니다. 현지화 기능을 만든 뒤 시장·광고 메뉴에서 진출하면 그 시장 고객이 더해집니다.';
 
 function sum(o: Partial<Record<string, number>>): number {
   return Object.values(o).reduce<number>((a, v) => a + (v ?? 0), 0);
@@ -163,7 +166,7 @@ export function marketingMonth(s: GameState) {
   const why = topLoss(cm.lost);
   why.forEach((k, i) => lines.push(lossLine(k, i > 0)));
   const room = growthRoom(s);
-  lines.push(ROOM_LINE[room.state] + (room.state === 'full' && room.closed.length ? ' 아직 나가지 않은 해외 시장도 있습니다.' : ''));
+  lines.push(ROOM_LINE[room.state] + (room.state === 'full' && room.closed.length ? CLOSED_LINE : ''));
   const team = s.employees.filter((e) => e.dept === 'marketing');
   if (team.length) {
     lines.push(...channelNotes(s));

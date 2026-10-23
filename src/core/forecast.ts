@@ -44,8 +44,8 @@ export function paydayForecast(s: GameState) {
   return nextPaydayForecast(s, rates, futureEntertainment(s, daysLeft));
 }
 
-// A-184 재무 "이번 달" 판: 한 달치 나가는 돈·들어오는 돈을 한꺼번에
+// A-184 재무 "이번 달" 판: 한 달치 나가는 돈·들어오는 돈을 한꺼번에. A-195 한 번 낸 돈은 빼고(거래 내역·손익표에는 남음)
 export function monthPlan(s: GameState) {
   const rates = dailyRates(s);
-  return monthOutlook(s, rates, futureEntertainment(s, nextPaydayForecast(s, rates).daysLeft));
+  return monthOutlook(s, rates, futureEntertainment(s, nextPaydayForecast(s, rates).daysLeft), true);
 }

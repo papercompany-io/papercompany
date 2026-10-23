@@ -29,7 +29,7 @@ export function hasMvp(s: GameState): boolean {
 
 // 지금 개발할 수 있는지(선행 기능·등장 연도·회사 단계·최대 레벨)
 export function featureLock(s: GameState, f: FeatureDef): string | null {
-  const queued = s.product.roadmap.filter((r) => r.id === f.id).length;
+  const queued = s.product.roadmap.filter((r) => r.id === f.id && !r.grow).length;
   if (featureLevel(s, f.id) + queued >= f.levels) return f.levels > 1 ? '최대 레벨' : '완성됨';
   if (yearOf(s.day) < f.year) return `${f.year}년에 등장`;
   if (s.company.stage < f.stage) return `회사 단계 ${f.stage} 필요`;
@@ -90,6 +90,109 @@ export function insightDay(s: GameState, users: number, csOut: number) {
   insightAdd(s, 'pay', g.pay);
 }
 
+// ── 기능 레벨(A-196, Startup Company식) ──
+// 버전(levels, 새 내용이 붙는 큰 단계)과 따로, 만든 기능은 Lv1부터 회사 단계별 상한까지 올립니다.
+// 레벨이 오를수록 그 기능의 매력 점수가 더해져 점유율, 곧 제품이 받쳐 주는 고객 수가 커집니다. 대가는 개발 작업·인사이트·코드베이스(유지보수·버그)
+const G = FEATURE_RULES.grow;
+
+export function growLevel(s: GameState, id: string): number {
+  return featureLevel(s, id) > 0 ? (s.product.grow?.[id] ?? 1) : 0;
+}
+
+export function growCap(s: GameState, stage = s.company.stage): number {
+  return G.cap[Math.max(0, Math.min(G.cap.length - 1, stage))];
+}
+
+// from 레벨에서 to 레벨까지 올리는 작업(개발·디자인은 기능의 비율대로). 레벨 L 하나 = 기본 작업 × work × (1 + L/ramp)
+export function growWork(f: FeatureDef, from: number, to: number): { dev: number; design: number } {
+  const n = Math.max(0, to - from);
+  const units = n + ((from + 1 + to) * n) / 2 / G.ramp;
+  const all = (f.dev + f.design) * G.work * units;
+  const devShare = f.dev / Math.max(1, f.dev + f.design);
+  return { dev: Math.round(all * devShare), design: Math.round(all * (1 - devShare)) };
+}
+
+export function growInsight(f: FeatureDef, from: number, to: number): number {
+  const w = growWork(f, from, to);
+  return Math.ceil((w.dev + w.design) * G.insight);
+}
+
+// 레벨 하나가 더하는 매력 점수: 그 기능 매력 효과(버전만큼), 매력 효과가 없는 기능은 base
+export function growAppealPer(f: FeatureDef, version: number): number {
+  const pts = (f.fx.appeal ?? 0) * Math.max(1, version);
+  return (pts > 0 ? pts : G.base) * G.appealPer;
+}
+
+// 이 기능의 레벨이 더한 매력 점수(Lv1은 0)
+export function growAppeal(s: GameState, id: string): number {
+  return growAppealPer(feature(id), featureLevel(s, id)) * Math.max(0, growLevel(s, id) - 1);
+}
+
+function growItem(s: GameState, id: string): RoadmapItem | undefined {
+  return s.product.roadmap.find((r) => r.id === id && r.grow);
+}
+
+// 개발 일정에 이미 잡힌 것까지 더한 목표 레벨
+export function growTarget(s: GameState, id: string): number {
+  return growItem(s, id)?.grow!.to ?? growLevel(s, id);
+}
+
+// 레벨을 더 올릴 수 없는 이유(없으면 null)와 이번에 올릴 범위
+export function growPlan(s: GameState, id: string): { from: number; to: number; insight: number; block: string | null } {
+  const f = feature(id);
+  const from = growTarget(s, id);
+  const cap = growCap(s);
+  const to = Math.min(cap, (Math.floor(from / G.step) + 1) * G.step); // 10, 20, 30…에 맞춤
+  const insight = growInsight(f, from, to);
+  const block = (() => {
+    if (featureLevel(s, id) < 1) return '먼저 만들어야 합니다';
+    if (!hasMvp(s)) return 'MVP를 낸 뒤에 올릴 수 있습니다';
+    if (from >= cap) {
+      const next = G.cap.findIndex((c, st) => st > s.company.stage && c > cap);
+      return next >= 0 ? `회사 단계 ${next}에서 Lv ${G.cap[next]}까지 열림` : '최고 레벨';
+    }
+    if (!growItem(s, id) && s.product.roadmap.length >= ROADMAP_MAX) return `개발 일정이 꽉 찼습니다(${ROADMAP_MAX}개)`;
+    if (insight > insightHave(s, 'insight')) return `인사이트 ${insight} 필요 · 지금 ${Math.floor(insightHave(s, 'insight'))}`;
+    return null;
+  })();
+  return { from, to, insight, block };
+}
+
+// 레벨 올리기를 개발 일정에 넣음. 같은 기능이 이미 일정에 있으면 그 항목 목표를 늘림
+export function addGrow(s: GameState, id: string): string | null {
+  const p = growPlan(s, id);
+  if (p.block) return p.block;
+  insightAdd(s, 'insight', -p.insight);
+  const it = growItem(s, id);
+  if (it) it.grow!.to = p.to;
+  else s.product.roadmap.push({ id, level: 0, grow: { from: p.from, to: p.to }, devDone: 0, designDone: 0 });
+  return null;
+}
+
+// 일정 항목 이름(버전 항목은 "v2", 레벨 항목은 "→ Lv 20")
+export function itemName(it: Pick<RoadmapItem, 'id' | 'level' | 'grow'>): string {
+  const f = feature(it.id);
+  if (it.grow) return `${f.name} → Lv ${it.grow.to}`;
+  return f.levels > 1 ? `${f.name} v${it.level}` : f.name;
+}
+
+// 작업이 쌓인 만큼 레벨을 올립니다. 목표에 닿으면 항목이 끝납니다
+function growReady(s: GameState, it: RoadmapItem): boolean {
+  const g = it.grow!;
+  const f = feature(it.id);
+  const need = itemNeed(it);
+  const frac = Math.min(need.dev > 0 ? it.devDone / need.dev : 1, need.design > 0 ? it.designDone / need.design : 1);
+  const all = need.dev + need.design;
+  let lv = growLevel(s, it.id);
+  while (lv < g.to) {
+    const w = growWork(f, g.from, lv + 1);
+    if (w.dev + w.design > frac * all + 1e-6) break;
+    lv++;
+  }
+  if (lv > growLevel(s, it.id)) (s.product.grow ??= {})[it.id] = lv;
+  return lv >= g.to;
+}
+
 export function availableFeatures(s: GameState): FeatureDef[] {
   return featuresOf(s.company.industry).filter((f) => !featureLock(s, f));
 }
@@ -99,7 +202,7 @@ export function addToRoadmap(s: GameState, id: string): string | null {
   const lock = featureLock(s, f);
   if (lock) return lock;
   if (s.product.roadmap.length >= ROADMAP_MAX) return `로드맵은 ${ROADMAP_MAX}개까지입니다.`;
-  const queued = s.product.roadmap.filter((r) => r.id === id).length;
+  const queued = s.product.roadmap.filter((r) => r.id === id && !r.grow).length;
   const level = featureLevel(s, id) + queued + 1;
   const c = insightCost(f, level);
   insightAdd(s, c.kind, -c.n);
@@ -134,13 +237,18 @@ export function removeFromRoadmap(s: GameState, index: number): string | null {
   const it = s.product.roadmap[index];
   if (!it) return '없는 항목입니다.';
   const before = s.product.roadmap;
-  // 같은 기능의 더 높은 레벨이 뒤에 있으면 함께 빠집니다.
-  s.product.roadmap = s.product.roadmap.filter((r, i) => i !== index && !(r.id === it.id && r.level > it.level));
+  // 같은 기능의 더 높은 버전이 뒤에 있으면 함께 빠집니다(레벨 올리기 항목은 따로).
+  s.product.roadmap = s.product.roadmap.filter((r, i) => i !== index && !(r.id === it.id && !it.grow && !r.grow && r.level > it.level));
   // 이 기능을 선행으로 둔 항목이 아직 안 만들어졌으면 빠집니다.
   s.product.roadmap = s.product.roadmap.filter((r) => feature(r.id).req.every((q) => featureLevel(s, q) >= 1 || s.product.roadmap.some((x) => x.id === q)));
   // 빠진 항목의 인사이트는 돌려받습니다(A-115)
   for (const r of before) {
     if (s.product.roadmap.includes(r)) continue;
+    // 레벨 올리기는 아직 못 올린 레벨 몫만 돌려받음(A-196)
+    if (r.grow) {
+      insightAdd(s, 'insight', growInsight(feature(r.id), growLevel(s, r.id), r.grow.to));
+      continue;
+    }
     const c = insightCost(feature(r.id), r.level);
     insightAdd(s, c.kind, c.n);
   }
@@ -155,7 +263,7 @@ export function moveRoadmap(s: GameState, index: number, dir: -1 | 1) {
 }
 
 export function itemNeed(it: RoadmapItem) {
-  const w = featureWork(feature(it.id), it.level);
+  const w = it.grow ? growWork(feature(it.id), it.grow.from, it.grow.to) : featureWork(feature(it.id), it.level);
   return it.extra ? { ...w, dev: w.dev + it.extra } : w; // 드러난 숨은 일(A-181)
 }
 
@@ -182,6 +290,9 @@ export function codebase(s: GameState): number {
       const n = featureWork(f, l);
       w += n.dev + n.design;
     }
+    // 올린 기능 레벨도 코드가 늘어난 만큼(A-196)
+    const g = growWork(f, 1, growLevel(s, id));
+    w += (g.dev + g.design) * G.code;
   }
   return w;
 }
@@ -256,7 +367,16 @@ function shipQuality(s: GameState): number {
 
 function shipReady(s: GameState) {
   const done: RoadmapItem[] = [];
+  for (const it of s.product.roadmap.filter((r) => r.grow)) {
+    if (!growReady(s, it)) continue;
+    s.product.roadmap = s.product.roadmap.filter((x) => x !== it);
+    const ch = s.channels.some((c) => c.id === 'team-dev') ? 'team-dev' : 'all';
+    post(s, ch, '시스템', `[레벨업] ${feature(it.id).name} Lv ${it.grow!.to}`, 'system');
+    notify(s, `"${feature(it.id).name}" 기능이 Lv ${it.grow!.to}까지 올랐습니다. 매력도가 올라 제품이 받쳐 주는 고객이 늘었습니다.`, 'good', 'product');
+    sfx(s, 'coin');
+  }
   for (const it of s.product.roadmap) {
+    if (it.grow) continue;
     const need = itemNeed(it);
     if (it.devDone >= need.dev - 1e-6 && it.designDone >= need.design - 1e-6 && it.level === featureLevel(s, it.id) + 1) {
       // 숨은 일이 아직 안 드러났으면 출시 대신 마무리하다 발견(A-181)
@@ -280,7 +400,7 @@ function ship(s: GameState, it: RoadmapItem) {
   s.product.shipped.push({ id: it.id, level: it.level, day: s.day, result });
   if (s.product.shipped.length > 80) s.product.shipped.splice(0, s.product.shipped.length - 80);
   const label = result === 'full' ? '완전 수행' : result === 'partial' ? '부분 수행(버그 조금)' : '실패에 가까움(버그 많음)';
-  const name = f.levels > 1 ? `${f.name} Lv${it.level}` : f.name;
+  const name = itemName(it);
   const ch = s.channels.some((c) => c.id === 'team-dev') ? 'team-dev' : 'all';
   post(s, ch, '시스템', `[출시] ${name} — ${label}`, 'system');
   s.events.push({ type: 'shipped', featureId: it.id });
@@ -324,6 +444,7 @@ export function fxTotals(s: GameState): FxTotals {
     if (fx.market && !t.markets.includes(fx.market)) t.markets.push(fx.market);
     if (fx.ai) t.aiFeatures += lv;
     if (fx.adFormat && !t.adFormats.includes(fx.adFormat)) t.adFormats.push(fx.adFormat);
+    t.appeal += growAppeal(s, id); // A-196
   }
   // 수확 체감(A-45): 기능을 많이 쌓을수록 같은 효과가 덜 붙습니다.
   const soft = (x: number, k: number) => k * Math.log(1 + Math.max(0, x) / k);
@@ -365,7 +486,7 @@ export function complexityMult(s: GameState): number {
 export function appealBreakdown(s: GameState) {
   const raw = Object.entries(s.product.features)
     .filter(([, lv]) => lv > 0)
-    .map(([id, lv]) => ({ id, name: feature(id).name, pts: (feature(id).fx.appeal ?? 0) * lv }))
+    .map(([id, lv]) => ({ id, name: feature(id).name, pts: (feature(id).fx.appeal ?? 0) * lv + growAppeal(s, id) }))
     .filter((x) => x.pts > 0);
   const sum = raw.reduce((a, x) => a + x.pts, 0);
   const scale = sum > 0 ? fxTotals(s).appeal / sum : 0;

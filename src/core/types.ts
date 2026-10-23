@@ -266,6 +266,7 @@ export interface MonthAccrual {
   entertainment: number;
   recruiting: number;
   ads: number;
+  adsOnce?: number; // A-195 ads 가운데 광고 캠페인으로 한 번에 낸 몫(재무 "이번 달" 판에서 뺌)
   infra: number;
   welfare: number;
   ai: number;
@@ -321,7 +322,8 @@ export interface CompanyResult {
 // 제품(PD)
 export interface RoadmapItem {
   id: string; // 기능 id
-  level: number; // 만드는 레벨(1부터)
+  level: number; // 만드는 버전(1부터). 기능 레벨 올리기 항목은 0
+  grow?: { from: number; to: number }; // A-196 기능 레벨 올리기: from → to(작업이 쌓이는 대로 한 레벨씩)
   devDone: number;
   designDone: number;
   hidden?: number; // 아직 아무도 모르는 숨은 개발 일(약속 기능, A-181). 점검 회의나 마무리 때 드러나 extra로 옮겨짐
@@ -330,7 +332,8 @@ export interface RoadmapItem {
 }
 
 export interface Product {
-  features: Record<string, number>; // 기능 id → 완성 레벨
+  features: Record<string, number>; // 기능 id → 완성 버전
+  grow?: Record<string, number>; // A-196 기능 id → 기능 레벨(없으면 1). 예전 저장엔 없음
   roadmap: RoadmapItem[];
   bugs: number; // 0~100
   debt: number; // 기술 부채 0~1(버그 발생 배율)

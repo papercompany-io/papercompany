@@ -77,7 +77,7 @@ function PLView() {
   const [table, setTable] = useState(false);
   const rw = runwayMonths(s);
   const spent = plan.revenue - plan.netIncome;
-  const perDay = (spent - plan.tax - (plan.interest ?? 0) - plan.recruiting - plan.other) / daysInMonthOf(s.day); // 날마다 나눠 빠지는 몫(광고비 포함)
+  const perDay = (spent - plan.tax - (plan.interest ?? 0)) / daysInMonthOf(s.day); // 날마다 나눠 빠지는 몫(광고비 포함, 한 번 낸 돈은 plan에 없음 A-195)
   const debt = debtBalance(s);
   const lenders = [...new Set((s.loans ?? []).map((l) => l.lender))].join(', ');
   const monthName = formatMonth(plan.month);
@@ -93,7 +93,7 @@ function PLView() {
         </h2>
         <p className="fn2-sub">
           하루에 {man(perDay)}만원씩 나갑니다
-          <Help text="한 달에 들어오고 나가는 돈입니다. 월급·월세·복지비 같은 돈은 월급일에 한꺼번에 빠지지 않고 날마다 한 달치를 나눠 빠지고, 매출도 날마다 들어옵니다. 들어오는 돈은 지금 고객 수가 이어진다고 본 값입니다. 법인세·대출 이자·원금은 매월 1일에 나가고, 홍보비·광고비·이벤트 비용은 쓰는 날 바로 빠집니다. 지난 달은 아래 손익표에서 봅니다." />
+          <Help text="한 달에 들어오고 나가는 돈입니다. 월급·월세·복지비 같은 돈은 월급일에 한꺼번에 빠지지 않고 날마다 한 달치를 나눠 빠지고, 매출도 날마다 들어옵니다. 들어오는 돈은 지금 고객 수가 이어진다고 본 값입니다. 법인세·대출 이자·원금은 매월 1일에 나갑니다. 채용 홍보비·광고 캠페인·이벤트·진출 비용처럼 한 번 낸 돈은 여기 넣지 않습니다. 그런 돈은 거래 내역과 아래 손익표에서 봅니다." />
         </p>
       </div>
       <div className="fin-budget">

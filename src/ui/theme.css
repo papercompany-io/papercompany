@@ -311,7 +311,7 @@ input[type='checkbox'] { accent-color: var(--accent); width: 16px; height: 16px;
 .help-text { font-size: var(--fs-sm); color: var(--text-2); line-height: 1.45; max-width: 640px; }
 
 /* ══════════════ 5. 게임 화면 ══════════════ */
-:root { --top-h: 86px; --side-w: 84px; }
+:root { --top-h: 86px; --side-w: 152px; }
 
 /* 위 HUD: 화면 위 가운데 떠 있는 반투명 어두운 카드, 2줄(레퍼런스).
    윗줄 = 날짜 · 회사 · 대표 나이(아래 가는 선은 하루 진행), 아랫줄 = 배속 · 시각 · 자금·기업가치·고객·직원 · 저장 */
@@ -375,32 +375,32 @@ input[type='checkbox'] { accent-color: var(--accent); width: 16px; height: 16px;
 .tb-stat small { font-size: 10px; color: var(--text-2); font-weight: 500; white-space: nowrap; }
 .tb-stat small.bad { color: var(--coral); font-weight: 700; }
 
-/* 왼쪽 메뉴: 크롬 띠 + 둥근 흰 버튼(레퍼런스 아래 도크) */
+/* 왼쪽 메뉴(A-192): 앱마다 제 색을 입힌 가로 버튼 — 색 동그라미 아이콘 + 이름. 버튼 바탕은 앱 색을 크롬에 섞은 어두운 톤이라 흰 글자가 읽힘 */
 .sidebar {
-  position: absolute; left: 0; top: 0; bottom: 0; width: var(--side-w); z-index: 38; display: flex; flex-direction: column; gap: 2px; padding: 8px 4px;
+  position: absolute; left: 0; top: 0; bottom: 0; width: var(--side-w); z-index: 38; display: flex; flex-direction: column; gap: 3px; padding: 8px 6px;
   background: var(--chrome); border-right: 1px solid var(--chrome-sunk); overflow-y: auto; scrollbar-width: none;
 }
 .sidebar::-webkit-scrollbar { display: none; }
 .sb-item {
-  position: relative; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 4px 2px 3px; border-radius: var(--r-sm); border: none;
-  background: transparent; color: var(--text-2); cursor: pointer; flex: none;
+  position: relative; display: flex; flex-direction: row; align-items: center; justify-content: flex-start; gap: 10px; height: 54px; padding: 0 6px 0 6px; flex: none;
+  border-radius: var(--r-sm); border: none; cursor: pointer;
+  background: color-mix(in srgb, var(--ac) 32%, var(--c-slate-800)); color: var(--c-white); transition: background-color 120ms, border-color 120ms;
 }
-.sb-item:hover:not(:disabled) { background: var(--surface-hover); color: var(--text); }
-.sb-item:hover:not(:disabled) .sb-icon { transform: translateY(-1px); }
-.sb-item.on { background: transparent; color: var(--text); }
-.sb-item.locked { opacity: 0.35; cursor: default; }
+.sb-item:hover:not(:disabled) { background: color-mix(in srgb, var(--ac) 50%, var(--c-slate-800)); }
+.sb-item:hover:not(:disabled) .sb-icon { transform: scale(1.06); }
+.sb-item.on { background: color-mix(in srgb, var(--ac) 62%, var(--c-slate-800)); }
+.sb-item.locked { opacity: 0.4; cursor: default; filter: grayscale(0.7); }
 .sb-icon {
-  width: 38px; height: 38px; border-radius: 50%; background: var(--c-white); border: none; display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35); transition: transform 120ms var(--ease), background-color 120ms;
+  width: 42px; height: 42px; border-radius: 50%; background: var(--ac); border: none; display: flex; align-items: center; justify-content: center; flex: none;
+  transition: transform 120ms var(--ease);
 }
-.sb-icon svg { width: 24px; height: 24px; }
-/* 흰 그림(AppIcon)을 짙은 회색으로: 흰 동그라미 위 짙은 아이콘 */
-.sb-icon svg rect { fill: var(--c-gray-700); }
-.sb-item.on .sb-icon { background: var(--accent); box-shadow: 0 0 0 2px var(--c-white), 0 2px 8px rgba(0, 0, 0, 0.4); }
-.sb-item.on .sb-icon svg rect { fill: var(--c-white); }
-.sb-name { font-size: 10px; font-weight: 600; white-space: nowrap; }
-.sb-badge { position: absolute; top: 0; right: 12px; min-width: 18px; height: 18px; border-radius: 9px; background: var(--positive); color: var(--c-white); font-size: 10px; font-weight: 800; display: flex; align-items: center; justify-content: center; padding: 0 4px; box-shadow: 0 0 0 2px var(--c-slate-800); }
-.sb-new { position: absolute; top: 0; left: 6px; background: var(--chrome-active); color: var(--c-white); font-size: 9px; font-weight: 800; border-radius: var(--r-xs); padding: 0 3px; }
+.sb-icon svg { width: 30px; height: 30px; }
+.sb-item.on .sb-icon { background: var(--c-white); }
+/* 흰 그림(AppIcon)은 색 동그라미 위에선 그대로 흰색, 켜진 버튼(흰 동그라미)에선 앱 색으로 */
+.sb-item.on .sb-icon svg rect { fill: var(--ac); }
+.sb-name { font-size: 14px; font-weight: 700; white-space: nowrap; letter-spacing: -0.01em; text-shadow: 0 1px 1px rgba(0, 0, 0, 0.3); }
+.sb-badge { position: absolute; top: 1px; left: 33px; min-width: 18px; height: 18px; border-radius: 9px; background: var(--positive); color: var(--c-white); font-size: 10px; font-weight: 800; display: flex; align-items: center; justify-content: center; padding: 0 4px; box-shadow: 0 0 0 2px var(--c-slate-800); }
+.sb-new { position: absolute; top: 3px; right: 4px; background: var(--chrome-active); color: var(--c-white); font-size: 9px; font-weight: 800; border-radius: var(--r-xs); padding: 0 3px; }
 
 /* 앱 창: 흰 창, 흰 제목줄(아이콘 + 큰 가는 제목), 회색 ✕ */
 .app-panel {
@@ -2083,10 +2083,45 @@ input[type='checkbox'] { accent-color: var(--accent); width: 16px; height: 16px;
 .tm-achievement { background: var(--gold-d); }
 .tm-dot:last-of-type { margin-right: 4px; }
 
-/* 화면(A-191): 팀 앱이 늘어 메뉴가 16개 — 높이 1000px 아래 화면에서는 메뉴 버튼을 조금 작게 해 마지막(설정)까지 한 화면에 */
-@media (max-height: 1000px) {
-  .sidebar { gap: 1px; padding: 6px 4px; }
-  .sb-item { gap: 2px; padding: 2px 2px 2px; }
-  .sb-icon { width: 32px; height: 32px; }
-  .sb-icon svg { width: 20px; height: 20px; }
+/* 화면(A-192): 메뉴가 16개 — 높이 870px 이하 화면에서는 버튼 높이를 줄여 마지막(설정)까지 한 화면에 */
+@media (max-height: 870px) {
+  .sidebar { gap: 2px; padding: 6px; }
+  .sb-item { height: 42px; }
+  .sb-icon { width: 34px; height: 34px; }
+  .sb-icon svg { width: 24px; height: 24px; }
+  .sb-badge { left: 26px; }
 }
+
+/* 화면(A-194): 광고 판매 하루 단위 — 광고 자리 막대를 계약마다 칸으로(단가 높은 순, 회색 = 광고 네트워크), 계약 카드의 하루 최소~최대 노출 막대(최소 눈금, 못 채우면 빨강) */
+.ads2-stack { display: flex; gap: 2px; height: 10px; background: repeating-linear-gradient(90deg, var(--surface-tile) 0 6px, transparent 6px 8px); }
+.ads2-stack i { display: block; height: 100%; min-width: 3px; background: repeating-linear-gradient(90deg, var(--dc) 0 6px, transparent 6px 8px); transition: width 400ms var(--ease); }
+.ads2-stack i.short { --dc: var(--negative); }
+.ads2-title { display: flex; align-items: baseline; gap: 8px; }
+.ads2-title span { margin-left: auto; font-size: var(--fs-xs); font-weight: 600; color: var(--text-3); }
+.ads2-meter { display: flex; flex-direction: column; gap: 4px; }
+.ads2-meter-bar { position: relative; height: 10px; background: repeating-linear-gradient(90deg, var(--surface-tile) 0 6px, transparent 6px 8px); }
+.ads2-meter-bar i { display: block; height: 100%; background: repeating-linear-gradient(90deg, var(--dc) 0 6px, transparent 6px 8px); transition: width 400ms var(--ease); }
+.ads2-meter-bar i.short { background: repeating-linear-gradient(90deg, var(--negative) 0 6px, transparent 6px 8px); }
+.ads2-meter-bar em { position: absolute; top: -3px; bottom: -3px; width: 2px; margin-left: -1px; background: var(--text-2); }
+.ads2-meter-foot { display: flex; justify-content: space-between; gap: 8px; font-size: var(--fs-xs); font-weight: 600; color: var(--text-3); font-variant-numeric: tabular-nums; }
+.ads2-meter-foot .bad { color: var(--negative-press); font-weight: 700; }
+.ads2-meter-foot .full { color: var(--positive); font-weight: 700; }
+
+/* 화면(A-196): 제품이 받쳐 주는 고객(SC의 잠재 사용자) — 이름·숫자·찬 비율 한 줄 + 칸칸이 막대 + 할 일 한 줄. 기능 카드의 기능 레벨 막대(진한 = 지금, 옅은 = 일정에 잡힌 목표, 끝 = 회사 단계 상한) */
+.sc-cap { display: flex; flex-direction: column; gap: 6px; width: 100%; }
+.sc-cap-head { display: flex; align-items: baseline; gap: 8px; font-size: var(--fs-sm); color: var(--text-2); cursor: help; }
+.sc-cap-head b { font-size: var(--fs-lg); font-weight: 800; color: var(--text); font-variant-numeric: tabular-nums; }
+.sc-cap-head b small { margin-left: 1px; font-size: var(--fs-sm); font-weight: 700; color: var(--text-3); }
+.sc-cap-head em { margin-left: auto; font-style: normal; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text-3); }
+.sc-cap.full .sc-cap-head em { color: var(--caution-text); }
+.sc-cap.over .sc-cap-head em { color: var(--negative-press); }
+.sc-cap-bar { display: block; height: 10px; background: repeating-linear-gradient(90deg, var(--surface-tile) 0 6px, transparent 6px 8px); }
+.sc-cap-bar i { display: block; height: 100%; background: repeating-linear-gradient(90deg, var(--positive) 0 6px, transparent 6px 8px); transition: width 400ms var(--ease); }
+.sc-cap.near .sc-cap-bar i { background: repeating-linear-gradient(90deg, var(--accent) 0 6px, transparent 6px 8px); }
+.sc-cap.full .sc-cap-bar i { background: repeating-linear-gradient(90deg, var(--caution) 0 6px, transparent 6px 8px); }
+.sc-cap.over .sc-cap-bar i { background: repeating-linear-gradient(90deg, var(--negative) 0 6px, transparent 6px 8px); }
+.wk .fc-gline { display: flex; align-items: center; gap: 6px; margin: 2px 0; cursor: help; }
+.wk .fc-gline em { flex: none; font-style: normal; font-family: var(--pixel); font-size: 11px; color: var(--text-3); -webkit-font-smoothing: none; font-variant-numeric: tabular-nums; }
+.wk .fc-gbar { position: relative; display: block; flex: 1; height: 6px; border-radius: var(--r-full); background: var(--surface-tile); overflow: hidden; }
+.wk .fc-gbar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: var(--r-full); background: var(--positive); transition: width 400ms var(--ease); }
+.wk .fc-gbar i.q { background: var(--accent-soft); }

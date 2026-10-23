@@ -4,13 +4,13 @@ import fs from 'fs';
 import { DATA, featuresOf, stageIndex } from '../../src/core/data';
 import { runDay } from '../../src/core/sim';
 import { newCareer, nextCompany, defaultPicks, ownedSpecs, type SetupChoices } from '../../src/core/state';
-import { addToRoadmap, availableFeatures, hasMvp, appeal, fxTotals, canCharge, moveRoadmap } from '../../src/core/product';
+import { addToRoadmap, availableFeatures, hasMvp, appeal, fxTotals, canCharge, moveRoadmap, addGrow, growPlan, growAppealPer, growWork } from '../../src/core/product';
 import { createPosting, offerJob } from '../../src/core/hiring';
 import { runwayMonths, lastRevenue, projectedMonthlyPayroll, debtBalance } from '../../src/core/finance';
 import { startRound, sendLetter, requestDecision, closeForOffer, acceptOffer, activeRound, fits, decisionProbability, selectableStages } from '../../src/core/funding';
 import { setOrder } from '../../src/core/orders';
 import { audience, campaignBlock, campaignCost, campaignDef, marketers, startCampaign } from '../../src/core/ads';
-import { setAdBudget, launchMarket, launchBlock, totalUsers, shares, demand, revenuePerUser } from '../../src/core/market';
+import { setAdBudget, launchMarket, launchBlock, totalUsers, shares, demand, revenuePerUser, growthRoom } from '../../src/core/market';
 import { moveOffice, moveBlock, seatsAvailable, furnitureItems, buyFurniture, buyFurnitureBlock } from '../../src/core/office';
 import { chooseModel, latestModels, setAdoption } from '../../src/core/aiadopt';
 import { promoteLead, leadInfo, avgSat, marketSalary } from '../../src/core/staff';
@@ -25,7 +25,7 @@ import { acceptOuting, declineOuting, outings } from '../../src/core/outings';
 import { acceptContract } from '../../src/core/contracts';
 import { autoFinish, bringCompanion, cardFits, companionCandidates, leaveMeeting, meetingHand, meetingScore, pendingMeetings, playCard, promiseFor, startMeeting, type CardId } from '../../src/core/meeting';
 import { contact } from '../../src/core/contacts';
-import { acceptAdCounter, adFormatDef, adNegotiation, adSalesOf, adSalesOn, declineAdOffer, formatSales, liveAdDeals, negotiateAd, setAdAutoRenew } from '../../src/core/adsales';
+import { acceptAdCounter, adCapacity, adFlow, adFormatDef, adNegotiation, adSalesOf, adSalesOn, declineAdOffer, formatSales, liveAdDeals, negotiateAd, setAdAutoRenew } from '../../src/core/adsales';
 import { adScale } from '../../src/core/market';
 import { acceptMilestone, declineMilestone, canExtend, canPush, extendDeadline, forecast, milestones, pushTeam } from '../../src/core/milestones';
 import { createEsop } from '../../src/core/equity';
@@ -74,6 +74,24 @@ function planRoadmap(s: GameState) {
   }
 }
 
+// A-196 기능 레벨: 받쳐 주는 만큼 찼거나(팀 단계부터) 새로 만들 기능이 없으면, 작업 대비 매력 점수가 가장 큰 기능의 레벨을 올림(한 번에 한 항목)
+function planGrow(s: GameState) {
+  if (!hasMvp(s) || s.product.roadmap.some((r) => r.grow)) return;
+  // 초반(팀 전)엔 결제·핵심 기능이 먼저: 만들 기능이 남아 있으면 단계 2부터, 받쳐 주는 만큼 찼을 때만
+  const st = growthRoom(s).state;
+  if (availableFeatures(s).length && (s.company.stage < 2 || st === 'room' || st === 'near')) return;
+  const f = (id: string) => featuresOf(s.company.industry).find((x) => x.id === id)!;
+  const worth = (id: string) => {
+    const p = growPlan(s, id);
+    const w = growWork(f(id), p.from, p.to);
+    return (growAppealPer(f(id), s.product.features[id]) * (p.to - p.from)) / Math.max(1, w.dev + w.design);
+  };
+  const best = Object.keys(s.product.features)
+    .filter((id) => !growPlan(s, id).block)
+    .sort((a, b) => worth(b) - worth(a))[0];
+  if (best) addGrow(s, best);
+}
+
 // 매출과 자금 여유에 맞춘 목표 인원(유능한 플레이어 흉내)
 function targetHeadcount(s: GameState): Partial<Record<DeptId, number>> {
   const st = s.company.stage;
@@ -95,14 +113,16 @@ function targetHeadcount(s: GameState): Partial<Record<DeptId, number>> {
 }
 
 // A-182 광고주 흥정: 첫 제안의 1.4배를 부르고, 역제안과 반씩 좁혀 감. 역제안이 내 값에 가까우면 받음.
-// 재고의 85%까지만 팔아 사용자가 줄 때 위약금을 피함. 지금 시세의 60% 아래로 묶인 계약은 자동 연장을 꺼서 다시 팜(보통 플레이어는 첫 제안을 그대로 받음)
+// A-194 하루 최소 노출 합이 그 형식 하루 노출의 85%를 넘지 않게만 받아 최소를 못 채워 깎이는 날을 피함(단가가 낮은 계약이 뒤로 밀림).
+// 계약 수는 광고 운영팀이 맡을 수 있는 만큼. 지금 시세의 60% 아래로 묶였거나 앱이 커져 최대 노출에 닿은 계약은 자동 연장을 꺼서 다시 팜(보통 플레이어는 첫 제안을 그대로 받음)
 function adStep(s: GameState) {
   if (!adSalesOn(s)) return;
   const fx = fxTotals(s);
   for (const o of adSalesOf(s).offers.slice()) {
     if (o.left) continue;
+    if (liveAdDeals(s).length >= adCapacity(s)) break;
     const f = formatSales(s, fx).find((x) => x.id === o.format)!;
-    if (f.sold + o.imps > f.inv * 0.85) {
+    if (f.minSum + o.min > f.inv * 0.85) {
       declineAdOffer(s, o.id);
       continue;
     }
@@ -114,20 +134,23 @@ function adStep(s: GameState) {
     let ask = Math.round(o.open * 1.4);
     let done = false;
     for (let i = 0; i < 5 && !done && !o.left; i++) {
-      const r = negotiateAd(s, o.id, ask, o.months);
+      const r = negotiateAd(s, o.id, ask, o.days);
       if (r.signed || !r.ok) done = true;
       else {
         const c = o.nego?.counter;
-        if (c && c.months === o.months && c.ecpm >= ask * 0.93) done = acceptAdCounter(s, o.id).ok;
+        if (c && c.days === o.days && c.ecpm >= ask * 0.93) done = acceptAdCounter(s, o.id).ok;
         else if (c) ask = Math.round((ask + c.ecpm) / 2);
       }
     }
     if (!done && !o.left && o.nego?.counter) acceptAdCounter(s, o.id);
   }
   if (NOVICE) return;
+  // 앱이 커져 최대 노출에 닿은 계약은 남는 자리가 많으면 연장하지 않고 더 큰 계약으로 다시 팜
+  const { formats, deals } = adFlow(s, fx);
   for (const d of liveAdDeals(s)) {
     const fair = adFormatDef(d.format).ecpm * adScale(totalUsers(s)) * (1 + fx.ecpm);
-    if (d.autoRenew && d.ecpm < fair * 0.6) setAdAutoRenew(s, d.id, false);
+    const outgrown = (deals[d.id]?.imps ?? 0) >= d.max && formats.find((f) => f.id === d.format)!.soldShare < 0.7;
+    if (d.autoRenew && (d.ecpm < fair * 0.6 || outgrown)) setAdAutoRenew(s, d.id, false);
   }
 }
 
@@ -463,7 +486,10 @@ function playCompany(s: GameState, log: (m: string) => void) {
   while (!s.ended && guard++ < 365 * 40) {
     s.pauseReason = null;
     const look = !NOVICE || s.day % 5 === 0;
-    if (look) planRoadmap(s);
+    if (look) {
+      planRoadmap(s);
+      planGrow(s);
+    }
     if (look && s.day % 2 === 0) hireStep(s);
     if (look) fundStep(s);
     if (look) adStep(s);

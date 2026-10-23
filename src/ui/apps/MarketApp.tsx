@@ -241,7 +241,7 @@ function TeamOrders() {
   );
 }
 
-// 고객이 들고 나는 줄(최근 2주 평균, 한 달 환산): 재무 판처럼 들어옴/나감 + 떠나는 이유 막대 + 제품 여유 한 줄(A-158)
+// 고객이 들고 나는 줄(최근 2주 평균, 한 달 환산): 재무 판처럼 들어옴/나감 + 떠나는 이유 막대 + 받쳐 주는 고객(A-196) + 제품 여유 한 줄(A-158)
 function GrowthPanel({ flow, users, unit }: { flow: NonNullable<MarketState['flow']>; users: number; unit: string }) {
   const gain = flow.inbound + flow.viral + flow.sales + flow.paid;
   const net = gain - flow.lost;
@@ -283,6 +283,12 @@ function GrowthPanel({ flow, users, unit }: { flow: NonNullable<MarketState['flo
           <LossBars why={flow.why} lost={flow.lost} />
         </>
       )}
+      <div className="fb-line fb-total" data-testid="market-cap" title="이 시장에서 지금 제품이 받쳐 주는 고객입니다(A-196). 매력도(기능·기능 레벨)와 인지도가 오르면 커집니다.">
+        <span>제품이 받쳐 주는 {unit}</span>
+        <b>
+          약 {n(flow.target)} · {Math.round((users / Math.max(1, flow.target)) * 100)}% 찼음
+        </b>
+      </div>
       <div className="ew-note">{why}</div>
     </div>
   );
