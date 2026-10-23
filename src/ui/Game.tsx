@@ -250,6 +250,7 @@ export function Game({ continued, notice, clearNotice, onEnded }: Props) {
             app={w.app}
             arg={w.arg}
             box={w.box}
+            fresh={w.nonce === 0}
             z={wins.filter((x) => x.z < w.z).length}
             focused={w === front}
             onFocus={() => w !== front && showApp(w.app)}
@@ -285,7 +286,7 @@ export function Game({ continued, notice, clearNotice, onEnded }: Props) {
             <span>{nextHint(s, openedOnce)}</span>
           </div>
         )}
-        {/* A-219: 창이 열려 있어도 오른쪽 카드는 늘 보임 */}
+        {/* 오른쪽 카드는 앱 창 아래(A-222) */}
         <SideCards s={s} onOpen={(a, arg) => openDesktop(a, arg)} />
         <SideStack s={s} onOpen={(app, arg) => openDesktop(app as AppId, arg)} />
         <NewsTicker s={s} />

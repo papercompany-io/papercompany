@@ -164,15 +164,15 @@ function cssPx(name: string, fallback: number): number {
   return Number.isFinite(v) ? v : fallback;
 }
 
-// 창이 놓일 수 있는 넓이: 위 막대 아래, 왼쪽 메뉴 오른쪽, 오른쪽 카드 왼쪽(A-219: 카드가 창에 가리지 않게)
+// 창이 놓일 수 있는 넓이: 위 막대 아래, 왼쪽 메뉴 오른쪽, 화면 오른쪽 끝까지(A-222: 오른쪽 카드는 창 아래라 칸을 비우지 않음)
 export function winArea() {
   const top = cssPx('--top-h', 86) + 12;
   const left = cssPx('--side-w', 84) + 14;
-  const right = cssPx('--cards-w', 216) + 24;
+  const right = 14;
   return { left, top, w: Math.max(MIN_W, window.innerWidth - left - right), h: Math.max(MIN_H, window.innerHeight - top - 14) };
 }
 
-// 기본 크기는 화면을 다 덮지 않는 보통 크기(가로 960·세로 680까지, 화면의 70%·82%까지). 내용이 더 커야 하면 열 때 내용에 맞게 키움(fitMin).
+// 기본 크기는 화면을 다 덮지 않는 보통 크기(가로 960·세로 680까지, 화면의 70%·82%까지). 새 창은 열 때 최소 크기로 줄임(A-223, AppPanel).
 // 창이 여러 개면 비스듬히 겹쳐 엽니다.
 export function defaultBox(index: number): WinBox {
   const a = winArea();
@@ -249,12 +249,14 @@ export function AppPanel({
   focused = true,
   onFocus,
   onBox,
+  fresh = false,
 }: {
   app: AppId;
   arg?: string;
   setApp: (a: AppId, arg?: string) => void;
   onClose: () => void;
   box?: WinBox;
+  fresh?: boolean; // 막 연 창(A-223: 최소 크기로 맞춤)
   z?: number;
   focused?: boolean;
   onFocus?: () => void;
@@ -265,25 +267,43 @@ export function AppPanel({
   const drag = useRef<{ kind: 'move' | Edge; px: number; py: number; b: WinBox; min: { w: number; h: number }; snap: WinBox | null } | null>(null);
   const restore = useRef<WinBox | null>(null); // 붙이기 전 크기. 붙은 채로 끌면 이 크기로 돌아옴
   const [ghost, setGhost] = useState<WinBox | null>(null); // 놓으면 붙을 자리 미리 보기
-  // 최소 크기 = 내용에 맞춘 크기(fit content): 가로는 내용이 잘리지 않는 가장 좁은 폭, 세로는 지금 폭에서 내용이 다 보이는 높이.
+  // 최소 크기: 가로는 MIN_W(A-228: 창 안은 창 폭에 맞춰 다시 짜임, @container app), 세로는 지금 폭에서 내용이 다 보이는 높이.
   // 내용이 기본 높이보다 길면 기본 높이까지만(그 아래는 창 안에서 스크롤). 긴 앱이 늘 화면을 다 덮지 않게
   const fitMin = () => {
     const p = el.current;
     if (!p) return { w: MIN_W, h: MIN_H };
-    const { width, height } = p.style;
-    p.style.width = 'min-content';
-    const w = p.offsetWidth;
-    p.style.width = width;
+    const { height } = p.style;
     p.style.height = 'auto';
     const h = p.offsetHeight;
     p.style.height = height;
-    return { w: Math.max(240, w), h: Math.max(160, Math.min(h, defaultBox(0).h)) };
+    return { w: MIN_W, h: Math.max(160, Math.min(h, defaultBox(0).h)) };
   };
-  // 처음 열 때 내용보다 작으면 내용에 맞게 키움
+  // 새로 연 창은 최소 크기로(A-223): 가로는 잘리지 않는 가장 좁은 폭, 세로는 그 폭에서 내용이 다 보이는 높이.
+  // 창 놓는 곳보다 크면 그만큼만(나머지는 창 안 스크롤), 오른쪽·아래로 넘치면 안으로 당김.
+  // 같은 창을 다른 탭으로 다시 그릴 때(fresh 아님)는 사용자가 맞춘 크기를 두고, 내용보다 작을 때만 키움
   useLayoutEffect(() => {
     if (!box || !onBox) return;
-    const min = fitMin();
-    if (box.w < min.w || box.h < min.h) onBox(clampBox(box, min));
+    const p = el.current;
+    if (!fresh || !p) {
+      const min = fitMin();
+      if (box.w < min.w || box.h < min.h) onBox(clampBox(box, min));
+      return;
+    }
+    const a = winArea();
+    const { width, height } = p.style;
+    // 처음 크기는 넓은 짜임의 내용 폭(A-223). 담기를 잠깐 풀어야 내용 폭이 잡힘
+    p.classList.add('measuring');
+    p.style.width = 'min-content';
+    const w = Math.min(a.w, Math.max(MIN_W, p.offsetWidth));
+    p.classList.remove('measuring');
+    p.style.width = `${w}px`;
+    p.style.height = 'auto';
+    const h = Math.min(a.h, Math.max(160, p.offsetHeight));
+    p.style.width = width;
+    p.style.height = height;
+    const x = Math.max(a.left, Math.min(box.x, a.left + a.w - w));
+    const y = Math.max(a.top, Math.min(box.y, a.top + a.h - h));
+    onBox({ x, y, w, h });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const grab = (kind: 'move' | Edge) => (e: React.PointerEvent) => {

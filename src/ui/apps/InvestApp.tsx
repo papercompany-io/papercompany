@@ -652,7 +652,7 @@ function InvestorPanel({ inv, open, openChat }: { inv: Inv; open: Round | null; 
                       </div>
                     )}
                   </div>
-                  <button className="btn small ghost" data-testid={`letter-${inv.id}-${l.id}`} disabled={sent} onClick={() => send(l.id, l.name)}>
+                  <button className="btn small green" data-testid={`letter-${inv.id}-${l.id}`} disabled={sent} onClick={() => send(l.id, l.name)}>
                     {sent ? '보냄' : '보내기'}
                   </button>
                 </div>
