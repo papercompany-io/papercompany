@@ -25,13 +25,13 @@
     "fit": { "name": "업무에 맞는지", "cats": ["core", "ai"], "say": ["저희 업무 방식에 정말 맞는지 모르겠습니다.", "보기에는 좋은데 저희한테 필요한 건지 확신이 없습니다."] }
   },
   "cards": {
-    "ask": { "name": "질문", "minutes": 10, "desc": "이 사람이 무엇을 걱정하는지 묻습니다.", "listen": 4, "repeat": -3 },
-    "demo": { "name": "데모", "minutes": 20, "desc": "만든 기능을 직접 보여 줍니다. 걱정에 맞는 기능이 있어야 잘 먹힙니다.", "match": 24, "plain": 2, "miss": -4, "glitchPerBug": 0.006, "glitch": -10 },
-    "case": { "name": "고객 사례", "minutes": 10, "desc": "다른 고객이 어떻게 쓰는지 이야기합니다. 고객이 있어야 낼 수 있습니다.", "match": 20, "partial": 8, "plain": 2, "needUsers": 30 },
-    "price": { "name": "가격 양보", "minutes": 10, "desc": "단가를 낮춰 주겠다고 합니다. 계약하면 그만큼 덜 받습니다.", "match": 22, "buyer": 8, "plain": 2, "discount": 0.08, "maxDiscount": 0.3 },
-    "promise": { "name": "기능 약속", "minutes": 10, "desc": "아직 없는 기능을 만들어 주겠다고 약속합니다. 계약하려면 그 기능을 기한 안에 만들어야 합니다.", "match": 18, "max": 2 },
-    "companion": { "name": "동행 발언", "minutes": 10, "desc": "함께 온 직원이 대신 설명합니다.", "match": 16, "plain": 3, "uses": 2, "skillK": 0.004 },
-    "close": { "name": "마무리 요청", "minutes": 10, "desc": "다음 단계로 가자고 정중하게 요청합니다. 분위기가 무르익지 않았으면 역효과가 납니다." }
+    "ask": { "short": "걱정을 물어봅니다", "name": "질문", "minutes": 10, "desc": "이 사람이 무엇을 걱정하는지 묻습니다.", "listen": 4, "repeat": -3 },
+    "demo": { "short": "만든 기능을 보여 줍니다", "name": "데모", "minutes": 20, "desc": "만든 기능을 직접 보여 줍니다. 걱정에 맞는 기능이 있어야 잘 먹힙니다.", "match": 24, "plain": 2, "miss": -4, "glitchPerBug": 0.006, "glitch": -10 },
+    "case": { "short": "다른 고객 이야기를 합니다", "name": "고객 사례", "minutes": 10, "desc": "다른 고객이 어떻게 쓰는지 이야기합니다. 고객이 있어야 낼 수 있습니다.", "match": 20, "partial": 8, "plain": 2, "needUsers": 30 },
+    "price": { "short": "단가를 낮춰 줍니다", "name": "가격 양보", "minutes": 10, "desc": "단가를 낮춰 주겠다고 합니다. 계약하면 그만큼 덜 받습니다.", "match": 22, "buyer": 8, "plain": 2, "discount": 0.08, "maxDiscount": 0.3 },
+    "promise": { "short": "없는 기능을 약속합니다", "name": "기능 약속", "minutes": 10, "desc": "아직 없는 기능을 만들어 주겠다고 약속합니다. 계약하려면 그 기능을 기한 안에 만들어야 합니다.", "match": 18, "max": 2 },
+    "companion": { "short": "함께 온 직원이 설명합니다", "name": "동행 발언", "minutes": 10, "desc": "함께 온 직원이 대신 설명합니다.", "match": 16, "plain": 3, "uses": 2, "skillK": 0.004 },
+    "close": { "short": "다음 단계를 요청합니다", "name": "마무리 요청", "minutes": 10, "desc": "다음 단계로 가자고 정중하게 요청합니다. 분위기가 무르익지 않았으면 역효과가 납니다." }
   },
   "_companionNote": "함께 갈 수 있는 부서와 그 직원이 풀 수 있는 걱정. 데려가면 그 시간 그 직원은 일을 못 함",
   "companionCovers": { "dev": ["integration", "security", "stability"], "sales": ["reference", "onboarding", "price", "fit"] },

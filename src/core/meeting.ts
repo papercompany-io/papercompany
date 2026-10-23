@@ -92,7 +92,7 @@ function build(s: GameState, o: Outing): Meeting {
   for (const role of rolesFor(s, stage)) {
     const c = meetContact(s, company, role, picked);
     picked.push(c.id);
-    attendees.push({ contactId: c.id, mood: startMood(c, stage), resolved: [], signal: 'listen' });
+    attendees.push({ contactId: c.id, mood: startMood(c, stage), resolved: [], signal: 'listen', bond0: c.bond });
   }
   const minutes = stageDef(stage).minutes;
   return {
@@ -222,6 +222,7 @@ export function promiseFor(s: GameState, m: Meeting, contactId: string): Feature
 export interface HandCard {
   id: CardId;
   name: string;
+  short: string; // 한 줄 설명(A-187)
   desc: string;
   minutes: number;
   target: boolean; // 대상(참석자)을 골라야 함
@@ -245,7 +246,7 @@ export function meetingHand(s: GameState): HandCard[] {
     else if (id === 'companion' && m.companionUses >= MT.cards.companion.uses) [ok, why] = [false, '이미 충분히 이야기했습니다'];
     if (ok && d.minutes > m.minutesLeft) [ok, why] = [false, '시간이 모자랍니다'];
     if (m.result) ok = false;
-    out.push({ id, name: d.name, desc: d.desc, minutes: d.minutes, target: id !== 'close', ok, why });
+    out.push({ id, name: d.name, short: d.short, desc: d.desc, minutes: d.minutes, target: id !== 'close', ok, why });
   }
   return out;
 }
@@ -481,6 +482,7 @@ function finishMeeting(s: GameState, why: 'close' | 'time'): null {
   const o = outings(s).find((x) => x.id === m.outingId);
   if (why === 'time' && !m.closed) say(m, m.attendees[0].contactId, pick(s, MT.lines.timeUp));
   m.closedEarly = m.closed && meetingScore(s, m) < MT.outcome.closeReady;
+  m.objection = null; // 끝난 뒤에는 이의 표시를 지움
   const r = meetingOutcome(s, m);
   if (m.closed) say(m, m.attendees[0].contactId, pick(s, m.closedEarly ? MT.lines.closeEarly : MT.lines.closeReady), m.closedEarly ? 'bad' : 'good');
   m.result = r;
@@ -565,4 +567,104 @@ export function meetingsDayEnd(s: GameState) {
     if (s.day < o.startDay || s.day >= o.startDay + o.days) continue;
     autoMeeting(s, o);
   }
+}
+
+// ── 화면 도우미(A-187): 숫자 없이 말·단계로만 ──
+// 몸짓 단계 0(시계 봄)~4(끄덕임). 보이는 몸짓 기준이라 지친 대표가 잘못 읽은 것도 그대로
+export function moodLevel(signal: string): number {
+  const i = MT.signals.findIndex((g) => g.id === signal);
+  return i < 0 ? 2 : MT.signals.length - 1 - i;
+}
+
+// 회의실 전체 분위기(보이는 몸짓의 가중 평균)
+export function roomMood(s: GameState, m: Meeting): { level: 0 | 1 | 2 | 3; text: string } {
+  let sum = 0;
+  let w = 0;
+  for (const a of m.attendees) {
+    const k = MT.roles[contact(s, a.contactId)?.role ?? 'user'].weight;
+    sum += moodLevel(a.signal) * k;
+    w += k;
+  }
+  const avg = w ? sum / w : 2;
+  if (avg >= 3.2) return { level: 3, text: '무르익었습니다' };
+  if (avg >= 2.4) return { level: 2, text: '좋아지고 있습니다' };
+  if (avg >= 1.6) return { level: 1, text: '반반입니다' };
+  return { level: 0, text: '무겁습니다' };
+}
+
+// 이 걱정에 쓸 만한 카드(규칙으로 정해진 것. 실제로 먹히는지는 만든 기능에 달림)
+export function cardsFor(concern: string): CardId[] {
+  const c = CONCERNS[concern];
+  if (!c) return [];
+  const out: CardId[] = [];
+  if (c.cats.length && !c.caseFits) out.push('demo');
+  if (c.caseFits) out.push('case');
+  if (concern === 'price') out.push('price');
+  if (Object.values(MT.companionCovers as Record<string, string[]>).some((l) => l.includes(concern))) out.push('companion');
+  if (c.cats.length) out.push('promise');
+  return out;
+}
+
+// 이 걱정을 풀어 줄, 아직 없는 기능이 있나(약속 카드 권유용)
+function promiseForConcern(s: GameState, m: Meeting, concern: string): boolean {
+  const cats = CONCERNS[concern]?.cats ?? [];
+  return availableFeatures(s).some((x) => cats.includes(x.cat) && featureLevel(s, x.id) === 0 && !m.promised.includes(x.id));
+}
+
+export interface MeetAdvice {
+  text: string;
+  target?: string; // 권하는 상대(연락처 id)
+  cards: CardId[]; // 권하는 카드
+  urgent?: boolean;
+}
+
+// 비서 한마디: 지금 무엇을 하면 좋을지(이의 → 모르는 걱정 → 남은 걱정 → 마무리)
+export function meetingAdvice(s: GameState): MeetAdvice | null {
+  const m = s.meeting;
+  if (!m || m.result) return null;
+  const who = (id: string) => {
+    const c = contact(s, id);
+    return c ? `${c.name} ${c.title}님` : '상대';
+  };
+  const ready = new Set(meetingHand(s).filter((h) => h.ok).map((h) => h.id));
+  // 실제로 낼 수 있고 먹힐 만한 카드만(데모·사례·동행은 만든 기능·고객·함께 온 직원 기준, 플레이어도 아는 정보)
+  const usable = (k: string) => cardsFor(k).filter((c) => ready.has(c) && (c === 'promise' ? promiseForConcern(s, m, k) : cardFits(s, m, c, k)));
+  if (m.objection) {
+    const k = m.objection.concern;
+    const cards = usable(k);
+    return {
+      text: `${who(m.objection.contactId)}이 "${concernName(k)}" 걱정을 꺼냈습니다. ${cards.length ? '바로 다음 카드로 답해야 분위기가 지켜집니다.' : '지금 낼 수 있는 카드로는 답하기 어렵습니다. 다른 사람의 걱정을 풀어 만회하세요.'}`,
+      target: m.objection.contactId,
+      cards,
+      urgent: true,
+    };
+  }
+  const people = m.attendees
+    .map((a) => ({ a, c: contact(s, a.contactId)! }))
+    .filter((x) => x.c)
+    .sort((x, y) => MT.roles[y.c.role].weight - MT.roles[x.c.role].weight);
+  const mood = roomMood(s, m);
+  if (m.minutesLeft <= 20) return { text: `시간이 얼마 남지 않았습니다. 분위기가 ${mood.text} — ${mood.level >= 2 ? '지금 마무리 요청을 해 보세요.' : '남은 걱정 하나를 더 풀지, 여기서 끝낼지 정하세요.'}`, cards: ['close'] };
+  const unknown = people.find((x) => x.c.concerns.some((k) => !x.c.known.includes(k)));
+  if (unknown) return { text: `${who(unknown.c.id)}이 무엇을 걱정하는지 아직 모릅니다. 먼저 물어보세요.`, target: unknown.c.id, cards: ['ask'] };
+  let stuck = false;
+  for (const x of people) {
+    for (const k of x.c.concerns.filter((c) => !x.a.resolved.includes(c))) {
+      const cards = usable(k);
+      if (cards.length) return { text: `${who(x.c.id)}의 "${concernName(k)}" 걱정이 남았습니다.`, target: x.c.id, cards };
+      stuck = true;
+    }
+  }
+  return {
+    text: stuck ? `남은 걱정은 지금 가진 카드로 풀기 어렵습니다. 분위기가 ${mood.text} — ${mood.level >= 2 ? '마무리 요청으로 정리해 보세요.' : '가격 양보 같은 카드로 분위기를 띄운 뒤 마무리하세요.'}` : `걱정을 다 풀었습니다. 분위기가 ${mood.text} — 마무리 요청을 해 보세요.`,
+    cards: ['close'],
+  };
+}
+
+// 친밀도 변화(결과 화면용 말)
+export function bondChange(s: GameState, a: MeetAttendee): string {
+  const c = contact(s, a.contactId);
+  if (!c || a.bond0 === undefined) return '';
+  const d = c.bond - a.bond0;
+  return d >= 4 ? '많이 가까워졌습니다' : d >= 1 ? '조금 가까워졌습니다' : d > -1 ? '그대로입니다' : '서먹해졌습니다';
 }

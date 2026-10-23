@@ -591,6 +591,7 @@ export interface MeetAttendee {
   mood: number; // 분위기 -100~100(숨김)
   resolved: string[]; // 이번 미팅에서 풀린 걱정
   signal: string; // 보이는 몸짓(meetings.json signals id)
+  bond0?: number; // 미팅을 시작할 때 친밀도(결과 화면의 "가까워졌습니다", A-187)
 }
 
 export interface MeetLine {
