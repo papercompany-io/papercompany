@@ -17,6 +17,13 @@ import { awayOuting } from '../../core/outings';
 import { play } from '../sound';
 import { PxIcon, bubbleIcon } from '../icons';
 import type { FloatFx } from '../Game';
+import { actionDef, ceoEnergy, ceoWork } from '../../core/ceo';
+import { hasMvp } from '../../core/product';
+import { productView } from '../apps/ProductApp';
+import { energyWord } from '../apps/ScheduleApp';
+
+// 대표 이름표의 "~ 중" 말(A-189). 없는 일은 행동 이름 그대로
+const CEO_DOING: Partial<Record<string, string>> = { contract: '외주 작업' };
 import './office.css';
 
 // 위 막대·왼쪽 메뉴·오른쪽 목표가 가리는 영역(카메라 가운데를 그만큼 옮김)
@@ -383,11 +390,20 @@ function PlaceBar({ s, mode, item, msg, onMode, onTurn, onDone }: { s: GameState
 function NameTag({ a, s, sc, pulse, onClick }: { a: Actor; s: GameState; sc: number; pulse: boolean; onClick: () => void }) {
   const style = { left: a.head[0] * sc, top: a.head[1] * sc };
   if (a.kind === 'ceo') {
+    // A-189: 직원 이름표처럼 지금 하는 일 + 컨디션 막대(숫자 없이 색·말). 누르면 CEO 일정
+    const out = awayOuting(s);
+    const work = ceoWork(s);
+    const doing = out ? `외출 중 · ${out.title}` : work === 'dev' && !hasMvp(s) ? `MVP 개발 중 · ${Math.floor(productView(s).mvpProgress * 100)}%` : `${CEO_DOING[work] ?? actionDef(work).name} 중`;
+    const energy = ceoEnergy(s);
+    const E = DATA.ceo.energy;
     return (
-      <div className={`nametag ceo ${pulse ? 'pulse' : ''}`} style={style} onClick={onClick} data-testid="ceo-tag">
+      <div className={`nametag ceo ${pulse ? 'pulse' : ''}`} style={style} onClick={onClick} data-testid="ceo-tag" title={`CEO 일정 열기 · 컨디션 ${energyWord(energy).word}`}>
         {pulse && <div className="tag-arrow">클릭!</div>}
         <div className="tag-name">나 · 대표</div>
-        <div className="tag-sub">{awayOuting(s) ? `외출 중 · ${awayOuting(s)!.title}` : 'CEO 일정'}</div>
+        <div className="tag-sub">{doing}</div>
+        <div className="tag-mood">
+          <i style={{ width: `${energy}%`, background: energy < E.burnoutAt ? '#d9453b' : energy < E.lowAt ? '#f0a020' : '#36b44a' }} />
+        </div>
       </div>
     );
   }

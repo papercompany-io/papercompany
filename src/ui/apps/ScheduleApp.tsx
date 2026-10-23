@@ -101,7 +101,7 @@ function buildersText(s: GameState, v: ReturnType<typeof productView>): string {
   return parts.length ? parts.join(' · ') : '아무도 만들지 않음';
 }
 
-function energyWord(e: number): { word: string; cls: string; hint: string } {
+export function energyWord(e: number): { word: string; cls: string; hint: string } {
   const E = DATA.ceo.energy;
   if (e >= 70) return { word: '좋음', cls: '', hint: '일이 잘 손에 붙습니다.' };
   if (e >= E.lowAt) return { word: '괜찮음', cls: '', hint: '아직은 버틸 만합니다.' };
