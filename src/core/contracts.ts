@@ -1,11 +1,13 @@
 // 외주 일감(A-79): 혼자 시작한 창업 초기에 남의 일을 해 주고 돈을 법니다. 대표 "외주" 칸과 개발팀 "외주 작업" 지시가 작업량을 넣습니다.
 // 제품(MVP)에 쓸 시간을 떼어 내는 대신 런웨이를 늘리는 선택입니다.
+// A-238: 외주를 동시에 여러 개(maxActive) 진행하고, 외주마다 사람·부서를 배치(staff·squadId). 배치된 사람은 끝날 때까지 그 외주만 함(assign.contractOf).
 // A-144: 외주 평판(trust) — 제때 끝내면 오르고, 늦거나 포기하면 깎임. 단계가 오르면 큰 일감이 섞이고 대금 단가가 오릅니다.
 import { book } from './finance';
+import { contractOf } from './assign';
 import { nextId } from './ids';
 import { notify } from './notify';
 import { pick, randInt, randRange } from './rng';
-import type { GameState } from './types';
+import type { Employee, GameState } from './types';
 import contractsData from '../data/contracts.json';
 
 const K = contractsData;
@@ -21,11 +23,14 @@ export interface Contract {
   deadline: number | null; // 받으면 정해짐
   offeredUntil: number;
   tier?: number; // A-144: 일감 단계(0~3). 예전 저장은 없음 = 0
+  staff?: string[]; // A-238: 배치한 직원 id
+  squadId?: string | null; // A-238: 배치한 부서
 }
 
 export interface ContractState {
   offers: Contract[];
-  active: Contract | null;
+  actives?: Contract[]; // A-238 진행 중인 외주들(마감 가까운 순이 아님, 받은 순)
+  active?: Contract | null; // 예전 저장(한 개만). 불러오면 actives로 옮김
   nextOfferDay: number;
   completed: number;
   trust?: number; // A-144: 외주 평판. 예전 저장은 없음 = 0
@@ -69,9 +74,60 @@ export function contractsOpen(s: GameState): boolean {
 }
 
 function ensure(s: GameState): ContractState {
-  const c = (s.contracts ??= { offers: [], active: null, nextOfferDay: s.day, completed: 0 });
+  const c = (s.contracts ??= { offers: [], actives: [], nextOfferDay: s.day, completed: 0 });
   c.trust ??= 0;
+  if (!c.actives) {
+    c.actives = c.active ? [c.active] : [];
+    delete c.active;
+  }
   return c;
+}
+
+const ST = K.staffing;
+
+// 진행 중인 외주들(A-238)
+export function activeContracts(s: GameState): Contract[] {
+  return s.contracts ? ensure(s).actives! : [];
+}
+
+// 마감이 가장 가까운 외주(대표 칸·배치 없는 "외주 작업"이 들어감)
+export function nearestContract(s: GameState): Contract | undefined {
+  return [...activeContracts(s)].sort((a, b) => (a.deadline ?? 0) - (b.deadline ?? 0))[0];
+}
+
+export function canStaff(e: Employee): boolean {
+  return (ST.staffDepts as string[]).includes(e.dept) && e.leaving === null;
+}
+
+// 이 외주에 배치된 사람(사람 배치가 부서 배치보다 먼저: 다른 외주에 따로 배치된 사람은 빠짐)
+export function contractWorkers(s: GameState, a: Contract): Employee[] {
+  return s.employees.filter((e) => canStaff(e) && staffedOn(s, e)?.id === a.id);
+}
+
+// 이 사람이 배치된 외주
+export function staffedOn(s: GameState, e: Employee): Contract | undefined {
+  const hit = contractOf(s, e);
+  return hit ? activeContracts(s).find((a) => a.id === hit.id) : undefined;
+}
+
+// 사람 배치 켜기·끄기. 한 사람은 외주 하나에만
+export function setContractStaff(s: GameState, ctId: string, empId: string, on: boolean): string | null {
+  const a = activeContracts(s).find((x) => x.id === ctId);
+  const e = s.employees.find((x) => x.id === empId);
+  if (!a || !e) return '외주나 직원을 찾을 수 없습니다.';
+  if (on && !canStaff(e)) return '개발·디자인 직원만 외주에 배치할 수 있습니다.';
+  for (const x of activeContracts(s)) x.staff = (x.staff ?? []).filter((id) => id !== empId);
+  if (on) a.staff!.push(empId);
+  return null;
+}
+
+// 부서 배치(null이면 뺌). 한 부서는 외주 하나에만
+export function setContractSquad(s: GameState, ctId: string, squadId: string | null): string | null {
+  const a = activeContracts(s).find((x) => x.id === ctId);
+  if (!a) return '외주를 찾을 수 없습니다.';
+  if (squadId) for (const x of activeContracts(s)) if (x.squadId === squadId) x.squadId = null;
+  a.squadId = squadId;
+  return null;
 }
 
 function makeOffer(s: GameState, tier: number): Contract {
@@ -96,9 +152,9 @@ export function contractsDay(s: GameState) {
     if (c.alert) notify(s, `새 외주 제안 ${c.offers.length}건이 들어왔습니다.`, 'info', 'contract'); // A-208
   }
   if (!contractsOpen(s)) c.offers = [];
-  const a = c.active;
-  if (a && a.deadline !== null && s.day > a.deadline + a.days) {
-    c.active = null;
+  for (const a of [...c.actives!]) {
+    if (a.deadline === null || s.day <= a.deadline + a.days) continue;
+    c.actives = c.actives!.filter((x) => x !== a);
     s.career.rep = Math.max(0, s.career.rep - 2);
     notify(s, `외주 "${a.title}"(${a.client})가 마감을 크게 넘겨 취소됐습니다. 대금을 받지 못했고 명성이 떨어졌습니다.`, 'bad', 'contract');
     changeTrust(s, 'cancel', a);
@@ -107,21 +163,23 @@ export function contractsDay(s: GameState) {
 
 export function acceptContract(s: GameState, id: string): string | null {
   const c = ensure(s);
-  if (c.active) return '이미 진행 중인 외주가 있습니다. 끝내고 받으세요.';
+  if (c.actives!.length >= ST.maxActive) return `외주는 동시에 ${ST.maxActive}개까지 진행할 수 있습니다. 하나를 끝내고 받으세요.`;
   const o = c.offers.find((x) => x.id === id);
   if (!o) return '없는 일감입니다.';
   o.deadline = s.day + o.days;
-  c.active = o;
+  o.staff = [];
+  o.squadId = null;
+  c.actives!.push(o);
   c.offers = c.offers.filter((x) => x.id !== id);
-  notify(s, `외주 "${o.title}"(${o.client})를 받았습니다. 사무실의 대표(나)를 눌러 "외주" 칸을 넣거나 개발팀에 "외주 작업"을 맡기세요.`, 'info', 'contract');
+  notify(s, `외주 "${o.title}"(${o.client})를 받았습니다. 외주 창에서 사람이나 부서를 배치하거나, 대표 주 업무를 "외주"로 바꾸세요.`, 'info', 'contract');
   return null;
 }
 
-export function dropContract(s: GameState): string | null {
+export function dropContract(s: GameState, id?: string): string | null {
   const c = ensure(s);
-  if (!c.active) return '진행 중인 외주가 없습니다.';
-  const a = c.active;
-  c.active = null;
+  const a = id ? c.actives!.find((x) => x.id === id) : c.actives![0];
+  if (!a) return '진행 중인 외주가 없습니다.';
+  c.actives = c.actives!.filter((x) => x !== a);
   s.career.rep = Math.max(0, s.career.rep - 1);
   notify(s, `외주 "${a.title}"를 포기했습니다. 명성이 조금 떨어졌습니다.`, 'bad', 'contract');
   changeTrust(s, 'drop', a);
@@ -134,23 +192,22 @@ export function setContractAlert(s: GameState, on: boolean) {
 }
 
 export function hasActiveContract(s: GameState): boolean {
-  return !!s.contracts?.active;
+  return activeContracts(s).length > 0;
 }
 
-// 작업량 넣기(대표 칸·개발팀). 다 하면 대금을 받습니다. 넣고 남은 작업량을 돌려줍니다.
-export function workOnContract(s: GameState, amount: number): number {
-  const a = s.contracts?.active;
+// 작업량 넣기. id가 없으면 마감이 가장 가까운 외주(대표 칸·배치 없는 "외주 작업"). 다 하면 대금을 받습니다. 넣고 남은 작업량을 돌려줍니다.
+export function workOnContract(s: GameState, amount: number, id?: string): number {
+  const a = id ? activeContracts(s).find((x) => x.id === id) : nearestContract(s);
   if (!a || amount <= 0) return amount;
   const put = Math.min(amount, a.work - a.done);
   a.done += put;
-  if (a.done >= a.work - 1e-6) finish(s);
+  if (a.done >= a.work - 1e-6) finish(s, a);
   return amount - put;
 }
 
-function finish(s: GameState) {
+function finish(s: GameState, a: Contract) {
   const c = ensure(s);
-  const a = c.active!;
-  c.active = null;
+  c.actives = c.actives!.filter((x) => x !== a);
   c.completed += 1;
   const late = a.deadline !== null && s.day > a.deadline;
   const pay = Math.round(a.pay * (late ? K.latePayMult : 1));
@@ -161,7 +218,7 @@ function finish(s: GameState) {
   } else {
     s.career.rep += 0.5;
     s.networkPoints += 2;
-    notify(s, `외주 "${a.title}" 완료! 대금 ${Math.round(pay / 1e4).toLocaleString('ko-KR')}만원이 들어왔습니다.`, 'good', 'contract');
+    notify(s, `외주 "${a.title}" 완료! 대금 ${Math.round(pay / 1e4).toLocaleString('ko-KR')}만원이 들어왔습니다.${a.staff?.length || a.squadId ? ' 배치했던 사람은 원래 부서 일로 돌아갑니다.' : ''}`, 'good', 'contract');
     s.events.push({ type: 'float', text: `+${Math.round(pay / 1e4).toLocaleString('ko-KR')}만`, kind: 'money', seat: 'ceo' });
   }
   // 마감까지 기간의 30% 이상 남기고 끝내면 "일찍"

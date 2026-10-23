@@ -5,14 +5,14 @@ import { deptMembers } from './employees';
 import { addMod, clearFlag, mod, setFlag } from './mods';
 import { trigger } from './events';
 import { news, notify, float } from './notify';
-import { post, teamChannelId } from './messenger';
+import { post } from './messenger';
 import { applyWork, appeal, fixBugs, fxTotals, hasMvp, insightDay } from './product';
 import { deptCoverage, launchedMarkets, totalUsers, type DayPush } from './market';
 import { nextId } from './ids';
 import { ceoSalesToday } from './ceo';
 import { workOnContract } from './contracts';
-import { allDeptOutputs, orderOutputs } from './staff';
-import { orderShare } from './assign';
+import { allDeptOutputs, orderOutputs, output } from './staff';
+import { contractOf, empOrderOf, orderShare } from './assign';
 import { pick, rand, randInt, randRange } from './rng';
 import type { DeptId, GameState, MarketId } from './types';
 
@@ -22,9 +22,9 @@ export function setOrder(s: GameState, d: DeptId, orderId: string): string | nul
   if (s.company.stage < o.stage) return `회사 단계 ${o.stage}부터 내릴 수 있는 지시입니다.`;
   if (s.company.orders[d] === orderId) return null;
   s.company.orders[d] = orderId;
-  post(s, teamChannelId(d), '나(대표)', `[지시] 앞으로 "${o.name}"에 집중해 주세요. ${o.desc}`, 'player');
+  post(s, 'all', '나(대표)', `[지시] 앞으로 "${o.name}"에 집중해 주세요. ${o.desc}`, 'player');
   const m = deptMembers(s, d)[0];
-  if (m) post(s, teamChannelId(d), m.name, '네, 알겠습니다. 바로 그 일로 옮기겠습니다.', 'npc');
+  if (m) post(s, 'all', m.name, '네, 알겠습니다. 바로 그 일로 옮기겠습니다.', 'npc');
   return null;
 }
 
@@ -58,18 +58,28 @@ function qualityWarn(s: GameState) {
     if (!has && q < th) {
       s.flags.push(key);
       const stab = orderShare(s, 'dev', 'dev_stabilize') > 0; // 부서 안의 팀·개인 업무로 맡겨도(A-226)
-      notify(s, `제품 품질이 ${Math.round(q)}점으로 떨어졌습니다. 버그는 이탈·장애를 부릅니다.${stab ? '' : ' 개발팀 채널에서 "안정화·버그 수정"을 맡기세요.'}`, th <= 40 ? 'urgent' : 'bad', 'messenger', teamChannelId('dev'));
+      notify(s, `제품 품질이 ${Math.round(q)}점으로 떨어졌습니다. 버그는 이탈·장애를 부릅니다.${stab ? '' : ' 업무 창이나 부서에서 개발자에게 "안정화·기술 부채 정리"를 맡기세요.'}`, th <= 40 ? 'urgent' : 'bad', 'product');
     } else if (has && q >= th + 10) s.flags = s.flags.filter((f) => f !== key);
   }
 }
 
-// 개발팀 "외주 작업" 지시의 하루 출력을 근무 칸마다 1/slotsPerDay씩 넣습니다(A-173). 외주가 없거나 끝나면 남는 몫은 제품 개발로.
+// "외주 작업"을 하는 사람의 하루 출력을 근무 칸마다 1/slotsPerDay씩 넣습니다(A-173). 외주가 없거나 끝나면 남는 몫은 제품 개발로.
+// A-238: 외주에 배치된 사람은 그 외주에, 배치 없이 "외주 작업"을 맡은 사람은 마감이 가장 가까운 외주에
 export function contractSlot(s: GameState) {
   const byOrder = orderOutputs(s);
-  const day = byOrder['dev_contract'] ?? 0;
-  if (day <= 0) return;
-  const per = day / DATA.time.slotsPerDay;
-  const left = workOnContract(s, per);
+  if ((byOrder['dev_contract'] ?? 0) <= 0) return;
+  const slots = DATA.time.slotsPerDay;
+  const byContract = new Map<string, number>();
+  let loose = 0;
+  for (const e of s.employees) {
+    if (empOrderOf(s, e) !== 'dev_contract') continue;
+    const amt = output(s, e) / slots;
+    const c = contractOf(s, e);
+    if (c) byContract.set(c.id, (byContract.get(c.id) ?? 0) + amt);
+    else loose += amt;
+  }
+  let left = workOnContract(s, loose);
+  for (const [id, amt] of byContract) left += workOnContract(s, amt, id);
   if (left > 0) applyWork(s, left, 'dev', deptMembers(s, 'design').length === 0, devBugMult(s), Math.min(2, (byOrder['ai_research'] ?? 0) * 0.08));
 }
 
@@ -89,8 +99,7 @@ export function ordersDay(s: GameState): DayPush & { outputs: Record<DeptId, num
     if (used < build * 0.5 && s.product.roadmap.length === 0) fixBugs(s, (build - used) * 0.5, 'stabilize');
   }
   // 개발팀 "외주 작업"은 근무 한 칸마다 들어갑니다(contractSlot, A-173). 하루 끝에는 따로 넣지 않습니다.
-  if (amt('dev_stabilize') > 0) fixBugs(s, amt('dev_stabilize'), 'stabilize');
-  if (amt('dev_debt') > 0) fixBugs(s, amt('dev_debt'), 'debt');
+  if (amt('dev_stabilize') > 0) fixBugs(s, amt('dev_stabilize'), 'stabilize'); // A-240: 버그 수정과 기술 부채 정리를 한 일로 합침
   qualityWarn(s);
   // 디자인
   const dBuild = amt('design_build');

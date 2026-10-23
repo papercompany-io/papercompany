@@ -7,9 +7,10 @@ import { DATA, dept, feature } from '../../core/data';
 import { slotParts, actionDef, approveMultiplier, ceoEnergy, ceoWork, efficiency, executiveBlock, setCeoMode, setCeoWork, workChoices } from '../../core/ceo';
 import { dateOf } from '../../core/calendar';
 import { openRound } from '../../core/funding';
-import { enterpriseThreshold, orderOf } from '../../core/orders';
 import { deptMembers } from '../../core/employees';
-import { deptOutput } from '../../core/staff';
+import { output } from '../../core/staff';
+import { contractWorkers, nearestContract, type Contract } from '../../core/contracts';
+import { contractOf, empOrderOf } from '../../core/assign';
 import { clockHour, inNight } from '../../core/night';
 import { fxTotals, hasMvp, itemNeed } from '../../core/product';
 import { productView } from './ProductApp';
@@ -128,7 +129,7 @@ export function ScheduleApp() {
   const inSpan = (day: number) => day >= start && day < start + SPAN;
   const todayIn = inSpan(s.day);
   const mvpDay = !hasMvp(s) && v.mvpEta !== null && isFinite(v.mvpEta) ? s.day + v.mvpEta : null;
-  const ct = s.contracts?.active ?? null;
+  const ct = nearestContract(s) ?? null; // 여러 외주면 마감이 가장 가까운 것(A-238)
   const picked = list.find((o) => o.id === sel && o.status !== 'offer' && o.status !== 'declined' && o.status !== 'expired');
   const trust = trustWord(s);
   const promises = openMilestones(s).sort((a, b) => (a.status === b.status ? (a.deadline ?? a.offeredDay + a.days) - (b.deadline ?? b.offeredDay + b.days) : a.status === 'offer' ? -1 : 1));
@@ -519,7 +520,8 @@ export function OutingOfferActions({ o, onErr }: { o: Outing; onErr: (e: string 
 
 // 외주 일감(A-79). A-132: 작업량 숫자 대신 "얼마나 했나 · 지금 속도면 언제 끝나나 · 누가 하고 있나"를 보여 줌
 // 왼쪽 알림 카드(A-144)도 같은 계산을 씁니다.
-export function contractPace(s: ReturnType<typeof useGame>) {
+// A-238: a = 볼 외주. 대표 외주 칸과 배치 없이 "외주 작업"을 맡은 사람은 마감이 가장 가까운 외주에만 들어감
+export function contractPace(s: ReturnType<typeof useGame>, a?: Contract) {
   const per = actionDef('contract').perSlot * efficiency(s, 'contract');
   let ceo = 0;
   let ceoLeft = 0; // 오늘 아직 안 지난 칸(퇴근 뒤면 0)
@@ -530,9 +532,12 @@ export function contractPace(s: ReturnType<typeof useGame>) {
         if (i >= s.slotsDone) ceoLeft += p.w * per;
       }
   const ceoFull = DATA.time.slotsPerDay * per; // 대표가 외주를 주 업무로 할 때
-  const devs = deptMembers(s, 'dev').length;
-  const team = orderOf(s, 'dev') === 'dev_contract' ? deptOutput(s, 'dev') : 0;
-  return { ceo, ceoLeft, ceoFull, team, devs, total: ceo + team };
+  const near = !a || a.id === nearestContract(s)?.id;
+  const staffed = a ? contractWorkers(s, a) : [];
+  const loose = near ? s.employees.filter((e) => empOrderOf(s, e) === 'dev_contract' && !contractOf(s, e)) : [];
+  const team = [...staffed, ...loose].reduce((t, e) => t + output(s, e), 0);
+  if (!near) (ceo = 0), (ceoLeft = 0);
+  return { ceo, ceoLeft, ceoFull, team, devs: staffed.length + loose.length, staffed, loose, total: ceo + team };
 }
 
 export const daysText = (d: number) => (d < 1 ? '오늘 안에' : `약 ${Math.ceil(d)}일`);
@@ -547,13 +552,13 @@ const workTimeText = (h: number) => {
 
 // 외주 마감까지 남은 근무 시간(A-155). 마감은 날짜(s.day) 단위라 마감일 근무까지 쓸 수 있고, 퇴근 뒤 밤에는 줄지 않습니다.
 // "늦음"은 마감까지 할 수 있는 양으로 봅니다: 대표·개발팀 모두 오늘 남은 칸 + 마감일까지 하루치씩(A-173)
-export function contractDue(s: ReturnType<typeof useGame>) {
-  const a = s.contracts?.active;
+export function contractDue(s: ReturnType<typeof useGame>, ct?: Contract) {
+  const a = ct ?? nearestContract(s);
   if (!a || a.deadline === null) return null;
   const dl = a.deadline - s.day;
   const today = inNight(s) ? 0 : Math.max(0, DATA.time.workEndHour - clockHour(s));
   const hours = Math.max(0, dl * WORK_HOURS + today);
-  const pace = contractPace(s);
+  const pace = contractPace(s, a);
   const slotsLeft = DATA.time.slotsPerDay - s.slotsDone; // 개발팀도 칸마다 들어가므로 오늘 남은 칸만큼(A-173)
   const capacity = pace.ceoLeft + pace.ceo * Math.max(0, dl) + pace.team * (Math.max(0, dl) + slotsLeft / DATA.time.slotsPerDay);
   const overdue = dl < 0;

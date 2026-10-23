@@ -3,6 +3,7 @@
 // 개인 업무가 없으면 비율은 0 또는 1이라 예전과 똑같이 동작합니다(봇·시뮬 그대로).
 // 다른 core 모듈에서 순환 없이 쓰도록 data·types만 가져옵니다.
 import { DATA, orderDef } from './data';
+import contractsData from '../data/contracts.json';
 import type { DeptId, Employee, GameState } from './types';
 
 export function teamOrder(s: GameState, d: DeptId): string {
@@ -11,15 +12,17 @@ export function teamOrder(s: GameState, d: DeptId): string {
 
 // 이 직원이 지금 하는 일: 개인 업무가 이 부서 일이고 지금 단계에서 고를 수 있으면 그것, 아니면 팀 일
 export function empOrderOf(s: GameState, e: Employee): string {
+  if (contractOf(s, e)) return 'dev_contract'; // 외주에 배치된 사람은 끝날 때까지 외주만(A-238)
   const o = e.order ? orderDef(e.order) : undefined;
   if (o && o.dept === e.dept && s.company.stage >= o.stage) return o.id;
   return groupOrder(s, e);
 }
 
-// 이 직원이 개인 업무 없이 따르는 일(A-226): 부서 안의 팀에 맡은 일이 있으면 그것, 없으면 부서 맡은 일
+// 이 직원이 개인 업무 없이 따르는 일(A-237): 소속 부서가 이 직무에 맡긴 일이 있으면 그것, 없으면 직무 기본 일
 export function groupOrder(s: GameState, e: Employee): string {
   const q = e.squadId ? s.company.squads?.find((x) => x.id === e.squadId) : undefined;
-  const o = q && q.dept === e.dept && q.order ? orderDef(q.order) : undefined;
+  const id = q?.orders?.[e.dept];
+  const o = id ? orderDef(id) : undefined;
   if (o && o.dept === e.dept && s.company.stage >= o.stage) return o.id;
   return teamOrder(s, e.dept);
 }
@@ -40,4 +43,12 @@ export function orderCount(s: GameState, d: DeptId, orderId: string): number {
 export function personalAssignees(s: GameState, d: DeptId): Employee[] {
   const t = teamOrder(s, d);
   return s.employees.filter((e) => e.dept === d && empOrderOf(s, e) !== t);
+}
+
+// 이 사람이 배치된 진행 중 외주(A-238). contracts.ts의 staffedOn과 같은 규칙(순환 import를 피해 여기 둠):
+// 개발·디자인 직무, 퇴사 예정 아님, 사람 배치가 먼저, 없으면 소속 부서가 배치된 외주
+export function contractOf(s: GameState, e: Employee): { id: string; title: string } | undefined {
+  const list = s.contracts?.actives ?? (s.contracts?.active ? [s.contracts.active] : []);
+  if (!list.length || e.leaving !== null || !(contractsData.staffing.staffDepts as string[]).includes(e.dept)) return undefined;
+  return list.find((a) => a.staff?.includes(e.id)) ?? (e.squadId ? list.find((a) => a.squadId === e.squadId) : undefined);
 }

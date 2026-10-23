@@ -7,6 +7,7 @@ import { act } from './store';
 import { play } from './sound';
 import { PxIcon, type PxId } from './icons';
 import { COLORS as WORK_COLORS, contractDue, contractPace, daysText } from './apps/ScheduleApp';
+import { activeContracts, type Contract } from '../core/contracts';
 import { forecast, KIND_NAME, milestones } from '../core/milestones';
 import { RISK_TEXT } from './apps/MilestoneCard';
 import './feedback.css';
@@ -212,13 +213,23 @@ const isUrgent = (it: StackItem) => it.kind === 'urgent' || !!it.decision?.urgen
 
 // 외주 진행 카드(A-144): 진행 중인 외주는 마감이 걸린 중요한 상태라 알림 카드 맨 위에 늘 붙여 둡니다(✕ 없음, 개수 제한에 안 셈).
 // A-235: ✕로 이 일감 카드만 치움(다음 외주를 받으면 다시 뜸)
-function ContractStackCard({ s, onOpen, hidden, onHide }: { s: GameState; onOpen: (app: string, arg?: string) => void; hidden: string[]; onHide: (key: string) => void }) {
-  const a = s.contracts?.active;
-  if (!a || a.deadline === null || hidden.includes(`c-${a.id}`)) return null;
+// A-238: 외주가 여러 개면 카드도 외주마다 하나
+function ContractStackCards({ s, onOpen, hidden, onHide }: { s: GameState; onOpen: (app: string, arg?: string) => void; hidden: string[]; onHide: (key: string) => void }) {
+  return (
+    <>
+      {activeContracts(s).map((a) => (
+        <ContractStackCard key={a.id} a={a} s={s} onOpen={onOpen} hidden={hidden} onHide={onHide} />
+      ))}
+    </>
+  );
+}
+
+function ContractStackCard({ a, s, onOpen, hidden, onHide }: { a: Contract; s: GameState; onOpen: (app: string, arg?: string) => void; hidden: string[]; onHide: (key: string) => void }) {
+  if (a.deadline === null || hidden.includes(`c-${a.id}`)) return null;
   const pct = Math.min(100, (a.done / a.work) * 100);
-  const pace = contractPace(s);
+  const pace = contractPace(s, a);
   const eta = pace.total > 0 ? Math.max(0, a.work - a.done) / pace.total : null;
-  const due = contractDue(s)!;
+  const due = contractDue(s, a)!;
   const late = due.late;
   return (
     <div role="button" className={`ss-card contract ${late ? 'late' : ''}`} data-testid="stack-contract" onClick={() => onOpen('contract')}>
@@ -236,7 +247,7 @@ function ContractStackCard({ s, onOpen, hidden, onHide }: { s: GameState; onOpen
           <div style={{ width: `${pct}%`, background: WORK_COLORS.contract }} />
         </div>
       </div>
-      <span className="ss-sub">{eta === null ? '아무도 안 하는 중 · 대표 주 업무나 개발팀 지시를 바꾸세요' : `${a.client} · 끝나는 때 ${daysText(eta)}${late ? ' · 마감보다 늦음' : ''}`}</span>
+      <span className="ss-sub">{eta === null ? '아무도 안 하는 중 · 외주 창에서 사람을 배치하세요' : `${a.client} · 끝나는 때 ${daysText(eta)}${late ? ' · 마감보다 늦음' : ''}`}</span>
     </div>
   );
 }
@@ -315,7 +326,7 @@ export function SideStack({ s, onOpen }: { s: GameState; onOpen: (app: string, a
     return out.filter((x) => !hidden.includes(x.key)).sort((a, b) => +isUrgent(b) - +isUrgent(a));
   })();
   const hide = (key: string) => setHidden((h) => [...h, key]);
-  const contract = !!s.contracts?.active && !hidden.includes(`c-${s.contracts.active.id}`);
+  const contract = activeContracts(s).some((a) => !hidden.includes(`c-${a.id}`));
   const promise = milestones(s).some((m) => m.status === 'active' && !hidden.includes(`p-${m.id}`));
   if (!items.length && !contract && !promise) return null;
   const show = items.slice(0, STACK_MAX);
@@ -358,7 +369,7 @@ export function SideStack({ s, onOpen }: { s: GameState; onOpen: (app: string, a
   return (
     <div className="side-stack" data-testid="side-stack" onPointerDown={(e) => e.stopPropagation()}>
       {show.filter(isUrgent).map(card)}
-      <ContractStackCard s={s} onOpen={onOpen} hidden={hidden} onHide={hide} />
+      <ContractStackCards s={s} onOpen={onOpen} hidden={hidden} onHide={hide} />
       <PromiseStackCard s={s} onOpen={onOpen} hidden={hidden} onHide={hide} />
       {show.filter((it) => !isUrgent(it)).map(card)}
       {items.length > STACK_MAX && <div className="ss-more">외 {items.length - STACK_MAX}개 · 메신저에서 확인</div>}

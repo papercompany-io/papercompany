@@ -3,7 +3,7 @@
 // 회사 단계가 오르면 새 앱이 열리고(NEW 표시), 메뉴 버튼에 알림 배지(DT-04)가 붙습니다.
 import { useLayoutEffect, useRef, useState } from 'react';
 import { unreadTotal } from '../core/messenger';
-import { contractsOpen } from '../core/contracts';
+import { contractsOpen, hasActiveContract } from '../core/contracts';
 import { useGame } from './store';
 import { getSettings, useSettings } from './meta';
 import { ScheduleApp } from './apps/ScheduleApp';
@@ -62,7 +62,7 @@ export function appRoute(app: AppId, arg?: string): [AppId, string | undefined] 
 export function appOpen(s: GameState, id: AppId): boolean {
   const a = APPS.find((x) => x.id === id)!;
   if (a.publicOnly) return !!s.public;
-  if (id === 'contract') return !!s.contracts?.active || contractsOpen(s);
+  if (id === 'contract') return hasActiveContract(s) || contractsOpen(s);
   return s.company.stage >= a.stage;
 }
 

@@ -1,5 +1,7 @@
 // 다음에 할 일 안내(주 타깃: 일반인·타이쿤 팬). 상태를 보고 가장 급한 한 줄을 고릅니다.
 import { ceoWork } from '../core/ceo';
+import { activeContracts, hasActiveContract } from '../core/contracts';
+import { contractPace } from './apps/ScheduleApp';
 import { todayOuting } from '../core/outings';
 import { paydayForecast } from '../core/forecast';
 import { runwayMonths } from '../core/finance';
@@ -39,8 +41,9 @@ export function nextHint(s: GameState, desktopOpenedOnce: boolean): string {
   if (!hasMvp(s)) {
     if (s.product.roadmap.length === 0) return '제품 메뉴의 만드는 순서가 비었습니다. 핵심 기능을 넣으세요. 핵심 기능을 모두 만들면 MVP가 출시됩니다.';
     if (ceoWork(s) !== 'dev' && !todayOuting(s) && !s.employees.some((e) => e.dept === 'dev')) return '개발할 사람이 없습니다. 사무실의 대표(나)를 눌러 주 업무를 "개발"로 바꾸거나 개발자를 뽑으세요.';
-    if (s.contracts?.active && ceoWork(s) !== 'contract' && s.company.orders.dev !== 'dev_contract') return `받은 외주 "${s.contracts.active.title}"가 멈춰 있습니다. 사무실의 대표(나)를 눌러 주 업무를 "외주"로 바꾸거나 개발팀에 맡기세요.`;
-    if (!s.contracts?.active && s.contracts?.offers.length && s.cash < 30000000) return '돈이 빠듯합니다. "외주" 창에서 일감을 받고 주 업무를 "외주"로 바꾸면 MVP를 만드는 동안 대금으로 버틸 수 있습니다.';
+    const stuck = activeContracts(s).find((a) => contractPace(s, a).total <= 0); // A-238: 아무도 안 하는 외주
+    if (stuck) return `받은 외주 "${stuck.title}"가 멈춰 있습니다. 외주 창에서 사람이나 부서를 배치하거나, 대표 주 업무를 "외주"로 바꾸세요.`;
+    if (!hasActiveContract(s) && s.contracts?.offers.length && s.cash < 30000000) return '돈이 빠듯합니다. "외주" 창에서 일감을 받고 주 업무를 "외주"로 바꾸면 MVP를 만드는 동안 대금으로 버틸 수 있습니다.';
     return 'MVP를 만드는 중입니다. 제품 메뉴에서 출시까지 남은 날을 확인하세요. 그동안 투자 유치(엔젤·SAFE)나 채용을 준비할 수 있습니다.';
   }
   // A-111: 출시했어도 결제 기능이 없으면 무료로만 씁니다
