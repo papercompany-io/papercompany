@@ -1,5 +1,5 @@
 {
-  "_note": "튜토리얼(A-242). intro = 게임 시작 때 한 번 보는 짧은 화면 소개(시간 멈춤, 화면을 어둡게 덮고 한 곳씩 짚음). guides = 기능을 쓸 때가 되면 그 버튼에 하이라이트가 붙는 상황 안내(게임은 멈추지 않음). 형식은 docs/CONTENT_SCHEMA.md '튜토리얼'",
+  "_note": "튜토리얼(A-244). intro = 게임 시작 때 한 번 보는 짧은 화면 소개(시간 멈춤, 화면을 어둡게 덮고 한 곳씩 짚음). guides = 기능을 쓸 때가 되면 그 버튼에 하이라이트가 붙는 상황 안내(게임은 멈추지 않음). 형식은 docs/CONTENT_SCHEMA.md '튜토리얼'",
   "intro": [
     { "target": null, "title": "회사를 세웠습니다", "text": "화면이 어떻게 생겼는지 짧게 짚어 드리겠습니다. 안내하는 동안 시간은 멈춰 있습니다. 기능은 쓸 때가 되면 그때그때 알려 드립니다." },
     { "target": "[data-testid='hud'] .hud-main", "title": "회사 자금", "text": "자금과 런웨이(지금 쓰는 속도로 버틸 수 있는 개월 수), 기업가치, 고객 수입니다. 자금이 바닥나면 회사가 문을 닫습니다." },
@@ -10,7 +10,7 @@
   ],
   "guides": [
     { "id": "ceo", "when": ["!mvp"], "targets": ["[data-testid='window-schedule'] [data-testid='work-dev']", "[data-testid='ceo-tag']"], "title": "대표의 하루", "text": "대표 이름표를 누르면 CEO 일정이 열립니다. 대표가 날마다 맡을 주 업무(개발·영업·외주)를 고르고, 개발 사이클과 약속을 봅니다." },
-    { "id": "roadmap", "when": ["!mvp"], "targets": ["[data-testid='window-product'] [data-testid='product-roadmap']", "[data-testid='window-product'] [data-testid='tab-features']", "[data-testid='app-product']"], "title": "업무: 만드는 순서", "text": "업무 창 기능 탭에 만들 기능이 차례로 쌓여 있습니다. 핵심 기능을 모두 만들면 MVP가 출시되고 고객이 들어오기 시작합니다." },
+    { "id": "roadmap", "when": ["!mvp"], "targets": ["[data-testid='window-product'] [data-testid='product-roadmap']", "[data-testid='window-product'] [data-testid='tab-features']", "[data-testid='app-product']"], "title": "업무: MVP까지", "text": "업무 창에서 MVP 출시까지 남은 날과 지금 만드는 기능을 봅니다. 핵심 기능을 모두 만들면 MVP가 출시되고 고객이 들어오기 시작합니다. 기능 탭에서 만드는 순서를 바꿉니다." },
     { "id": "messenger", "when": ["decisions"], "targets": ["[data-testid='window-messenger'] [data-testid='msg-list']", "[data-testid='app-messenger']"], "title": "메신저", "text": "직원과 투자사가 결정을 물어 왔습니다. 기한 안에 답하지 않으면 기본 선택이 적용됩니다. 팀 채널에서는 일을 맡기고, 개인 대화로 직원과 이야기합니다." },
     { "id": "contract", "when": ["contractsOpen", "!mvp"], "done": ["contractActive"], "targets": ["[data-testid^='contract-take-']", "[data-testid='app-contract']"], "title": "외주", "text": "다른 회사의 일감을 받아 대금으로 버틸 수 있습니다. 대신 외주를 하는 동안 대표나 직원의 시간이 MVP 대신 외주에 들어갑니다." },
     { "id": "hire", "when": ["staff<1", "days>=3"], "done": ["staff>=1"], "targets": ["[data-testid='post-create']", "[data-testid='window-employees'] [data-testid='tab-hire']", "[data-testid='app-employees']"], "title": "채용", "text": "직원 관리 창 채용 탭에서 공고를 올리면 지원자가 찾아옵니다. 직원은 일을 나눠 맡지만 매달 월급이 나갑니다." },

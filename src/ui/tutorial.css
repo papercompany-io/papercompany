@@ -1,4 +1,4 @@
-/* 화면(A-242): 게임 시작 튜토리얼 — 화면을 어둡게 덮고 짚을 곳만 밝게 뚫은 하이라이트 + 흰 말풍선(.hint와 같은 톤) */
+/* 화면(A-244): 게임 시작 튜토리얼 — 화면을 어둡게 덮고 짚을 곳만 밝게 뚫은 하이라이트 + 흰 말풍선(.hint와 같은 톤) */
 .tut { position: fixed; inset: 0; z-index: 75; }
 .tut-dim { position: absolute; inset: 0; background: rgba(12, 16, 32, 0.55); }
 .tut-spot {
@@ -28,7 +28,7 @@
 .tut-dots i.on { background: var(--accent); width: 14px; }
 @media (prefers-reduced-motion: reduce) { .tut-spot, .tut-bubble { animation: none; transition: none; } }
 
-/* 상황 안내(A-242): 화면을 덮지 않고 짚을 곳에 빛나는 테두리 + 작은 말풍선. 게임은 그대로 흐름 */
+/* 상황 안내(A-244): 화면을 덮지 않고 짚을 곳에 빛나는 테두리 + 작은 말풍선. 게임은 그대로 흐름 */
 .gd { position: fixed; inset: 0; z-index: 48; pointer-events: none; }
 .gd-ring {
   position: absolute; border-radius: var(--r-md); outline: 3px solid var(--chrome-active); outline-offset: 0;

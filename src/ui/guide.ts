@@ -1,4 +1,4 @@
-// 상황 안내(A-242): tutorial.json guides의 when·done 조건을 지금 게임 상태로 풉니다. 새 상태 없이 있는 데이터에서만 계산.
+// 상황 안내(A-244): tutorial.json guides의 when·done 조건을 지금 게임 상태로 풉니다. 새 상태 없이 있는 데이터에서만 계산.
 // 조건 글자: 이름 하나("mvp", 앞에 !면 반대) 또는 지표 비교("staff>=1", "days>=3"). 지표는 progress.ts metric + 아래 NUMS
 import { hasMvp, canCharge } from '../core/product';
 import { activeRound, openRound } from '../core/funding';

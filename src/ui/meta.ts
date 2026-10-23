@@ -47,8 +47,8 @@ export interface Settings {
   autoSkipNight: AutoSkip; // 퇴근 뒤 자동 빨리 감기(A-149, A-159)
   autoSkipLast: Exclude<AutoSkip, 'off'>; // 위 막대 버튼으로 다시 켤 때 쓸 마지막 방식(A-159)
   uiScale: number; // 화면 크기(A-241): 화면 전체 확대 배율
-  tutorialDone: boolean; // 게임 시작 튜토리얼을 끝내거나 건너뜀(A-242)
-  guides: boolean; // 기능 상황 안내 보이기(A-242)
+  tutorialDone: boolean; // 게임 시작 튜토리얼을 끝내거나 건너뜀(A-244)
+  guides: boolean; // 기능 상황 안내 보이기(A-244)
   guidesSeen: string[]; // 본 상황 안내 id(tutorial.json guides)
 }
 

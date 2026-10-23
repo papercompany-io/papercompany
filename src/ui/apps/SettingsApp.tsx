@@ -136,8 +136,11 @@ export function SettingsApp() {
             켜기 / 끄기
           </button>
         </Row>
-        {/* A-242: 게임 시작 튜토리얼 다시 보기 */}
-        <Row title="튜토리얼" sub="화면 곳곳을 차례로 짚어 설명합니다.">
+        {/* A-244: 게임 시작 튜토리얼 다시 보기 */}
+        <Row title="기능 안내 보이기" sub="기능을 쓸 때가 되면 그 버튼을 빛나게 짚고 짧게 설명합니다.">
+          <Switch label="기능 안내 보이기" on={st.guides} onChange={(v) => setSettings({ guides: v })} />
+        </Row>
+        <Row title="튜토리얼" sub="화면 소개와 기능 안내를 처음부터 다시 봅니다.">
           <button className="btn small ghost" data-testid="tutorial-replay" onClick={replayTutorial}>
             다시 보기
           </button>

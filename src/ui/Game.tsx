@@ -85,7 +85,7 @@ export function Game({ continued, notice, clearNotice, onEnded }: Props) {
     });
   const closeApp = (app: AppId) => setWins((ws) => ws.filter((w) => w.app !== app));
   const [openedOnce, setOpenedOnce] = useState(continued);
-  // 게임 시작 튜토리얼(A-242): 처음 들어올 때 자동으로, 설정 창 "다시 보기"로도 (열린 창은 닫고 시작)
+  // 게임 시작 튜토리얼(A-244): 처음 들어올 때 자동으로, 설정 창 "다시 보기"로도 (열린 창은 닫고 시작)
   const [tour, setTour] = useState(() => !!getGame() && shouldStartTutorial(getGame()!, continued, getSettings().tutorialDone));
   useEffect(() => {
     const start = () => {

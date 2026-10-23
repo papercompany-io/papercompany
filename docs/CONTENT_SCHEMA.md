@@ -380,3 +380,13 @@ Choice:
 - `companionCovers`: 함께 갈 수 있는 부서 → 풀 수 있는 걱정
 - `objection`, `signals`(분위기 문턱 → 몸짓), `tired`, `outcome`(결과 문턱·마무리 요청), `reward`(파이프라인·계약·약속), `bond`(친밀도), `auto`(알아서 진행·위임), `inviteBond`/`inviteWeight`, `followLead`, `lines`(대사)
 - 상태: `GameState.contacts`(연락처, 회사가 바뀌어도 남음), `GameState.meeting`(진행 중인 미팅, 있으면 시계가 멈춤), `Outing.stage/result/promised/discount/companion`
+
+## 튜토리얼 `src/data/tutorial.json` (A-244)
+
+- `intro[]`: 새 회사를 처음 열 때 보는 화면 소개. `target`(짚을 곳 CSS 선택자, `null`이면 가운데 말풍선만), `title`, `text`
+- `guides[]`: 기능 상황 안내. 위에서부터 차례로, 아직 안 본 것 중 조건이 맞는 하나만 보임
+  - `id`: 설정 `guidesSeen`에 남는 이름(바꾸면 본 기록이 사라짐)
+  - `when`: 모두 맞아야 보임. `done`: 모두 맞으면 안내 없이 본 것으로(이미 해낸 일)
+  - 조건 글자: 이름(`mvp` `charge` `round` `roundNoLetters` `roundNoLead` `roundOffer` `applicants` `decisions` `contractsOpen` `contractActive` `milestoneOffer` `night` `officeFull` `runwayLow` `adSales` `public`, 앞에 `!`면 반대) 또는 지표 비교(`staff>=1`처럼 `>= <= > < =`). 지표는 업적과 같은 이름 + `days`(창업하고 지난 날) `months`(마감한 달 수) `missions`(이룬 목표 수). 이름·지표는 `src/ui/guide.ts`
+  - `targets`: 짚을 곳 CSS 선택자. 앞일수록 정확한 자리(창 안 버튼), 마지막은 늘 보이는 곳(왼쪽 메뉴 버튼 `[data-testid='app-…']`). 화면에 보이는 첫 자리를 짚고, 첫 자리를 누르면 본 것으로
+  - 문구에 효과 수치·시장 크기·경쟁사 정보·비용 금액을 넣지 않음(SCREEN_GUIDE 3절)

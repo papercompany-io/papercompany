@@ -18,7 +18,7 @@ export function setGame(s: GameState | null) {
   emit();
 }
 
-// 채용 협상 창(A-118)·튜토리얼(A-242)이 열려 있는 동안 게임 시간을 멈추는 화면 쪽 표시(저장되지 않음)
+// 채용 협상 창(A-118)·튜토리얼(A-244)이 열려 있는 동안 게임 시간을 멈추는 화면 쪽 표시(저장되지 않음)
 export const timeHold = { nego: false, tutorial: false };
 
 export function getGame(): GameState | null {
