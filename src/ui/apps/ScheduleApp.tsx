@@ -29,7 +29,7 @@ export const COLORS: Record<ActionId, string> = { dev: '#4f8df5', contract: '#2b
 // 주 업무 설명(하루 내내 했을 때)
 const WORK_DESC: Partial<Record<ActionId, string>> = {
   dev: '로드맵 기능을 직접 만듭니다.',
-  contract: '받은 외주 일감을 합니다(없으면 제품 개발).',
+  contract: '받은 외주를 진행합니다(없으면 제품 개발).',
   sales: '직접 고객을 찾아 첫 고객을 모읍니다. 접대비가 듭니다.',
   enterprise: '대기업 계약을 따러 다닙니다. 접대비가 큽니다.',
   approve: '쌓인 결재를 처리해 전 직원 출력이 떨어지지 않게 합니다.',
@@ -97,7 +97,7 @@ function cycleBars(s: GameState, v: ReturnType<typeof productView>): CycleBar[] 
 function buildersText(s: GameState, v: ReturnType<typeof productView>): string {
   const devs = deptMembers(s, 'dev').length;
   const parts = [v.rate.ceo > 0 ? '대표' : null, v.rate.team > 0 ? `개발자 ${devs}명` : null, v.rate.design > 0 ? `디자이너 ${deptMembers(s, 'design').length}명` : null].filter(Boolean);
-  return parts.length ? parts.join(' · ') : '아무도 만들지 않음';
+  return parts.length ? parts.join(' · ') : '개발 인력 없음';
 }
 
 export function energyWord(e: number): { word: string; cls: string; hint: string } {
@@ -158,7 +158,7 @@ export function ScheduleApp() {
 
         <div>
           <div className="hf-label">컨디션</div>
-          <div className="sc-energy" data-testid="ceo-energy" title="외출·야근·자금 압박에 닳고, 하루마다 조금씩 회복합니다.">
+          <div className="sc-energy" data-testid="ceo-energy" title="외출·야근·자금 압박으로 줄고, 매일 조금씩 회복합니다.">
             <div className={`meter ${energy.cls}`}>
               <div style={{ width: `${ceoEnergy(s)}%` }} />
             </div>
@@ -168,7 +168,7 @@ export function ScheduleApp() {
         </div>
 
         <div>
-          <div className="hf-label">주 업무 · 약속이 없는 시간에 하는 일</div>
+          <div className="hf-label">주 업무 · 약속 없는 시간</div>
           <div className="sc-work">
             {workChoices(s).map((a) => {
               const blocked = a === 'sales' && !hasMvp(s) ? 'MVP 전에는 팔 제품이 없습니다.' : null;
@@ -207,7 +207,7 @@ export function ScheduleApp() {
         </div>
 
         <div>
-          <div className="hf-label">대표 활동으로 쌓인 것</div>
+          <div className="hf-label">대표 활동 성과</div>
           {standingWords(s).map((w) => (
             <div key={w.label} className="fb-row">
               <span>{w.label}</span>
@@ -217,18 +217,18 @@ export function ScheduleApp() {
           {exec && (
             <div className="fb-row">
               <span>결재</span>
-              <b className={approveMultiplier(s) < 1 ? 'fin-bad' : 'fin-good'}>{approveMultiplier(s) < 1 ? '밀려서 일이 늦어지고 있습니다' : '제때 처리하고 있습니다'}</b>
+              <b className={approveMultiplier(s) < 1 ? 'fin-bad' : 'fin-good'}>{approveMultiplier(s) < 1 ? '밀림 · 업무 지연 중' : '제때 처리 중'}</b>
             </div>
           )}
         </div>
         <div>
           <div className="hf-label">약속</div>
-          <div className="fb-row" data-testid="ms-trust" title="바깥과 한 약속을 지켜 온 기록입니다. 투자 결정과 고객사 계약 규모에 들어갑니다. 오래되면 잊힙니다.">
+          <div className="fb-row" data-testid="ms-trust" title="외부와 한 약속을 지킨 기록입니다. 투자 결정과 고객사 계약 규모에 반영됩니다. 오래되면 잊힙니다.">
             <span>약속 신뢰</span>
             <b className={trust.tone === 'good' ? 'fin-good' : trust.tone === 'low' ? 'fin-bad' : ''}>{trust.word}</b>
           </div>
           <div className="fb-row">
-            <span>이 회사에서</span>
+            <span>이 회사 기록</span>
             <b>
               지킴 {s.milestones?.kept ?? 0} · 못 지킴 {s.milestones?.broken ?? 0}
             </b>
@@ -240,7 +240,7 @@ export function ScheduleApp() {
       {/* 오른쪽: 개발 사이클 타임라인(만드는 순서·출시·외주 마감·대표 외출) + 고른 일정 + 답할 초대 */}
       <div className="post-list">
         <div className="section-title">약속 {promises.length}</div>
-        {promises.length === 0 && <div className="empty-note">진행 중인 약속이 없습니다. 고객사·행사·투자사가 날짜를 제안하면 여기에 옵니다. 분기 첫날에는 분기 목표를 정합니다.</div>}
+        {promises.length === 0 && <div className="empty-note">진행 중인 약속이 없습니다. 고객사·행사·투자사가 날짜를 제안하면 여기에 표시됩니다. 분기 첫날에는 분기 목표를 정합니다.</div>}
         <div className="ms-list">
           {promises.map((m) => (
             <MilestoneCard key={m.id} m={m} />
@@ -260,11 +260,11 @@ export function ScheduleApp() {
           <b>
             개발 사이클 · {md(start)} ~ {md(start + SPAN - 1)}
           </b>
-          {openRound(s) && <span className="chip amber">투자 라운드 중 · 투자 미팅 초대가 자주 옴</span>}
+          {openRound(s) && <span className="chip amber">투자 라운드 중 · 투자 미팅 초대 많음</span>}
           <span className="grow" />
           <div className="seg">
             <button className={page === -1 ? 'on' : ''} data-testid="cycle-prev" onClick={() => setPage(-1)}>
-              앞 4주
+              이전 4주
             </button>
             <button className={page === 0 ? 'on' : ''} data-testid="cycle-now" onClick={() => setPage(0)}>
               지금
@@ -295,7 +295,7 @@ export function ScheduleApp() {
               {s.product.shipped
                 .filter((x) => inSpan(x.day))
                 .map((x, i) => (
-                  <span key={`${x.id}-${x.level}-${i}`} className={`cy-ship ${x.result}`} style={{ left: pos(x.day) }} title={`${md(x.day)} ${feature(x.id).name} 출시${x.result === 'full' ? '' : x.result === 'partial' ? ' · 일부만 잘 됨' : ' · 실패'}`} />
+                  <span key={`${x.id}-${x.level}-${i}`} className={`cy-ship ${x.result}`} style={{ left: pos(x.day) }} title={`${md(x.day)} ${feature(x.id).name} 출시${x.result === 'full' ? '' : x.result === 'partial' ? ' · 부분 성공' : ' · 실패'}`} />
                 ))}
               {mvpDay !== null && inSpan(mvpDay) && (
                 <span className="cy-flag" style={{ left: pos(mvpDay) }} title={`${md(mvpDay)} MVP 출시 예정`}>
@@ -358,9 +358,9 @@ export function ScheduleApp() {
                     <span
                       className={`cy-bar ${b.now ? 'now' : ''} ${b.to === null ? 'stall' : ''}`}
                       style={{ left: pos(Math.max(start, b.from)), width: `calc(${pos(b.to === null ? start + SPAN : Math.min(start + SPAN, b.to + 1))} - ${pos(Math.max(start, b.from))})`, ['--p' as string]: `${b.progress * 100}%` }}
-                      title={b.to === null ? '만드는 사람이 없어 끝나지 않습니다' : `${md(b.from)} ~ ${md(b.to)}`}
+                      title={b.to === null ? '개발 인력이 없어 끝나지 않습니다' : `${md(b.from)} ~ ${md(b.to)}`}
                     >
-                      {b.to === null ? '멈춤' : b.now ? `만드는 중 ${Math.floor(b.progress * 100)}%` : `${md(b.to)} 끝`}
+                      {b.to === null ? '멈춤' : b.now ? `개발 중 ${Math.floor(b.progress * 100)}%` : `${md(b.to)} 끝`}
                     </span>
                   ) : (
                     <span className="cy-out">{!isFinite(b.from) ? '앞 항목이 멈춰 시작 못 함' : b.from >= start + SPAN ? `${md(b.from)}부터` : '이 기간 전에 끝남'}</span>
@@ -412,7 +412,7 @@ export function ScheduleApp() {
           </div>
         </div>
         <div className="tiny muted">
-          지금 만드는 사람: {buildersText(s, v)}. 끝나는 날은 지금 속도로 계산합니다. 대표가 외출하거나 주 업무를 바꾸면 늦어집니다. 약속 줄의 옅은 띠는 지금 속도면 끝나는 범위, 깃발은 기한입니다. 점선은 아직 답하지 않은 초대입니다.
+          개발 인력: {buildersText(s, v)}. 끝나는 날은 지금 속도로 계산합니다. 대표가 외출하거나 주 업무를 바꾸면 늦어집니다. 약속 줄의 옅은 띠는 지금 속도면 끝나는 범위, 깃발은 기한입니다. 점선은 아직 답하지 않은 초대입니다.
         </div>
 
         {picked && (
@@ -482,7 +482,7 @@ export function OutingOfferActions({ o, onErr }: { o: Outing; onErr: (e: string 
     <>
       {can.length > 0 && (
         <label className="oc-who">
-          누가 갈까
+          참석자
           <select data-testid={`outing-who-${o.id}`} value={sent ?? ''} onChange={(e) => setWho(e.target.value)}>
             <option value="">대표(나)</option>
             {can.map((e) => (

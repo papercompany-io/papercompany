@@ -137,7 +137,7 @@ export function MessengerApp({ initial, openInvest }: { initial?: string; openIn
           ? '외부 연락처'
           : ch.kind === 'dm'
             ? `${members[0] ? `${dept(members[0].dept).name}팀 · ${presence(s, members[0]) === 'on' ? '일하는 중' : '자리 비움'}` : '다이렉트 메시지'}`
-            : `구성원 ${members.length}명`;
+            : `직원 ${members.length}명`;
   const msgs = ch.messages.slice(0, shown);
 
   return (
@@ -204,13 +204,13 @@ export function MessengerApp({ initial, openInvest }: { initial?: string; openIn
                 </button>
                 {/* 잡담 알림 끄기(A-201): 팀 채널·#전체에 새 말이 와도 뱃지·굵은 글씨를 띄우지 않음 */}
                 {g.title === '채널' && (
-                  <button className={`mg-read-all ${muteChatter ? 'on' : ''}`} data-testid="mute-chatter" aria-pressed={muteChatter} title={muteChatter ? '팀 채널·#전체 알림을 다시 켭니다' : '팀 채널·#전체에 새 말이 와도 알림 뱃지를 띄우지 않습니다'} onClick={() => setSettings({ muteChatter: !muteChatter })}>
+                  <button className={`mg-read-all ${muteChatter ? 'on' : ''}`} data-testid="mute-chatter" aria-pressed={muteChatter} title={muteChatter ? '팀 채널·#전체 알림을 다시 켭니다' : '팀 채널·#전체의 새 메시지에 알림 뱃지를 띄우지 않습니다'} onClick={() => setSettings({ muteChatter: !muteChatter })}>
                     {muteChatter ? '알림 꺼짐' : '알림 끄기'}
                   </button>
                 )}
                 {/* 외부 연락처 한 번에 읽기(A-201): 안 읽은 연락이 있을 때만 */}
                 {g.title === '외부 연락처' && items.some((c) => c.unread > 0) && (
-                  <button className="mg-read-all" data-testid="ext-read-all" title="외부 연락처를 모두 읽음으로" onClick={() => act((gs) => items.forEach((c) => markRead(gs, c.id)))}>
+                  <button className="mg-read-all" data-testid="ext-read-all" title="외부 연락처를 모두 읽음으로 표시합니다" onClick={() => act((gs) => items.forEach((c) => markRead(gs, c.id)))}>
                     모두 읽음
                   </button>
                 )}
@@ -365,18 +365,18 @@ export function MessengerApp({ initial, openInvest }: { initial?: string; openIn
         <div className="mg-compose">
           {sq ? (
             <>
-              <ChatInput channelId={ch.id} placeholder={`${ch.name}에 메시지 쓰기 — 예: 이번 주는 버그 수정에 집중해 주세요`} onErr={setErr} />
+              <ChatInput channelId={ch.id} placeholder={`${ch.name}에 메시지 쓰기 (예: 이번 주는 버그 수정에 집중해 주세요)`} onErr={setErr} />
               <SquadOrders squadId={sq.id} onErr={setErr} />
             </>
           ) : ch.kind === 'all' && s.employees.length > 0 ? (
-            <ChatInput channelId={ch.id} placeholder="모두에게 메시지 쓰기 — 이름을 부르면 그 사람이, 팀 이름과 일을 말하면 그 팀이 답합니다" onErr={setErr} />
+            <ChatInput channelId={ch.id} placeholder="모두에게 메시지 쓰기 (이름을 부르면 그 사람이, 부서 이름과 일을 말하면 그 부서가 답합니다)" onErr={setErr} />
           ) : ch.kind === 'dm' && members[0] ? (
             <DmActions empId={members[0].id} name={members[0].name} busy={!!typing || shown < total} onErr={setErr} />
           ) : ch.kind === 'external' && DATA.investors.investors.some((i) => i.id === ch.memberIds[0]) ? (
             <InvestorBar investorId={ch.memberIds[0]} onPeek={() => setPeek(true)} onOpenInvest={openInvest} />
           ) : (
             <div className="mg-box muted">
-              {ch.kind === 'all' && <span>#전체는 회사 소식을 보는 채널입니다. 일은 각 팀 채널에서 부서가 맡을 일을 정합니다.</span>}
+              {ch.kind === 'all' && <span>#전체는 회사 소식 채널입니다. 부서 업무는 각 팀 채널에서 정합니다.</span>}
               {ch.kind === 'external' && (
                 <>
                   <span>외부 연락은 메시지 속 버튼으로 답합니다.</span>
@@ -556,8 +556,8 @@ export function TeamOrderSelect({ d, testId, className, onErr, plain }: { d: Dep
       value={sq ? sq.id : ''}
       onChange={setTarget}
       options={[
-        { value: '', label: '소속 없음', desc: '부서에 넣지 않은 사람이 하는 회사 기본 일입니다.' },
-        ...squads.map((q) => ({ value: q.id, label: q.name, desc: `이 부서 ${dept(d).name} ${squadMembers(s, q.id).filter((e) => e.dept === d).length}명이 따로 맡을 일을 정합니다.` })),
+        { value: '', label: '소속 없음', desc: '부서에 배치하지 않은 직원의 기본 업무입니다.' },
+        ...squads.map((q) => ({ value: q.id, label: q.name, desc: `이 부서 ${dept(d).name} ${squadMembers(s, q.id).filter((e) => e.dept === d).length}명의 업무를 따로 정합니다.` })),
       ]}
     />
   );
@@ -634,7 +634,7 @@ function MsgOuting({ id }: { id: string }) {
       </div>
       <div className="mo-meta">
         {outingEffect(o)} · 비용 {o.cost ? `${(o.cost / 1e4).toLocaleString()}만원` : '없음'}
-        {outingTravel(o) ? ` · ${outingTravel(o)}` : ''} · {isFullDay(o) ? '그동안 대표 기본 업무는 쉼' : '오가는 시간 포함 그 시간만 주 업무를 쉼'}
+        {outingTravel(o) ? ` · ${outingTravel(o)}` : ''} · {isFullDay(o) ? '그동안 대표 기본 업무는 쉼' : '이동 시간 포함 그 시간만 기본 업무 쉼'}
       </div>
       {o.status === 'offer' && (
         <div className="mo-actions">
@@ -705,12 +705,12 @@ function SquadOrders({ squadId, onErr }: { squadId: string; onErr: (e: string | 
   return (
     <div className="mg-box">
       <div className="mg-box-head">
-        <b>{q.name} 맡은 일</b>
+        <b>{q.name} 업무</b>
         <span>바꿀 때까지 매일 계속</span>
-        <Help text="부서는 직무마다 하는 일이 하나씩 있습니다. 바꾸면 이 부서의 그 직무 사람이 모두 그 일로 옮깁니다. 한 사람만 다르게 하려면 아래 사람별 예외에서 고릅니다. 위 입력칸에 '버그 수정에 집중해 주세요'처럼 써도 됩니다. 며칠 안에 또 바꾸면 만족도가 조금 떨어집니다." />
+        <Help text="부서는 직무마다 업무가 하나씩 정해져 있습니다. 바꾸면 이 부서의 해당 직무 직원이 모두 그 업무로 옮깁니다. 한 사람만 다르게 하려면 아래 사람별 예외에서 고릅니다. 위 입력칸에 '버그 수정에 집중해 주세요'처럼 써도 됩니다. 며칠 안에 또 바꾸면 만족도가 조금 떨어집니다." />
       </div>
       {jobs.length === 0 ? (
-        <div className="muted tiny">아직 사람이 없습니다. 직원 관리의 부서 탭에서 사람을 넣습니다.</div>
+        <div className="muted tiny">아직 직원이 없습니다. 직원 관리의 부서 탭에서 배치합니다.</div>
       ) : (
         <>
           <div className="mg-sq-jobs">
@@ -725,7 +725,7 @@ function SquadOrders({ squadId, onErr }: { squadId: string; onErr: (e: string | 
           </div>
           <details className="mg-people">
             <summary>
-              사람별 예외 <span className="muted">· {team.filter((e) => !!e.order).length ? `따로 하는 사람 ${team.filter((e) => !!e.order).length}명` : '없음'}</span>
+              사람별 예외 <span className="muted">· {team.filter((e) => !!e.order).length ? `예외 ${team.filter((e) => !!e.order).length}명` : '없음'}</span>
             </summary>
             {team.map((e) => (
               <div key={e.id} className="mg-person">

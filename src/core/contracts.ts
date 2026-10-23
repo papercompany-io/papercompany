@@ -65,7 +65,7 @@ function changeTrust(s: GameState, outcome: ContractOutcome, a: Contract) {
   const before = trustLevel(s).index;
   c.trust = Math.max(0, (c.trust ?? 0) + trustDelta(outcome, a));
   const after = trustLevel(s);
-  if (after.index > before) notify(s, `외주 평판이 올라 "${after.name}"가 됐습니다. 거래처 사이에 소문이 나서 더 큰 일감이 들어옵니다.`, 'good', 'contract');
+  if (after.index > before) notify(s, `외주 평판이 올라 "${after.name}"가 됐습니다. 고객사 사이에 소문이 나서 더 큰 일감이 들어옵니다.`, 'good', 'contract');
   else if (after.index < before) notify(s, `외주 평판이 떨어져 "${after.name}"로 내려갔습니다. 큰 일감 제안이 줄어듭니다.`, 'bad', 'contract');
 }
 
@@ -218,7 +218,7 @@ function finish(s: GameState, a: Contract) {
   } else {
     s.career.rep += 0.5;
     s.networkPoints += 2;
-    notify(s, `외주 "${a.title}" 완료! 대금 ${Math.round(pay / 1e4).toLocaleString('ko-KR')}만원이 들어왔습니다.${a.staff?.length || a.squadId ? ' 배치했던 사람은 원래 부서 일로 돌아갑니다.' : ''}`, 'good', 'contract');
+    notify(s, `외주 "${a.title}" 완료. 대금 ${Math.round(pay / 1e4).toLocaleString('ko-KR')}만원이 들어왔습니다.${a.staff?.length || a.squadId ? ' 배치했던 사람은 원래 부서 일로 돌아갑니다.' : ''}`, 'good', 'contract');
     s.events.push({ type: 'float', text: `+${Math.round(pay / 1e4).toLocaleString('ko-KR')}만`, kind: 'money', seat: 'ceo' });
   }
   // 마감까지 기간의 30% 이상 남기고 끝내면 "일찍"

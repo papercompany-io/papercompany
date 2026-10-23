@@ -118,11 +118,11 @@ export function EmployeeDetail({ e, openDm, compact }: { e: Employee; openDm?: (
             </select>
           </label>
           <label className="emd-field">
-            <span>하는 일</span>
+            <span>업무</span>
             <EmpOrderSelect e={e} onErr={(m) => m && setMsg({ text: m, ok: false })} />
           </label>
           <div className="emd-acts act-row">
-            <button className="btn small act-main" data-testid="bonus" disabled={!!bonusBlock(s, e)} title={bonusBlock(s, e) ?? '떨어진 만족도만큼 보너스를 줍니다(많이 떨어졌을수록 비쌈). 만족도가 가득 차지만, 처우가 그대로면 차츰 원래대로 돌아옵니다.'} onClick={() => run((g) => giveBonus(g, e.id), '보너스를 줬습니다. 만족도가 가득 찼습니다.')}>
+            <button className="btn small act-main" data-testid="bonus" disabled={!!bonusBlock(s, e)} title={bonusBlock(s, e) ?? '만족도를 가득 채우는 보너스입니다. 만족도가 낮을수록 비싸고, 처우가 그대로면 차츰 다시 떨어집니다.'} onClick={() => run((g) => giveBonus(g, e.id), '보너스를 줬습니다. 만족도가 가득 찼습니다.')}>
               보너스 <small>{Math.round(bonusCost(e) / 1e4).toLocaleString('ko-KR')}만원</small>
             </button>
             <LeaveButtons e={e} run={run} />
@@ -131,16 +131,16 @@ export function EmployeeDetail({ e, openDm, compact }: { e: Employee; openDm?: (
             </button>
             {!e.lead ? (
               <button className="btn small ghost" data-testid="promote" onClick={() => run((g) => promoteLead(g, e.id), '팀장이 되었습니다(월급 15% 인상).')}>
-                팀장 세우기
+                팀장 임명
               </button>
             ) : (
-              <button className="btn small ghost" onClick={() => run((g) => demoteLead(g, e.id), '팀장에서 내렸습니다.')}>
+              <button className="btn small ghost" onClick={() => run((g) => demoteLead(g, e.id), '팀장에서 해제했습니다.')}>
                 팀장 해제
               </button>
             )}
             {esopEntry(s) && (
               <button className="btn small ghost" data-testid="grant" onClick={() => run((g) => grantOptions(g, e, Math.min(esopFree(g), Math.round(esopEntry(g)!.shares * (e.grade === 'S' ? 0.06 : e.grade === 'A' ? 0.04 : 0.02)))), '스톡옵션을 줬습니다(베스팅 2년 20%, 3년 40%, 4년 80%, 5년 100%).')}>
-                스톡옵션 주기
+                스톡옵션 지급
               </button>
             )}
             {openDm && (
@@ -239,7 +239,7 @@ function People({ openDm, sel, setSel, goHire }: { openDm: (id: string) => void;
       <nav className="em3-list">
         <div className="em3-total" title="4대보험·퇴직연금 회사 부담 포함">
           <b data-testid="emp-total">{n}명</b>
-          <span>한 달 월급 {wonShort(payrollWithBenefits(monthlySalary(s)).total)}</span>
+          <span>월급 합계 {wonShort(payrollWithBenefits(monthlySalary(s)).total)}</span>
         </div>
         {groups.map(({ d, list }) => (
           <div key={d} className="em3-group" style={{ ['--dc' as string]: dept(d).color }}>
@@ -335,7 +335,7 @@ function Welfare() {
         </div>
       </section>
       <section className="em2-wf-side">
-        <div className="em2-sect">일하는 방식</div>
+        <div className="em2-sect">근무·연봉</div>
         <div className="hf-field">
           <div className="hf-label">근무 방침</div>
           <div className="seg">

@@ -32,17 +32,17 @@ export const APPS: { id: AppId; name: string; unit: string; desc: string; stage:
   { id: 'schedule', name: 'CEO 일정', unit: 'F14 대표 행동', desc: '개발 사이클·약속·외출', stage: 0, noMenu: true },
   { id: 'messenger', name: '메신저', unit: 'F06 메신저', desc: '팀 지시·결정', stage: 0 },
   { id: 'product', name: '업무', unit: 'F09 업무', desc: '제품 개발·마케팅', stage: 0 }, // A-136: 제품 → 업무
-  { id: 'contract', name: '외주', unit: 'A-207 외주', desc: '일감·평판', stage: 0, hideLocked: true }, // A-207: 업무 창의 외주 탭을 따로 뗌. 외주를 받을 수 없게 되면 메뉴에서 사라짐
+  { id: 'contract', name: '외주', unit: 'A-207 외주', desc: '외주 제안·평판', stage: 0, hideLocked: true }, // A-207: 업무 창의 외주 탭을 따로 뗌. 외주를 받을 수 없게 되면 메뉴에서 사라짐
   { id: 'market', name: '시장', unit: 'RV 시장·경쟁', desc: '고객·점유율·경쟁사', stage: 1 },
-  { id: 'employees', name: '직원 관리', unit: 'F05 직원·조직', desc: '직원·채용·팀·복지·AI', stage: 0 },
+  { id: 'employees', name: '직원 관리', unit: 'F05 직원·조직', desc: '직원·채용·부서·복지·AI', stage: 0 },
   // A-213: 채용·팀·AI 도입은 직원 관리 창의 탭. 알림·다른 창이 예전 id로 열면 appRoute가 그 탭으로 보냄
   { id: 'hiring', name: '채용', unit: 'F04 채용', desc: '공고·지원자', stage: 0, noMenu: true },
-  { id: 'team', name: '팀', unit: 'A-191 부서 일', desc: '부서별 하는 일·지시', stage: 0, noMenu: true },
+  { id: 'team', name: '팀', unit: 'A-191 부서 일', desc: '부서별 업무·지시', stage: 0, noMenu: true },
   { id: 'ai', name: 'AI 도입', unit: 'F07 AI 도입', desc: '모델·적용률', stage: 1, noMenu: true },
-  { id: 'shop', name: '상점', unit: 'OF-07 상점', desc: '책상·가구 사서 놓기', stage: 0 },
+  { id: 'shop', name: '상점', unit: 'OF-07 상점', desc: '책상·가구 구매·배치', stage: 0 },
   { id: 'office', name: '사무실', unit: 'OF-07 사무실', desc: '넓이·이전', stage: 0, noMenu: true }, // A-214: 오른쪽 위 회사 카드의 이사가기 모달로 옮김
   { id: 'invest', name: '투자', unit: 'F08 투자 유치', desc: '라운드·지분·Exit', stage: 0 },
-  { id: 'finance', name: '재무', unit: 'F10 재무·기업가치', desc: '손익·자금·가치', stage: 0 },
+  { id: 'finance', name: '재무', unit: 'F10 재무·기업가치', desc: '손익·자금·기업가치', stage: 0 },
   { id: 'exit', name: 'Exit', unit: 'F12 Exit', desc: '매각·IPO', stage: 1, noMenu: true }, // A-215: 투자 창의 Exit 탭으로 합침
   { id: 'stock', name: '주식', unit: '상장사', desc: '주가·실적·지분 매각', stage: 5, publicOnly: true },
   { id: 'ranking', name: '시장 랭킹', unit: 'A-120 랭킹', desc: '시장별 고객 수 순위', stage: 0, noMenu: true },

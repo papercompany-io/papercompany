@@ -400,10 +400,10 @@ function WaitTimeModal({ what, onResume, onStay }: { what: string; onResume: () 
         <div className="row">
           <div className="grow" />
           <button className="btn small ghost" data-testid="wait-stay" onClick={onStay}>
-            멈춘 채로 두기
+            멈춤 유지
           </button>
           <button className="btn small green" data-testid="wait-resume" onClick={onResume}>
-            ▶ 시간 흐르게 하기
+            ▶ 시간 진행
           </button>
         </div>
       </div>
@@ -468,7 +468,7 @@ function TopBar({ s }: { s: GameState }) {
       <div className="hud-card hud-main">
         <div className="tb-row">
           <div className="tb-stats">
-            <div className="tb-stat cash" title={`회사 자금 · 이번 달 손익 ${net >= 0 ? '흑자' : '적자'}`}>
+            <div className="tb-stat cash" title={`회사 자금 · 이번 달 ${net >= 0 ? '흑자' : '적자'}`}>
               <PxIcon id="coin" size={18} />
               <div>
                 <CashFlash cash={s.cash}>
@@ -516,7 +516,7 @@ function TopBar({ s }: { s: GameState }) {
           </div>
           <div className="tb-age">
             {/* 운영일(A-123): 창업한 날이 D+1 */}
-            <span className="tb-dday" data-testid="hud-dday" title="창업한 날부터 센 운영일">
+            <span className="tb-dday" data-testid="hud-dday" title="창업일 기준 운영일">
               D+{s.day - s.company.startDay + 1}
             </span>
             대표 <b>{Math.floor(founderAge(s))}</b>세
@@ -539,9 +539,9 @@ function TopBar({ s }: { s: GameState }) {
               aria-pressed={autoSkip !== 'off'}
               title={
                 autoSkip === 'off'
-                  ? '켜면 밤을 빠르게 흘려 보냅니다. 다음 밤에도 켜져 있습니다.'
+                  ? '켜면 밤 시간을 빨리 감습니다. 다음 밤에도 켜져 있습니다.'
                   : !due
-                    ? '야근하는 사람이 모두 퇴근하면 빨리 감습니다. 누르면 끕니다.'
+                    ? '야근 직원이 모두 퇴근하면 빨리 감습니다. 누르면 끕니다.'
                     : fast
                       ? '아침까지 빨리 감는 중입니다. 누르면 끕니다.'
                       : '시간이 다시 흐르면 아침까지 빨리 감습니다. 누르면 끕니다.'
@@ -556,7 +556,7 @@ function TopBar({ s }: { s: GameState }) {
           )}
           {/* 버닝 중(A-131) */}
           {burningActive(s) && (
-            <span className="tb-burn" data-testid="hud-burning" title="버닝: 팀이 더 빨리 일하는 중">
+            <span className="tb-burn" data-testid="hud-burning" title="버닝 기간에는 직원이 더 빨리 일합니다">
               버닝 {s.company.burning!.until - s.day}일
             </span>
           )}
@@ -635,18 +635,18 @@ function SideCards({ s, onOpen }: { s: GameState; onOpen: (a: AppId, arg?: strin
 
 // 다음 목표 카드의 바로가기(A-219): 목표 지표마다 그 일을 하는 창·탭. 아직 열리지 않은 창이거나 맞는 곳이 없으면 버튼 없음
 const MISSION_CTA: Record<string, { label: string; app: AppId; arg?: string }> = {
-  featuresDone: { label: '기능 만들기', app: 'product' },
-  stage: { label: '기능 만들기', app: 'product' },
-  users: { label: '마케팅 하기', app: 'product' },
-  mrr: { label: '결제 기능 만들기', app: 'product' },
+  featuresDone: { label: '기능 개발', app: 'product' },
+  stage: { label: '기능 개발', app: 'product' },
+  users: { label: '마케팅', app: 'product' },
+  mrr: { label: '결제 기능 개발', app: 'product' },
   markets: { label: '시장 보기', app: 'market' },
   share: { label: '시장 보기', app: 'market' },
-  staff: { label: '채용하기', app: 'employees', arg: 'hire' },
-  deptHr: { label: '채용하기', app: 'employees', arg: 'hire' },
-  welfare: { label: '복지 정하기', app: 'employees', arg: 'welfare' },
-  aiAdoption: { label: 'AI 도입하기', app: 'employees', arg: 'ai' },
+  staff: { label: '채용', app: 'employees', arg: 'hire' },
+  deptHr: { label: '채용', app: 'employees', arg: 'hire' },
+  welfare: { label: '복지 설정', app: 'employees', arg: 'welfare' },
+  aiAdoption: { label: 'AI 도입', app: 'employees', arg: 'ai' },
   officeTier: { label: '이사가기', app: 'office' },
-  fundingIndex: { label: '투자 유치하기', app: 'invest' },
+  fundingIndex: { label: '투자 유치', app: 'invest' },
   valuation: { label: '투자 보기', app: 'invest' },
   marketCap: { label: '투자 보기', app: 'invest' },
   profitMonths: { label: '재무 보기', app: 'finance' },

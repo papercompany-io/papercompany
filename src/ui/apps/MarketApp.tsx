@@ -100,7 +100,7 @@ function Markets({ setMsg }: { setMsg: (m: string | null) => void }) {
                   setMsg(err ?? null);
                 }}
               >
-                {wonShort(md.entry)} 들여 진출하기
+                {wonShort(md.entry)} 들여 진출
               </button>
             )}
           </div>
@@ -134,9 +134,9 @@ function Markets({ setMsg }: { setMsg: (m: string | null) => void }) {
 
             <div className="mk2-block">
               <div className="mk2-label">
-                <span>한 달 광고 예산</span>
+                <span>월 광고 예산</span>
                 <b>{wonShort(ms.adBudget)}</b>
-                <Help text="광고는 우리를 아는 사람을 늘리고, 고객을 직접 데려옵니다. 고객이 많아질수록 한 명 데려오는 값이 비싸집니다. 마케팅팀이 '퍼포먼스 광고 운영'을 하면 효율이 오르고, 마케터가 많을수록 채널을 더 돌립니다. 매일 예산의 1/30씩 나갑니다." />
+                <Help text="광고는 인지도를 올리고 고객을 직접 데려옵니다. 고객이 많아질수록 한 명을 데려오는 비용이 오릅니다. 마케팅팀이 '퍼포먼스 광고 운영'을 하면 효율이 오르고, 마케터가 많을수록 채널을 더 돌립니다. 매일 예산의 1/30씩 나갑니다." />
               </div>
               <input
                 type="range"
@@ -149,7 +149,7 @@ function Markets({ setMsg }: { setMsg: (m: string | null) => void }) {
                 onChange={(e) => act((g) => setAdBudget(g, sel, Number(e.target.value)))}
               />
               <div className="ew-note">
-                우리를 아는 사람 <b>{(ms.awareness * 100).toFixed(1)}%</b>
+                인지도 <b>{(ms.awareness * 100).toFixed(1)}%</b>
               </div>
             </div>
           </>
@@ -164,22 +164,22 @@ function GrowthPanel({ flow, users, unit }: { flow: NonNullable<MarketState['flo
   const gain = flow.inbound + flow.viral + flow.sales + flow.paid;
   const net = gain - flow.lost;
   const m = (v: number) => (v * 30 >= 100 ? n(v * 30) : (v * 30).toFixed(1));
-  const why = ROOM_LINE[roomState(users, flow.target)] + (net <= 0 ? ' 지금은 들어오는 고객보다 떠나는 고객이 많습니다.' : '');
+  const why = ROOM_LINE[roomState(users, flow.target)] + (net <= 0 ? ' 지금은 유입보다 이탈이 많습니다.' : '');
   const fill = Math.min(100, (users / Math.max(1, flow.target)) * 100);
   return (
     <div className="mk2-block" data-testid="growth-panel">
-      <div className="mk2-label">한 달에 들고 나는 {unit}</div>
+      <div className="mk2-label">월 {unit} 유입·이탈</div>
       <div className="mk2-trio">
         <div title={`스스로 찾아옴 +${m(flow.inbound)} · 입소문 +${m(flow.viral)} · 영업 +${m(flow.sales)} · 광고 +${m(flow.paid)}`}>
-          <span>들어옴</span>
+          <span>유입</span>
           <b className="fin-good">+{m(gain)}</b>
         </div>
         <div>
-          <span>떠남</span>
+          <span>이탈</span>
           <b className="fin-bad">−{m(flow.lost)}</b>
         </div>
         <div>
-          <span>합계</span>
+          <span>순증감</span>
           <b className={net >= 0 ? 'fin-good' : 'fin-bad'}>
             {net >= 0 ? '+' : ''}
             {m(net)}
@@ -215,7 +215,7 @@ function Competitors({ setMsg }: { setMsg: (m: string | null) => void }) {
   const list = s.competitors.filter((c) => c.alive || c.acquiredDay !== null);
   return (
     <div className="col">
-      <div className="mk2-sect" title="경쟁사는 매달 기능을 내고 투자를 받으며 따라옵니다. 회사 단계 4부터 경쟁사를 사들여 고객의 60%와 기술을 가져올 수 있습니다.">
+      <div className="mk2-sect" title="경쟁사는 매달 기능을 출시하고 투자를 받으며 따라옵니다. 회사 단계 4부터 경쟁사를 인수해 고객의 60%와 기술을 가져올 수 있습니다.">
         경쟁사 <em>회사 단계 4부터 인수할 수 있습니다</em>
       </div>
       {list.length === 0 && <div className="empty-note">아직 경쟁사가 없습니다.</div>}
@@ -228,8 +228,8 @@ function Competitors({ setMsg }: { setMsg: (m: string | null) => void }) {
               <div className="pc-head">
                 <span className="pc-dot" />
                 <b>{c.name}</b>
-                {c.alive ? <span className={`chip ${st.tone}`}>{st.text}</span> : <span className="chip">{c.acquiredDay ? '인수함' : '문 닫음'}</span>}
-                {c.alive && c.boostUntil && c.boostUntil > s.day && <span className="chip red">가격 내리는 중</span>}
+                {c.alive ? <span className={`chip ${st.tone}`}>{st.text}</span> : <span className="chip">{c.acquiredDay ? '인수됨' : '폐업'}</span>}
+                {c.alive && c.boostUntil && c.boostUntil > s.day && <span className="chip red">가격 인하 중</span>}
               </div>
               {c.alive && (
                 <>
@@ -244,7 +244,7 @@ function Competitors({ setMsg }: { setMsg: (m: string | null) => void }) {
                   </div>
                   <div className="row">
                     <span className="pc-foot grow">
-                      <span>사들이려면 {wonShort(acquisitionPrice(s, c))}</span>
+                      <span>인수가 {wonShort(acquisitionPrice(s, c))}</span>
                     </span>
                     <button
                       className="btn small"
@@ -290,7 +290,7 @@ export function Enterprise() {
         {industry(s.company.industry).entBase <= 0 && <div className="ew-note">이 산업은 대기업 계약이 거의 없습니다.</div>}
         {live.length > 0 && (
           <div className="fb-row big">
-            <span>대기업에서 받는 돈</span>
+            <span>대기업 매출</span>
             <b className="fin-good">월 {wonShort(live.reduce((a, d) => a + d.monthly, 0))}</b>
           </div>
         )}
@@ -313,7 +313,7 @@ export function Enterprise() {
                 <span>
                   {formatDate(d.startDay)} ~ {formatDate(d.endDay)}
                 </span>
-                <span>{d.endDay <= s.day ? '끝남' : `${d.endDay - s.day}일 남음`}</span>
+                <span>{d.endDay <= s.day ? '종료' : `${d.endDay - s.day}일 남음`}</span>
               </div>
             </div>
           ))}

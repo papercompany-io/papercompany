@@ -46,7 +46,7 @@ export function ShopApp({ onEdit }: { onEdit: (r: EditRequest) => void }) {
           {
             id: 'desk',
             name: '책상·PC',
-            desc: '직원 한 명이 앉는 자리. 여러 개를 이어서 놓을 수 있습니다.',
+            desc: '직원 한 명이 앉는 자리입니다. 여러 개를 이어서 놓을 수 있습니다.',
             price: DATA.furniture.deskPrice,
             comfort: 0,
             state: 'buy',

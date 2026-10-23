@@ -25,9 +25,9 @@ const metricText = (m: Milestone, v: number) => (m.metric === 'mrr' ? `월 매�
 function stakes(s: GameState, m: Milestone): { win: string; lose: string } {
   switch (m.kind) {
     case 'customer':
-      return { win: `${m.reward.months ?? 12}개월 시범 계약`, lose: '명성이 깎이고, 소문이 나서 대기업 영업이 뒤로 밀립니다' };
+      return { win: `${m.reward.months ?? 12}개월 시범 계약`, lose: '명성이 깎이고 소문이 나서 대기업 영업이 늦어짐' };
     case 'partner':
-      return { win: '제휴사가 함께 알려 줘 인지도와 사용자가 늘어남', lose: '제휴사 고객에게 이름이 나빠져 인지도가 줄어듦' };
+      return { win: '제휴사 공동 홍보로 인지도·사용자 증가', lose: '제휴사 고객 사이 평판이 나빠져 인지도 하락' };
     case 'event':
       return { win: `투자자 관심·인지도·명성 · 참가비 ${wonShort(eventFee(s))}(받을 때)`, lose: '발표가 펑크 나 명성과 투자자 관심이 떨어짐' };
     case 'investor':
@@ -46,7 +46,7 @@ function Needs({ s, m, f }: { s: GameState; m: Milestone; f: MilestoneForecast }
           const done = featureLevel(s, n.id) >= n.level;
           const qi = s.product.roadmap.findIndex((r) => r.id === n.id && r.level === n.level);
           const it = qi >= 0 ? s.product.roadmap[qi] : null;
-          const st = done ? '완성' : it ? (qi === 0 ? '만드는 중' : `만드는 순서 ${qi + 1}번째`) : m.status === 'offer' ? '받으면 순서 끝에 넣음' : '만드는 순서에 없음';
+          const st = done ? '완성' : it ? (qi === 0 ? '개발 중' : `만드는 순서 ${qi + 1}번째`) : m.status === 'offer' ? '받으면 순서 끝에 넣음' : '만드는 순서에 없음';
           return (
             <div key={n.id} className={`ms-need ${done ? 'done' : !it && m.status === 'active' ? 'miss' : ''}`}>
               <span className="ms-check">{done ? '✓' : ''}</span>
@@ -79,7 +79,7 @@ function Needs({ s, m, f }: { s: GameState; m: Milestone; f: MilestoneForecast }
 function When({ s, m, f }: { s: GameState; m: Milestone; f: MilestoneForecast }) {
   const dl = m.deadline ?? s.day + m.days;
   const r = RISK_TEXT[f.risk];
-  const est = f.mid === 0 ? '조건을 채웠습니다' : !isFinite(f.mid) ? '지금은 끝나지 않음(만드는 사람·순서·추세를 보세요)' : f.lo === f.hi ? `지금 속도면 ${md(s.day + f.mid)}` : `지금 속도면 ${md(s.day + f.lo)}~${md(s.day + f.hi)}`;
+  const est = f.mid === 0 ? '조건을 채웠습니다' : !isFinite(f.mid) ? '지금은 끝나지 않음(개발 인력·순서·추세 확인)' : f.lo === f.hi ? `지금 속도면 ${md(s.day + f.mid)}` : `지금 속도면 ${md(s.day + f.lo)}~${md(s.day + f.hi)}`;
   return (
     <div className="ms-when">
       <span>
@@ -187,7 +187,7 @@ export function MilestoneCard({ m, compact = false }: { m: Milestone; compact?: 
               </>
             ) : (
               <>
-                {f.risk === 'late' && <span className="ms-hint">늦을 것 같습니다. 조율하세요:</span>}
+                {f.risk === 'late' && <span className="ms-hint">늦을 것 같습니다. 조율이 필요합니다.</span>}
                 {canCut(m) && (
                   <button className="btn small ghost" data-testid={`ms-cut-${m.id}`} title="기능 하나를 빼고 나머지로 지킵니다. 보상이 줄고 신뢰가 조금 깎입니다." onClick={() => run((g) => cutScope(g, m.id))}>
                     범위 줄이기
@@ -199,7 +199,7 @@ export function MilestoneCard({ m, compact = false }: { m: Milestone; compact?: 
                   </button>
                 )}
                 {canPush(s, m) && (
-                  <button className="btn small ghost" data-testid={`ms-push-${m.id}`} title={`${MS.push.days}일 동안 팀이 더 빨리 만들지만, 만족이 떨어지고 대표가 지치고 버그가 늘어납니다.`} onClick={() => run((g) => pushTeam(g, m.id))}>
+                  <button className="btn small ghost" data-testid={`ms-push-${m.id}`} title={`${MS.push.days}일 동안 팀이 더 빨리 만들지만 만족도가 떨어지고 대표가 지치고 버그가 늘어납니다.`} onClick={() => run((g) => pushTeam(g, m.id))}>
                     팀 몰아치기
                   </button>
                 )}

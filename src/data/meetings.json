@@ -22,11 +22,11 @@
     "price": { "name": "가격", "cats": ["monetize"], "say": ["예산이 정해져 있어서 가격이 제일 중요합니다.", "솔직히 견적이 부담스럽습니다."] },
     "onboarding": { "name": "직원 교육·도입", "cats": ["growth", "retention"], "say": ["직원들이 새 도구를 배우는 데 오래 걸리면 곤란합니다.", "도입하고 나서 아무도 안 쓰면 제 책임이라서요."] },
     "reference": { "name": "도입 사례", "cats": [], "caseFits": true, "say": ["저희 같은 회사가 실제로 쓰고 있나요?", "처음 도입하는 회사가 되기는 부담스럽습니다."] },
-    "fit": { "name": "업무에 맞는지", "cats": ["core", "ai"], "say": ["저희 업무 방식에 정말 맞는지 모르겠습니다.", "보기에는 좋은데 저희한테 필요한 건지 확신이 없습니다."] }
+    "fit": { "name": "업무 적합성", "cats": ["core", "ai"], "say": ["저희 업무 방식에 정말 맞는지 모르겠습니다.", "보기에는 좋은데 저희한테 필요한 건지 확신이 없습니다."] }
   },
   "cards": {
     "ask": { "short": "걱정을 물어봅니다", "name": "질문", "minutes": 10, "desc": "이 사람이 무엇을 걱정하는지 묻습니다.", "listen": 4, "repeat": -3 },
-    "demo": { "short": "만든 기능을 보여 줍니다", "name": "데모", "minutes": 20, "desc": "만든 기능을 직접 보여 줍니다. 걱정에 맞는 기능이 있어야 잘 먹힙니다.", "match": 24, "plain": 2, "miss": -4, "glitchPerBug": 0.006, "glitch": -10 },
+    "demo": { "short": "만든 기능을 보여 줍니다", "name": "데모", "minutes": 20, "desc": "만든 기능을 직접 보여 줍니다. 걱정에 맞는 기능이 있어야 효과가 큽니다.", "match": 24, "plain": 2, "miss": -4, "glitchPerBug": 0.006, "glitch": -10 },
     "case": { "short": "다른 고객 이야기를 합니다", "name": "고객 사례", "minutes": 10, "desc": "다른 고객이 어떻게 쓰는지 이야기합니다. 고객이 있어야 낼 수 있습니다.", "match": 20, "partial": 8, "plain": 2, "needUsers": 30 },
     "price": { "short": "단가를 낮춰 줍니다", "name": "가격 양보", "minutes": 10, "desc": "단가를 낮춰 주겠다고 합니다. 계약하면 그만큼 덜 받습니다.", "match": 22, "buyer": 8, "plain": 2, "discount": 0.08, "maxDiscount": 0.3 },
     "promise": { "short": "없는 기능을 약속합니다", "name": "기능 약속", "minutes": 10, "desc": "아직 없는 기능을 만들어 주겠다고 약속합니다. 계약하려면 그 기능을 기한 안에 만들어야 합니다.", "match": 18, "max": 2 },

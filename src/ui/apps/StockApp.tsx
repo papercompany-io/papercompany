@@ -78,7 +78,7 @@ export function StockApp() {
         </div>
         <div>
           <PxIcon id="coin" size={20} />
-          <span>이미 판 돈(개인 자산)</span>
+          <span>매각 대금(개인 자산)</span>
           <b>
             <Money v={p.founderSold} />
           </b>
@@ -101,7 +101,7 @@ export function StockApp() {
               {p.lastQuarter.guidance !== null && (
                 <>
                   {' '}
-                  (가이던스 {wonShort(p.lastQuarter.guidance)} — <span className={p.lastQuarter.beat ? 'st2-up' : 'st2-down'}>{p.lastQuarter.beat ? '상회 ▲' : '하회 ▼'}</span>)
+                  (가이던스 {wonShort(p.lastQuarter.guidance)}, <span className={p.lastQuarter.beat ? 'st2-up' : 'st2-down'}>{p.lastQuarter.beat ? '상회 ▲' : '하회 ▼'}</span>)
                 </>
               )}
             </div>
@@ -156,18 +156,18 @@ export function StockApp() {
                   if (!err) play('coin');
                 }}
               >
-                팔기
+                매각
               </button>
             </>
           )}
         </div>
         <div className="st2-card">
-          <div className="st2-card-head" title="회사 자금으로 주식을 사서 없애면 주당 가치가 오릅니다(보유 자금의 50%까지).">
+          <div className="st2-card-head" title="회사 자금으로 주식을 사서 없애면 주당 가치가 오릅니다(잔고의 50%까지).">
             <b>자사주 매입</b>
           </div>
           <div className="st2-line muted">회사 자금으로 주식을 사서 없앱니다.</div>
-          <button className="btn ghost" onClick={() => setMsg(act((g) => buyback(g, Math.floor(g.cash * 0.1))) ?? '자금 10%로 자사주를 샀습니다.')}>
-            자금 10% 매입
+          <button className="btn ghost" onClick={() => setMsg(act((g) => buyback(g, Math.floor(g.cash * 0.1))) ?? '잔고 10%로 자사주를 매입했습니다.')}>
+            잔고 10% 매입
           </button>
         </div>
       </div>
@@ -176,7 +176,7 @@ export function StockApp() {
           <b>대표에서 물러나기(Exit)</b>
         </div>
         <div className="st2-line">
-          남은 지분 {rv.shares.toLocaleString('ko-KR')}주를 블록딜로 넘기고 이 회사를 마칩니다. 예상 수령 <b>{wonShort(rv.proceeds)}</b> + 이미 판 돈 {wonShort(p.founderSold)}. 주식 수 {totalShares(s.capTable).toLocaleString('ko-KR')}주.
+          남은 지분 {rv.shares.toLocaleString('ko-KR')}주를 블록딜로 넘기고 이 회사를 마칩니다. 예상 수령 <b>{wonShort(rv.proceeds)}</b> + 매각 대금 {wonShort(p.founderSold)}. 발행 주식 수 {totalShares(s.capTable).toLocaleString('ko-KR')}주.
         </div>
         {!confirm ? (
           <>

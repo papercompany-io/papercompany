@@ -38,7 +38,7 @@ export function ExitApp() {
   return (
     <div className="col ex2">
       <div className="ex2-head">
-        <span className="ex2-kicker">지금 Exit하면 받을 돈(예상)</span>
+        <span className="ex2-kicker">Exit 예상 수령액</span>
         <h2 className="ex2-big" title="기업가치 × 창업자 지분율. 실제 금액은 제안가·공모가에 따라 달라집니다.">
           <Money v={Math.round(v * fp)} />
         </h2>
@@ -72,7 +72,7 @@ export function ExitApp() {
             </span>
             <div className="ex2-card-title">
               <b>{a.buyer ?? '인수 희망 기업'}의 인수 제안</b>
-              <span>{a.inbound ? '먼저 연락해 옴' : '매각 시도 결과'}</span>
+              <span>{a.inbound ? '먼저 들어온 제안' : '매각 시도 결과'}</span>
             </div>
             {a.deadline !== null && (
               <span className="chip amber" title={`답변 기한 ${formatDate(a.deadline)}. 지나면 무산됩니다.`}>
@@ -90,7 +90,7 @@ export function ExitApp() {
               <b>{pct(fp, 6)}</b>
             </div>
             <div className="total">
-              <span>받을 결과 금액 = 제안가 × 지분율</span>
+              <span>결과 금액 = 제안가 × 지분율</span>
               <b data-testid="sale-result">{wonShort(Math.round(a.price! * fp))}</b>
             </div>
           </div>
@@ -106,7 +106,7 @@ export function ExitApp() {
           {err && <div className="err">{err}</div>}
           <div className="ex2-btns">
             <button className="btn ghost" data-testid="sale-decline" onClick={() => setErr(act((g) => declineSale(g)) ?? null)}>
-              거절하고 더 키운다
+              거절
             </button>
             <button className="btn green big" data-testid="sale-accept" onClick={() => setErr(act((g) => acceptSale(g)) ?? null)}>
               매각 진행(회사 종료)
@@ -150,8 +150,8 @@ export function ExitApp() {
 
       {(!a || a.status === 'failed' || a.status === 'declined') && (
         <>
-          <div className="ex2-sect" title="원할 때 언제든 Exit을 시도할 수 있습니다. 매각에 성공하면 이 회사가 끝나고 결과 금액이 정해집니다. IPO에 성공하면 상장사로 회사가 이어지고, 락업(180일) 뒤 지분을 팔거나 물러날 때 돈을 받습니다.">
-            어떻게 Exit할까요
+          <div className="ex2-sect" title="Exit은 언제든 시도할 수 있습니다. 매각에 성공하면 이 회사가 끝나고 결과 금액이 정해집니다. IPO에 성공하면 상장사로 회사가 이어지고, 락업(180일) 뒤 지분을 팔거나 물러날 때 돈을 받습니다.">
+            Exit 방식
           </div>
           {blocked && <div className="warn">{blocked}</div>}
           <div className="ex2-choices">
@@ -170,7 +170,7 @@ export function ExitApp() {
                     </span>
                     <div className="ex2-card-title">
                       <b>{m === 'sale' ? '매각' : 'IPO'}</b>
-                      <span>{m === 'sale' ? '기업에게 Exit · 회사 종료' : '일반인에게 Exit · 회사 계속'}</span>
+                      <span>{m === 'sale' ? '기업에 매각 · 회사 종료' : '주식시장 상장 · 회사 계속'}</span>
                     </div>
                   </div>
                   <div className="ex2-tags">
@@ -222,7 +222,7 @@ export function ExitApp() {
                   setConfirm(null);
                 }}
               >
-                시도하기
+                시도
               </button>
             </div>
           </div>

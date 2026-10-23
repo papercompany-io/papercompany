@@ -271,7 +271,7 @@ export function offerWait(s: GameState): string | null {
   const fx = fxTotals(s);
   if (!hasMvp(s) || !fx.adFormats.length) return '광고 자리가 없어 광고주가 오지 않습니다. 업무 창에서 광고 기능을 만드세요.';
   if (!s.employees.some((e) => e.dept === 'adops')) return '광고 운영 담당자를 뽑으면 매일 광고주 제안이 들어옵니다.';
-  if (adCapacity(s) <= 0) return '광고 운영팀에 "광고주 찾기"를 하는 사람이 없어 제안이 오지 않습니다. 직원 관리 창 팀 탭에서 한 명 이상에게 "광고주 찾기"를 맡기세요.';
+  if (adCapacity(s) <= 0) return '광고 운영팀에 "광고주 찾기"를 하는 사람이 없어 제안이 오지 않습니다. 직원 관리 창 부서 탭에서 한 명 이상에게 "광고주 찾기"를 맡기세요.';
   const need = Math.min(...A.tiers.map((t) => t.minUsers));
   if (totalUsers(s) < need) return `사용자가 ${need.toLocaleString('ko-KR')}명을 넘으면 광고주가 찾아옵니다.`;
   return null;

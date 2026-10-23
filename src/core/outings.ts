@@ -139,7 +139,7 @@ export function outingEffect(o: Outing): string {
   const per = slot * hours;
   if (t.kind === 'ir') return `IR 점수 약 +${(per + (t.bonus.ir ?? 0)).toFixed(0)}${t.bonus.network ? ` · 네트워크 +${t.bonus.network}` : ''}`;
   if (t.kind === 'network') return `네트워크 점수 약 +${(per + (t.bonus.network ?? 0)).toFixed(0)}`;
-  if (o.tpl === 'customer') return `고객사 미팅 ${o.stage ?? 1}단계 · 약속 시각에 회의실에 들어갑니다`; // A-186
+  if (o.tpl === 'customer') return `고객사 미팅 ${o.stage ?? 1}단계 · 약속 시각에 회의실 입장`; // A-186
   return `영업 ${isFullDay(o) ? `${o.days}일치` : `${o.hours}시간`}${t.bonus.pipeline ? ' · 대기업 파이프라인 +' + t.bonus.pipeline : ''}`;
 }
 
@@ -232,7 +232,7 @@ export function acceptOuting(s: GameState, id: string, replace = false, delegate
   if (delegateId && !emp) return '이 일정에 보낼 수 없는 직원입니다.';
   const cs = outingConflicts(s, o, delegateId);
   const whose = emp ? `${emp.name}님의 ` : '';
-  if (cs.length && !replace) return `${whose}${outingRange(cs[0])} "${cs[0].title}" 일정과 겹칩니다(이동 시간 포함). 기존 일정을 취소하고 받거나 거절하세요.`;
+  if (cs.length && !replace) return `${whose}${outingRange(cs[0])} "${cs[0].title}" 일정과 겹칩니다(이동 시간 포함). 기존 일정을 취소하고 수락하거나 거절하세요.`;
   if (cs.some((c) => s.day >= c.startDay)) return '이미 시작한 일정과 겹쳐 바꿀 수 없습니다.';
   if (o.cost > s.cash) return '비용을 낼 자금이 부족합니다.';
   for (const c of cs) cancelOuting(s, c.id);

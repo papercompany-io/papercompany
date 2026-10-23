@@ -17,7 +17,7 @@ import { formatDate, formatMonth } from '../../core/calendar';
 import { growthRoom, launchedMarkets, liveUsers, revenuePerUser, totalUsers, unitWord } from '../../core/market';
 import { ROOM_LINE } from '../../core/marketing';
 import { AxisChart, FlowBars, flowAll } from './CustomerFlow';
-import { countShort, josa, wonCompact, wonShort } from '../../core/format';
+import { countShort, wonCompact, wonShort } from '../../core/format';
 import { TeamOrderSelect } from './MessengerApp';
 import { act, useGame } from '../store';
 import { Tabs, Help, useTween } from '../common';
@@ -31,15 +31,15 @@ import './skin/ProductLive.css';
 
 // 분류가 하는 일(A-158, 기능 탭 묶음 머리): 효과 숫자 대신 역할만
 const CAT_ROLE: Record<string, string> = {
-  core: '제품의 뼈대입니다. 다 있어야 출시합니다',
-  growth: '더 많이 데려옵니다',
-  monetize: '돈을 법니다',
-  retention: '덜 떠나게 합니다',
-  infra: '안정과 서버 비용',
-  enterprise: '큰 회사와 계약을 맺게 합니다',
-  global: '다른 나라에 나갈 수 있게 합니다',
-  ai: '새 기술로 매력을 더합니다',
-  platform: '다른 서비스와 이어 판을 키웁니다',
+  core: '모두 만들어야 출시합니다',
+  growth: '사용자 유입을 늘립니다',
+  monetize: '매출을 냅니다',
+  retention: '이탈을 줄입니다',
+  infra: '안정성과 서버비를 관리합니다',
+  enterprise: '대기업 계약을 엽니다',
+  global: '해외 진출을 엽니다',
+  ai: '새 기술로 매력도를 높입니다',
+  platform: '다른 서비스와 연동해 규모를 키웁니다',
 };
 const CAT_ORDER = ['core', 'growth', 'monetize', 'retention', 'infra', 'enterprise', 'global', 'ai', 'platform'];
 
@@ -59,10 +59,10 @@ export function fxText(fx: FeatureFx): string {
   const p: string[] = [];
   if (fx.appeal) p.push(`매력도 +${fx.appeal}`);
   if (fx.conv) p.push(`고객 유입 +${Math.round(fx.conv * 100)}%`);
-  if (fx.churn) p.push(`떠나는 고객 ${Math.round(fx.churn * 100)}%`);
+  if (fx.churn) p.push(`이탈 ${Math.round(fx.churn * 100)}%`);
   if (fx.pay) p.push(`유료 전환 +${(fx.pay * 100).toFixed(1)}%p`);
   if (fx.arpu) p.push(`고객당 매출 +${Math.round(fx.arpu * 100)}%`);
-  if (fx.ad) p.push(`광고 수익 +${fx.ad}원/명`);
+  if (fx.ad) p.push(`광고 매출 +${fx.ad}원/명`);
   if (fx.take) p.push(`수수료 +${(fx.take * 100).toFixed(1)}%p`);
   if (fx.gmv) p.push(`거래액 +${Math.round(fx.gmv * 100)}%`);
   if (fx.viral) p.push(`입소문 +${(fx.viral * 100).toFixed(1)}`);
@@ -71,7 +71,7 @@ export function fxText(fx: FeatureFx): string {
   if (fx.enterprise) p.push('대기업 계약 가능');
   if (fx.market) p.push(`${DATA.markets.markets.find((m) => m.id === fx.market)!.name} 진출 가능`);
   if (fx.ai) p.push('AI 기능');
-  if (fx.bugs) p.push(`버그 조금 생김`);
+  if (fx.bugs) p.push(`버그 약간 발생`);
   return p.join(' · ');
 }
 
@@ -100,7 +100,7 @@ function MoneyNote({ s }: { s: GameState }) {
     <div className="pd-money">
       <div className="pd-kv">
         <span>
-          {ind.unit} 1{ind.unit === '고객사' ? '곳' : '명'}당 한 달 매출
+          {ind.unit} 1{ind.unit === '고객사' ? '곳' : '명'}당 월 매출
         </span>
         <b>{wonShort(r.total)}</b>
       </div>
@@ -109,7 +109,7 @@ function MoneyNote({ s }: { s: GameState }) {
           {parts.join(' + ')}
         </div>
       ) : (
-        <div className="pl-alert">아직 결제 기능이 없어 무료로만 씁니다. 기능 탭에서 "{billingFeatureName(s)}" 기능을 만들어야 돈이 들어옵니다.</div>
+        <div className="pl-alert">결제 기능이 없어 무료로 제공 중입니다. 기능 탭에서 "{billingFeatureName(s)}" 기능을 만들어야 매출이 생깁니다.</div>
       )}
     </div>
   );
@@ -158,7 +158,7 @@ export function ProductCard({ onOpen }: { onOpen: () => void }) {
       </div>
       {!mvp ? (
         <>
-          <div className="pc-sub">MVP 만드는 중 · {Math.round(v.mvpProgress * 100)}%</div>
+          <div className="pc-sub">MVP 개발 중 · {Math.round(v.mvpProgress * 100)}%</div>
           <span className="ms-meter">
             <i style={{ width: `${v.mvpProgress * 100}%` }} />
           </span>
@@ -175,13 +175,13 @@ export function ProductCard({ onOpen }: { onOpen: () => void }) {
               <PxIcon id="users" size={14} />
               {users >= 1e5 ? countShort(users) : num(users)}
             </span>
-            <span className={`pc-tile ${delta < 0 ? 'down' : 'up'}`} title="어제보다 늘어난 사용자">
+            <span className={`pc-tile ${delta < 0 ? 'down' : 'up'}`} title="어제 대비 순증감">
               <PxIcon id="chart" size={14} />
               {delta >= 0 ? '+' : ''}
               {Math.abs(delta) >= 1e5 ? countShort(delta) : num(delta)}
             </span>
           </div>
-          <div className="pc-foot">{cur ? `만드는 중: ${itemName(cur)} · ${dayText(v.etas[0])}` : '만들 기능이 없습니다'}</div>
+          <div className="pc-foot">{cur ? `개발 중: ${itemName(cur)} · ${dayText(v.etas[0])}` : '개발할 기능이 없습니다'}</div>
         </>
       )}
     </button>
@@ -254,7 +254,7 @@ function Builders({ s, v, openSchedule }: { s: GameState; v: View; openSchedule?
   const nobody = v.rate.dev + v.rate.design <= 0;
   return (
     <div className="pd-who">
-      <h3 className="wk-sect">누가 만드나</h3>
+      <h3 className="wk-sect">개발 인력</h3>
       <div className="pd-who-row">
         <span>대표(나)</span>
         <b>{v.rate.ceo > 0 ? `개발 ${v.rate.ceo.toFixed(2)}` : '안 함'}</b>
@@ -263,26 +263,26 @@ function Builders({ s, v, openSchedule }: { s: GameState; v: View; openSchedule?
         <span>개발자 {devCount}명</span>
         <b>{v.rate.team > 0 ? `개발 ${v.rate.team.toFixed(1)}` : devCount ? '다른 일' : '-'}</b>
       </div>
-      <div className="pd-who-row" title={designCount ? undefined : '디자이너가 없으면 개발하는 사람이 디자인도 절반 속도로 합니다.'}>
+      <div className="pd-who-row" title={designCount ? undefined : '디자이너가 없으면 개발 인력이 디자인도 절반 속도로 합니다.'}>
         <span>디자이너 {designCount}명</span>
         <b>{v.rate.design > 0 ? `디자인 ${v.rate.design.toFixed(1)}` : designCount ? '다른 일' : '-'}</b>
       </div>
       {nobody ? <div className="wk-alert">아무도 개발하지 않습니다</div> : null}
       {devCount > 0 && (
         <label className="pd-who-row">
-          <span>개발팀이 하는 일</span>
+          <span>개발팀 업무</span>
           <TeamOrderSelect d="dev" testId="dev-order" />
         </label>
       )}
       {designCount > 0 && (
         <label className="pd-who-row">
-          <span>디자인팀이 하는 일</span>
+          <span>디자인팀 업무</span>
           <TeamOrderSelect d="design" testId="design-order" />
         </label>
       )}
       {openSchedule && (
         <button className="btn small ghost" data-testid="open-schedule" onClick={openSchedule}>
-          대표 하루 일정 바꾸기
+          대표 일정 바꾸기
         </button>
       )}
     </div>
@@ -330,7 +330,7 @@ function MvpStatus({ s, v, openSchedule, openHiring, goFeatures }: { s: GameStat
       rate: v.rate.design,
       text: v.rate.design > 0 ? `하루 ${v.rate.design.toFixed(1)}` : designCount ? '다른 일 중' : '없음',
       empty: !designCount,
-      tip: designCount ? undefined : '디자이너가 없으면 개발하는 사람이 디자인도 절반 속도로 합니다.',
+      tip: designCount ? undefined : '디자이너가 없으면 개발 인력이 디자인도 절반 속도로 합니다.',
     },
   ];
   return (
@@ -360,7 +360,7 @@ function MvpStatus({ s, v, openSchedule, openHiring, goFeatures }: { s: GameStat
             <li key={c.id} className={`wk-node ${state}`}>
               <span className="wk-dot">{done ? <PixelCheck /> : state === 'now' ? <PixelFlag /> : state === 'missing' ? '+' : i + 1}</span>
               <b>{c.name}</b>
-              <span>{done ? '완료' : state === 'now' ? `만드는 중 ${Math.round(pct)}%` : it ? `${dayText(v.etas[qi])} 뒤` : '순서에 없음'}</span>
+              <span>{done ? '완료' : state === 'now' ? `개발 중 ${Math.round(pct)}%` : it ? `${dayText(v.etas[qi])} 뒤` : '순서에 없음'}</span>
             </li>
           );
         })}
@@ -379,7 +379,7 @@ function MvpStatus({ s, v, openSchedule, openHiring, goFeatures }: { s: GameStat
       )}
       <NowBuilding s={s} v={v} goFeatures={goFeatures} />
       <section className="wk-team">
-        <h3 className="wk-sect">만드는 사람</h3>
+        <h3 className="wk-sect">개발 인력</h3>
         {people.map((x) => (
           <div key={x.key} className={`wk-person ${x.empty ? 'empty' : ''}`} title={x.tip}>
             <span className={`wk-av ${x.key}`}>{x.av}</span>
@@ -392,14 +392,14 @@ function MvpStatus({ s, v, openSchedule, openHiring, goFeatures }: { s: GameStat
         ))}
         {withDev !== null && v.mvpEta !== null && isFinite(withDev) && (!isFinite(v.mvpEta) || withDev < v.mvpEta) && (
           <p className="wk-tip">
-            개발자 1명을 뽑으면 출시가 <b>D-{withDev}</b>로 당겨집니다
+            개발자 1명을 채용하면 출시가 <b>D-{withDev}</b>로 당겨집니다
             {isFinite(v.mvpEta) ? ` (${v.mvpEta - withDev}일 빨라짐)` : ''}.
           </p>
         )}
         <div className="wk-btns">
           {openHiring && (
             <button className="btn small" onClick={openHiring}>
-              개발자 뽑기
+              개발자 채용
             </button>
           )}
           {openSchedule && (
@@ -459,11 +459,11 @@ function LiveStatus({ s, v, openSchedule, goFeatures }: { s: GameState; v: View;
     <div className="pl" data-testid="product-status">
       <div className="wk-stats pl-stats">
         <div className="wk-stat pl-rev">
-          <span>한 달 매출</span>
+          <span>월 매출</span>
           <b>{wonCompact(monthRev)}</b>
-          <em>최근 {Math.min(30, d.length)}일{d.length < 30 ? ' 기준 30일로 환산' : ''}</em>
+          <em>최근 {Math.min(30, d.length)}일{d.length < 30 ? '을 월 기준으로 환산' : ''}</em>
         </div>
-        <div className="wk-stat pl-users" title={`${num(users)}${w}. 제품이 받쳐 주는 최대 약 ${countShort(room.target)}${w}. ${ROOM_LINE[room.state]}`}>
+        <div className="wk-stat pl-users" title={`${num(users)}${w}. 수용 가능한 최대 약 ${countShort(room.target)}${w}. ${ROOM_LINE[room.state]}`}>
           <span>지금 {ind.unit}</span>
           <b>
             {countShort(users)}
@@ -474,7 +474,7 @@ function LiveStatus({ s, v, openSchedule, goFeatures }: { s: GameState; v: View;
             </span>
           </b>
           <em>
-            어제보다 <i className={delta < 0 ? 'neg' : 'pos'}>{delta >= 0 ? '+' : ''}{big(delta)}</i> · 오늘 {big(newToday)}
+            어제보다 <i className={delta < 0 ? 'neg' : 'pos'}>{delta >= 0 ? '+' : ''}{big(delta)}</i> · 오늘 유입 {big(newToday)}
           </em>
         </div>
       </div>
@@ -494,7 +494,7 @@ function LiveStatus({ s, v, openSchedule, goFeatures }: { s: GameState; v: View;
       </div>
       <div className="pl-two one">
         <section className="pl-card">
-          <h3 className="pl-head" title="버그가 적을수록 높습니다. 새 기능을 만들 때마다 버그가 생기고, 품질이 낮으면 고객이 떠나고 장애가 납니다. 개발팀에 '안정화·버그 수정'을 맡기면 오릅니다.">
+          <h3 className="pl-head" title="버그가 적을수록 높습니다. 새 기능을 만들 때마다 버그가 생기고, 품질이 낮으면 이탈이 늘고 장애가 납니다. 개발팀에 '안정화·기술 부채 정리'을 맡기면 오릅니다.">
             품질
           </h3>
           <div className="pd-qrow">
@@ -511,7 +511,7 @@ function LiveStatus({ s, v, openSchedule, goFeatures }: { s: GameState; v: View;
               <b>+{Math.round(s.product.polish * 100)}%</b>
             </div>
             <div className="pd-kv">
-              <span>지금까지 장애</span>
+              <span>누적 장애</span>
               <b className={s.stats.outages ? 'neg' : ''}>{s.stats.outages}번</b>
             </div>
           </div>
@@ -581,7 +581,7 @@ function NowList({ s, v, goFeatures }: { s: GameState; v: View; goFeatures: () =
           <b title={feature(first.id).desc}>{itemName(first)}</b>
           {promiseChip(0)}
           <span className="grow" />
-          <span className="pl-chip">{isFinite(v.etas[0]) ? `${dayText(v.etas[0])} 뒤 출시` : '멈춤'}</span>
+          <span className="pl-chip">{isFinite(v.etas[0]) ? `출시까지 ${dayText(v.etas[0])}` : '멈춤'}</span>
           <button className="btn small ghost" data-testid="roadmap-remove-0" title="만드는 순서에서 빼기" onClick={() => act((g) => removeFromRoadmap(g, 0))}>
             ✕
           </button>
@@ -602,7 +602,7 @@ function NowList({ s, v, goFeatures }: { s: GameState; v: View; goFeatures: () =
             <span className="pd-order">{i + 1}</span>
             <b className="grow">{itemName(it)}</b>
             {promiseChip(i)}
-            <span className="nl-date" title={isFinite(v.etas[i]) ? `${dayText(v.etas[i])} 뒤 출시 (${formatDate(s.day + v.etas[i])})` : '만드는 사람이 없어 멈춤'}>
+            <span className="nl-date" title={isFinite(v.etas[i]) ? `출시까지 ${dayText(v.etas[i])} (${formatDate(s.day + v.etas[i])})` : '개발 인력이 없어 멈춤'}>
               {to === null ? '멈춤' : shortDate(to)}
             </span>
             <span className="nl-ctl">
@@ -628,7 +628,7 @@ export function NowBuilding({ s, v, openSchedule, goFeatures, builders }: { s: G
   return (
     <section className="pl-card" data-testid="product-roadmap">
       <h3 className="pl-head">
-        지금 만드는 기능<em>{s.product.roadmap.length}/{ROADMAP_MAX}</em>
+        개발 중인 기능<em>{s.product.roadmap.length}/{ROADMAP_MAX}</em>
       </h3>
       <div className={builders ? 'wk-road' : 'col'}>
         <NowList s={s} v={v} goFeatures={goFeatures} />
@@ -642,7 +642,7 @@ export function NowBuilding({ s, v, openSchedule, goFeatures, builders }: { s: G
 function Stability({ q }: { q: number }) {
   const state = q >= 75 ? 'ok' : q >= 50 ? 'mid' : 'bad';
   return (
-    <div className="pd-stab" title="품질이 낮을수록 장애가 잦고 고객이 떠납니다">
+    <div className="pd-stab" title="품질이 낮을수록 장애가 잦고 이탈이 늘어납니다">
       <div className="pd-stab-bar">
         <i style={{ bottom: `${Math.max(2, Math.min(98, q))}%` }} />
       </div>
@@ -662,9 +662,9 @@ function Inflow({ s }: { s: GameState }) {
   const ads = launchedMarkets(s).reduce((a, m) => a + s.markets[m].adBudget, 0);
   return (
     <section className="pl-card" data-testid="inflow">
-      <h3 className="pl-head" title={`국내 인지도 ${(s.markets.kr.awareness * 100).toFixed(2)}% · 광고 예산 월 ${wonShort(ads)}. 최근 2주 평균을 한 달로 바꾼 값입니다. 홍보를 하지 않으면 출시 날 들어온 대표의 지인 말고는 거의 들어오지 않습니다. 떠나는 이유는 매달 초 고객 리포트(메신저)로도 받습니다.`}>
+      <h3 className="pl-head" title={`국내 인지도 ${(s.markets.kr.awareness * 100).toFixed(2)}% · 광고 예산 월 ${wonShort(ads)}. 최근 2주 평균을 월 기준으로 바꾼 값입니다. 홍보를 하지 않으면 출시 날 대표 지인 외에는 유입이 거의 없습니다. 이탈 이유는 매달 초 고객 리포트(메신저)로도 받습니다.`}>
         {ind.unit}
-        {josa(ind.unit, '이')} 들고 나는 길<em>한 달 환산</em>
+        {' '}유입·이탈<em>월 기준</em>
       </h3>
       {f ? <FlowBars flow={f} unit={ind.unit} simple /> : <div className="wk-empty small">하루가 지나면 쌓입니다.</div>}
     </section>
@@ -768,7 +768,7 @@ function Features({ s, v }: { s: GameState; v: View }) {
                 Lv {gl}
               </span>
             )}
-            {q > 0 && <span className="fc-q">{qi === 0 ? '만드는 중' : `순서 ${qi + 1}번`}</span>}
+            {q > 0 && <span className="fc-q">{qi === 0 ? '개발 중' : `순서 ${qi + 1}번`}</span>}
           </div>
           <div className="fc-tags">
             <span className={`cat ${f.cat}`}>{CAT_NAME[f.cat]}</span>
@@ -889,7 +889,7 @@ function Features({ s, v }: { s: GameState; v: View }) {
             {hasMvp(s) ? bd.total.toFixed(1) : '출시 전'}
           </b>
           <div className="fs-pop" data-testid="appeal-breakdown">
-            <div className="fs-pop-title">매력도는 어디서 오나</div>
+            <div className="fs-pop-title">매력도 구성</div>
             {bd.parts.length === 0 && <div className="tiny muted">아직 만든 기능이 없습니다.</div>}
             {bd.parts.map((x) => (
               <div key={x.id} className="pd-kv">
@@ -913,7 +913,7 @@ function Features({ s, v }: { s: GameState; v: View }) {
             </div>
             {bd.complexity < 1 && (
               <div className="pd-kv">
-                <span>기능이 너무 많아 복잡함</span>
+                <span>기능 과다</span>
                 <b className="neg">{signed(bd.complexity - 1)}</b>
               </div>
             )}
@@ -970,14 +970,14 @@ function Features({ s, v }: { s: GameState; v: View }) {
       <button className="fm-open" data-testid="feat-add-open" onClick={() => setAdding(true)}>
         <PxIcon id="star" size={16} />
         <b>새 기능 보기</b>
-        <em>{can.length ? `지금 만들 수 있는 기능 ${can.length}개` : '지금 더 만들 수 있는 기능이 없습니다'}{locked.length > 0 ? ` · 나중에 열리는 기능 ${locked.length}개` : ''}</em>
+        <em>{can.length ? `개발 가능한 기능 ${can.length}개` : '개발 가능한 기능이 없습니다'}{locked.length > 0 ? ` · 나중에 열리는 기능 ${locked.length}개` : ''}</em>
       </button>
       {adding && (
         <div className="modal-bg" onClick={() => setAdding(false)}>
           <div className="modal fmod" data-testid="feat-modal" onClick={(e) => e.stopPropagation()}>
             <div className="fmod-head">
               <b>새 기능</b>
-              <span className="tiny muted">{can.length}개 만들 수 있음</span>
+              <span className="tiny muted">{can.length}개 개발 가능</span>
               <span className="grow" />
               <button className="btn small ghost" data-testid="feat-modal-close" onClick={() => setAdding(false)}>
                 닫기
@@ -985,7 +985,7 @@ function Features({ s, v }: { s: GameState; v: View }) {
             </div>
             {msg && <div className="warn">{msg}</div>}
             <div className="fmod-body">
-              {can.length === 0 && <div className="wk-empty small">지금 더 만들 수 있는 기능이 없습니다</div>}
+              {can.length === 0 && <div className="wk-empty small">개발 가능한 기능이 없습니다</div>}
               {CAT_ORDER.filter((c) => can.some((f) => f.cat === c)).map((c) => (
                 <div key={c} className="fm-group">
                   <div className="fc-group-head" title={CAT_ROLE[c]}>
@@ -1014,7 +1014,7 @@ function Features({ s, v }: { s: GameState; v: View }) {
 const shortDate = (day: number) => formatDate(day).slice(5).replace('.', '/');
 
 function sprintOf(s: GameState, to: number | null): { key: string; name: string; range: string } {
-  if (to === null) return { key: 'stall', name: '멈춤', range: '만드는 사람이 없어 끝나지 않습니다' };
+  if (to === null) return { key: 'stall', name: '멈춤', range: '개발 인력이 없어 끝나지 않습니다' };
   const w0 = weekStartOf(s.day);
   const w = Math.floor((to - w0) / 7);
   const range = (a: number, b: number) => `${shortDate(w0 + a * 7)} ~ ${shortDate(w0 + b * 7 + 6)}`;
@@ -1041,7 +1041,7 @@ function SprintSummary({ s, v }: { s: GameState; v: View }) {
         <b>{thisWeek}개</b>
       </div>
       <div>
-        <span>순서를 다 끝내는 날</span>
+        <span>전체 완료 예정일</span>
         <b>{last === null ? '멈춤' : shortDate(last)}</b>
       </div>
       <div>
@@ -1062,7 +1062,7 @@ export function Roadmap({ s, v, openSchedule, goFeatures, builders = true }: { s
         {s.product.roadmap.length === 0 && (
           <div className="wk-empty">
             <PxIcon id="box" size={32} />
-            <b>만들 기능이 없습니다</b>
+            <b>개발할 기능이 없습니다</b>
             <button className="btn small" onClick={goFeatures}>
               기능 고르기
             </button>
@@ -1121,9 +1121,9 @@ export function Roadmap({ s, v, openSchedule, goFeatures, builders = true }: { s
               </div>
               <div className="row tiny">
                 <span className="muted grow">
-                  {i === 0 ? '만드는 중' : '대기'} · {Math.round(((it.devDone + it.designDone) / tot) * 100)}%
+                  {i === 0 ? '개발 중' : '대기'} · {Math.round(((it.devDone + it.designDone) / tot) * 100)}%
                 </span>
-                <span className="rm-dates" title={isFinite(v.etas[i]) ? `${dayText(v.etas[i])} 뒤 출시 (${formatDate(s.day + v.etas[i])})` : '만드는 사람이 없어 멈춤'}>
+                <span className="rm-dates" title={isFinite(v.etas[i]) ? `출시까지 ${dayText(v.etas[i])} (${formatDate(s.day + v.etas[i])})` : '개발 인력이 없어 멈춤'}>
                   {isFinite(span.from) ? shortDate(span.from) : '-'} → <b>{span.to === null ? '멈춤' : shortDate(span.to)}</b>
                   {span.to !== null && isFinite(span.from) ? ` · ${Math.max(1, span.to - Math.max(s.day, span.from))}일` : ''}
                 </span>
@@ -1132,7 +1132,7 @@ export function Roadmap({ s, v, openSchedule, goFeatures, builders = true }: { s
             </Fragment>
           );
         })}
-        <Help text="맨 위 기능부터 하나씩 만듭니다. 끝나는 주로 묶어 보여 줍니다. ▲▼로 순서를 바꾸면 날짜가 바로 바뀝니다. 약속한 기능은 기한 칩이 붙고, 기한보다 늦게 끝나면 빨강입니다. 파란 막대는 개발, 보라 막대는 디자인 진행입니다." />
+        <Help text="맨 위 기능부터 하나씩 개발합니다. 끝나는 주로 묶어 보여 줍니다. ▲▼로 순서를 바꾸면 날짜가 바로 바뀝니다. 약속한 기능은 기한 칩이 붙고, 기한보다 늦게 끝나면 빨강입니다. 파란 막대는 개발, 보라 막대는 디자인 진행입니다." />
       </div>
       {builders && <Builders s={s} v={v} openSchedule={openSchedule} />}
     </div>

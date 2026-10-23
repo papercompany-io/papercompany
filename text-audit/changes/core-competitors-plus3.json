@@ -1,7 +1,0 @@
-[
-  {"file":"src/core/competitors.ts","line":48,"old":"가격으로 맞서는 곳","new":"가격 경쟁형","reason":"풀어 쓴 설명형 라벨"},
-  {"file":"src/core/competitors.ts","line":48,"old":"기능을 빨리 따라오는 곳","new":"기능 추격형","reason":"풀어 쓴 설명형 라벨"},
-  {"file":"src/core/competitors.ts","line":48,"old":"광고를 크게 쓰는 곳","new":"광고 공세형","reason":"풀어 쓴 설명형 라벨"},
-  {"file":"src/core/contracts.ts","line":68,"old":"\"가 됐습니다. 거래처 사이에 소문이 나서 더 큰 일감이 들어옵니다.","new":"\"가 됐습니다. 고객사 사이에 소문이 나서 더 큰 일감이 들어옵니다.","reason":"용어집: 거래처 → 고객사"},
-  {"file":"src/core/contracts.ts","line":221,"old":"\" 완료! 대금 ","new":"\" 완료. 대금 ","reason":"알림 느낌표 제거"}
-]

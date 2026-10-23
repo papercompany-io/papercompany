@@ -34,7 +34,7 @@ export function Hall({ onBack }: { onBack: () => void }) {
           />
           {tab === 'legacy' && (
             <>
-              <div className="tiny muted">회사가 끝날 때마다(파산 포함) 레거시 점수를 받습니다. 강화는 새로 시작하는 커리어(와 진행 중인 커리어의 다음 회사)에 적용됩니다.</div>
+              <div className="tiny muted">회사가 끝날 때마다(파산 포함) 레거시 점수를 받습니다. 강화는 새 커리어와 진행 중인 커리어의 다음 회사에 적용됩니다.</div>
               {msg && <div className="warn">{msg}</div>}
               <div className="legacy-grid">
                 {DATA.career.legacy.map((l) => {

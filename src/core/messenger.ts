@@ -31,7 +31,7 @@ export function unreadTotal(s: GameState, muteChatter = false): number {
 
 export function createWorkspace(s: GameState) {
   s.channels.push({ id: 'all', kind: 'all', name: '전체', memberIds: [], messages: [], unread: 0 });
-  post(s, 'all', '시스템', `${s.company.name} 워크스페이스가 만들어졌습니다. 직원 관리의 부서 탭에서 부서를 만들면 부서마다 채널이 열리고, 그 채널에서 부서가 맡을 일을 정할 수 있습니다.`, 'system');
+  post(s, 'all', '시스템', `${s.company.name} 워크스페이스가 만들어졌습니다. 직원 관리의 부서 탭에서 부서를 만들면 부서별 채널이 열리고, 채널에서 부서 업무를 정할 수 있습니다.`, 'system');
 }
 
 export function onEmployeeJoined(s: GameState, e: Employee) {
@@ -44,7 +44,7 @@ export function onEmployeeJoined(s: GameState, e: Employee) {
 export function onEmployeeLeft(s: GameState, e: Employee, why: 'quit' | 'fired' | 'event') {
   for (const c of s.channels) c.memberIds = c.memberIds.filter((x) => x !== e.id);
   s.channels = s.channels.filter((c) => c.id !== `dm-${e.id}`);
-  const verb = why === 'fired' ? '회사를 떠났습니다(해고)' : '퇴사했습니다';
+  const verb = why === 'fired' ? '해고되었습니다' : '퇴사했습니다';
   post(s, 'all', '시스템', `${e.name}님(${dept(e.dept).name})이 ${verb}.`, 'system');
 }
 

@@ -303,7 +303,7 @@
   {
    "id": "ach_staff1",
    "name": "첫 동료",
-   "desc": "첫 직원을 뽑았습니다.",
+   "desc": "첫 직원을 채용했습니다.",
    "tier": "bronze",
    "cond": {
     "metric": "staff",
@@ -454,7 +454,7 @@
   {
    "id": "ach_ipo",
    "name": "상장의 종",
-   "desc": "회사를 상장시켰습니다.",
+   "desc": "회사를 상장했습니다.",
    "tier": "gold",
    "cond": {
     "metric": "ipos",
@@ -464,7 +464,7 @@
   {
    "id": "ach_ipo2",
    "name": "두 번째 종",
-   "desc": "두 회사를 상장시켰습니다.",
+   "desc": "두 회사를 상장했습니다.",
    "tier": "platinum",
    "cond": {
     "metric": "ipos",
@@ -515,7 +515,7 @@
   {
    "id": "ach_exit10b",
    "name": "100억의 사나이",
-   "desc": "한 번의 Exit으로 100억원 이상을 손에 쥐었습니다.",
+   "desc": "Exit 한 번으로 100억원 이상을 손에 쥐었습니다.",
    "tier": "silver",
    "cond": {
     "metric": "exitAmount",
@@ -525,7 +525,7 @@
   {
    "id": "ach_exit100b",
    "name": "1,000억 Exit",
-   "desc": "한 번의 Exit으로 1,000억원 이상을 손에 쥐었습니다.",
+   "desc": "Exit 한 번으로 1,000억원 이상을 손에 쥐었습니다.",
    "tier": "gold",
    "cond": {
     "metric": "exitAmount",

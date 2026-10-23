@@ -124,7 +124,7 @@ function RoundTab({ initialStage, goInvestors }: { initialStage?: string; goInve
     return (
       <div className="iv2-empty">
         <PxIcon id="lock" />
-        <b>무투자 도전 중입니다. 투자를 받을 수 없습니다. 매출로 키우세요!</b>
+        <b>무투자 도전 중이라 투자를 받을 수 없습니다. 매출로 회사를 키웁니다.</b>
       </div>
     );
   if (s.public)
@@ -138,9 +138,9 @@ function RoundTab({ initialStage, goInvestors }: { initialStage?: string; goInve
   return (
     <div className="hire-layout">
       <section className="hire-form iv2-main">
-        <div className="iv2-hero" title={`라운드는 원할 때 언제든 열 수 있고, 실패해도 다시 열 수 있습니다. 다만 맞지 않는 시점에 열면 실패하기 쉽고, 진행하는 ${DATA.funding.roundDays}일 동안 투자자 미팅 초대가 자주 옵니다(수락하면 하루~이틀 자리를 비움).`}>
+        <div className="iv2-hero" title={`라운드는 언제든 열 수 있고, 실패해도 다시 열 수 있습니다. 다만 시점이 맞지 않으면 실패하기 쉽고, 진행하는 ${DATA.funding.roundDays}일 동안 투자자 미팅 초대가 자주 옵니다(수락하면 하루~이틀 자리를 비웁니다).`}>
           <span className="iv2-kicker">새 {st.name} 라운드 · 받을 돈</span>
-          <b className="iv2-big good" data-testid="preview-amount" title="투자금 = 투자 뒤 회사 가치 × 내줄 지분">
+          <b className="iv2-big good" data-testid="preview-amount" title="투자금 = 투자 후 기업가치 × 내줄 지분">
             {wonShort(m.amount)}
           </b>
           <span className="iv2-sub inv-mine">
@@ -163,7 +163,7 @@ function RoundTab({ initialStage, goInvestors }: { initialStage?: string; goInve
           {safeOk && (
             <div className="hf-field">
               <div className="hf-label">방식</div>
-              <div className="seg" title="SAFE: 지금 회사 가치를 정하지 않고 돈만 받고, 다음 지분 라운드에서 주식으로 바뀝니다">
+              <div className="seg" title="SAFE: 기업가치를 정하지 않고 돈만 먼저 받습니다. 다음 지분 라운드에서 주식으로 바뀝니다.">
                 <button className={instrument === 'equity' ? 'on' : ''} data-testid="inst-equity" onClick={() => setInstrument('equity')}>
                   지분 투자
                 </button>
@@ -184,20 +184,20 @@ function RoundTab({ initialStage, goInvestors }: { initialStage?: string; goInve
         </div>
         <div className="hf-summary">
           <div className="hf-sum" title="프리밸류">
-            <span>지금 회사 가치</span>
+            <span>투자 전 기업가치</span>
             <b data-testid="preview-pre">{wonShort(m.preValue)}</b>
           </div>
-          <div className="hf-sum" title="포스트밸류 = 프리밸류 ÷ (1 − 내줄 지분)">
-            <span>투자 뒤 회사 가치</span>
+          <div className="hf-sum" title="투자 후 기업가치 = 투자 전 기업가치 ÷ (1 − 내줄 지분)">
+            <span>투자 후 기업가치</span>
             <b data-testid="preview-post">{wonShort(m.postValue)}</b>
           </div>
         </div>
         {safe && (
-          <div className="iv2-note" title={`SAFE: 지금은 주식을 주지 않고 돈만 받습니다. 다음 지분 라운드에서 회사 가치 상한 ${wonShort(m.postValue)}과 할인 ${DATA.funding.safe.discount * 100}% 중 유리한 가격으로 주식이 됩니다.`}>
+          <div className="iv2-note" title={`SAFE: 지금은 주식을 주지 않고 돈만 받습니다. 다음 지분 라운드에서 기업가치 상한 ${wonShort(m.postValue)}과 할인 ${DATA.funding.safe.discount * 100}% 중 유리한 가격으로 주식이 됩니다.`}>
             SAFE · 지금은 돈만 받기 · 상한 {wonShort(m.postValue)} · 할인 {DATA.funding.safe.discount * 100}%
           </div>
         )}
-        <div className="iv2-sect">이 단계에 맞는 때인가요?</div>
+        <div className="iv2-sect">단계 조건</div>
         <div className="inv-checks">
           {conds.length === 0 && <span className="muted">특별한 조건이 없습니다.</span>}
           {conds.map((c) => (
@@ -223,7 +223,7 @@ function RoundTab({ initialStage, goInvestors }: { initialStage?: string; goInve
         <div className="iv2-sect">지난 라운드</div>
         {s.safes.length > 0 && (
           <div className="post-card inv-note" title="다음 지분 라운드에서 주식이 됩니다.">
-            아직 주식으로 바뀌지 않은 SAFE <b>{wonShort(s.safes.reduce((a, x) => a + x.amount, 0))}</b>
+            주식 전환 전 SAFE <b>{wonShort(s.safes.reduce((a, x) => a + x.amount, 0))}</b>
           </div>
         )}
         {history.length === 0 ? <div className="empty-note">아직 연 라운드가 없습니다.</div> : <RoundHistory rounds={history} />}
@@ -258,7 +258,7 @@ function OpenRound({ r, goInvestors }: { r: Round; goInvestors: () => void }) {
             </div>
             <div className="pc-foot">
               <span>{formatDate(r.openedDay)} 시작</span>
-              <span>{formatDate(r.endDay)} 끝</span>
+              <span>{formatDate(r.endDay)} 마감</span>
             </div>
           </div>
         </div>
@@ -267,8 +267,8 @@ function OpenRound({ r, goInvestors }: { r: Round; goInvestors: () => void }) {
             <span>내줄 지분</span>
             <b>{pct(r.room, 1)}</b>
           </div>
-          <div className="hf-sum" title="라운드를 연 날 산정한 프리밸류">
-            <span>회사 가치</span>
+          <div className="hf-sum" title="라운드를 연 날 산정한 투자 전 기업가치">
+            <span>투자 전 기업가치</span>
             <b>{wonShort(m.preValue)}</b>
           </div>
           <div className="hf-sum">
@@ -282,7 +282,7 @@ function OpenRound({ r, goInvestors }: { r: Round; goInvestors: () => void }) {
             <b data-testid="round-lead">{r.leadId ? investor(r.leadId).name : '아직 없음'}</b>
           </div>
           <div className="fb-row">
-            <span>함께하는 투자사</span>
+            <span>공동 투자사</span>
             <b data-testid="round-co">{co.length ? co.map((id) => investor(id).name).join(', ') : '없음'}</b>
           </div>
         </div>
@@ -290,7 +290,7 @@ function OpenRound({ r, goInvestors }: { r: Round; goInvestors: () => void }) {
         <div className="row">
           {!r.leadId && (
             <button className="btn ghost" data-testid="round-cancel" onClick={() => setErr(act((g) => cancelRound(g, r.id)) ?? null)}>
-              라운드 접기
+              라운드 취소
             </button>
           )}
           <div className="grow" />
@@ -340,27 +340,27 @@ function OfferView({ r }: { r: Round }) {
             {wonShort(o.amount)}
           </b>
           <span className="iv2-sub">
-            통장 {wonShort(s.cash)} → <b>{wonShort(s.cash + o.amount)}</b>
+            잔고 {wonShort(s.cash)} → <b>{wonShort(s.cash + o.amount)}</b>
           </span>
         </div>
-        {o.down && <div className="warn">지난번보다 낮은 회사 가치입니다(다운라운드). 받으면 직원 사기와 명성이 떨어집니다.</div>}
+        {o.down && <div className="warn">지난 라운드보다 낮은 기업가치입니다(다운라운드). 받으면 직원 만족도와 명성이 떨어집니다.</div>}
         {o.instrument === 'safe' && (
-          <div className="iv2-note" title={`SAFE라 지금은 지분이 줄지 않습니다. 회사 가치 상한 ${wonShort(o.safeCap ?? 0)}, 할인 ${DATA.funding.safe.discount * 100}%로 다음 지분 라운드에서 주식이 됩니다.`}>
+          <div className="iv2-note" title={`SAFE라 지금은 지분이 줄지 않습니다. 기업가치 상한 ${wonShort(o.safeCap ?? 0)}, 할인 ${DATA.funding.safe.discount * 100}%로 다음 지분 라운드에서 주식으로 전환됩니다.`}>
             SAFE · 지금은 지분이 줄지 않음 · 상한 {wonShort(o.safeCap ?? 0)} · 할인 {DATA.funding.safe.discount * 100}%
           </div>
         )}
-        {o.safeShares > 0 && <div className="iv2-note">이번에 예전 SAFE가 주식 {o.safeShares.toLocaleString('ko-KR')}주로 바뀝니다.</div>}
+        {o.safeShares > 0 && <div className="iv2-note">이번 라운드에서 기존 SAFE가 주식 {o.safeShares.toLocaleString('ko-KR')}주로 전환됩니다.</div>}
         <div className="hf-summary">
-          <div className="hf-sum" title="협상 반영 프리밸류">
-            <span>회사 가치</span>
+          <div className="hf-sum" title="협상 반영 투자 전 기업가치(프리밸류)">
+            <span>투자 전 기업가치</span>
             <b data-testid="offer-pre">{wonShort(o.preValue)}</b>
           </div>
           <div className="hf-sum">
             <span>내줄 지분</span>
             <b data-testid="offer-room">{pct(o.room, 2)}</b>
           </div>
-          <div className="hf-sum" title="포스트밸류">
-            <span>투자 뒤 회사 가치</span>
+          <div className="hf-sum" title="투자 후 기업가치(포스트밸류)">
+            <span>투자 후 기업가치</span>
             <b data-testid="offer-post">{wonShort(o.postValue)}</b>
           </div>
         </div>
@@ -379,7 +379,7 @@ function OfferView({ r }: { r: Round }) {
         </div>
       </section>
       <section className="post-list">
-        <div className="iv2-sect">누가 얼마나</div>
+        <div className="iv2-sect">투자사별 배분</div>
         {o.shares.map((x, i) => (
           <div key={x.investorId} className="post-card" style={{ ['--dc' as string]: i === 0 ? 'var(--accent)' : 'var(--c-gray-400)' }}>
             <div className="pc-head">
@@ -393,7 +393,7 @@ function OfferView({ r }: { r: Round }) {
                 지분 <b>{pct(x.pct, 2)}</b>
               </span>
               <span>
-                새 주식 <b>{x.newShares.toLocaleString()}주</b>
+                신주 <b>{x.newShares.toLocaleString()}주</b>
               </span>
             </div>
           </div>
@@ -439,7 +439,7 @@ function invStatus(r: Round | null, id: string): { text: string; tone: '' | 'blu
   if (r.leadId === id) return { text: '리드', tone: 'blue' };
   if (t.coInvest === 'joined') return { text: '함께 투자', tone: 'green' };
   if (t.decision === 'declined' || t.coInvest === 'declined') return { text: '거절', tone: 'red' };
-  if (t.decision === 'pending') return { text: '답 기다리는 중', tone: 'blue' };
+  if (t.decision === 'pending') return { text: '답변 대기', tone: 'blue' };
   if (t.sent.length) return { text: '대화 중', tone: '' };
   return { text: '', tone: '' };
 }
@@ -561,7 +561,7 @@ function InvestorPanel({ inv, open, openChat }: { inv: Inv; open: Round | null; 
             {stage(x as StageId).name}
           </span>
         ))}
-        {inv.soloAverse && <span>혼자 투자는 꺼림</span>}
+        {inv.soloAverse && <span>단독 투자 꺼림</span>}
       </div>
       {open && !fit && <div className="warn">이 투자사는 {stage(open.stage).name} 단계에 잘 투자하지 않습니다. 맞는 투자사를 고르는 게 좋습니다.</div>}
 
@@ -587,7 +587,7 @@ function InvestorPanel({ inv, open, openChat }: { inv: Inv; open: Round | null; 
       )}
       {gain && (
         <div className={`inv-gain ${gain.v > 0 ? 'up' : gain.v < 0 ? 'down' : ''}`}>
-          {gain.name}: 관심 {gain.v > 0 ? `+${gain.v}` : gain.v} {gain.v >= 20 ? '· 아주 반깁니다!' : gain.v < 0 ? '· 반기지 않습니다' : gain.v === 0 ? '· 별 반응이 없습니다' : ''}
+          {gain.name}: 관심 {gain.v > 0 ? `+${gain.v}` : gain.v} {gain.v >= 20 ? '· 아주 반깁니다' : gain.v < 0 ? '· 반기지 않습니다' : gain.v === 0 ? '· 별 반응이 없습니다' : ''}
           <span>답장은 내일 메신저로 옵니다.</span>
         </div>
       )}
@@ -603,7 +603,7 @@ function InvestorPanel({ inv, open, openChat }: { inv: Inv; open: Round | null; 
             <span className="inv-why">{dp.factors.filter((f) => f.value < 0 || f.mult).map((f) => f.label).join(' · ') || '좋은 조건입니다'}</span>
           </div>
           <button className="btn green" data-testid={`decide-${inv.id}`} onClick={() => setErr(act((g) => requestDecision(g, open!.id, inv.id)) ?? null)}>
-            요청하기
+            요청
           </button>
         </div>
       )}
@@ -616,13 +616,13 @@ function InvestorPanel({ inv, open, openChat }: { inv: Inv; open: Round | null; 
       {cp !== null && (
         <div className="inv-decide">
           <div>
-            <b>같이 투자하자고 제안</b>
+            <b>공동 투자 제안</b>
             <span>
               참여 가능성 <b>{chanceLabel(cp)}</b>
             </span>
           </div>
           <button className="btn green" data-testid={`coinvest-${inv.id}`} onClick={() => setErr(act((g) => askCoInvest(g, open!.id, inv.id)) ?? null)}>
-            제안하기
+            제안
           </button>
         </div>
       )}
@@ -687,7 +687,7 @@ function CapTab() {
         <div className="iv2-hero">
           <span className="iv2-kicker">내 지분</span>
           <b className="iv2-big">{pct(founderPct(s), 1)}</b>
-          <span className="iv2-sub">누가 회사를 얼마나 갖고 있나</span>
+          <span className="iv2-sub">주주별 지분</span>
         </div>
         <div className="inv-capbar">
           {s.capTable.map((c, i) => (
@@ -761,7 +761,7 @@ function EsopCard() {
     <div className="post-card" style={{ ['--dc' as string]: 'var(--c-gray-400)' }}>
       <div className="pc-head">
         <span className="pc-dot" />
-        <b className="iv2-help" title="ESOP 풀을 만들면 모든 주주가 같은 비율로 조금씩 줄지만, 핵심 직원에게 스톡옵션을 줘 오래 함께할 수 있습니다. 옵션은 직원 관리에서 줍니다(2년 20% → 3년 40% → 4년 80% → 5년 100%).">
+        <b className="iv2-help" title="ESOP 풀을 만들면 모든 주주의 지분이 같은 비율로 줄지만, 핵심 직원에게 스톡옵션을 줘 오래 함께할 수 있습니다. 옵션은 직원 관리에서 줍니다(2년 20% → 3년 40% → 4년 80% → 5년 100%).">
           직원 몫(ESOP)
         </b>
       </div>
@@ -771,7 +771,7 @@ function EsopCard() {
             풀 <b>{pool.shares.toLocaleString('ko-KR')}주</b>
           </span>
           <span>
-            준 몫 <b>{granted.toLocaleString('ko-KR')}주</b>
+            부여 <b>{granted.toLocaleString('ko-KR')}주</b>
           </span>
           <span>
             남음 <b>{esopFree(s).toLocaleString('ko-KR')}주</b>

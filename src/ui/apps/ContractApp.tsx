@@ -33,7 +33,7 @@ export function ContractApp({ openSchedule, openDevTeam }: { openSchedule?: () =
       <div className="col wk" data-testid="contracts">
         <div className="wk-empty">
           <b>이제 외주를 받지 않습니다</b>
-          <span>회사가 커서 거래처가 작은 일감을 맡기지 않습니다.</span>
+          <span>회사가 커서 고객사가 작은 일감을 맡기지 않습니다.</span>
         </div>
       </div>
     );
@@ -90,7 +90,7 @@ export function ContractApp({ openSchedule, openDevTeam }: { openSchedule?: () =
                     <b className="ct2-pay">
                       <Money v={o.pay} />
                     </b>
-                    <button className="btn small" data-testid={`contract-take-${o.id}`} disabled={full} title={full ? `외주는 동시에 ${ST_MAX}개까지 진행할 수 있습니다.` : ok ? '' : '기간 안에 대표 혼자는 어렵습니다. 받은 뒤 사람을 배치하세요.'} onClick={() => act((g) => acceptContract(g, o.id))}>
+                    <button className="btn small" data-testid={`contract-take-${o.id}`} disabled={full} title={full ? `외주는 동시에 ${ST_MAX}개까지 진행할 수 있습니다.` : ok ? '' : '대표 혼자서는 기간 안에 끝내기 어렵습니다. 받은 뒤 인력을 배치하세요.'} onClick={() => act((g) => acceptContract(g, o.id))}>
                       받기
                     </button>
                   </div>
@@ -143,12 +143,12 @@ function Active({ a, many, openSchedule }: { a: Contract; many: boolean; openSch
       </section>
       <div className="wk-stats">
         <div className="wk-stat">
-          <span>끝나는 때</span>
+          <span>예상 완료</span>
           <b className={bad ? 'neg' : ''}>{eta === null ? '멈춤' : daysText(eta)}</b>
         </div>
         <div className="wk-stat">
-          <span>마감과 비교</span>
-          <b className={bad ? 'neg' : ''}>{eta === null ? '아무도 안 함' : due.late ? '늦음' : '맞춤'}</b>
+          <span>마감 대비</span>
+          <b className={bad ? 'neg' : ''}>{eta === null ? '인력 없음' : due.late ? '늦음' : '제때'}</b>
         </div>
         <div className="wk-stat">
           <span>대금</span>
@@ -159,7 +159,7 @@ function Active({ a, many, openSchedule }: { a: Contract; many: boolean; openSch
       </div>
       <section className="wk-team">
         <div className="ct3-head">
-          <h3 className="wk-sect">하는 사람</h3>
+          <h3 className="wk-sect">작업 인력</h3>
           <button className={`btn small ${picking ? '' : 'ghost'}`} data-testid={`contract-staff-${a.id}`} aria-expanded={picking} onClick={() => setPicking(!picking)}>
             {picking ? '배치 닫기' : '+ 인원 배치'}
           </button>
@@ -249,7 +249,7 @@ function Picker({ a, run }: { a: Contract; run: (fn: (g: GameState) => string | 
             {people.map((e) => {
               const on = !!a.staff?.includes(e.id);
               const other = staffedOn(s, e);
-              const now = other && other.id !== a.id ? `다른 외주: ${other.title}` : other ? '이 외주 하는 중' : orderDef(empOrderOf(s, e))?.name ?? '';
+              const now = other && other.id !== a.id ? `다른 외주: ${other.title}` : other ? '이 외주 진행 중' : orderDef(empOrderOf(s, e))?.name ?? '';
               return (
                 <label key={e.id} className={`ct3-opt ${on ? 'on' : ''}`}>
                   <input type="checkbox" data-testid={`contract-staff-${a.id}-${e.id}`} checked={on} onChange={(ev) => run((g) => setContractStaff(g, a.id, e.id, ev.target.checked))} />
@@ -279,7 +279,7 @@ function Picker({ a, run }: { a: Contract; run: (fn: (g: GameState) => string | 
               <label key={q.id} className={`ct3-opt ${on ? 'on' : ''}`}>
                 <input type="radio" name={`ct-sq-${a.id}`} data-testid={`contract-squad-${a.id}-${q.id}`} checked={on} disabled={n === 0} onChange={() => run((g) => setContractSquad(g, a.id, q.id))} />
                 <span>
-                  <b>{q.name}</b> <small>외주 할 수 있는 사람 {n}명</small>
+                  <b>{q.name}</b> <small>외주 가능 인력 {n}명</small>
                 </span>
                 <em>{elsewhere ? `다른 외주: ${elsewhere.title}` : ''}</em>
               </label>
@@ -292,7 +292,7 @@ function Picker({ a, run }: { a: Contract; run: (fn: (g: GameState) => string | 
           )}
         </div>
       )}
-      <p className="ct3-note">배치한 사람은 이 외주가 끝날 때까지 외주만 하고, 끝나면 원래 부서 일로 돌아갑니다. 그동안 제품 개발은 그만큼 늦어집니다.</p>
+      <p className="ct3-note">배치한 직원은 이 외주가 끝날 때까지 외주만 하고, 끝나면 원래 부서 일로 돌아갑니다. 그동안 제품 개발은 그만큼 늦어집니다.</p>
     </div>
   );
 }

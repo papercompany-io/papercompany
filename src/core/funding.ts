@@ -67,7 +67,7 @@ export function stageConditions(s: GameState, id: StageId): { label: string; ok:
   if (st.needCustomers !== undefined) out.push({ label: `고객 ${seedUsersNeed(s).toLocaleString('ko-KR')} 이상`, ok: Math.floor(totalUsers(s)) >= seedUsersNeed(s) });
   if (st.needRevenue !== undefined) out.push({ label: `지난달 매출 ${(st.needRevenue / 10000).toLocaleString('ko-KR')}만원 이상(또는 그만한 사용자 규모)`, ok: tractionRatio(s, st.needRevenue) >= 1 });
   if (s.lastRoundDay !== null) out.push({ label: `직전 라운드 후 ${FD.prob.recentDays}일 지남`, ok: s.day - s.lastRoundDay >= FD.prob.recentDays });
-  if (st.early) out.push({ label: '창업자가 투자 유치·엑싯 경험 보유(초기 라운드)', ok: specEffects(s.founder.picks).earlyRound !== 'hard' });
+  if (st.early) out.push({ label: '창업자 투자 유치·엑싯 경험 보유(초기 라운드)', ok: specEffects(s.founder.picks).earlyRound !== 'hard' });
   return out;
 }
 
@@ -215,7 +215,7 @@ export function sendLetter(s: GameState, roundId: string, investorId: string, le
     const ask = FD.valuationAsks.find((a) => a.id === (askId ?? 'as_is')) ?? FD.valuationAsks[0];
     t.valuationAsk = ask.id;
     const m = roundMath(Math.round(r.preValue * ask.mult), r.room);
-    body += `${st} 라운드, 룸 ${(r.room * 100).toFixed(1)}%, 희망 프리밸류 ${(m.preValue / 1e8).toFixed(2)}억원(${ask.name})을 제안드립니다.`;
+    body += `${st} 라운드, 룸 ${(r.room * 100).toFixed(1)}%, 희망 투자 전 기업가치 ${(m.preValue / 1e8).toFixed(2)}억원(${ask.name})을 제안드립니다.`;
   } else if (letterId === 'intro') body += `${s.company.name}의 대표입니다. ${st} 라운드를 진행 중입니다.`;
   else if (letterId === 'material') body += '제품 소개서와 최근 지표를 보내드립니다.';
   else if (letterId === 'club') body += '이번 라운드는 여러 투자사와 함께하는 클럽딜로 만들려고 합니다.';
@@ -259,14 +259,14 @@ export function decisionProbability(s: GameState, r: Round, investorId: string):
     const ask = FD.valuationAsks.find((a) => a.id === t.valuationAsk)!;
     if (ask.pAdj !== 0) factors.push({ label: `희망 기업가치 ${ask.name}`, value: ask.pAdj });
   }
-  if (t?.sent.includes('club')) factors.push({ label: inv.soloAverse ? '클럽딜 의향(단독 투자를 꺼리는 곳)' : '클럽딜 의향', value: inv.soloAverse ? P.clubSoloAverse : P.club });
+  if (t?.sent.includes('club')) factors.push({ label: inv.soloAverse ? '클럽딜 의향(단독 투자 기피)' : '클럽딜 의향', value: inv.soloAverse ? P.clubSoloAverse : P.club });
   const ev = econ(s, 'invest');
   if (Math.abs(ev) > 0.005) factors.push({ label: `경기(${s.economy.phase === 'boom' ? '호황' : s.economy.phase === 'recession' ? '불황' : '보통'})`, value: ev });
   if (s.career.rep > 0) factors.push({ label: `창업자 명성 ${Math.round(s.career.rep)}`, value: Math.min(P.repCap, s.career.rep * P.perRep) });
   const lf = legacyFx(s, 'invest');
   if (lf) factors.push({ label: '레거시: 투자자 관계', value: lf });
   const mi = mod(s, 'invest');
-  if (mi) factors.push({ label: '최근 일(이벤트)', value: mi });
+  if (mi) factors.push({ label: '최근 이벤트', value: mi });
   // A-143 투자사는 최근 큰 장애를 기억합니다(날이 갈수록 잊음)
   const OU = DATA.orders.outage;
   if (s.lastMajorOutage !== undefined && s.day - s.lastMajorOutage < OU.investDays) {
@@ -292,7 +292,7 @@ export function decisionProbability(s: GameState, r: Round, investorId: string):
   if (!st.early) {
     if (hasMvp(s) && s.product.bugs > 50) mults.push({ label: `제품 품질 ${Math.round(100 - s.product.bugs)}점(버그 많음)`, mult: s.product.bugs > 75 ? 0.45 : 0.7 });
     const h = s.plHistory.slice(-4);
-    if (h.length >= 4 && h[0].usersEnd > 0 && h[3].usersEnd < h[0].usersEnd * 0.95) mults.push({ label: '최근 3개월 고객 감소', mult: 0.6 });
+    if (h.length >= 4 && h[0].usersEnd > 0 && h[3].usersEnd < h[0].usersEnd * 0.95) mults.push({ label: '최근 3개월 사용자 감소', mult: 0.6 });
     if (s.fundingStage === r.stage) mults.push({ label: '같은 단계 재유치(브릿지)', mult: 0.6 });
   }
   // 투자 업계는 좁습니다(A-65): 이번 라운드에서 거절한 곳이 있으면 다른 곳도 그 소식을 듣습니다.
@@ -466,7 +466,7 @@ export function acceptOffer(s: GameState, roundId: string): string | null {
       addMod(s, 'sat', FD.downRoundSat, 60, '다운라운드');
       s.career.rep = Math.max(0, s.career.rep - 2);
       news(s, `[투자] ${s.company.name}, 기업가치를 낮춰 ${stName} 유치(다운라운드)`, 'company');
-      notify(s, '다운라운드로 투자를 받았습니다. 직원 사기와 명성이 조금 떨어졌습니다.', 'bad', 'invest');
+      notify(s, '다운라운드로 투자를 받았습니다. 직원 만족도와 명성이 조금 떨어졌습니다.', 'bad', 'invest');
     }
   }
   book(s, `${stName} ${o.instrument === 'safe' ? 'SAFE ' : ''}투자금 (${o.shares.map((x) => x.name).join(', ')})`, o.amount);

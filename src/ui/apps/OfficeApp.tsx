@@ -23,7 +23,7 @@ export function OfficeApp() {
   return (
     <div className="col of of2">
       <section className="of2-seats">
-        <div className="of-seats" aria-label={`책상 ${all.length}개 중 ${used}개에 사람이 앉음, 더 놓을 수 있는 책상 ${room}개`}>
+        <div className="of-seats" aria-label={`책상 ${all.length}개 중 ${used}개 사용 중, 더 놓을 자리 ${room}개`}>
           {Array.from({ length: Math.min(cap, 50) }, (_, i) => (
             <i key={i} className={i < used ? 'sat' : i < all.length ? 'empty' : ''} />
           ))}
@@ -61,7 +61,7 @@ export function OfficeApp() {
       {msg && <div className="warn">{msg}</div>}
 
       <div className="of2-sect">
-        사무실 옮기기
+        사무실 이전
         <Help text="이전하면 지금 보증금을 돌려받고 새 보증금을 냅니다. 책상·가구는 들고 가서 새 사무실 빈 자리에 차례로 놓입니다(놓을 곳이 없는 가구는 보관함으로). 배치는 상점에서 다시 바꿀 수 있습니다." />
       </div>
       <div className="of-grid">
@@ -75,7 +75,7 @@ export function OfficeApp() {
                 {here && <span className="of-here">지금 여기</span>}
               </div>
               <div className="of-cap">
-                <b>{deskCapacity(t.id)}명</b>까지 앉을 수 있어요
+                <b>{deskCapacity(t.id)}명</b>까지 수용
               </div>
               <div className="of-tags">
                 {t.comfort > 0 && <span>쾌적도 +{t.comfort}</span>}
@@ -96,7 +96,7 @@ export function OfficeApp() {
               {!here &&
                 (block ? (
                   <div className="of-block" title={block}>
-                    {block.includes('자금') ? `돈이 모자랍니다 · 필요 ${wonShort(t.deposit - cur.deposit + t.rent)}` : block}
+                    {block.includes('자금') ? `자금이 부족합니다 · 필요 ${wonShort(t.deposit - cur.deposit + t.rent)}` : block}
                   </div>
                 ) : (
                   <button
@@ -107,7 +107,7 @@ export function OfficeApp() {
                       setMsg(err ?? null);
                     }}
                   >
-                    이사하기
+                    이사
                   </button>
                 ))}
             </div>

@@ -179,10 +179,10 @@ function Record() {
       </div>
       <div className="cr-tiles">
         <div title="65세에 은퇴하거나, 회사가 끝난 뒤 원할 때 은퇴하면 그때의 자산과 기록으로 엔딩이 정해집니다.">
-          <span>이대로면 엔딩</span>
+          <span>예상 엔딩</span>
           <b>{endingFor(s).name}</b>
         </div>
-        <div title="회사가 끝날 때 명예의 전당에 쌓여, 다음 커리어를 강화하는 데 씁니다.">
+        <div title="회사가 끝나면 명예의 전당에 쌓이고, 다음 커리어 강화에 씁니다.">
           <span>이번 커리어 레거시</span>
           <b>{s.career.legacyEarned}점</b>
         </div>

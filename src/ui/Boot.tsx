@@ -58,7 +58,7 @@ export function Boot({ onNew, onContinue, onHall }: Props) {
       {done && checked && (
         <div className="boot-choices" onClick={(e) => e.stopPropagation()}>
           {checked.corrupt && <div className="err">저장 파일을 읽지 못했습니다. 새 커리어로 시작하세요.</div>}
-          {checked.old && <div className="warn">이전 버전(MVP)의 저장은 새 버전에서 이어할 수 없습니다. 새 커리어를 시작하세요.</div>}
+          {checked.old && <div className="warn">이전 버전(MVP) 저장 파일은 이어할 수 없습니다. 새 커리어를 시작하세요.</div>}
           {live && (
             <button
               className="btn big"

@@ -35,7 +35,7 @@ export function policyApproval(s: GameState): { p: number; good: string[]; bad: 
   } else bad.push('아직 매출이 없음');
   const q = 1 - s.product.bugs / 100;
   p += c.pQuality * q;
-  if (s.product.bugs > 50) bad.push('제품 오류가 많음');
+  if (s.product.bugs > 50) bad.push('버그가 많음');
   else if (s.product.bugs < 20) good.push('제품이 안정적임');
   const rp = Math.min(c.pRepCap, s.career.rep * c.pRep);
   p += rp;
@@ -113,14 +113,14 @@ export function loanHint(s: GameState, kind: 'policy' | 'bank'): string {
 // A-185 재무 화면에서 직접 신청: 메신저 제안과 같은 조건(제품 출시 뒤, 버틸 기간이 offerRunway개월 아래). 막히면 이유를 말로
 export function loanBlock(s: GameState, kind: 'policy' | 'bank'): string | null {
   if (s.public) return '상장한 회사는 신청할 수 없습니다';
-  if (!hasMvp(s)) return '제품을 내놓은 뒤에 신청할 수 있습니다';
+  if (!hasMvp(s)) return '제품 출시 뒤에 신청할 수 있습니다';
   if (kind === 'policy') {
     if (s.loanApp) return '심사 중입니다';
     if ((s.loans ?? []).some((l) => l.kind === 'policy')) return '이미 받은 정책자금이 있습니다';
     if (!policyOpen(s)) return `창업 ${L.policy.maxAgeYears}년이 지나 신청할 수 없습니다`;
   } else if (!bankOpen(s)) return '이미 받은 은행 대출이 있습니다';
   const rw = runwayMonths(s);
-  if (rw === null || rw >= L.offerRunway) return `버틸 기간이 ${L.offerRunway}개월 아래로 줄면 신청할 수 있습니다`;
+  if (rw === null || rw >= L.offerRunway) return `런웨이가 ${L.offerRunway}개월 아래로 줄면 신청할 수 있습니다`;
   return null;
 }
 

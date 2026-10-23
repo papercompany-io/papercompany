@@ -64,21 +64,21 @@ export function Ads({ setMsg }: { setMsg: (m: string | null) => void }) {
     <div className="ad2">
       <div className="wk-stats ad2-sum" data-testid="ad-summary">
         <div className="wk-stat">
-          <span>한 달 광고비</span>
+          <span>월 광고비</span>
           <b>{wonShort(total)}</b>
           <em>{season ? `${season} · 광고가 ${sm >= 1 ? '더 잘' : '덜'} 통합니다` : '평소 시기'}</em>
         </div>
-        <div className="wk-stat" title="광고 채널 하나를 돌리려면 일손이 하나 필요합니다. 대표 혼자서는 한 채널, 마케터 한 명마다 한 채널씩 더 돌립니다. 일손보다 많은 채널에 예산을 넣으면 예산이 작은 채널부터 쉽니다.">
-          <span>돌리는 광고</span>
+        <div className="wk-stat" title="광고 채널 하나에 인력 한 명이 필요합니다. 대표 혼자서는 한 채널, 마케터 한 명마다 한 채널씩 더 운영합니다. 인력보다 많은 채널에 예산을 넣으면 예산이 작은 채널부터 쉽니다.">
+          <span>집행 중인 광고</span>
           <b>
             {Math.min(onCount, slots)}/{slots}개
           </b>
           <em>마케터 {mk}명</em>
         </div>
         <div className="wk-stat">
-          <span>30일 데려온 {industry(s.company.industry).unit}</span>
+          <span>30일 유입 {industry(s.company.industry).unit}</span>
           <b>{totGot >= 10 ? countShort(totGot) : totGot.toFixed(1)}</b>
-          <em>{totGot >= 0.5 ? `한 명당 ${wonShort(totSpent / totGot)}` : '아직 쌓이는 중'}</em>
+          <em>{totGot >= 0.5 ? `한 명당 ${wonShort(totSpent / totGot)}` : '집계 중'}</em>
         </div>
       </div>
       {launched.length > 1 && (
@@ -99,26 +99,26 @@ export function Ads({ setMsg }: { setMsg: (m: string | null) => void }) {
             <button
               className={s.company.adAuto ? 'on' : ''}
               data-testid="ad-auto-on"
-              title="매달 초 마케팅팀이 성과가 나쁜 채널 예산을 좋은 채널로 옮기고, 지친 소재를 새로 만듭니다. 한 달 광고비 합계는 그대로입니다. 한 일은 마케팅팀 채널로 보고합니다."
+              title="매달 초 마케팅팀이 성과가 나쁜 채널 예산을 좋은 채널로 옮기고, 지친 소재를 새로 만듭니다. 한 달 광고비 합계는 그대로입니다. 결과는 마케팅팀 채널로 보고합니다."
               onClick={() => act((g) => (g.company.adAuto = true))}
             >
               마케팅팀에 맡기기
             </button>
           </>
         ) : (
-          <span className="ad2-note">마케터를 뽑으면 채널을 더 돌리고 운영을 맡길 수 있습니다</span>
+          <span className="ad2-note">마케터를 채용하면 채널을 늘리고 운영을 맡길 수 있습니다</span>
         )}
       </div>
       <h3
         className="ad2-sect"
-        title="채널마다 성격이 다릅니다. 바로 데려오는 채널, 널리 알리는 채널이 있고, 우리 사업과 잘 맞는 채널이 있습니다. 한 채널에 몰아 넣으면 효과가 점점 줄고, 같은 광고를 오래 돌리면 지칩니다. 나눠 넣고, 성과를 보고 고치세요."
+        title="채널마다 성격이 다릅니다. 바로 유입을 만드는 채널, 인지도를 올리는 채널이 있고, 우리 사업과 잘 맞는 채널이 있습니다. 한 채널에 몰아 넣으면 효과가 점점 줄고, 같은 광고를 오래 돌리면 지칩니다. 나눠 넣고, 성과를 보고 고치세요."
       >
-        돌리는 광고
+        집행 중인 광고
       </h3>
       {live.length === 0 && (
         <div className="ad2-empty">
           <PxIcon id="chart" size={28} />
-          <span>돌리는 광고가 없습니다. 아래에서 광고를 시작하면 고객이 들어옵니다</span>
+          <span>집행 중인 광고가 없습니다. 아래에서 광고를 시작하면 고객이 유입됩니다</span>
         </div>
       )}
       <div className="ad2-grid">
@@ -139,16 +139,16 @@ export function Ads({ setMsg }: { setMsg: (m: string | null) => void }) {
               <div className="ad2-tags">
                 {fit.text !== '보통' && <span className={`chip ${fit.tone}`}>{fit.text}</span>}
                 {fat >= 0.3 && <span className="chip amber">{fat >= 0.6 ? '많이 지침' : '조금 지침'}</span>}
-                {resting && <span className="chip red">쉼 · 일손 모자람</span>}
+                {resting && <span className="chip red">쉼 · 인력 부족</span>}
               </div>
-              <div className="ad2-mini" title="최근 30일로 바꾼 값입니다">
+              <div className="ad2-mini" title="최근 30일 기준 값입니다">
                 {got >= 0.5 ? (
                   <>
                     30일 <b>{got >= 10 ? Math.round(got).toLocaleString('ko-KR') : got.toFixed(1)}</b>
                     {unitWord(s)} · 한 명당 <b>{wonShort(spent / got)}</b>
                   </>
                 ) : (
-                  '성과가 쌓이는 중'
+                  '성과 집계 중'
                 )}
               </div>
               <input
@@ -168,17 +168,17 @@ export function Ads({ setMsg }: { setMsg: (m: string | null) => void }) {
       {idle.length > 0 && (
         <button className="fm-open" data-testid="ad-add-open" onClick={() => setAdding(true)}>
           <PxIcon id="star" size={16} />
-          <b>새 광고 시작하기</b>
-          <em>아직 안 쓰는 광고 {idle.length}가지 · 눌러서 골라 보기{onCount >= slots ? ' (일손이 모자라 하나를 꺼야 시작할 수 있습니다)' : ''}</em>
+          <b>새 광고 시작</b>
+          <em>집행하지 않은 광고 {idle.length}가지{onCount >= slots ? ' (인력이 부족해 하나를 꺼야 시작할 수 있습니다)' : ''}</em>
         </button>
       )}
       {adding && (
         <div className="modal-bg" onClick={() => setAdding(false)}>
           <div className="modal fmod" data-testid="ad-modal" onClick={(e) => e.stopPropagation()}>
             <div className="fmod-head">
-              <b>어디에 광고할까요</b>
+              <b>광고 채널 선택</b>
               <span className="tiny muted">
-                지금 {Math.min(onCount, slots)}개 / 동시에 {slots}개까지
+                집행 중 {Math.min(onCount, slots)}개 / 최대 {slots}개
               </span>
               <span className="grow" />
               <button className="btn small ghost" onClick={() => setAdding(false)}>
@@ -202,7 +202,7 @@ export function Ads({ setMsg }: { setMsg: (m: string | null) => void }) {
                         className="btn small"
                         data-testid={`ad-start-${c.id}`}
                         disabled={noHands}
-                        title={noHands ? `지금은 채널 ${slots}개까지 돌릴 수 있습니다` : `한 달 ${wonShort(startAmount)}로 시작합니다. 예산은 나중에 고칩니다`}
+                        title={noHands ? `지금은 채널 ${slots}개까지 운영할 수 있습니다` : `월 ${wonShort(startAmount)}로 시작합니다. 예산은 나중에 고칩니다`}
                         onClick={() => {
                           const e = act((g) => setChannelBudget(g, m, c.id, startAmount)) ?? null;
                           setMsg(e);
@@ -225,7 +225,7 @@ export function Ads({ setMsg }: { setMsg: (m: string | null) => void }) {
       <Campaigns m={m} setMsg={setMsg} />
       {locked.length > 0 && (
         <>
-          <h3 className="ad2-sect">더 크면 열리는 광고</h3>
+          <h3 className="ad2-sect">잠긴 광고</h3>
           <div className="ad2-locked" data-testid="ad-locked">
             {locked.slice(0, 4).map((x) => (
               <div key={x.name} className="ad2-lock">
@@ -270,20 +270,20 @@ function AdStats({ m }: { m: MarketId }) {
           <div key={c.id} className="ad2-perf-row">
             <div className="ad2-perf-top">
               <b>{c.name}</b>
-              {c.id === best && rows.length > 1 && got >= 1 && <em className="chip green">가장 싸게 데려옴</em>}
+              {c.id === best && rows.length > 1 && got >= 1 && <em className="chip green">유입 비용 최저</em>}
               <span className="grow" />
-              <span className="ad2-perf-per" title="한 명을 데려오는 데 든 돈">
+              <span className="ad2-perf-per" title="1명당 유입 비용">
                 {got >= 0.5 ? `한 명당 ${wonShort(spent / got)}` : '-'}
               </span>
             </div>
-            <div className="ad2-perf-bar" title={`쓴 돈 ${wonShort(spent)} · 알린 정도 +${(x.aware * 30 * 100).toFixed(2)}%p`}>
+            <div className="ad2-perf-bar" title={`비용 ${wonShort(spent)} · 인지도 +${(x.aware * 30 * 100).toFixed(2)}%p`}>
               <i style={{ width: `${Math.max(2, (got / maxGot) * 100)}%` }} />
               <span>
                 {unit} {got >= 10 ? Math.round(got).toLocaleString('ko-KR') : got.toFixed(1)}
               </span>
             </div>
             <div className="ad2-perf-sub">
-              쓴 돈 {wonShort(spent)} · 알린 정도 +{(x.aware * 30 * 100).toFixed(2)}%p
+              비용 {wonShort(spent)} · 인지도 +{(x.aware * 30 * 100).toFixed(2)}%p
             </div>
           </div>
         );
@@ -317,7 +317,7 @@ function Campaigns({ m, setMsg }: { m: MarketId; setMsg: (m: string | null) => v
                 <span className="pc-dot" />
                 <b>{def.name}</b>
                 {prep ? <span className="chip amber">준비 중</span> : <span className="chip blue">진행 중</span>}
-                <span className="pc-hired">{prep ? `${Math.max(0, to - s.day)}일 뒤 시작` : `D-${Math.max(0, c.endDay - s.day)}`}</span>
+                <span className="pc-hired">{prep ? `시작까지 ${Math.max(0, to - s.day)}일` : `D-${Math.max(0, c.endDay - s.day)}`}</span>
               </div>
               <div className="pc-time">
                 <i style={{ width: `${frac * 100}%` }} />
@@ -325,10 +325,10 @@ function Campaigns({ m, setMsg }: { m: MarketId; setMsg: (m: string | null) => v
               {def.power > 0 ? (
                 <div className="pc-stats">
                   <span>
-                    지금까지 {unit} <b>{Math.round(c.got).toLocaleString('ko-KR')}</b>
+                    누적 {unit} <b>{Math.round(c.got).toLocaleString('ko-KR')}</b>
                   </span>
                   <span>
-                    알린 정도 <b>+{(c.aware * 100).toFixed(1)}%p</b>
+                    인지도 <b>+{(c.aware * 100).toFixed(1)}%p</b>
                   </span>
                 </div>
               ) : (
@@ -409,7 +409,7 @@ function Campaigns({ m, setMsg }: { m: MarketId; setMsg: (m: string | null) => v
                     {unit} <b>{Math.round(c.got).toLocaleString('ko-KR')}</b>
                   </span>
                   <span>
-                    알린 정도 <b>+{(c.aware * 100).toFixed(1)}%p</b>
+                    인지도 <b>+{(c.aware * 100).toFixed(1)}%p</b>
                   </span>
                   <span>
                     문구 <b>{AD.tones.find((x) => x.id === c.tone)?.name}</b>

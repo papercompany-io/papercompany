@@ -16,26 +16,26 @@ export const GAIN_WORD: Record<GainWhy, string> = { inbound: '스스로 찾아�
 // 떠나는 이유를 쉬운 말로(화면 막대 이름)
 export function lossName(key: string): string {
   if (key.startsWith('mod:')) return key.slice(4);
-  return ({ natural: '원래 떠나는 고객', bugs: '버그·불편', price: '가격 부담', cs: '문의 답이 늦음', excess: '제품보다 많이 데려옴' } as Record<string, string>)[key] ?? key;
+  return ({ natural: '자연 이탈', bugs: '버그·불편', price: '가격 부담', cs: '문의 응답 지연', excess: '제품보다 많이 데려옴' } as Record<string, string>)[key] ?? key;
 }
 
 const LOSS_LINE: Record<string, string> = {
-  natural: '특별한 문제 없이 원래 떠나는 만큼 떠났습니다.',
-  bugs: '버그 때문에 불편하다는 고객이 가장 많았습니다. 개발팀에 "안정화·버그 수정"을 맡기면 줄어듭니다.',
+  natural: '특별한 문제 없이 자연 이탈 수준이었습니다.',
+  bugs: '버그 때문에 불편하다는 고객이 가장 많았습니다. 개발팀에 "안정화·기술 부채 정리"를 맡기면 줄어듭니다.',
   price: '가격이 부담된다며 떠난 고객이 가장 많았습니다.',
-  cs: '문의에 답이 늦어 떠난 고객이 가장 많았습니다. 고객지원 인원이 모자랍니다.',
-  excess: '광고·영업으로 데려온 고객 가운데 제품에 실망한 분들이 많이 빠져나갔습니다.',
+  cs: '문의 응답이 늦어 이탈한 고객이 가장 많았습니다. 고객지원 인력이 부족합니다.',
+  excess: '광고·영업으로 유입된 고객 중 제품에 실망한 고객이 많이 이탈했습니다.',
 };
 
 export const ROOM_LINE: Record<RoomState, string> = {
-  room: '제품은 고객을 더 받을 수 있습니다. 더 알리면 더 옵니다.',
+  room: '제품은 고객을 더 받을 수 있습니다. 홍보를 늘리면 유입이 늘어납니다.',
   near: '제품이 받쳐 주는 만큼 차 가고 있습니다.',
-  full: '제품이 받쳐 주는 만큼 거의 찼습니다. 제품 메뉴 기능 탭에서 기능 레벨을 올리거나 새 기능을 만들어 매력을 높여야 더 큽니다.',
-  over: '제품이 받쳐 주는 것보다 많이 데려왔습니다. 광고·영업으로 온 고객이 빠져나가고 있습니다.',
+  full: '제품이 받쳐 주는 만큼 거의 찼습니다. 제품 메뉴 기능 탭에서 기능 레벨을 올리거나 새 기능을 만들어 매력도를 높여야 더 성장합니다.',
+  over: '제품이 받쳐 주는 것보다 많이 데려왔습니다. 광고·영업으로 유입된 고객이 이탈하고 있습니다.',
 };
 
 // 받쳐 주는 만큼 찼을 때 아직 안 나간 시장이 있으면(A-196: 어디서 하는지까지)
-export const CLOSED_LINE = ' 아직 나가지 않은 해외 시장도 있습니다. 현지화 기능을 만든 뒤 시장 메뉴에서 진출하면 그 시장 고객이 더해집니다.';
+export const CLOSED_LINE = ' 아직 진출하지 않은 해외 시장도 있습니다. 현지화 기능을 만든 뒤 시장 메뉴에서 진출하면 그 시장 고객이 더해집니다.';
 
 function sum(o: Partial<Record<string, number>>): number {
   return Object.values(o).reduce<number>((a, v) => a + (v ?? 0), 0);
@@ -92,13 +92,13 @@ export function adAutoMonth(s: GameState): string[] {
       if (value(best)! > value(worst)! * T.gap && move > 0) {
         mix[worst] -= move;
         mix[best] += move;
-        lines.push(`${where}${chName(worst)} 예산 ${Math.round(shift * 100)}%를 ${chName(best)}${josa(chName(best), '으로')} 옮겼습니다. 같은 돈으로 더 많이 데려오고 알립니다.`);
+        lines.push(`${where}${chName(worst)} 예산 ${Math.round(shift * 100)}%를 ${chName(best)}${josa(chName(best), '으로')} 옮겼습니다. 같은 예산으로 유입과 인지도가 더 늘어납니다.`);
       }
     }
     const tired = runningChannels(s, m).filter((id) => (ms.adFatigue?.[id] ?? 0) >= T.refreshAt);
     if (tired.length && !campaignBlock(s, 'refresh', m) && s.cash > campaignCost(s, campaignDef('refresh')!, m) * 10) {
       startCampaign(s, 'refresh', m, 'feature');
-      lines.push(`${where}지친 ${tired.map(chName).join('·')} 소재를 새로 만들었습니다.`);
+      lines.push(`${where}지침 상태인 ${tired.map(chName).join('·')} 소재를 새로 만들었습니다.`);
     }
     const used = Object.keys(mix).filter((k) => mix[k] > 0);
     if (used.length < adSlots(s)) {
@@ -132,17 +132,17 @@ function channelNotes(s: GameState): string[] {
   const ranked = Object.entries(agg)
     .filter(([, x]) => x.got * 30 >= 1 && x.spent * 30 >= 1e5)
     .sort((a, b) => a[1].spent / a[1].got - b[1].spent / b[1].got);
-  if (ranked.length >= 2) out.push(`${chName(ranked[0][0])}${josa(chName(ranked[0][0]), '이')} 한 명을 가장 싸게 데려옵니다.`);
+  if (ranked.length >= 2) out.push(`${chName(ranked[0][0])}${josa(chName(ranked[0][0]), '이')} 유입 비용이 가장 낮습니다.`);
   if (!s.company.adAuto) {
     const tired = new Set<string>();
     for (const m of launchedMarkets(s)) for (const id of runningChannels(s, m)) if ((s.markets[m].adFatigue?.[id] ?? 0) >= 0.5) tired.add(id);
-    if (tired.size) out.push(`${[...tired].map(chName).join('·')}${josa(chName([...tired].pop()!), '이')} 지쳤습니다. 소재를 새로 만들면 다시 힘을 냅니다.`);
+    if (tired.size) out.push(`${[...tired].map(chName).join('·')}${josa(chName([...tired].pop()!), '이')} 지침 상태입니다. 소재를 새로 만들면 효과가 돌아옵니다.`);
   }
   const kr = s.markets.kr;
   const on = Object.values(adMix(s, 'kr')).filter((v) => v > 0).length;
   if (kr.launched && on >= adSlots(s)) {
     const idle = channelsFor(s).find((c) => !(adMix(s, 'kr')[c.id] > 0) && channelFit(s, c.id) >= 1.15);
-    if (idle) out.push(`${idle.name}${josa(idle.name, '이')} 우리와 잘 맞는데, 일손이 모자라 돌리지 못하고 있습니다.`);
+    if (idle) out.push(`${idle.name}${josa(idle.name, '이')} 우리와 잘 맞지만, 운영 인력이 부족해 집행하지 못하고 있습니다.`);
   }
   return out;
 }
@@ -161,8 +161,8 @@ export function marketingMonth(s: GameState) {
   const lines: string[] = [`[고객 리포트] ${month}월 ${unit} ${net >= 0 ? '+' : ''}${countShort(net)}${w} (지금 ${countShort(now)}${w})`];
   const gainTotal = sum(cm.gain);
   const topGain = (Object.entries(cm.gain) as [GainWhy, number][]).sort((a, b) => b[1] - a[1])[0];
-  if (topGain && gainTotal >= 1) lines.push(`가장 많이 온 길은 ${GAIN_WORD[topGain[0]]}입니다(들어온 ${unit}의 ${Math.round((topGain[1] / gainTotal) * 100)}%).`);
-  else lines.push(`새로 들어온 ${unit}${josa(unit, '이')} 거의 없습니다. 광고·영업·콘텐츠로 알려야 옵니다.`);
+  if (topGain && gainTotal >= 1) lines.push(`가장 많은 유입 경로는 ${GAIN_WORD[topGain[0]]}입니다(유입 ${unit}의 ${Math.round((topGain[1] / gainTotal) * 100)}%).`);
+  else lines.push(`신규 유입 ${unit}${josa(unit, '이')} 거의 없습니다. 광고·영업·콘텐츠로 알려야 유입됩니다.`);
   const why = topLoss(cm.lost);
   why.forEach((k, i) => lines.push(lossLine(k, i > 0)));
   const room = growthRoom(s);
@@ -176,7 +176,7 @@ export function marketingMonth(s: GameState) {
   } else {
     if (!s.flags.includes('custreport-tip')) {
       s.flags.push('custreport-tip');
-      lines.push('마케터가 있으면 채널별 성과를 보고 제안도 드리고, 광고 운영을 맡길 수 있습니다.');
+      lines.push('마케터를 채용하면 채널별 성과 보고와 제안을 받고, 광고 운영도 맡길 수 있습니다.');
     }
     post(s, 'all', '비서', lines.join('\n'), 'npc');
   }

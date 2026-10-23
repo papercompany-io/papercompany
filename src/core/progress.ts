@@ -38,7 +38,7 @@ export function updateStage(s: GameState) {
   const st = computeStage(s);
   if (st > s.company.stage) {
     for (let k = s.company.stage + 1; k <= st; k++) {
-      notify(s, `회사 단계 ${k} "${STAGE_NAMES[k]}"에 올랐습니다! 새로 열림: ${STAGE_UNLOCKS[k].join(', ')}`, 'mission');
+      notify(s, `회사 단계 ${k} "${STAGE_NAMES[k]}"에 올랐습니다. 새로 열림: ${STAGE_UNLOCKS[k].join(', ')}`, 'mission');
     }
     s.company.stage = st;
     s.events.push({ type: 'confetti' });

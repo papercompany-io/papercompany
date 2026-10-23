@@ -1,4 +1,0 @@
-[
-  {"file":"src/core/events.ts","line":451,"old":"'이벤트 지출'","new":"'이벤트 비용'","reason":"용어집: 지출 → 비용"},
-  {"file":"src/core/events.ts","line":457,"old":"'이벤트 지출'","new":"'이벤트 비용'","reason":"용어집: 지출 → 비용"}
-]

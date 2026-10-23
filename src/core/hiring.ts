@@ -43,7 +43,7 @@ export function postingWarnings(s: GameState): string[] {
   const free = seatsAvailable(s);
   const out: string[] = [];
   if (free === 0) out.push('사무실에 책상을 더 놓을 자리가 없습니다. 상점에서 책상을 놓거나 더 큰 사무실로 옮기세요.');
-  else if (free <= 2) out.push(`책상을 ${free}개 더 놓을 수 있습니다. ${free}명까지만 뽑을 수 있습니다.`);
+  else if (free <= 2) out.push(`책상 자리가 ${free}개 남았습니다. ${free}명까지만 뽑을 수 있습니다.`);
   return out;
 }
 
@@ -208,7 +208,7 @@ export function hiringDayEnd(s: GameState) {
 
 export function hireWarning(s: GameState, salary: number): string | null {
   const need = projectedMonthlyPayroll(s, salary);
-  if (s.cash < need) return `이 사람까지 뽑으면 한 달 인건비(입사 대기자 포함)가 약 ${Math.round(need / 1e4).toLocaleString('ko-KR')}만원인데, 지금 자금은 ${Math.round(s.cash / 1e4).toLocaleString('ko-KR')}만원입니다. 자금이 0 이하로 월급일을 넘기면 파산합니다.`;
+  if (s.cash < need) return `이 사람까지 뽑으면 월 인건비(입사 대기자 포함)가 약 ${Math.round(need / 1e4).toLocaleString('ko-KR')}만원인데, 현재 잔고는 ${Math.round(s.cash / 1e4).toLocaleString('ko-KR')}만원입니다. 잔고가 0 이하인 채로 월급일을 넘기면 파산합니다.`;
   return null;
 }
 

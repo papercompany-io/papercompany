@@ -77,7 +77,7 @@ export function leaveBlock(s: GameState, e: Employee): string | null {
   if (isSick(s, e)) return '병가 중입니다.';
   if (hasLeave(s, e)) return '이미 휴가가 잡혀 있습니다.';
   if (e.leaving !== null) return '퇴사 예정입니다.';
-  if (e.leaveDay !== undefined && s.day - e.leaveDay < LEAVE.coolDays) return `최근에 쉬었습니다(${LEAVE.coolDays - (s.day - e.leaveDay)}일 뒤 다시).`;
+  if (e.leaveDay !== undefined && s.day - e.leaveDay < LEAVE.coolDays) return `최근에 쉬었습니다(${LEAVE.coolDays - (s.day - e.leaveDay)}일 뒤 가능).`;
   return null;
 }
 

@@ -381,7 +381,7 @@ export function launchMarket(s: GameState, m: MarketId): string | null {
   s.markets[m].launched = true;
   s.markets[m].launchedDay = s.day;
   s.markets[m].awareness = 0.02;
-  notify(s, `${md.flag} ${md.name} 시장에 진출했습니다!`, 'mission', 'market');
+  notify(s, `${md.flag} ${md.name} 시장에 진출했습니다.`, 'mission', 'market');
   news(s, `[해외] ${s.company.name}, ${md.name} 시장 진출`, 'company');
   s.events.push({ type: 'confetti' });
   return null;

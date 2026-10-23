@@ -49,7 +49,7 @@ export function EmployeeModal({ id, onClose, onDm, onManage, openApp, onEmployee
               {dept(e.dept).name} · {e.lead ? '팀장' : kind} · {squad(s, e.squadId)?.name ?? '소속 없음'} · 입사 {formatDate(e.joinedDay)} · 경력 {e.years}년
             </span>
             <span className="epm-now">
-              지금 하는 일 <em data-testid="emp-status">{orderLabel(s, e.dept)}</em>
+              현재 업무 <em data-testid="emp-status">{orderLabel(s, e.dept)}</em>
             </span>
           </div>
           <div className="epm-acts act-row">
@@ -60,7 +60,7 @@ export function EmployeeModal({ id, onClose, onDm, onManage, openApp, onEmployee
                     className="btn small act-main"
                     data-testid="employee-bonus"
                     disabled={!!bonusWhy}
-                    title={bonusWhy ?? '떨어진 만족도만큼 보너스를 줍니다(많이 떨어졌을수록 비쌈). 만족도가 가득 차지만, 처우가 그대로면 차츰 원래대로 돌아옵니다.'}
+                    title={bonusWhy ?? '만족도를 가득 채우는 보너스입니다. 만족도가 낮을수록 비싸고, 처우가 그대로면 차츰 다시 떨어집니다.'}
                     onClick={() => run((g) => giveBonus(g, e.id), `${e.name}님에게 보너스를 줬습니다. 만족도가 가득 찼습니다.`)}
                   >
                     보너스 <small>{Math.round(bonusCost(e) / 1e4).toLocaleString('ko-KR')}만원</small>

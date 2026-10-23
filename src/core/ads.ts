@@ -128,7 +128,7 @@ export function setChannelBudget(s: GameState, m: MarketId, channel: string, mon
   const v = Math.max(0, Math.round(monthly / 1e5) * 1e5);
   // 새 채널을 켜려면 일손이 남아야 함(A-157)
   if (v > 0 && !((mix[channel] ?? 0) > 0) && Object.values(mix).filter((x) => x > 0).length >= adSlots(s))
-    return `지금은 채널 ${adSlots(s)}개까지 돌릴 수 있습니다. 다른 채널을 끄거나 마케터를 뽑으면 하나씩 늘어납니다.`;
+    return `지금은 채널 ${adSlots(s)}개까지 운영할 수 있습니다. 다른 채널을 끄거나 마케터를 채용해 한도를 늘리세요.`;
   mix[channel] = v;
   ms.ads = mix;
   ms.adBudget = Object.values(mix).reduce((a, x) => a + x, 0);
@@ -270,7 +270,7 @@ export function startCampaign(s: GameState, defId: string, m: MarketId, toneId: 
   if (extra(def).refresh) {
     s.markets[m].adFatigue = {};
     (s.campaigns ??= []).push({ id: nextId(s, 'cp'), def: defId, market: m, tone: toneId, startDay: s.day, endDay: s.day, cost, mult: 1, risk: false, got: 0, aware: 0, done: true });
-    notify(s, `${market(m).name} 광고를 새 소재로 바꿨습니다. 지쳤던 광고가 다시 힘을 냅니다.`, 'good', 'market');
+    notify(s, `${market(m).name} 광고 소재를 새로 바꿔 지침이 풀렸습니다.`, 'good', 'market');
     return null;
   }
   const tone = AD.tones.find((x) => x.id === toneId) ?? AD.tones[0];
@@ -332,13 +332,13 @@ export function endCampaigns(s: GameState) {
     c.done = true;
     const def = campaignDef(c.def)!;
     const v = campaignVerdict(c);
-    const head = v === 'hit' ? '대박! ' : v === 'flop' ? '반응이 저조했습니다. ' : '';
+    const head = v === 'hit' ? '반응이 좋았습니다. ' : v === 'flop' ? '반응이 저조했습니다. ' : '';
     const unit = industry(s.company.industry).unit;
-    if (def.power > 0) notify(s, `${head}"${def.name}" 끝: ${unit} ${Math.round(c.got).toLocaleString('ko-KR')} 데려옴, 우리를 아는 사람 +${(c.aware * 100).toFixed(1)}%p`, v === 'flop' ? 'bad' : 'good', 'market');
+    if (def.power > 0) notify(s, `${head}"${def.name}" 끝: ${unit} ${Math.round(c.got).toLocaleString('ko-KR')} 유입, 인지도 +${(c.aware * 100).toFixed(1)}%p`, v === 'flop' ? 'bad' : 'good', 'market');
     else notify(s, `"${def.name}"${josa(def.name, '이')} 끝났습니다.`, 'info', 'market');
     if (v === 'hit' && def.power > 0) news(s, `${s.company.name}의 "${def.name}"${josa(def.name, '이')} 화제입니다.`, 'company');
     const after = def as { afterChurn?: number; afterDays?: number };
-    if (after.afterChurn) addMod(s, 'churn', after.afterChurn, after.afterDays ?? 30, '할인이 끝나 떠나는 고객');
+    if (after.afterChurn) addMod(s, 'churn', after.afterChurn, after.afterDays ?? 30, '할인 종료 후 이탈');
     if (c.risk) {
       s.career.rep = Math.max(0, s.career.rep + AD.campaignResult.riskRep);
       notify(s, `"${def.name}"에서 인플루언서 논란이 생겼습니다. 이름은 많이 알려졌지만 평판이 조금 깎였습니다.`, 'bad', 'market');

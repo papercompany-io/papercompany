@@ -85,7 +85,7 @@ function PLView() {
     <div className="col">
       <div className={`fn2-head ${plan.netIncome < 0 ? 'bad' : ''}`}>
         <span className="fn2-kicker">
-          {monthName} 한 달 {plan.netIncome < 0 ? '적자' : '흑자'}
+          {monthName} {plan.netIncome < 0 ? '적자' : '흑자'}
         </span>
         <h2 className={`fn2-big ${plan.netIncome < 0 ? 'fin-bad' : 'fin-good'}`}>
           {plan.netIncome > 0 ? '+' : ''}
@@ -93,12 +93,12 @@ function PLView() {
         </h2>
         <p className="fn2-sub">
           하루에 {man(perDay)}만원씩 나갑니다
-          <Help text="한 달에 들어오고 나가는 돈입니다. 월급·월세·복지비 같은 돈은 월급일에 한꺼번에 빠지지 않고 날마다 한 달치를 나눠 빠지고, 매출도 날마다 들어옵니다. 들어오는 돈은 지금 고객 수가 이어진다고 본 값입니다. 법인세·대출 이자·원금은 매월 1일에 나갑니다. 채용 홍보비·광고 캠페인·이벤트·진출 비용처럼 한 번 낸 돈은 여기 넣지 않습니다. 그런 돈은 거래 내역과 아래 손익표에서 봅니다." />
+          <Help text="월 기준 매출과 비용입니다. 월급·월세·복지비 같은 비용은 월급일에 한꺼번에 빠지지 않고 날마다 나눠 빠지며, 매출도 날마다 들어옵니다. 매출은 지금 고객 수가 이어진다고 본 값입니다. 법인세·대출 이자·원금은 매월 1일에 나갑니다. 채용 홍보비·광고 캠페인·이벤트·진출 비용처럼 한 번 낸 돈은 여기 넣지 않고, 거래 내역과 아래 손익표에서 봅니다." />
         </p>
       </div>
       <div className="fin-budget">
-        <MoneyList tone="out" title={`나가는 돈 · ${monthName}`} items={costGroups(plan)} total={spent} empty="나가는 돈이 없습니다" />
-        <MoneyList tone="in" title={`들어오는 돈 · ${monthName}`} items={REVENUES.map(([label, f]) => ({ label, v: f(plan) }))} total={plan.revenue} empty="아직 버는 돈이 없습니다" />
+        <MoneyList tone="out" title={`비용 · ${monthName}`} items={costGroups(plan)} total={spent} empty="비용이 없습니다" />
+        <MoneyList tone="in" title={`매출 · ${monthName}`} items={REVENUES.map(([label, f]) => ({ label, v: f(plan) }))} total={plan.revenue} empty="아직 매출이 없습니다" />
       </div>
       <div className="fin-bank">
         <div className="fb-row">
@@ -111,7 +111,7 @@ function PLView() {
           // A-137 빚이 있을 때만: 누구에게 얼마를 갚아야 하고 다음 월급일에 얼마가 나가는지
           <div className="fb-row" data-testid="fin-debt">
             <span className="fb-stack">
-              갚을 대출
+              대출 잔액
               <small>
                 {lenders} · 다음 월급일에 이자 {man(loanInterestDue(s))}만원{loanPrincipalDue(s) > 0 ? ` + 원금 ${man(loanPrincipalDue(s))}만원` : ''}
               </small>
@@ -121,8 +121,8 @@ function PLView() {
             </b>
           </div>
         )}
-        <div className="fb-row" title="최근 3개월 동안 돈이 줄어든 속도로 계산합니다">
-          <span>이대로 버틸 수 있는 기간</span>
+        <div className="fb-row" title="최근 3개월 잔고 감소 속도로 계산합니다">
+          <span>런웨이</span>
           <b className={rw !== null && rw < 3 ? 'fin-bad' : ''}>{rw === null ? '계속(흑자)' : rw > 120 ? '10년 넘게' : `${rw.toFixed(1)}개월`}</b>
         </div>
       </div>
@@ -159,7 +159,7 @@ function LoanDesk() {
               className={`btn small ${sure === l.id ? 'red' : 'ghost'}`}
               data-testid={`loan-repay-${l.kind}`}
               disabled={short}
-              title={short ? '통장 잔고가 모자랍니다' : undefined}
+              title={short ? '잔고가 부족합니다' : undefined}
               onClick={() => {
                 if (sure !== l.id) return setSure(l.id);
                 act((g) => repayEarly(g, l.id));
@@ -258,7 +258,7 @@ function PLTable({ months }: { months: PLMonth[] }) {
           ))}
         </tr>
         <tr>
-          <td>월말 고객 수</td>
+          <td>월말 사용자 수</td>
           {months.map((m) => (
             <td key={m.month} className="r num">
               {m.partial ? '-' : m.usersEnd.toLocaleString('ko-KR')}

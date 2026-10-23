@@ -155,7 +155,7 @@ export function DecisionModal({ d, onClose, onOpenMessenger }: { d: PendingDecis
             <button className="btn small ghost" onClick={onOpenMessenger}>
               메신저에서 보기
             </button>
-            <span className="tiny muted grow">나중에 답하면 기한이 지날 때 기본 선택이 적용됩니다.</span>
+            <span className="tiny muted grow">기한까지 답하지 않으면 기본 선택이 적용됩니다.</span>
             <button className="btn small ghost" onClick={onClose}>
               나중에
             </button>
@@ -247,7 +247,7 @@ function ContractStackCard({ a, s, onOpen, hidden, onHide }: { a: Contract; s: G
           <div style={{ width: `${pct}%`, background: WORK_COLORS.contract }} />
         </div>
       </div>
-      <span className="ss-sub">{eta === null ? '아무도 안 하는 중 · 외주 창에서 사람을 배치하세요' : `${a.client} · 끝나는 때 ${daysText(eta)}${late ? ' · 마감보다 늦음' : ''}`}</span>
+      <span className="ss-sub">{eta === null ? '배치 인력 없음 · 외주 창에서 인력을 배치하세요' : `${a.client} · 완료 예상 ${daysText(eta)}${late ? ' · 마감보다 늦음' : ''}`}</span>
     </div>
   );
 }
@@ -288,7 +288,7 @@ function HideX({ onHide }: { onHide: () => void }) {
   return (
     <button
       className="ss-x"
-      title="이 카드 치우기"
+      title="카드 닫기"
       onClick={(e) => {
         e.stopPropagation();
         onHide();
@@ -340,7 +340,7 @@ export function SideStack({ s, onOpen }: { s: GameState; onOpen: (app: string, a
           {it.decision && <span className="ss-due">{Math.max(0, it.decision.deadline - s.day)}일 안에</span>}
           <button
             className="ss-x"
-            title="이 카드 치우기"
+            title="카드 닫기"
             onClick={() => {
               it.onDismiss?.();
               setHidden((h) => [...h, it.key]);

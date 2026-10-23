@@ -42,7 +42,7 @@ export function CycleStrip({ s, v, onOpen }: { s: GameState; v: ReturnType<typeo
               {next.day - s.day > 0 ? ` (D-${next.day - s.day})` : ' (오늘)'}
             </>
           ) : s.product.roadmap.length ? (
-            <span className="bad">멈춤 · 만드는 사람이 없습니다</span>
+            <span className="bad">멈춤 · 개발 인력이 없습니다</span>
           ) : (
             '만드는 순서가 비었습니다'
           )}

@@ -362,7 +362,7 @@ function MeetingResult({ m, last }: { m: Meeting; last: boolean }) {
   const next =
     r === 'won'
       ? last
-        ? '계약 이야기로 넘어갑니다. 메신저와 CEO 일정을 확인하세요.'
+        ? '계약 협상으로 넘어갑니다. 메신저와 CEO 일정을 확인하세요.'
         : '다음 단계 미팅 제안이 메신저로 왔습니다. CEO 일정에서 받으세요.'
       : r === 'warm'
         ? '다시 연락을 주겠다고 합니다. 영업 기회가 조금 늘었습니다.'

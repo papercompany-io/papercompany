@@ -348,7 +348,7 @@ function requestReview(s: GameState, m: Milestone) {
   if (startDay > (m.deadline ?? s.day)) return;
   const o = { id: nextId(s, 'out'), tpl: 'review', kind: 'review' as const, title: '점검 회의', host: lead.name, channelId: teamChannel(s), startDay, days: 1, startHour: randInt(s, R.startHour[0], R.startHour[1]), hours: 1, travel: 0, cost: 0, status: 'offer' as const, milestoneId: m.id };
   (s.outings ??= []).push(o);
-  post(s, o.channelId, lead.name, `대표님, ${m.from}와 약속한 기능 진행을 ${dayName(startDay)} ${o.startHour}시에 한 시간만 같이 점검하실 수 있을까요? 생각보다 손이 많이 갈 수도 있어서요.`, 'npc');
+  post(s, o.channelId, lead.name, `대표님, ${m.from}에 약속한 기능 진행을 ${dayName(startDay)} ${o.startHour}시에 한 시간만 같이 점검하실 수 있을까요? 생각보다 손이 많이 갈 수도 있어서요.`, 'npc');
   const ch = getChannel(s, o.channelId);
   const last = ch?.messages[ch.messages.length - 1];
   if (last) last.outingId = o.id;
@@ -376,7 +376,7 @@ function finishReview(s: GameState, m: Milestone, o: { host: string; channelId: 
       : '점검 결과: 숨은 일은 없습니다. 지금 계획대로 가면 됩니다.',
     'npc',
   );
-  notify(s, found > 0 ? `점검 회의: ${m.from} 약속에 숨은 일이 있었습니다. 일찍 알아 조율할 시간이 있습니다.` : `점검 회의: ${m.from} 약속은 계획대로입니다.`, found > 0 && late ? 'urgent' : 'info', 'schedule');
+  notify(s, found > 0 ? `점검 회의: ${m.from} 약속에 숨은 일이 있었습니다. 일찍 발견해 조율할 시간이 있습니다.` : `점검 회의: ${m.from} 약속은 계획대로입니다.`, found > 0 && late ? 'urgent' : 'info', 'schedule');
 }
 
 function reviewsDay(s: GameState, m: Milestone) {
@@ -549,8 +549,8 @@ function complete(s: GameState, m: Milestone) {
       const months = m.reward.months ?? 12;
       s.enterprise.push({ id: nextId(s, 'ent'), name: m.from.replace(/ (구매|IT|운영|기획|전산)팀$/, ''), monthly, startDay: s.day, endDay: s.day + months * 30, market: 'kr' });
       s.company.enterpriseCount += 1;
-      notify(s, `약속을 지켰습니다(${when}): ${m.from}와 ${months}개월 계약 — 월 ${Math.round(monthly / 1e4).toLocaleString('ko-KR')}만원`, 'good', 'schedule');
-      news(s, `[계약] ${s.company.name}, 약속한 기능 내놓고 ${m.from.replace(/ .*$/, '')}과 공급 계약`, 'company');
+      notify(s, `약속을 지켰습니다(${when}): ${m.from}와 ${months}개월 계약, 월 ${Math.round(monthly / 1e4).toLocaleString('ko-KR')}만원`, 'good', 'schedule');
+      news(s, `[계약] ${s.company.name}, 약속한 기능 출시하고 ${m.from.replace(/ .*$/, '')}과 공급 계약`, 'company');
       break;
     }
     case 'partner':
@@ -570,13 +570,13 @@ function complete(s: GameState, m: Milestone) {
       break;
     }
     case 'investor':
-      addMod(s, 'invest', M.investor.investBonus * k, M.investor.investBonusDays, `${m.from}와의 약속을 지킴`);
-      notify(s, `약속을 지켰습니다(${when}): ${m.from}와 잡은 목표를 넘었습니다. 다음 투자 때 힘이 됩니다.`, 'good', 'schedule');
+      addMod(s, 'invest', M.investor.investBonus * k, M.investor.investBonusDays, `${m.from} 약속 이행`);
+      notify(s, `약속을 지켰습니다(${when}): ${m.from}와 정한 목표를 넘었습니다. 다음 투자 유치에 유리합니다.`, 'good', 'schedule');
       break;
     case 'goal': {
       const lv = M.goal.levels[m.level ?? 0];
       addMod(s, 'sat', lv.sat * k, M.goal.satDays, `${m.title} 달성`);
-      notify(s, `${m.title}(${lv.name})를 이뤘습니다. 팀 분위기가 좋아졌습니다.`, 'good', 'schedule');
+      notify(s, `${m.title}(${lv.name})를 이뤘습니다. 직원 만족도가 올랐습니다.`, 'good', 'schedule');
       break;
     }
   }
@@ -606,7 +606,7 @@ function fail(s: GameState, m: Milestone, dropped = false) {
     s.irPoints = Math.max(0, s.irPoints - M.event.missIr);
     if (kr.launched) kr.awareness = Math.max(0, kr.awareness - M.event.missAwareness);
     news(s, `[행사] ${s.company.name}, ${m.from} 발표 직전 취소… "준비가 덜 됐다"`, 'company');
-  } else if (m.kind === 'investor') addMod(s, 'invest', -M.investor.investPenalty, M.investor.investBonusDays, `${m.from}와의 약속을 못 지킴`);
+  } else if (m.kind === 'investor') addMod(s, 'invest', -M.investor.investPenalty, M.investor.investBonusDays, `${m.from} 약속 불이행`);
   notify(s, `약속을 ${dropped ? '포기했습니다' : '지키지 못했습니다'}: ${m.title}(${m.from}). 약속 신뢰가 떨어졌습니다.`, 'bad', 'schedule');
   if (m.channelId) post(s, m.channelId, m.from, dropped ? '…알겠습니다. 이번 일은 없던 걸로 하죠.' : '약속한 날이 지났네요. 이번 일은 없던 걸로 하겠습니다.', 'npc');
 }

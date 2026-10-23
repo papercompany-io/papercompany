@@ -71,11 +71,11 @@ export function AdSales({ setMsg, inTeam }: { setMsg: (m: string | null) => void
             >
               <div className="ads2-slot-head">
                 <b>{def.name} 광고</b>
-                {f.on ? <span className="ads2-slot-pct">{Math.round(f.soldShare * 100)}% 계약</span> : <span className="ads2-slot-lock">기능을 만들면 생김</span>}
+                {f.on ? <span className="ads2-slot-pct">{Math.round(f.soldShare * 100)}% 계약</span> : <span className="ads2-slot-lock">기능 개발 필요</span>}
               </div>
               {f.on && (
                 <>
-                  <div className="ads2-stack" title="단가가 높은 계약부터 노출을 채웁니다. 회색 = 계약하지 않아 광고 네트워크가 싸게 채우는 자리">
+                  <div className="ads2-stack" title="단가가 높은 계약부터 노출을 채웁니다. 회색은 광고 네트워크가 싸게 채우는 미계약 자리입니다.">
                     {ds.map((d) => {
                       const x = flow[d.id];
                       if (!x || x.imps <= 0) return null;
@@ -101,7 +101,7 @@ export function AdSales({ setMsg, inTeam }: { setMsg: (m: string | null) => void
             <span>광고 네트워크</span>
             <b>하루 {wonShort(rev.network / 30)}</b>
           </div>
-          <div className="hf-sum" title="광고 운영 담당자가 동시에 맡을 수 있는 계약 수. 담당자가 늘거나 일을 잘하면 늘어납니다.">
+          <div className="hf-sum" title="광고 운영 담당자가 동시에 맡을 수 있는 계약 수입니다. 담당자가 늘거나 일을 잘하면 늘어납니다.">
             <span>계약</span>
             <b>
               {live.length}/{cap}건
@@ -111,7 +111,7 @@ export function AdSales({ setMsg, inTeam }: { setMsg: (m: string | null) => void
         {!inTeam && <div className="hf-title">광고 운영팀</div>}
         {ao.length === 0 ? (
           <div className="warn" data-testid="adops-none">
-            광고 운영 담당자가 없어 광고주 제안이 오지 않습니다. 직원 관리 창 채용 탭에서 "광고 운영"(애드옵스 매니저)을 뽑으면 광고주를 찾아 매일 계약 제안을 받아 옵니다.
+            광고 운영 담당자가 없어 광고주 제안이 오지 않습니다. 직원 관리 창 채용 탭에서 "광고 운영"(애드옵스 매니저)을 채용하면 매일 광고주 계약 제안을 받아 옵니다.
           </div>
         ) : (
           <div className="fb-row">
@@ -126,7 +126,7 @@ export function AdSales({ setMsg, inTeam }: { setMsg: (m: string | null) => void
           {offers.length > 0 && <span>내일 새 제안으로 바뀝니다</span>}
         </div>
         {offers.length === 0 && <div className="empty-note">{wait ?? '오늘은 들어온 제안이 없습니다. 내일 새 제안이 들어옵니다. 사용자가 많을수록 큰 광고주가 찾아옵니다.'}</div>}
-        {offers.length > 0 && full && <div className="ads2-short">맡을 수 있는 계약({cap}건)이 가득 차 새 계약을 맺을 수 없습니다. 광고 운영 담당자를 더 뽑거나 계약을 끝내면 흥정할 수 있습니다.</div>}
+        {offers.length > 0 && full && <div className="ads2-short">맡을 수 있는 계약({cap}건)이 가득 차 새 계약을 맺을 수 없습니다. 광고 운영 담당자를 더 채용하거나 계약을 끝내면 흥정할 수 있습니다.</div>}
         <div className="applicant-grid">
           {offers.map((o) => {
             const left = Math.max(0, o.offeredUntil - s.day);
@@ -213,7 +213,7 @@ function DealCard({ s, d, x, setMsg }: { s: GameState; d: AdDeal; x: DealFlow | 
         <span className="pc-dot" />
         <b>{d.advertiser}</b>
         <span className="chip">{adFormatDef(d.format).name}</span>
-        <span className="pc-hired">{live ? `오늘 ${wonShort(x?.pay ?? 0)}` : `${wonShort(d.earned)} 벌었음`}</span>
+        <span className="pc-hired">{live ? `오늘 ${wonShort(x?.pay ?? 0)}` : `누적 매출 ${wonShort(d.earned)}`}</span>
       </div>
       {live && (
         <div className="ads2-meter" title={`하루 최소 ${impsText(d.min)} · 최대 ${impsText(d.max)}. 최소에 못 미치면 그날 계약금이 20% 깎이고, 사용자가 늘어도 최대까지만 받습니다.`}>
@@ -223,7 +223,7 @@ function DealCard({ s, d, x, setMsg }: { s: GameState; d: AdDeal; x: DealFlow | 
           </div>
           <div className="ads2-meter-foot">
             <span className={x?.short ? 'bad' : imps >= d.max ? 'full' : ''}>
-              오늘 {impsText(imps)} {x?.short ? '· 최소에 못 미침' : imps >= d.max ? '· 최대' : ''}
+              오늘 {impsText(imps)} {x?.short ? '· 최소 미달' : imps >= d.max ? '· 최대' : ''}
             </span>
             <span>
               최소 {impsText(d.min)} · 최대 {impsText(d.max)}
@@ -389,8 +389,8 @@ function AdNegotiationDialog({ offerId, onClose, onDone }: { offerId: string; on
             <section className="nego-card">
               <div className="nego-head">제안 보내기</div>
               <div className="nego-offer">
-                <label title="노출 1000회당 받는 돈(eCPM)">
-                  1000회당 단가: <b>{won(ecpm)}</b>
+                <label title="노출 1000회당 단가(eCPM)">
+                  1000회당 단가 <b>{won(ecpm)}</b>
                 </label>
                 <div className="nego-slider">
                   <button onClick={() => nudge(-step)} aria-label="단가 내리기">

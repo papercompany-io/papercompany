@@ -170,7 +170,7 @@ export function rotateFurniture(s: GameState, placedId: string): string | null {
   if (!p || p.gx === null || p.gy === null) return '가구를 찾을 수 없습니다.';
   const rot = nextRot(p.rot);
   const err = furnitureSpotFits(s, p.item, p.gx, p.gy, p.id, s.company.officeTier, rot);
-  if (err) return `돌리면 자리가 모자랍니다: ${err} 옮긴 뒤 돌려 보세요.`;
+  if (err) return `돌리면 자리가 모자랍니다. ${err} 옮긴 뒤 돌려 보세요.`;
   p.rot = rot;
   return null;
 }
@@ -178,7 +178,7 @@ export function rotateFurniture(s: GameState, placedId: string): string | null {
 export function removeDesk(s: GameState, id: string): string | null {
   const d = desks(s).find((x) => x.id === id);
   if (!d) return '책상을 찾을 수 없습니다.';
-  if (d.occupant !== null) return '사람이 앉아 있는 책상은 치울 수 없습니다. 옮기기는 됩니다.';
+  if (d.occupant !== null) return '직원이 앉은 책상은 치울 수 없습니다. 옮길 수는 있습니다.';
   s.seats = s.seats.filter((x) => x.id !== id);
   book(s, '책상 처분', Math.round(DATA.furniture.deskPrice / 2));
   return null;
@@ -442,7 +442,7 @@ export function moveOffice(s: GameState, tierId: number): string | null {
     }
   }
   notify(s, `${t.name}(으)로 이사를 시작합니다. ${DATA.offices.moveDays}일 동안 일이 조금 느려집니다.`, 'good', 'office');
-  news(s, `[오피스] ${s.company.name}, ${t.name}(으)로 이전`, 'company');
+  news(s, `[사무실] ${s.company.name}, ${t.name}(으)로 이전`, 'company');
   s.events.push({ type: 'moved' });
   return null;
 }

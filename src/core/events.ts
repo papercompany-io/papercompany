@@ -448,13 +448,13 @@ export function applyFx(s: GameState, fx: Record<string, unknown>, ctx: Ctx) {
   let inflow = 0;
   const label = fx.equity ? `이벤트 투자금(${ctx.from ?? '투자자'})` : '이벤트 수입';
   if (num('cash')) {
-    book(s, num('cash') > 0 ? label : '이벤트 지출', num('cash'));
+    book(s, num('cash') > 0 ? label : '이벤트 비용', num('cash'));
     if (num('cash') < 0) s.accrual.other += -num('cash');
     else inflow += num('cash');
   }
   if (num('cashRev')) {
     const v = Math.round(num('cashRev') * revBase(s));
-    book(s, v > 0 ? label : '이벤트 지출', v);
+    book(s, v > 0 ? label : '이벤트 비용', v);
     if (v < 0) s.accrual.other += -v;
     else inflow += v;
   }

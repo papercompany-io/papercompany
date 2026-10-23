@@ -47,7 +47,7 @@ export function RankingApp() {
 // 맨 위 큰 문장: 우리가 몇 위인지. 아래 작은 글은 앞 회사·1위와 차이, 기업가치 순위(예전 위쪽 요약 칸 다섯 개를 글로)
 function headOf(rows: RankRow[], unit: string, valueRank: number | null, notYet: string): { big: string; lead: string } {
   const me = myRank(rows);
-  if (!me) return { big: '아직 우리 이름이 없습니다', lead: notYet };
+  if (!me) return { big: '아직 순위에 없습니다', lead: notYet };
   const lead: string[] = [];
   if (me.rank > 1) lead.push(`바로 앞 회사와 ${unit} ${countShort(rows[me.rank - 2].users - me.users)} 차이`, `1위와 ${countShort(rows[0].users - me.users)} 차이`);
   else if (rows.length > 1) lead.push(`2위와 ${unit} ${countShort(me.users - rows[1].users)} 차이`);
@@ -147,7 +147,7 @@ function Item({ r, unit, here, logo }: { r: RankRow; unit: string; here: MarketI
         <b>
           {countShort(r.users)} <i>{unit}</i>
         </b>
-        <small>비중 {(r.share * 100).toFixed(1)}%</small>
+        <small>점유율 {(r.share * 100).toFixed(1)}%</small>
       </span>
     </div>
   );

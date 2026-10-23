@@ -87,7 +87,7 @@ export function Setup({ mode, wealth = 0, legacy, challenge: careerChallenge = n
 
   const confirmTeam = () => {
     if (cof && equity < cof.minEquity) {
-      setTeamMsg(`${cof.name}님이 지분 ${pct(equity, 0)}로는 합류하지 않겠다고 했습니다. 영입이 취소되었습니다.`);
+      setTeamMsg(`${cof.name}님이 지분 ${pct(equity, 0)}로는 합류하지 않겠다고 했습니다. 채용이 취소되었습니다.`);
       setCofounderId(null);
       return;
     }
@@ -151,7 +151,7 @@ export function Setup({ mode, wealth = 0, legacy, challenge: careerChallenge = n
 
         {step === 1 && (
           <div className="setup-body">
-            <div className="section-title">어떤 사업을 할까요?</div>
+            <div className="section-title">산업 선택</div>
             <div className="industries">
               {INDUSTRIES.map((ind) => {
                 const locked = ind.locked && !legacyUnlocked(lg, ind.id);
@@ -280,7 +280,7 @@ export function Setup({ mode, wealth = 0, legacy, challenge: careerChallenge = n
         {step === 3 && (
           <div className="setup-body">
             {solo && <div className="warn">1인 창업 도전 중입니다. 코파운더·파운딩 엔지니어 없이 시작합니다.</div>}
-            <div className="section-title">코파운더 (주식을 받습니다)</div>
+            <div className="section-title">코파운더 (지분 보상)</div>
             <div className="cands">
               <button className={`cand ${cofounderId === null ? 'sel' : ''}`} data-testid="cof-none" onClick={() => { setCofounderId(null); setTeamMsg(null); }}>
                 <div className="cand-name">영입하지 않음</div>
@@ -301,7 +301,7 @@ export function Setup({ mode, wealth = 0, legacy, challenge: careerChallenge = n
               <div className="card equity">
                 <div className="row">
                   <b>지분 분배</b>
-                  <span className="muted tiny">창업자와 코파운더가 회사 주식을 나눕니다.</span>
+                  <span className="muted tiny">창업자와 코파운더가 지분을 나눕니다.</span>
                 </div>
                 <input data-testid="equity-slider" type="range" min={0.05} max={0.5} step={0.01} value={equity} onChange={(e) => { setEquity(Number(e.target.value)); setTeamMsg(null); }} />
                 <div className="row">
@@ -387,7 +387,7 @@ export function Setup({ mode, wealth = 0, legacy, challenge: careerChallenge = n
             <div className="choices">
               <button className="choice" data-testid="start-angel" onClick={() => finish(true)}>
                 <b>엔젤 투자를 알아본다</b>
-                <span className="tiny muted">사무실에 들어가면 투자 메뉴이 열리고 엔젤 라운드를 준비합니다.</span>
+                <span className="tiny muted">사무실에 들어가면 투자 메뉴가 열리고 엔젤 라운드를 준비합니다.</span>
                 {fx.earlyRound === 'hard' && <span className="tiny warn">투자 유치·엑싯 경험이 없는 창업자는 엔젤·프리시드를 받기 어렵습니다.</span>}
               </button>
               <button className="choice" data-testid="start-bootstrap" onClick={() => finish(false)}>

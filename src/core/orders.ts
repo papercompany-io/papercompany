@@ -58,7 +58,7 @@ function qualityWarn(s: GameState) {
     if (!has && q < th) {
       s.flags.push(key);
       const stab = orderShare(s, 'dev', 'dev_stabilize') > 0; // 부서 안의 팀·개인 업무로 맡겨도(A-226)
-      notify(s, `제품 품질이 ${Math.round(q)}점으로 떨어졌습니다. 버그는 이탈·장애를 부릅니다.${stab ? '' : ' 업무 창이나 부서에서 개발자에게 "안정화·기술 부채 정리"를 맡기세요.'}`, th <= 40 ? 'urgent' : 'bad', 'product');
+      notify(s, `제품 품질이 ${Math.round(q)}점으로 떨어졌습니다. 버그가 쌓이면 이탈과 장애가 늘어납니다.${stab ? '' : ' 업무 창이나 부서에서 개발자에게 "안정화·기술 부채 정리"를 맡기세요.'}`, th <= 40 ? 'urgent' : 'bad', 'product');
     } else if (has && q >= th + 10) s.flags = s.flags.filter((f) => f !== key);
   }
 }
@@ -162,7 +162,7 @@ function enterpriseDay(s: GameState) {
         d.endDay = s.day + 365;
         d.monthly = Math.round(d.monthly * 1.05);
         notify(s, `${d.name}이(가) 계약을 1년 연장했습니다(월 ${Math.round(d.monthly / 1e4).toLocaleString('ko-KR')}만원).`, 'good', 'market');
-      } else notify(s, `${d.name} 계약이 끝났습니다. 갱신하지 않았습니다.`, 'bad', 'market');
+      } else notify(s, `${d.name} 계약이 갱신 없이 끝났습니다.`, 'bad', 'market');
     }
   }
   s.enterprise = s.enterprise.filter((d) => d.endDay > s.day - 400);
@@ -177,8 +177,8 @@ function enterpriseDay(s: GameState) {
     const deal = { id: nextId(s, 'ent'), name: m === 'kr' ? name : `${name} ${m.toUpperCase()}`, monthly, startDay: s.day, endDay: s.day + randInt(s, 12, 36) * 30, market: m };
     s.enterprise.push(deal);
     s.company.enterpriseCount += 1;
-    notify(s, `대기업 계약! ${deal.name} — 월 ${Math.round(monthly / 1e4).toLocaleString('ko-KR')}만원, ${Math.round((deal.endDay - deal.startDay) / 30)}개월`, 'good', 'market');
-    news(s, `[계약] ${s.company.name}, ${deal.name}와 대형 공급 계약`, 'company');
+    notify(s, `대기업 계약 체결: ${deal.name}, 월 ${Math.round(monthly / 1e4).toLocaleString('ko-KR')}만원, ${Math.round((deal.endDay - deal.startDay) / 30)}개월`, 'good', 'market');
+    news(s, `[계약] ${s.company.name}, ${deal.name}에 대형 공급 계약`, 'company');
     float(s, `+계약 ${Math.round(monthly / 1e4).toLocaleString('ko-KR')}만/월`, 'money');
   }
 }
@@ -202,16 +202,16 @@ function outageRoll(s: GameState) {
   addMod(s, 'churn', 0.1 * sev, 14, '장애 여파');
   s.stats.outages += 1;
   const hours = Math.max(1, Math.round(sev * 4));
-  notify(s, `서비스 장애 ${hours}시간! 고객 일부가 떠나고 2주 동안 이탈이 늘어납니다. (버그를 줄이고 인프라·안정성 기능을 갖추세요)`, 'bad', 'product');
+  notify(s, `서비스 장애 ${hours}시간. 일부 사용자가 이탈했고 2주 동안 이탈이 늘어납니다. 버그를 줄이고 인프라·안정성 기능을 갖추세요.`, 'bad', 'product');
   if (sev > OU.majorSev) {
-    news(s, `[장애] ${s.company.name} 서비스 ${hours}시간 먹통… 이용자 불만`, 'company');
+    news(s, `[장애] ${s.company.name} 서비스 ${hours}시간 먹통… 사용자 불만`, 'company');
     // A-143 큰 장애는 결정 카드로(원인이 기술 부채면 그쪽 카드), 투자사는 한동안 기억합니다
     s.lastMajorOutage = s.day;
     setFlag(s, 'outage_now');
     trigger(s, debt >= OU.debtCard ? 'ev_product_debt_outage' : 'ev_product_outage');
     clearFlag(s, 'outage_now');
   }
-  post(s, s.channels.some((c) => c.id === 'team-dev') ? 'team-dev' : 'all', '시스템', `서비스 장애 ${hours}시간 — 복구했습니다.`, 'system');
+  post(s, s.channels.some((c) => c.id === 'team-dev') ? 'team-dev' : 'all', '시스템', `서비스 장애 ${hours}시간 만에 복구했습니다.`, 'system');
   float(s, '장애!', 'bad');
 }
 

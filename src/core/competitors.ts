@@ -45,7 +45,7 @@ export function rivalStyle(c: Competitor): RivalStyle {
   return c.style ?? (c.aggression > 0.66 ? 'price' : c.aggression > 0.33 ? 'marketing' : 'feature');
 }
 
-export const STYLE_NAME: Record<RivalStyle, string> = { price: '가격으로 맞서는 곳', feature: '기능을 빨리 따라오는 곳', marketing: '광고를 크게 쓰는 곳' };
+export const STYLE_NAME: Record<RivalStyle, string> = { price: '가격 경쟁형', feature: '기능 추격형', marketing: '광고 공세형' };
 
 // 그 경쟁사가 느끼는 위협: 겹치는 시장에서 우리 점유율 ÷ 그쪽 점유율(가장 큰 곳)
 function threat(s: GameState, c: Competitor): { ratio: number; player: number } {

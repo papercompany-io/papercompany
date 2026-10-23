@@ -20,7 +20,7 @@ function perfLabel(m: Model, best: number): { text: string; cls: string } {
 // 안정성: 효과에 비해 회사마다 얼마나 흔들리나
 function steadyLabel(m: Model): { text: string; cls: string } {
   const r = m.var / m.mean;
-  return r <= 0.15 ? { text: '안정적', cls: 'green' } : r <= 0.4 ? { text: '보통', cls: '' } : { text: '들쭉날쭉', cls: 'amber' };
+  return r <= 0.15 ? { text: '안정적', cls: 'green' } : r <= 0.4 ? { text: '보통', cls: '' } : { text: '불안정', cls: 'amber' };
 }
 // 부작용(AI 슬롭): 적용률을 높였을 때 사고가 얼마나 잦나
 function slopLabel(m: Model): { text: string; cls: string } {
@@ -46,14 +46,14 @@ export function AiApp() {
   return (
     <div className="col ai3">
       <div className="ai3-now">
-        <span>지금 쓰는 AI</span>
+        <span>사용 중인 AI</span>
         <b>{cur ? `${aiVendor(cur.vendor).name} ${cur.name}` : '아직 없음'}</b>
         {cur ? (
           <>
-            <span className={`chip ${feel === '기대 이상' ? 'green' : feel === '기대 이하' ? 'red' : 'blue'}`} title="이 회사에서 실제로 나온 효과(같은 모델도 회사마다 다름)">
+            <span className={`chip ${feel === '기대 이상' ? 'green' : feel === '기대 이하' ? 'red' : 'blue'}`} title="우리 회사의 실제 효과(같은 모델도 회사마다 다름)">
               체감 {feel}
             </span>
-            <div className="ai3-adapt" title="팀 적응: 모델을 바꾸면 일부 처음부터 다시 익힙니다">
+            <div className="ai3-adapt" title="모델을 바꾸면 적응이 일부 초기화됩니다.">
               <div className="ms-bar">
                 <div style={{ width: `${adapt}%` }} />
               </div>
@@ -74,7 +74,7 @@ export function AiApp() {
           <h3 className="wk-sect" title='적용률이 높을수록 효과와 부작용(AI 슬롭) 위험이 함께 커집니다. AX 복지와 AI연구팀의 "사내 AI 도구 고도화"가 적응을 빠르게 하고 부작용을 줄입니다.'>
             부서별 적용률
           </h3>
-          {!cur && <div className="wk-empty small">모델을 고르면 부서마다 얼마나 쓸지 정합니다.</div>}
+          {!cur && <div className="wk-empty small">모델을 도입하면 부서별 적용률을 정합니다.</div>}
           {cur && depts.length === 0 && <div className="wk-empty small">직원이 있는 부서가 없습니다.</div>}
           {cur &&
             depts.map((d) => {
@@ -134,7 +134,7 @@ export function AiApp() {
             })}
           {upcoming.length > 0 && (
             <div className="ai3-soon" title="소문만 돌고 있습니다.">
-              곧 나옴 · {upcoming.map((m) => `${aiVendor(m.vendor).name} ${m.name}(${m.release.replace('-', '.')})`).join(', ')}
+              출시 예정 · {upcoming.map((m) => `${aiVendor(m.vendor).name} ${m.name}(${m.release.replace('-', '.')})`).join(', ')}
             </div>
           )}
         </section>

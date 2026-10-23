@@ -143,7 +143,7 @@ export function commandOrder(s: GameState, d: DeptId, orderId: string, said = tr
   } else {
     s.company.orderPushback = { dept: d, order: orderId, day: s.day };
     say(`${reason || '지금은 어렵습니다.'} ${pick(s, ['당분간은 지금 하던 일을 계속하면 안 될까요?', '지금 바꾸는 건 무리라고 봅니다.', '조금만 시간을 주세요.'])}`);
-    const msg = `${dept(d).name}팀이 "${o.name}" 지시를 거절했습니다. 같은 지시를 다시 내리면 강행합니다(팀 만족도가 떨어짐).`;
+    const msg = `${dept(d).name}팀이 "${o.name}" 지시를 거절했습니다. 같은 지시를 다시 내리면 강행하며 팀 만족도가 떨어집니다.`;
     notify(s, msg, 'bad', 'messenger', ch);
     return msg;
   }
@@ -155,9 +155,9 @@ export type DmAction = 'checkin' | 'praise' | 'push' | 'rest';
 
 export const DM_ACTIONS: { id: DmAction; label: string; say: string; cool: number }[] = [
   { id: 'checkin', label: '근황 묻기', say: '요즘 어때요? 힘든 건 없어요?', cool: 3 },
-  { id: 'praise', label: '칭찬하기', say: '요즘 정말 잘해 주고 있어요. 고마워요.', cool: 7 },
+  { id: 'praise', label: '칭찬', say: '요즘 정말 잘해 주고 있어요. 고마워요.', cool: 7 },
   { id: 'push', label: '분발 부탁', say: '요즘 중요한 시기라 조금만 더 힘내 줄 수 있을까요?', cool: 5 },
-  { id: 'rest', label: '쉬라고 하기', say: '무리하지 말고 좀 쉬어요. 건강이 먼저예요.', cool: 10 },
+  { id: 'rest', label: '휴식 권유', say: '무리하지 말고 좀 쉬어요. 건강이 먼저예요.', cool: 10 },
 ];
 
 // 근황: 만족도 이유 중 가장 나쁜 것을 털어놓음. note = LLM에게 넘기는 설명(A-199)

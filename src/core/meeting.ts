@@ -360,7 +360,7 @@ export function playCard(s: GameState, card: CardId, targetId?: string): string 
     case 'companion': {
       const e = s.employees.find((x) => x.id === m.companion)!;
       m.companionUses += 1;
-      m.log.push({ from: 'mate', who: e.id, text: `${e.name}입니다. 실제로 어떻게 쓰시게 되는지 제가 설명드리겠습니다.` });
+      m.log.push({ from: 'mate', who: e.id, text: `${e.name}입니다. 실제로 어떻게 쓰는지 제가 설명드리겠습니다.` });
       const fit = unresolved(m, a!, c!).filter((k) => companionCovers(s, m).includes(k));
       const skill = 0.8 + e.skill * D.companion.skillK;
       if (fit.length) {
@@ -556,7 +556,7 @@ function closeDeal(s: GameState, o: Outing, m: Meeting) {
   s.enterprise.push({ id: nextId(s, 'ent'), name: m.company, monthly, startDay: s.day, endDay: s.day + months * 30, market: 'kr' });
   s.company.enterpriseCount += 1;
   post(s, o.channelId, o.host, `최종 승인이 났습니다. ${months}개월 계약으로 진행하시죠.`, 'npc');
-  notify(s, `대기업 계약! ${m.company} — 월 ${Math.round(monthly / 1e4).toLocaleString('ko-KR')}만원, ${months}개월`, 'good', 'market');
+  notify(s, `대기업 계약 체결: ${m.company}, 월 ${Math.round(monthly / 1e4).toLocaleString('ko-KR')}만원, ${months}개월`, 'good', 'market');
   news(s, `[계약] ${s.company.name}, ${m.company}와 공급 계약`, 'company');
 }
 
@@ -644,7 +644,7 @@ export function meetingAdvice(s: GameState): MeetAdvice | null {
     .filter((x) => x.c)
     .sort((x, y) => MT.roles[y.c.role].weight - MT.roles[x.c.role].weight);
   const mood = roomMood(s, m);
-  if (m.minutesLeft <= 20) return { text: `시간이 얼마 남지 않았습니다. 분위기가 ${mood.text} — ${mood.level >= 2 ? '지금 마무리 요청을 해 보세요.' : '남은 걱정 하나를 더 풀지, 여기서 끝낼지 정하세요.'}`, cards: ['close'] };
+  if (m.minutesLeft <= 20) return { text: `시간이 얼마 남지 않았습니다. 분위기가 ${mood.text}. ${mood.level >= 2 ? '지금 마무리 요청을 해 보세요.' : '남은 걱정 하나를 더 풀지, 여기서 끝낼지 정하세요.'}`, cards: ['close'] };
   const unknown = people.find((x) => x.c.concerns.some((k) => !x.c.known.includes(k)));
   if (unknown) return { text: `${who(unknown.c.id)}이 무엇을 걱정하는지 아직 모릅니다. 먼저 물어보세요.`, target: unknown.c.id, cards: ['ask'] };
   let stuck = false;
@@ -656,7 +656,7 @@ export function meetingAdvice(s: GameState): MeetAdvice | null {
     }
   }
   return {
-    text: stuck ? `남은 걱정은 지금 가진 카드로 풀기 어렵습니다. 분위기가 ${mood.text} — ${mood.level >= 2 ? '마무리 요청으로 정리해 보세요.' : '가격 양보 같은 카드로 분위기를 띄운 뒤 마무리하세요.'}` : `걱정을 다 풀었습니다. 분위기가 ${mood.text} — 마무리 요청을 해 보세요.`,
+    text: stuck ? `남은 걱정은 지금 가진 카드로 풀기 어렵습니다. 분위기가 ${mood.text}. ${mood.level >= 2 ? '마무리 요청으로 정리해 보세요.' : '가격 양보 같은 카드로 분위기를 띄운 뒤 마무리하세요.'}` : `걱정을 다 풀었습니다. 분위기가 ${mood.text}. 마무리 요청을 해 보세요.`,
     cards: ['close'],
   };
 }

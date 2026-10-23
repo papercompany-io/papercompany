@@ -146,7 +146,7 @@ export function growPlan(s: GameState, id: string): { from: number; to: number; 
   const insight = growInsight(f, from, to);
   const block = (() => {
     if (featureLevel(s, id) < 1) return '먼저 만들어야 합니다';
-    if (!hasMvp(s)) return 'MVP를 낸 뒤에 올릴 수 있습니다';
+    if (!hasMvp(s)) return 'MVP 출시 후 올릴 수 있습니다';
     if (from >= cap) {
       const next = G.cap.findIndex((c, st) => st > s.company.stage && c > cap);
       return next >= 0 ? `회사 단계 ${next}에서 Lv ${G.cap[next]}까지 열림` : '최고 레벨';
@@ -399,10 +399,10 @@ function ship(s: GameState, it: RoadmapItem) {
   s.product.polish = Math.max(0, s.product.polish - 0.008);
   s.product.shipped.push({ id: it.id, level: it.level, day: s.day, result });
   if (s.product.shipped.length > 80) s.product.shipped.splice(0, s.product.shipped.length - 80);
-  const label = result === 'full' ? '완전 수행' : result === 'partial' ? '부분 수행(버그 조금)' : '실패에 가까움(버그 많음)';
+  const label = result === 'full' ? '성공' : result === 'partial' ? '부분 성공(버그 조금)' : '거의 실패(버그 많음)';
   const name = itemName(it);
   const ch = s.channels.some((c) => c.id === 'team-dev') ? 'team-dev' : 'all';
-  post(s, ch, '시스템', `[출시] ${name} — ${label}`, 'system');
+  post(s, ch, '시스템', `[출시] ${name} (${label})`, 'system');
   s.events.push({ type: 'shipped', featureId: it.id });
   sfx(s, result === 'fail' ? 'warn' : 'coin');
   if (!hasMvp(s) && coreFeatures(s).every((c) => featureLevel(s, c.id) >= 1)) launchMvp(s);
@@ -423,7 +423,7 @@ function launchMvp(s: GameState) {
   const who = friends > 0 ? `대표의 지인 ${friends}${ind.unit === '고객사' ? '곳' : '명'}이 먼저 써 보기 시작했습니다` : '아직 아무도 모릅니다';
   notify(s, `MVP 출시! ${s.company.name}이(가) 국내 시장에 나왔습니다. ${who}. 고객을 늘리려면 광고·영업·콘텐츠로 알려야 합니다.`, 'mission', 'market');
   news(s, `[스타트업] ${s.company.name}, 첫 서비스 출시`, 'company');
-  post(s, 'all', '시스템', 'MVP를 출시했습니다. 홍보하지 않으면 지인 말고는 거의 들어오지 않습니다. 시장 메뉴에서 광고 예산을 정하거나 대표 일정에 "영업"을 넣으세요.', 'system');
+  post(s, 'all', '시스템', 'MVP를 출시했습니다. 홍보하지 않으면 지인 외에는 유입이 거의 없습니다. 시장 메뉴에서 광고 예산을 정하거나 대표 일정에 "영업"을 넣으세요.', 'system');
   s.events.push({ type: 'confetti' });
 }
 

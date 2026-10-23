@@ -84,16 +84,16 @@ export function SettingsApp() {
 
       <section className="set-group">
         <div className="hf-title">게임</div>
-        <Row title="급한 일이 생기면 멈추기" sub="장애·인수 제안·투자 제안서가 오면 시간을 멈춥니다. 꺼도 파산 경고는 멈춥니다.">
-          <Switch label="급한 일이 생기면 멈추기" on={st.autoPauseUrgent} onChange={(v) => setSettings({ autoPauseUrgent: v })} />
+        <Row title="긴급 시 자동 멈춤" sub="장애·인수 제안·투자 제안서가 오면 시간을 멈춥니다. 꺼도 파산 경고는 멈춥니다.">
+          <Switch label="긴급 시 자동 멈춤" on={st.autoPauseUrgent} onChange={(v) => setSettings({ autoPauseUrgent: v })} />
         </Row>
         <Row title="알림 카드 보이기" sub="오른쪽 아래에 새 소식을 띄웁니다.">
           <Switch label="알림 카드 보이기" on={st.toasts} onChange={(v) => setSettings({ toasts: v })} />
         </Row>
-        <Row title="축하 연출 보이기" sub="종이 꽃가루와 떠오르는 숫자.">
+        <Row title="축하 연출 보이기" sub="종이 꽃가루와 떠오르는 숫자를 띄웁니다.">
           <Switch label="축하 연출 보이기" on={st.animations} onChange={(v) => setSettings({ animations: v })} />
         </Row>
-        <Row title="퇴근 뒤 밤 빨리 감기" sub="켜 두면 18시부터 다음 날 9시까지의 밤을 빠르게 흘려 보냅니다." tip="18시가 지나면 시계는 다음 날 9시까지 흐릅니다. 켜 두면 밤을 빠르게 흘려 보냅니다. 밤에는 위 막대의 빨리 감기 버튼으로도 켜고 끌 수 있습니다.">
+        <Row title="퇴근 뒤 밤 빨리 감기" sub="켜 두면 18시부터 다음 날 9시까지 밤을 빠르게 흘려 보냅니다." tip="18시가 지나면 시계는 다음 날 9시까지 흐릅니다. 켜 두면 밤을 빠르게 흘려 보냅니다. 밤에는 위 막대의 빨리 감기 버튼으로도 켜고 끌 수 있습니다.">
           <div className="seg" data-testid="auto-skip-night">
             {(
               [
@@ -108,7 +108,7 @@ export function SettingsApp() {
             ))}
           </div>
         </Row>
-        <Row title="스페이스로 다시 시작할 빠르기">
+        <Row title="Space로 재개할 배속">
           <div className="seg">
             {[1, 2, 4].map((v) => (
               <button key={v} className={st.defaultSpeed === v ? 'on' : ''} onClick={() => setSettings({ defaultSpeed: v })}>
@@ -151,7 +151,7 @@ export function SettingsApp() {
             [['Space'], '멈춤 / 계속'],
             [['1', '2', '3'], '1배속 · 2배속 · 4배속'],
             [['Esc'], '열린 창 닫기'],
-            [['방향키'], '사무실 둘러보기 (끌기·휠로도 움직이고 확대)'],
+            [['방향키'], '사무실 둘러보기 (끌기로 이동·휠로 확대)'],
           ] as [string[], string][]
         ).map(([keys, what]) => (
           <div key={what} className="set-row">

@@ -42,7 +42,7 @@ export function TeamApp({ initial, openApp, onEmployee }: { initial?: string; op
     return (
       <div className="wk-empty">
         <b>아직 직원이 없습니다</b>
-        <span>직원을 뽑으면 여기서 부서를 만들고 사람을 나눠 일을 맡깁니다.</span>
+        <span>직원을 채용하면 여기서 부서를 만들고 업무를 맡깁니다.</span>
         <button className="btn small" data-testid="team-open-hiring" onClick={() => openApp('hiring')}>
           채용 탭으로
         </button>
@@ -57,7 +57,7 @@ export function TeamApp({ initial, openApp, onEmployee }: { initial?: string; op
           <button key={q.id} className={`em3-row dept sq ${cur === q.id ? 'on' : ''}`} data-testid={`tab-squad-${q.id}`} onClick={() => setSel(q.id)}>
             <span className="sq-row-main">
               <b>{q.name}</b>
-              <small>{squadJobs(s, q.id).map((d) => dept(d).name).join(' · ') || '사람 없음'}</small>
+              <small>{squadJobs(s, q.id).map((d) => dept(d).name).join(' · ') || '직원 없음'}</small>
             </span>
             <span className="em3-sat">{squadMembers(s, q.id).length}명</span>
           </button>
@@ -65,7 +65,7 @@ export function TeamApp({ initial, openApp, onEmployee }: { initial?: string; op
         <button className={`em3-row dept sq none ${cur === NONE ? 'on' : ''}`} data-testid="tab-squad-none" onClick={() => setSel(NONE)}>
           <span className="sq-row-main">
             <b>소속 없음</b>
-            <small>{loose.length ? '부서에 넣지 않은 사람' : '모두 부서에 있음'}</small>
+            <small>{loose.length ? '부서 미배정 직원' : '모두 배정됨'}</small>
           </span>
           <span className="em3-sat">{loose.length}명</span>
         </button>
@@ -85,7 +85,7 @@ function WorkRows({ people, squadId, setMsg }: { people: Employee[]; squadId?: s
   const s = useGame();
   const jobs = jobsOf(people);
   const odd = people.filter((e) => !!e.order && e.order !== groupOrder(s, e));
-  if (!jobs.length) return <p className="empty-note">아직 사람이 없습니다. 아래에서 사람을 넣으면 직무마다 할 일을 정합니다.</p>;
+  if (!jobs.length) return <p className="empty-note">아직 직원이 없습니다. 아래에서 직원을 넣으면 직무별 업무를 정합니다.</p>;
   return (
     <div className="sq-work">
       {jobs.map((d) => {
@@ -104,7 +104,7 @@ function WorkRows({ people, squadId, setMsg }: { people: Employee[]; squadId?: s
       })}
       <details className="sq-odd" open={odd.length > 0}>
         <summary>
-          사람별 예외 <span className="muted">· {odd.length ? `혼자 다른 일 ${odd.length}명` : '없음, 모두 위의 일을 함'}</span>
+          사람별 예외 <span className="muted">· {odd.length ? `예외 ${odd.length}명` : '없음'}</span>
         </summary>
         <div className="sq-odd-list">
           {people.map((e) => (
@@ -208,23 +208,23 @@ function SquadPage({ id, openApp, onEmployee, onDeleted }: { id: string; openApp
             <button className="btn small ghost" onClick={() => openApp('messenger', squadChannelId(id))}>
               채팅방
             </button>
-            <button className="btn small ghost" data-testid={`squad-remove-${id}`} title="사람은 소속 없음으로 돌아가고 채팅방은 닫힙니다" onClick={() => (act((g) => removeSquad(g, id)), onDeleted())}>
-              부서 없애기
+            <button className="btn small ghost" data-testid={`squad-remove-${id}`} title="직원은 소속 없음으로 돌아가고 채팅방은 닫힙니다" onClick={() => (act((g) => removeSquad(g, id)), onDeleted())}>
+              부서 삭제
             </button>
           </span>
         </div>
       </div>
       {msg && <div className="info dpg-msg">{msg}</div>}
       <section className="sq-sect">
-        <h4 className="sq-h">하는 일</h4>
+        <h4 className="sq-h">업무</h4>
         <WorkRows people={members} squadId={id} setMsg={setMsg} />
       </section>
       <section className="sq-sect">
         <div className="sq-h-row">
-          <h4 className="sq-h">사람</h4>
+          <h4 className="sq-h">직원</h4>
           {others.length > 0 && (
             <select className="sq-add" data-testid={`squad-add-${id}`} value="" onChange={(ev) => ev.target.value && setMsg(act((g) => setSquad(g, ev.target.value, id)) ?? null)}>
-              <option value="">+ 사람 넣기</option>
+              <option value="">+ 직원 추가</option>
               {others.map((e) => (
                 <option key={e.id} value={e.id}>
                   {e.name} ({dept(e.dept).name}
@@ -234,7 +234,7 @@ function SquadPage({ id, openApp, onEmployee, onDeleted }: { id: string; openApp
             </select>
           )}
         </div>
-        {members.length ? <PeopleRows people={members} onEmployee={onEmployee} setMsg={setMsg} /> : <p className="empty-note">아직 아무도 없습니다. 오른쪽 위 "+ 사람 넣기"로 넣습니다.</p>}
+        {members.length ? <PeopleRows people={members} onEmployee={onEmployee} setMsg={setMsg} /> : <p className="empty-note">아직 직원이 없습니다. 오른쪽 위 "+ 직원 추가"로 넣습니다.</p>}
       </section>
       <JobViews jobs={jobsOf(members)} setMsg={setMsg} openApp={openApp} />
     </div>
@@ -251,7 +251,7 @@ function LoosePage({ openApp, onEmployee }: { openApp: OpenApp; onEmployee?: (id
       <div className="dpg-head">
         <div className="dpg-title">
           <b>소속 없음</b>
-          <span className="dpg-meta">{loose.length}명 · 부서에 넣지 않은 사람은 여기 일을 합니다</span>
+          <span className="dpg-meta">{loose.length}명 · 부서 미배정 직원은 아래 업무를 합니다</span>
         </div>
       </div>
       {msg && <div className="info dpg-msg">{msg}</div>}
@@ -260,11 +260,11 @@ function LoosePage({ openApp, onEmployee }: { openApp: OpenApp; onEmployee?: (id
       ) : (
         <>
           <section className="sq-sect">
-            <h4 className="sq-h">하는 일</h4>
+            <h4 className="sq-h">업무</h4>
             <WorkRows people={loose} setMsg={setMsg} />
           </section>
           <section className="sq-sect">
-            <h4 className="sq-h">사람</h4>
+            <h4 className="sq-h">직원</h4>
             <PeopleRows people={loose} onEmployee={onEmployee} setMsg={setMsg} />
           </section>
           <JobViews jobs={jobsOf(loose)} setMsg={setMsg} openApp={openApp} />
@@ -310,7 +310,7 @@ function NewSquad({ onDone }: { onDone: (id: string) => void }) {
         <input data-testid="dept-new-name" value={name} maxLength={12} placeholder="예: 결제팀" onChange={(ev) => setName(ev.target.value)} />
       </label>
       <div className="dpg-field">
-        <span className="hf-label">사람 {picked.length ? `· ${picked.length}명 고름` : ''}</span>
+        <span className="hf-label">직원 {picked.length ? `· ${picked.length}명 선택` : ''}</span>
         <div className="dpg-people">
           {s.employees.map((e) => {
             const on = picked.includes(e.id);
@@ -362,9 +362,9 @@ export function DeptPage({ d, openApp, focusId, onEmployee }: { d: DeptId; openA
         </div>
         {me && (
           <div className="dpg-order">
-            <span className="hf-label">하는 일</span>
+            <span className="hf-label">업무</span>
             <EmpOrderSelect e={me} onErr={setMsg} />
-            <span className="dpg-desc">{squad(s, me.squadId) ? `${squad(s, me.squadId)!.name} 부서` : '소속 없음'} 기준. 부서 일은 직원 관리의 부서 탭에서 바꿉니다.</span>
+            <span className="dpg-desc">{squad(s, me.squadId) ? `${squad(s, me.squadId)!.name} 부서` : '소속 없음'} 기준. 부서 업무는 직원 관리의 부서 탭에서 바꿉니다.</span>
           </div>
         )}
         {showPeople && (
@@ -423,7 +423,7 @@ function DeptWork({ d, setMsg, openApp }: { d: DeptId; setMsg: (m: string | null
     case 'infra':
       return <Coverage d={d} openApp={openApp} />;
     default:
-      return <div className="empty-note">이 팀은 따로 보는 화면이 없습니다. 위에서 맡은 일을 바꿉니다.</div>;
+      return <div className="empty-note">이 부서는 전용 화면이 없습니다. 업무는 위에서 바꿉니다.</div>;
   }
 }
 
@@ -434,7 +434,7 @@ function Coverage({ d, openApp }: { d: 'cs' | 'infra'; openApp: OpenApp }) {
   const short = c < 0.95;
   return (
     <div className="dpg-cover">
-      <div className="hf-label">{d === 'cs' ? '고객 문의를 감당하는 정도' : '서버·운영을 감당하는 정도'}</div>
+      <div className="hf-label">{d === 'cs' ? '고객 문의 대응 여력' : '서버·운영 대응 여력'}</div>
       <div className="dpg-cover-row">
         <div className={`meter ${c < 0.7 ? 'bad' : short ? 'warnc' : ''}`}>
           <div style={{ width: `${c * 100}%` }} />
@@ -445,8 +445,8 @@ function Coverage({ d, openApp }: { d: 'cs' | 'infra'; openApp: OpenApp }) {
         {!short
           ? '지금 인원으로 충분합니다. 사용자가 늘면 다시 모자랄 수 있습니다.'
           : d === 'cs'
-            ? '모자라면 답이 늦어져 떠나는 고객이 늘어납니다. 고객지원 직원을 더 뽑으세요.'
-            : '모자라면 장애가 잦아집니다. 인프라 직원을 더 뽑으세요.'}
+            ? '모자라면 답변이 늦어져 이탈이 늘어납니다. 고객지원 직원을 더 채용하세요.'
+            : '모자라면 장애가 잦아집니다. 인프라 직원을 더 채용하세요.'}
       </p>
       {short && (
         <button className="btn small" onClick={() => openApp('hiring')}>

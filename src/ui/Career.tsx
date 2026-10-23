@@ -29,7 +29,7 @@ export function CompanyResultCard({ r }: { r: CompanyResult }) {
         {industry(r.industry).name} · {formatDate(r.startDay)} ~ {formatDate(r.day)} ({years.toFixed(1)}년)
       </div>
       <div className="rc-amount">
-        창업자에게 돌아온 돈
+        창업자 수령액
         <b data-testid="result-amount">
           <Money v={r.amount} full />
         </b>
@@ -67,7 +67,7 @@ export function CompanyResultCard({ r }: { r: CompanyResult }) {
           <tr>
             <td>성장 경로</td>
             <td className="r">
-              <b>{r.path}</b> — {pathSummary(r.path)}
+              <b>{r.path}</b> · {pathSummary(r.path)}
             </td>
           </tr>
         </tbody>
@@ -121,7 +121,7 @@ export function Career({ s, onNext, onRetire }: { s: GameState; onNext: () => vo
                 </div>
               </div>
               <div className="tiny">
-                이번 회사로 얻은 레거시 점수 <b>+{lp}</b> (회사 단계 {s.company.stage} "{STAGE_NAMES[s.company.stage]}"까지 도달). 레거시 점수는 명예의 전당에서 다음 커리어를 강하게 만드는 데 씁니다.
+                이번 회사 레거시 점수 <b>+{lp}</b> (회사 단계 {s.company.stage} "{STAGE_NAMES[s.company.stage]}"까지 도달). 레거시 점수는 명예의 전당에서 다음 커리어 강화에 씁니다.
               </div>
               <div className="tiny muted">명성이 높을수록 다음 회사의 투자 유치·채용·시작 인지도가 좋아집니다. 엑싯을 한 번 하면 투자자들이 먼저 연락합니다.</div>
             </div>
@@ -151,12 +151,12 @@ export function Career({ s, onNext, onRetire }: { s: GameState; onNext: () => vo
             <div className="row">
               {!forced && (
                 <button className="btn big green" data-testid="next-company" onClick={onNext}>
-                  다음 회사 창업하기
+                  다음 회사 창업
                 </button>
               )}
               {!askRetire ? (
                 <button className={`btn big ${forced ? 'green' : 'ghost'}`} data-testid="retire" onClick={() => (forced ? onRetire() : setAskRetire(true))}>
-                  {forced ? '은퇴하기(65세)' : '은퇴하고 엔딩 보기'}
+                  {forced ? '은퇴(65세)' : '은퇴하고 엔딩 보기'}
                 </button>
               ) : (
                 <>
@@ -171,7 +171,7 @@ export function Career({ s, onNext, onRetire }: { s: GameState; onNext: () => vo
               )}
             </div>
             {forced && <div className="warn">은퇴 나이가 되었습니다. 이 커리어를 마칩니다.</div>}
-            {!forced && <div className="tiny muted">다음 회사는 {DATA.career.breakDays}일 쉰 뒤 시작합니다. 엔딩은 은퇴할 때의 개인 자산과 기록으로 정해집니다(지금이라면: {endingFor(s).name}).</div>}
+            {!forced && <div className="tiny muted">다음 회사는 {DATA.career.breakDays}일 쉰 뒤 시작합니다. 엔딩은 은퇴 시점의 개인 자산과 기록으로 정해집니다(현재 기준 {endingFor(s).name}).</div>}
           </div>
         </div>
       </div>
@@ -233,7 +233,7 @@ export function Ending({ s, onHome }: { s: GameState; onHome: () => void }) {
             {outcomes && <i>{outcomes}</i>}
           </div>
           <div className="end-cell">
-            <span>모은 업적</span>
+            <span>달성 업적</span>
             <b>{s.career.achievements.length}개</b>
             <i>전체 {DATA.achievements.achievements.length}개 중</i>
           </div>
@@ -260,7 +260,7 @@ export function Ending({ s, onHome }: { s: GameState; onHome: () => void }) {
                         {i === sig && <span className="end-sig">대표작</span>}
                       </div>
                       <div className="end-co-sub">
-                        {industry(c.industry).name} · 가장 컸을 때 직원 {c.peakEmployees}명 · 회사 몸값 {wonShort(c.maxValuation)}
+                        {industry(c.industry).name} · 최대 직원 {c.peakEmployees}명 · 최대 기업가치 {wonShort(c.maxValuation)}
                       </div>
                     </div>
                     <div className="end-co-amt">

@@ -117,7 +117,7 @@ export function HireTab() {
                 <div className="em3-ap-main">
                   <div className="em3-ap-name">
                     <b>{a.name}</b>
-                    {a.arrivedDay >= s.day - 1 && <span className="chip blue">새로 옴</span>}
+                    {a.arrivedDay >= s.day - 1 && <span className="chip blue">신규</span>}
                     {a.traits.map((t) => (
                       <span key={t} className="chip amber" title={trait(t)?.desc}>
                         {trait(t)?.name}
@@ -128,7 +128,7 @@ export function HireTab() {
                     {roleName(a)} · 경력 {a.years}년 · <span className={staysLeft <= 2 ? 'fin-bad' : ''}>{staysLeft}일 더 기다림</span>
                   </span>
                 </div>
-                <div className="em3-ap-val" title={`개발 속도 ${sp}% · 숙련을 다 올리면 ${maxSpeedOf(a.grade, a.talent ?? 1)}%`}>
+                <div className="em3-ap-val" title={`개발 속도 ${sp}% · 숙련 최대 시 ${maxSpeedOf(a.grade, a.talent ?? 1)}%`}>
                   <span>속도</span>
                   <b>{sp}%</b>
                 </div>
@@ -137,7 +137,7 @@ export function HireTab() {
                   <b>{a.nego?.revealed ? `${(a.desiredSalary / 1e4).toLocaleString()}만` : '?'}</b>
                 </div>
                 {full(a.postingId) ? (
-                  <span className="em3-ap-full">모집 인원이 다 찼습니다</span>
+                  <span className="em3-ap-full">모집 완료</span>
                 ) : (
                   <div className="em3-ap-btns">
                     <button className="btn small" data-testid={`hire-${a.id}`} onClick={() => setOfferFor(a.id)}>
@@ -368,7 +368,7 @@ function NegotiationDialog({ applicantId, onClose, onDone }: { applicantId: stri
                 </div>
               </div>
               <div className="nego-stats">
-                <div title="숙련을 다 올렸을 때 괄호 속도">
+                <div title="괄호 안은 숙련 최대일 때 속도">
                   <span>속도</span>
                   <b>
                     {sp}% <small>({maxSpeedOf(a.grade, a.talent ?? 1)}%)</small>
@@ -463,7 +463,7 @@ function NegotiationDialog({ applicantId, onClose, onDone }: { applicantId: stri
               )}
               {nego?.counter && !closed && !busy && (
                 <button className="btn small nego-take" data-testid="offer-accept-counter" onClick={take}>
-                  역제안 받아들이기 (월 {man(nego.counter.salary)}
+                  역제안 수락 (월 {man(nego.counter.salary)}
                   {nego.counter.bonus ? ` · 보너스 ${man(nego.counter.bonus)}` : ''})
                 </button>
               )}
@@ -494,7 +494,7 @@ export function AutoHire() {
   return (
     <div className="col">
       <div className="tiny muted">
-        인사팀 {hr}명. 인원이 많고 "채용 지원" 지시를 하고 있을수록 빨리 뽑습니다. C등급 지원자는 절반쯤 걸러 냅니다. 자금이 부족하면 위임이 자동으로 멈춥니다.
+        인사팀 {hr}명. 인원이 많고 "채용 지원" 지시 중일수록 빨리 뽑습니다. C등급 지원자는 절반쯤 걸러 냅니다. 자금이 부족하면 위임이 자동으로 멈춥니다.
       </div>
       <div className="row">
         <span className="tiny">월급 수준</span>
@@ -511,7 +511,7 @@ export function AutoHire() {
         <thead>
           <tr>
             <th>부서</th>
-            <th className="r">지금</th>
+            <th className="r">현재</th>
             <th>목표 인원</th>
           </tr>
         </thead>

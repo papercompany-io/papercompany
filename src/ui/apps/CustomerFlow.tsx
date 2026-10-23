@@ -58,7 +58,7 @@ export function RoomNote({ s }: { s: GameState }) {
   const fill = r.target > 0 ? r.users / r.target : 0;
   return (
     <div className={`sc-cap ${r.state}`} data-testid="growth-room">
-      <div className="sc-cap-head" title="매력도(기능·기능 레벨·UX·품질)와 인지도가 오르면 커집니다. 해외 시장에 나가면 그 시장 몫이 더해집니다. 이보다 많이 데려온 고객은 빠져나갑니다.">
+      <div className="sc-cap-head" title="매력도(기능·기능 레벨·UX·품질)와 인지도가 오르면 커집니다. 해외 시장에 나가면 그 시장 몫이 더해집니다. 이를 넘는 고객은 이탈합니다.">
         <span>제품이 받쳐 주는 {industry(s.company.industry).unit}</span>
         <b data-testid="growth-cap">
           약 {countShort(r.target)}
@@ -84,7 +84,7 @@ export function LossBars({ why, lost }: { why: Partial<Record<string, number>>; 
     .filter(([, v]) => lost > 0 && v / lost >= 0.03)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5);
-  if (!rows.length) return <div className="tiny muted">아직 떠나는 고객이 거의 없습니다.</div>;
+  if (!rows.length) return <div className="tiny muted">아직 이탈 고객이 거의 없습니다.</div>;
   return (
     <div className="cf-list" data-testid="loss-why">
       {rows.map(([k, v]) => (
@@ -119,17 +119,17 @@ export function FlowBars({ flow, unit, simple }: { flow: Flow; unit: string; sim
     return (
       <div className="cf-simple">
         <div className={`cf-net-big ${net >= 0 ? 'fin-good' : 'fin-bad'}`}>
-          한 달에 {unit} <b>{netText}</b>
+          월 {unit} 순증감 <b>{netText}</b>
         </div>
         <div className="cf-line">
-          <span>들어옴</span>
+          <span>유입</span>
           <b className="fin-good">+{fmt(gTotal)}</b>
-          <em>{gTotal > 0 ? `주로 ${topIn[0]}` : '-'}</em>
+          <em>{gTotal > 0 ? `${topIn[0]} 비중 높음` : '-'}</em>
         </div>
         <div className="cf-line">
-          <span>떠남</span>
+          <span>이탈</span>
           <b className="fin-bad">−{fmt(flow.lost)}</b>
-          <em>{topLoss && flow.lost > 0 ? `주로 ${lossName(topLoss[0])}` : '-'}</em>
+          <em>{topLoss && flow.lost > 0 ? `${lossName(topLoss[0])} 비중 높음` : '-'}</em>
         </div>
       </div>
     );
@@ -138,7 +138,7 @@ export function FlowBars({ flow, unit, simple }: { flow: Flow; unit: string; sim
     <div className="cf-cols">
       <div className="col" style={{ gap: 4 }}>
         <div className="cf-head">
-          <span>들어오는 길</span>
+          <span>유입</span>
           <b className="fin-good">+{fmt(gTotal)}</b>
         </div>
         <div className="cf-list">
@@ -155,12 +155,12 @@ export function FlowBars({ flow, unit, simple }: { flow: Flow; unit: string; sim
       </div>
       <div className="col" style={{ gap: 4 }}>
         <div className="cf-head">
-          <span>떠나는 이유</span>
+          <span>이탈 이유</span>
           <b className="fin-bad">−{fmt(flow.lost)}</b>
         </div>
         <LossBars why={flow.why ?? {}} lost={flow.lost} />
         <div className={`cf-net ${net >= 0 ? 'fin-good' : 'fin-bad'}`}>
-          한 달에 {unit} {net >= 0 ? '+' : ''}
+          월 {unit} 순증감 {net >= 0 ? '+' : ''}
           {Math.abs(net) >= 10 ? countShort(net) : net.toFixed(1)}
         </div>
       </div>
