@@ -1,22 +1,23 @@
 // F09 업무 창(A-136, 예전 제품 창 · Startup Company식): 위 제품 띠(로고·순위·품질·사용자) + 탭(상태·기능·마케팅·만드는 순서·외주·출시 기록)
+// 화면(A-179): 출시 뒤 상태 대시보드와 출시 기록 표를 MVP 전 화면(A-171)과 같은 톤으로 — 가운데 큰 사용자 수, 납작한 회색 요약 칸, 1px 테두리 카드, 칸칸이 막대, 설명은 title
 //  A-158: 상태 탭을 SC 제품 창 Stats 짜임으로, 마케팅 탭(광고 판)을 제품 창 안에, 기능은 분류별 묶음
 //  상태: MVP 전에는 출시까지 공정(진행률·남은 날·누가 만드나), 출시 후에는 지금 사용자·어제 매출·품질 계기판·추이 그래프
 //  기능: 위 요약(잠재 고객·사용자·매력도 구성 팝업 / 다음 출시·작업량) + 기능 카드 줄(그림·레벨·업그레이드)
 //  만드는 순서(로드맵) · 출시 기록
+//  A-171: MVP 전에 보이는 화면(상태·기능·만드는 순서·출시 기록)을 커리어·랭킹과 같은 톤으로 — 가운데 큰 숫자, 색 타일 + 흰 픽셀 표식 길, 칸칸이 차는 막대, 납작한 회색 칸, 설명 글은 줄이고 마우스를 올리면(title)
 // 오른쪽 위 제품 카드(ProductCard)도 여기서 내보냅니다.
 import { ContractsCard } from './ScheduleApp';
+import { devRates, forecast, promiseFor } from '../../core/milestones';
+import { CycleStrip, itemSpans, weekStartOf } from './CycleStrip';
 import { Ads } from './AdsPanel';
 import { activeCampaigns } from '../../core/ads';
 import { contractsOpen } from '../../core/contracts';
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { DATA, feature, gradeOutput, industry, featuresOf, featureWork, priceTierDef, type FeatureDef, type FeatureFx } from '../../core/data';
-import { addToRoadmap, appeal, appealBreakdown, canCharge, coreFeatures, etaDays, featureLevel, featureLock, hasMvp, insightCost, insightHave, itemNeed, moveRoadmap, quality, removeFromRoadmap, ROADMAP_MAX, upkeepShare } from '../../core/product';
-import { ceoDevPerDay } from '../../core/ceo';
-import { hasActiveContract } from '../../core/contracts';
-import { deptOutput } from '../../core/staff';
+import { addToRoadmap, appeal, appealBreakdown, canCharge, coreFeatures, etaDays, featureLevel, featureLock, hasMvp, insightCost, insightHave, itemNeed, moveRoadmap, quality, removeFromRoadmap, ROADMAP_MAX } from '../../core/product';
 import { orderOf } from '../../core/orders';
 import { formatDate, formatMonth } from '../../core/calendar';
-import { launchedMarkets, revenuePerUser, totalUsers, unitWord } from '../../core/market';
+import { launchedMarkets, liveUsers, revenuePerUser, totalUsers, unitWord } from '../../core/market';
 import { AxisChart, FlowBars, flowAll, RoomNote, ScaleLadder } from './CustomerFlow';
 import { computeValuation } from '../../core/valuation';
 import { countShort, josa, wonCompact, wonShort } from '../../core/format';
@@ -25,9 +26,11 @@ import { act, useGame } from '../store';
 import { Tabs, Help, useTween } from '../common';
 import { ServiceLogo } from '../logo';
 import { PxIcon } from '../icons';
+import { PixelCheck, PixelFlag } from '../pixelMarks';
 import { play } from '../sound';
 import type { GameState, PriceTier } from '../../core/types';
 import './apps.css';
+import './skin/ProductLive.css';
 
 // 분류가 하는 일(A-158, 기능 탭 묶음 머리): 효과 숫자 대신 역할만
 const CAT_ROLE: Record<string, string> = {
@@ -104,20 +107,20 @@ function MoneyNote({ s }: { s: GameState }) {
         </span>
         <b>{wonShort(r.total)}</b>
       </div>
-      <div className="tiny muted">{canCharge(s) ? `${parts.join(' + ')}. 수익화 기능을 만들면 더 받습니다.` : `아직 결제 기능이 없어 무료로만 씁니다. 기능 탭에서 "${billingFeatureName(s)}" 기능을 만들어야 돈이 들어옵니다.`}</div>
+      {canCharge(s) ? (
+        <div className="pl-parts" title="수익화 기능을 만들면 더 받습니다.">
+          {parts.join(' + ')}
+        </div>
+      ) : (
+        <div className="pl-alert">아직 결제 기능이 없어 무료로만 씁니다. 기능 탭에서 "{billingFeatureName(s)}" 기능을 만들어야 돈이 들어옵니다.</div>
+      )}
     </div>
   );
 }
 
 // 제품 화면 공통 계산: 하루 작업량(대표 + 로드맵을 맡은 팀), 항목별 남은 날, MVP 진행률
 export function productView(s: GameState) {
-  const ceo = ceoDevPerDay(s);
-  const devBuilding = orderOf(s, 'dev') === 'dev_build' || (orderOf(s, 'dev') === 'dev_contract' && !hasActiveContract(s));
-  const team = devBuilding ? deptOutput(s, 'dev') : 0;
-  const design = orderOf(s, 'design') === 'design_build' ? deptOutput(s, 'design') : 0;
-  // 유지보수(A-115)로 빠지는 몫을 뺀 실제 개발 속도
-  const upkeep = upkeepShare(s);
-  const rate = { ceo, team, design, dev: (ceo + team) * (1 - upkeep), upkeep };
+  const rate = devRates(s); // 약속 예상과 같은 계산(A-177)
   const etas = etaDays(s.product.roadmap, rate.dev, rate.design);
   const cores = coreFeatures(s);
   // MVP 진행률: 핵심 기능 전체 작업량 중 끝낸 몫
@@ -144,7 +147,7 @@ export function ProductCard({ onOpen }: { onOpen: () => void }) {
   const v = productView(s);
   const mvp = hasMvp(s);
   const cur = s.product.roadmap[0];
-  const users = useTween(totalUsers(s));
+  const users = useTween(liveUsers(s));
   const d = s.product.daily ?? [];
   const delta = d.length >= 2 ? d[d.length - 1].users - d[d.length - 2].users : 0;
   const justShipped = s.product.shipped.length > 0 && s.day - s.product.shipped[s.product.shipped.length - 1].day <= 1;
@@ -201,10 +204,11 @@ export function ProductApp({ initialTab, openSchedule, openHiring }: { initialTa
   }, [initialTab]);
   const showContract = !!s.contracts?.active || contractsOpen(s); // 외주 일감(A-133). A-136: 제안이 없어도 외주를 받을 수 있는 동안은 탭을 늘 보여 줌
   const v = productView(s);
+  const live = liveUsers(s);
   const name = s.company.service?.name ?? s.company.name;
   const all = featuresOf(s.company.industry);
   return (
-    <div className="col">
+    <div className="col wk">
       <div className="pd-band">
         <ServiceLogo service={s.company.service} fallback={name} size={36} />
         <div className="col" style={{ gap: 2 }}>
@@ -224,9 +228,9 @@ export function ProductApp({ initialTab, openSchedule, openHiring }: { initialTa
           <PxIcon id="check" size={16} />
           {quality(s)}%
         </span>
-        <span className="pd-pill" title={`사용자 ${num(totalUsers(s))}`}>
+        <span className="pd-pill" title={`사용자 ${num(live)}`}>
           <PxIcon id="users" size={16} />
-          {totalUsers(s) >= 1e5 ? countShort(totalUsers(s)) : num(totalUsers(s))}
+          {live >= 1e5 ? countShort(live) : num(live)}
         </span>
       </div>
       {/* 탭(A-158, Startup Company 제품 창처럼 아이콘 + 이름). 마케팅 탭은 시장·광고 창의 광고 탭과 같은 판 */}
@@ -234,19 +238,37 @@ export function ProductApp({ initialTab, openSchedule, openHiring }: { initialTa
         tabs={[
           { id: 'status', label: '상태', icon: 'chart' },
           { id: 'features', label: '기능', icon: 'star' },
-          ...(mvp ? [{ id: 'marketing' as const, label: `마케팅${activeCampaigns(s).length ? ` · 캠페인 ${activeCampaigns(s).length}` : ''}`, icon: 'talk' as const }] : []),
+          ...(mvp
+            ? [
+                {
+                  id: 'marketing' as const,
+                  label: `마케팅${activeCampaigns(s).length ? ` · 캠페인 ${activeCampaigns(s).length}` : ''}`,
+                  icon: 'talk' as const,
+                },
+              ]
+            : []),
           {
             id: 'roadmap',
-            label: `만드는 순서 ${s.product.roadmap.length}/${ROADMAP_MAX}`,
+            label: `개발 일정 ${s.product.roadmap.length}/${ROADMAP_MAX}`, // A-183: 만드는 순서 → 일정으로 관리
             icon: 'clock',
           },
-          ...(showContract ? [{ id: 'contract' as const, label: `외주${s.contracts?.active ? ' · 진행 중' : s.contracts?.offers.length ? ` ${s.contracts.offers.length}` : ''}`, icon: 'case' as const }] : []),
+          ...(showContract
+            ? [
+                {
+                  id: 'contract' as const,
+                  label: `외주${s.contracts?.active ? ' · 진행 중' : s.contracts?.offers.length ? ` ${s.contracts.offers.length}` : ''}`,
+                  icon: 'case' as const,
+                },
+              ]
+            : []),
           { id: 'log', label: '출시 기록', icon: 'check' },
         ]}
         value={tab}
         onChange={setTab}
       />
       {msg && <div className="warn">{msg}</div>}
+      {/* A-183 개발 사이클 띠: 마케팅·외주 탭 말고는 늘 위에 */}
+      {tab !== 'marketing' && tab !== 'contract' && <CycleStrip s={s} v={v} onOpen={() => setTab('roadmap')} />}
       {tab === 'status' && (mvp ? <LiveStatus s={s} v={v} openSchedule={openSchedule} /> : <MvpStatus s={s} v={v} openSchedule={openSchedule} openHiring={openHiring} />)}
       {tab === 'features' && <Features s={s} v={v} />}
       {tab === 'marketing' && <Ads setMsg={setMsg} />}
@@ -266,7 +288,7 @@ function Builders({ s, v, openSchedule }: { s: GameState; v: View; openSchedule?
   const nobody = v.rate.dev + v.rate.design <= 0;
   return (
     <div className="pd-who">
-      <div className="pd-who-title">누가 만드나(하루 작업량)</div>
+      <h3 className="wk-sect">누가 만드나</h3>
       <div className="pd-who-row">
         <span>대표(나)</span>
         <b>{v.rate.ceo > 0 ? `개발 ${v.rate.ceo.toFixed(2)}` : '안 함'}</b>
@@ -275,17 +297,11 @@ function Builders({ s, v, openSchedule }: { s: GameState; v: View; openSchedule?
         <span>개발자 {devCount}명</span>
         <b>{v.rate.team > 0 ? `개발 ${v.rate.team.toFixed(1)}` : devCount ? '다른 일' : '-'}</b>
       </div>
-      <div className="pd-who-row">
+      <div className="pd-who-row" title={designCount ? undefined : '디자이너가 없으면 개발하는 사람이 디자인도 절반 속도로 합니다.'}>
         <span>디자이너 {designCount}명</span>
         <b>{v.rate.design > 0 ? `디자인 ${v.rate.design.toFixed(1)}` : designCount ? '다른 일' : '-'}</b>
       </div>
-      {nobody ? (
-        <div className="tiny" style={{ color: 'var(--red)' }}>
-          아무도 개발하지 않습니다.
-        </div>
-      ) : (
-        designCount === 0 && <div className="tiny muted">디자이너가 없으면 개발하는 사람이 디자인도 절반 속도로 합니다.</div>
-      )}
+      {nobody ? <div className="wk-alert">아무도 개발하지 않습니다</div> : null}
       {devCount > 0 && (
         <label className="pd-who-row">
           <span>개발팀이 하는 일</span>
@@ -324,7 +340,7 @@ function Builders({ s, v, openSchedule }: { s: GameState; v: View; openSchedule?
   );
 }
 
-// MVP 전 상태: D-day 카운트다운 + 핵심 기능 → 출시 단계 + 만드는 사람(개발자 1명 뽑으면 얼마나 당겨지나)
+// MVP 전 상태(A-171): 가운데 큰 D-day + 칸칸이 차는 진행 막대 → 핵심 기능 길(색 타일 + 흰 픽셀 표식) → 만드는 사람 줄
 function MvpStatus({ s, v, openSchedule, openHiring }: { s: GameState; v: View; openSchedule?: () => void; openHiring?: () => void }) {
   const p = useTween(v.mvpProgress * 100);
   const missing = v.cores.filter((c) => featureLevel(s, c.id) < 1 && !s.product.roadmap.some((r) => r.id === c.id));
@@ -339,131 +355,124 @@ function MvpStatus({ s, v, openSchedule, openHiring }: { s: GameState; v: View; 
     act((g) => missing.forEach((c) => addToRoadmap(g, c.id)));
     play('click');
   };
+  const people = [
+    {
+      key: 'me',
+      av: '나',
+      name: '대표',
+      rate: v.rate.ceo,
+      text: v.rate.ceo > 0 ? `하루 ${v.rate.ceo.toFixed(2)}` : '개발 안 함',
+      empty: false,
+      tip: undefined,
+    },
+    {
+      key: 'dev',
+      av: '개',
+      name: `개발자 ${devCount}명`,
+      rate: v.rate.team,
+      text: v.rate.team > 0 ? `하루 ${v.rate.team.toFixed(1)}` : devCount ? '다른 일 중' : '없음',
+      empty: !devCount,
+      tip: undefined,
+    },
+    {
+      key: 'design',
+      av: '디',
+      name: `디자이너 ${designCount}명`,
+      rate: v.rate.design,
+      text: v.rate.design > 0 ? `하루 ${v.rate.design.toFixed(1)}` : designCount ? '다른 일 중' : '없음',
+      empty: !designCount,
+      tip: designCount ? undefined : '디자이너가 없으면 개발하는 사람이 디자인도 절반 속도로 합니다.',
+    },
+  ];
   return (
-    <div className="col">
-      <div className="mvp-wrap">
-        <div className={`mvp ${stalled || missing.length ? 'bad' : ''}`} data-testid="product-status">
-          <div className="mvp-top">
-            <div className="col" style={{ gap: 2 }}>
-              <span className="mvp-kicker">MVP 출시까지</span>
-              <span className="mvp-count">{missing.length ? '준비 필요' : stalled ? '멈춤' : v.mvpEta !== null ? `D-${Math.max(0, v.mvpEta)}` : '-'}</span>
-              <span className="mvp-date">
-                {missing.length
-                  ? `핵심 기능 ${missing.length}개가 만드는 순서에 없습니다`
-                  : stalled
-                    ? '아무도 개발하지 않습니다. 대표 일정에 "개발"을 넣거나 개발자를 뽑으세요'
-                    : v.mvpEta !== null
-                      ? `${formatDate(s.day + v.mvpEta)} 출시 예정 · 핵심 기능을 다 만들면 자동으로 국내에 출시됩니다`
-                      : ''}
-              </span>
-            </div>
-            <div className="mvp-ring" style={{ ['--p' as string]: `${p}%` }}>
-              <span>{Math.round(p)}%</span>
-            </div>
+    <div className="wk-mvp">
+      <section className={`wk-hero ${stalled || missing.length ? 'bad' : ''}`} data-testid="product-status">
+        <span className="wk-kicker">MVP 출시까지</span>
+        <h2 className="wk-count">{missing.length ? '준비 필요' : stalled ? '멈춤' : v.mvpEta !== null ? `D-${Math.max(0, v.mvpEta)}` : '-'}</h2>
+        <p className="wk-sub" title={!missing.length && !stalled && v.mvpEta !== null ? '핵심 기능을 다 만들면 자동으로 국내에 출시됩니다.' : undefined}>
+          {missing.length ? `핵심 기능 ${missing.length}개가 만드는 순서에 없습니다` : stalled ? '아무도 개발하지 않습니다' : v.mvpEta !== null ? `${formatDate(s.day + v.mvpEta)} 출시 예정` : ''}
+        </p>
+        <div className="wk-prog">
+          <div className="ms-bar">
+            <div style={{ width: `${p}%` }} />
           </div>
-          <div className="mvp-track">
-            {v.cores.map((c, i) => {
-              const done = featureLevel(s, c.id) >= 1;
-              const qi = s.product.roadmap.findIndex((x) => x.id === c.id);
-              const it = qi >= 0 ? s.product.roadmap[qi] : null;
-              const need = it ? itemNeed(it) : null;
-              const pct = it && need ? ((it.devDone + it.designDone) / (need.dev + need.design)) * 100 : 0;
-              const state = done ? 'done' : qi === 0 ? 'now' : it ? 'wait' : 'missing';
-              return (
-                <div key={c.id} className={`mvp-node ${state}`}>
-                  <span className="mvp-dot" style={state === 'now' ? { ['--p' as string]: `${pct}%` } : undefined}>
-                    {done ? '✓' : state === 'missing' ? '+' : i + 1}
-                  </span>
-                  <b>{c.name}</b>
-                  <span>{done ? '완료' : state === 'now' ? `만드는 중 ${Math.round(pct)}%` : it ? `${dayText(v.etas[qi])} 뒤` : '순서에 없음'}</span>
-                </div>
-              );
-            })}
-            <div className="mvp-node goal">
-              <span className="mvp-dot">
-                <PxIcon id="star" size={18} />
-              </span>
-              <b>국내 출시</b>
-              <span>고객·매출 시작</span>
-            </div>
+          <b>{Math.round(p)}%</b>
+        </div>
+      </section>
+      <ol className="wk-path">
+        {v.cores.map((c, i) => {
+          const done = featureLevel(s, c.id) >= 1;
+          const qi = s.product.roadmap.findIndex((x) => x.id === c.id);
+          const it = qi >= 0 ? s.product.roadmap[qi] : null;
+          const need = it ? itemNeed(it) : null;
+          const pct = it && need ? ((it.devDone + it.designDone) / (need.dev + need.design)) * 100 : 0;
+          const state = done ? 'done' : qi === 0 ? 'now' : it ? 'wait' : 'missing';
+          return (
+            <li key={c.id} className={`wk-node ${state}`}>
+              <span className="wk-dot">{done ? <PixelCheck /> : state === 'now' ? <PixelFlag /> : state === 'missing' ? '+' : i + 1}</span>
+              <b>{c.name}</b>
+              <span>{done ? '완료' : state === 'now' ? `만드는 중 ${Math.round(pct)}%` : it ? `${dayText(v.etas[qi])} 뒤` : '순서에 없음'}</span>
+            </li>
+          );
+        })}
+        <li className="wk-node goal">
+          <span className="wk-dot">
+            <PxIcon id="star" size={20} />
+          </span>
+          <b>국내 출시</b>
+          <span>고객·매출 시작</span>
+        </li>
+      </ol>
+      {missing.length > 0 && (
+        <button className="btn mvp-fix" data-testid="fill-cores" onClick={fillCores}>
+          핵심 기능 {missing.length}개 모두 만드는 순서에 넣기
+        </button>
+      )}
+      <section className="wk-team">
+        <h3 className="wk-sect">만드는 사람</h3>
+        {people.map((x) => (
+          <div key={x.key} className={`wk-person ${x.empty ? 'empty' : ''}`} title={x.tip}>
+            <span className={`wk-av ${x.key}`}>{x.av}</span>
+            <b>{x.name}</b>
+            <span className={`ms-bar ${x.key === 'design' ? 'design' : ''}`}>
+              <div style={{ width: `${(x.rate / maxRate) * 100}%` }} />
+            </span>
+            <em>{x.text}</em>
           </div>
-          {missing.length > 0 && (
-            <button className="btn mvp-fix" data-testid="fill-cores" onClick={fillCores}>
-              핵심 기능 {missing.length}개 모두 만드는 순서에 넣기
+        ))}
+        {withDev !== null && v.mvpEta !== null && isFinite(withDev) && (!isFinite(v.mvpEta) || withDev < v.mvpEta) && (
+          <p className="wk-tip">
+            개발자 1명을 뽑으면 출시가 <b>D-{withDev}</b>로 당겨집니다
+            {isFinite(v.mvpEta) ? ` (${v.mvpEta - withDev}일 빨라짐)` : ''}.
+          </p>
+        )}
+        <div className="wk-btns">
+          {openHiring && (
+            <button className="btn small" onClick={openHiring}>
+              개발자 뽑기
+            </button>
+          )}
+          {openSchedule && (
+            <button className="btn small ghost" data-testid="open-schedule" onClick={openSchedule}>
+              대표 일정 바꾸기
             </button>
           )}
         </div>
-        <div className="mvp-team">
-          <div className="mvp-team-title">만드는 사람</div>
-          <div className="mvp-person">
-            <span className="mvp-av me">나</span>
-            <div className="grow">
-              <div className="pd-kv">
-                <span>대표</span>
-                <b>{v.rate.ceo > 0 ? `하루 ${v.rate.ceo.toFixed(2)}` : '개발 안 함'}</b>
-              </div>
-              <span className="mvp-bar">
-                <i style={{ width: `${(v.rate.ceo / maxRate) * 100}%` }} />
-              </span>
-            </div>
-          </div>
-          <div className={`mvp-person ${devCount ? '' : 'empty'}`}>
-            <span className="mvp-av">개</span>
-            <div className="grow">
-              <div className="pd-kv">
-                <span>개발자 {devCount}명</span>
-                <b>{v.rate.team > 0 ? `하루 ${v.rate.team.toFixed(1)}` : devCount ? '다른 일 중' : '없음'}</b>
-              </div>
-              <span className="mvp-bar">
-                <i style={{ width: `${(v.rate.team / maxRate) * 100}%` }} />
-              </span>
-            </div>
-          </div>
-          <div className={`mvp-person ${designCount ? '' : 'empty'}`}>
-            <span className="mvp-av design">디</span>
-            <div className="grow">
-              <div className="pd-kv">
-                <span>디자이너 {designCount}명</span>
-                <b>{v.rate.design > 0 ? `하루 ${v.rate.design.toFixed(1)}` : designCount ? '다른 일 중' : '없음 · 개발이 대신(절반 속도)'}</b>
-              </div>
-              <span className="mvp-bar design">
-                <i style={{ width: `${(v.rate.design / maxRate) * 100}%` }} />
-              </span>
-            </div>
-          </div>
-          {withDev !== null && v.mvpEta !== null && isFinite(withDev) && (!isFinite(v.mvpEta) || withDev < v.mvpEta) && (
-            <div className="mvp-tip">
-              개발자 1명을 뽑으면 출시가 <b>D-{withDev}</b>로 당겨집니다{isFinite(v.mvpEta) ? ` (${v.mvpEta - withDev}일 빨라짐)` : ''}.
-            </div>
-          )}
-          <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
-            {openHiring && (
-              <button className="btn small" onClick={openHiring}>
-                개발자 뽑기
-              </button>
-            )}
-            {openSchedule && (
-              <button className="btn small ghost" data-testid="open-schedule" onClick={openSchedule}>
-                대표 일정 바꾸기
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
+      </section>
     </div>
   );
 }
 
-// 반원 계기판(품질)
+// 반원 계기판(품질). 화면(A-179): 칸칸이 끊긴 호(.wk .pd-gauge), 색은 토큰
 function Gauge({ value, label }: { value: number; label: string }) {
   const t = useTween(value);
   const a = Math.PI * (1 - Math.max(0, Math.min(100, t)) / 100);
   const x = 60 + 48 * Math.cos(a);
   const y = 60 - 48 * Math.sin(a);
-  const color = t >= 75 ? 'var(--green)' : t >= 50 ? 'var(--amber)' : 'var(--red)';
+  const color = t >= 75 ? 'var(--positive)' : t >= 50 ? 'var(--caution)' : 'var(--negative)';
   return (
     <svg viewBox="0 0 120 70" className="pd-gauge" aria-label={`${label} ${Math.round(t)}%`}>
-      <path d="M12 60 A48 48 0 0 1 108 60" fill="none" stroke="var(--c-gray-200)" strokeWidth="12" />
+      <path d="M12 60 A48 48 0 0 1 108 60" fill="none" stroke="var(--surface-tile)" strokeWidth="12" />
       <path d={`M12 60 A48 48 0 0 1 ${x.toFixed(2)} ${y.toFixed(2)}`} fill="none" stroke={color} strokeWidth="12" />
       <text x="60" y="56" textAnchor="middle" className="pd-gauge-num">
         {Math.round(t)}%
@@ -472,13 +481,14 @@ function Gauge({ value, label }: { value: number; label: string }) {
   );
 }
 
-// 출시 후 상태 = 대시보드(A-158, Startup Company 제품 창 Stats 탭 짜임): 큰 타일 3개(지금 · 오늘 매출 · 품질) → 눈금 그래프 2개
-// → 고객이 들고 나는 길 → 시장별 사용자 → 지금 만드는 기능. 받쳐 주는 고객 수(SC의 잠재 사용자)는 규모 사다리와 말로만
+// 출시 후 상태 = 대시보드(A-158, Startup Company 제품 창 Stats 탭 짜임). 받쳐 주는 고객 수(SC의 잠재 사용자)는 규모 사다리와 말로만
+// 화면(A-179): MVP 전 화면(A-171)과 같은 톤 — 가운데 큰 사용자 수 + 규모 사다리 → 납작한 회색 요약 칸(매출·가치·매력도·광고비) → 돈 버는 법·품질 카드 둘
+// → 그래프 둘 → 고객이 들고 나는 길 → 시장별 → 지금 만드는 기능(강조 카드) + 누가 만드나. 긴 설명은 title로
 function LiveStatus({ s, v, openSchedule }: { s: GameState; v: View; openSchedule?: () => void }) {
   const d = s.product.daily ?? [];
   const last = d[d.length - 1];
   const prev = d[d.length - 2];
-  const users = useTween(totalUsers(s));
+  const users = useTween(liveUsers(s));
   const delta = last && prev ? last.users - prev.users : 0;
   const cur = s.product.roadmap[0];
   const curF = cur ? feature(cur.id) : null;
@@ -491,52 +501,56 @@ function LiveStatus({ s, v, openSchedule }: { s: GameState; v: View; openSchedul
   const months = s.plHistory.filter((m) => m.usersEnd > 0).slice(-24);
   const monthly = months.length >= 3;
   const big = (x: number) => (Math.abs(x) >= 1e4 ? countShort(x) : num(x));
+  const q = quality(s);
+  const curPct = cur && need ? ((cur.devDone + cur.designDone) / (need.dev + need.design)) * 100 : 0;
   return (
-    <div className="col">
-      <div className="pd-tiles3 pd-dash" data-testid="product-status">
-        <div className="pd-tile pd-scale">
-          <div className="pd-tile-label">
-            <span className="pd-live" /> 지금 {ind.unit}
-          </div>
-          <div className="pd-tile-huge" title={`${num(users)}${w}`}>
-            {countShort(users)}
-            <small>{w}</small>
-          </div>
-          <div className="pd-kv">
-            <span>오늘 새로 온 {ind.unit}</span>
-            <b>{big(newToday)}</b>
-          </div>
-          <div className="pd-kv">
-            <span>어제보다</span>
-            <b className={delta < 0 ? 'neg' : 'pos'}>
-              {delta >= 0 ? '+' : ''}
-              {big(delta)}
-            </b>
-          </div>
+    <div className="pl" data-testid="product-status">
+      <section className="pl-hero">
+        <span className="wk-kicker">
+          <span className="pd-live" /> 지금 {ind.unit}
+        </span>
+        <h2 className="wk-count" title={`${num(users)}${w}`}>
+          {countShort(users)}
+          <small>{w}</small>
+        </h2>
+        <p className="wk-sub">
+          어제보다{' '}
+          <b className={delta < 0 ? 'neg' : 'pos'}>
+            {delta >= 0 ? '+' : ''}
+            {big(delta)}
+          </b>
+          <span className="pl-dot">·</span>오늘 새로 온 {ind.unit} <b>{big(newToday)}</b>
+        </p>
+        <div className="pl-scale">
           <ScaleLadder s={s} />
           <RoomNote s={s} />
         </div>
-        <div className="pd-tile">
-          <div className="pd-tile-label">어제 매출</div>
-          <div className="pd-tile-big">{wonShort(last?.rev ?? 0)}</div>
-          <div className="tiny muted">한 달이면 약 {wonCompact((last?.rev ?? 0) * 30)}</div>
+      </section>
+      <div className="wk-stats pl-stats">
+        <div className="wk-stat pl-rev">
+          <span>어제 매출</span>
+          <b>{wonShort(last?.rev ?? 0)}</b>
+          <em>한 달이면 약 {wonCompact((last?.rev ?? 0) * 30)}</em>
+        </div>
+        <div className="wk-stat">
+          <span>회사 가치</span>
+          <b>{wonCompact(computeValuation(s).value)}</b>
+        </div>
+        <div className="wk-stat">
+          <span>매력도</span>
+          <b>{appeal(s).toFixed(1)}</b>
+        </div>
+        <div className="wk-stat">
+          <span>한 달 광고비</span>
+          <b>{wonShort(ads)}</b>
+        </div>
+      </div>
+      <div className="pl-two">
+        <section className="pl-card">
+          <h3 className="pl-head">돈 버는 법</h3>
           <MoneyNote s={s} />
-          <div className="pd-kv">
-            <span>한 달 광고비</span>
-            <b>{wonShort(ads)}</b>
-          </div>
-          <div className="pd-kv">
-            <span>회사 가치</span>
-            <b>{wonCompact(computeValuation(s).value)}</b>
-          </div>
-          <div className="pd-kv">
-            <span>매력도</span>
-            <b>{appeal(s).toFixed(1)}</b>
-          </div>
-          <div className="pd-kv">
-            <span>
-              가격 <Help text="싸게 팔면 고객이 많이 오고, 비싸게 팔면 고객당 매출이 큽니다." />
-            </span>
+          <div className="pl-price" title="싸게 팔면 고객이 많이 오고, 비싸게 팔면 고객당 매출이 큽니다.">
+            <span className="pl-lab">가격</span>
             <div className="seg">
               {(['low', 'standard', 'premium'] as PriceTier[]).map((t) => (
                 <button key={t} className={s.product.priceTier === t ? 'on' : ''} data-testid={`price-${t}`} title={priceTierDef(t).desc} onClick={() => act((g) => (g.product.priceTier = t))}>
@@ -545,78 +559,82 @@ function LiveStatus({ s, v, openSchedule }: { s: GameState; v: View; openSchedul
               ))}
             </div>
           </div>
-        </div>
-        <div className="pd-tile">
-          <div className="pd-tile-label">
-            품질 <Help text="버그가 적을수록 높습니다. 새 기능을 만들 때마다 버그가 생기고, 품질이 낮으면 고객이 떠나고 장애가 납니다. 개발팀에 '안정화·버그 수정'을 맡기면 오릅니다." />
-          </div>
+        </section>
+        <section className="pl-card">
+          <h3 className="pl-head" title="버그가 적을수록 높습니다. 새 기능을 만들 때마다 버그가 생기고, 품질이 낮으면 고객이 떠나고 장애가 납니다. 개발팀에 '안정화·버그 수정'을 맡기면 오릅니다.">
+            품질
+          </h3>
           <div className="pd-qrow">
-            <Gauge value={quality(s)} label="품질" />
-            <Stability q={quality(s)} />
+            <Gauge value={q} label="품질" />
+            <Stability q={q} />
           </div>
-          <div className="pd-kv">
-            <span>
-              기술 부채 <Help text="급하게(야근) 만든 코드가 쌓인 정도입니다. 높을수록 새 기능에 버그가 더 생깁니다. '기술 부채 정리'로 줄입니다." />
-            </span>
-            <b>{Math.round(s.product.debt * 100)}%</b>
+          <div className="pl-rows">
+            <div className="pd-kv" title="급하게(야근) 만든 코드가 쌓인 정도입니다. 높을수록 새 기능에 버그가 더 생깁니다. '기술 부채 정리'로 줄입니다.">
+              <span>기술 부채</span>
+              <b>{Math.round(s.product.debt * 100)}%</b>
+            </div>
+            <div className="pd-kv" title="디자인팀이 'UX 다듬기'를 하면 오르고 매력도에 곱해집니다. 새 기능을 낼 때마다 조금씩 내려갑니다.">
+              <span>UX 완성도</span>
+              <b>+{Math.round(s.product.polish * 100)}%</b>
+            </div>
+            <div className="pd-kv">
+              <span>지금까지 장애</span>
+              <b className={s.stats.outages ? 'neg' : ''}>{s.stats.outages}번</b>
+            </div>
           </div>
-          <div className="pd-kv">
-            <span>
-              UX 완성도 <Help text="디자인팀이 'UX 다듬기'를 하면 오르고 매력도에 곱해집니다. 새 기능을 낼 때마다 조금씩 내려갑니다." />
-            </span>
-            <b>+{Math.round(s.product.polish * 100)}%</b>
-          </div>
-          <div className="pd-kv">
-            <span>지금까지 장애</span>
-            <b>{s.stats.outages}번</b>
-          </div>
-        </div>
+        </section>
       </div>
-      <div className="pd-charts">
-        <div className="pd-tile">
-          <div className="pd-tile-label">{monthly ? `${ind.unit} (월말)` : `${ind.unit} (최근 ${d.length}일)`}</div>
+      <div className="pl-two">
+        <section className="pl-card">
+          <h3 className="pl-head">
+            {ind.unit}
+            <em>{monthly ? '월말' : `최근 ${d.length}일`}</em>
+          </h3>
           {monthly ? (
             <AxisChart points={months.map((m) => m.usersEnd)} from={formatMonth(months[0].month)} to={formatMonth(months[months.length - 1].month)} fmt={(x) => countShort(x)} />
           ) : (
             <AxisChart points={d.map((x) => x.users)} from={d.length ? formatDate(d[0].day) : ''} to={d.length ? formatDate(d[d.length - 1].day) : ''} fmt={(x) => countShort(x)} />
           )}
-        </div>
-        <div className="pd-tile">
-          <div className="pd-tile-label">하루 매출 (최근 {d.length}일)</div>
+        </section>
+        <section className="pl-card">
+          <h3 className="pl-head">
+            하루 매출<em>최근 {d.length}일</em>
+          </h3>
           <AxisChart points={d.map((x) => x.rev)} from={d.length ? formatDate(d[0].day) : ''} to={d.length ? formatDate(d[d.length - 1].day) : ''} fmt={(x) => wonCompact(x)} />
-        </div>
+        </section>
       </div>
       <Inflow s={s} />
       <MarketUsers s={s} />
-      <div className="pd-hero">
-        <div className="pd-hero-main">
-          <div className="pd-stage">지금 만드는 기능</div>
+      <div className="pl-build">
+        <section className={`pl-card pl-now ${cur ? '' : 'empty'}`}>
+          <span className="wk-kicker">지금 만드는 기능</span>
           {cur && curF && need ? (
             <>
-              <div className="pd-headline">
-                {curF.name}
-                {curF.levels > 1 ? ` Lv${cur.level}` : ''} · {dayText(v.etas[0])} 뒤 출시
+              <div className="pl-now-head">
+                <span className="pl-tile">
+                  <PixelFlag />
+                </span>
+                <b title={curF.desc}>
+                  {curF.name}
+                  {curF.levels > 1 ? ` Lv${cur.level}` : ''}
+                </b>
+                <span className="pl-chip">{isFinite(v.etas[0]) ? `${dayText(v.etas[0])} 뒤 출시` : '멈춤'}</span>
               </div>
-              <div className="pbar">
-                <div
-                  className="dev"
-                  style={{
-                    width: `${(cur.devDone / (need.dev + need.design)) * 100}%`,
-                  }}
-                />
-                <div
-                  className="design"
-                  style={{
-                    width: `${(cur.designDone / (need.dev + need.design)) * 100}%`,
-                  }}
-                />
+              <div className="pl-now-prog">
+                <div className="pbar" title={`개발 ${Math.floor(cur.devDone)}/${need.dev} · 디자인 ${Math.floor(cur.designDone)}/${need.design}`}>
+                  <div className="dev" style={{ width: `${(cur.devDone / (need.dev + need.design)) * 100}%` }} />
+                  <div className="design" style={{ width: `${(cur.designDone / (need.dev + need.design)) * 100}%` }} />
+                </div>
+                <b>{Math.round(curPct)}%</b>
               </div>
-              <div className="tiny muted">{curF.desc}</div>
             </>
           ) : (
-            <div className="pd-headline">만들 기능이 없습니다. 기능 탭에서 다음 기능을 고르세요.</div>
+            <div className="wk-empty small">
+              <PxIcon id="box" size={20} />
+              만들 기능이 없습니다. 기능 탭에서 다음 기능을 고르세요.
+            </div>
           )}
-        </div>
+        </section>
         <Builders s={s} v={v} openSchedule={openSchedule} />
       </div>
     </div>
@@ -646,15 +664,17 @@ function Inflow({ s }: { s: GameState }) {
   const ind = industry(s.company.industry);
   const ads = launchedMarkets(s).reduce((a, m) => a + s.markets[m].adBudget, 0);
   return (
-    <div className="pd-tile" data-testid="inflow">
-      <div className="pd-tile-label">
-        {ind.unit}{josa(ind.unit, '이')} 들고 나는 길 (한 달 환산) <Help text="최근 2주 평균을 한 달로 바꾼 값입니다. 홍보를 하지 않으면 출시 날 들어온 대표의 지인 말고는 거의 들어오지 않습니다. 떠나는 이유는 매달 초 고객 리포트(메신저)로도 받습니다." />
+    <section className="pl-card" data-testid="inflow">
+      <h3 className="pl-head" title="최근 2주 평균을 한 달로 바꾼 값입니다. 홍보를 하지 않으면 출시 날 들어온 대표의 지인 말고는 거의 들어오지 않습니다. 떠나는 이유는 매달 초 고객 리포트(메신저)로도 받습니다.">
+        {ind.unit}
+        {josa(ind.unit, '이')} 들고 나는 길<em>한 달 환산</em>
+      </h3>
+      {f ? <FlowBars flow={f} unit={ind.unit} /> : <div className="wk-empty small">하루가 지나면 쌓입니다.</div>}
+      <div className="pl-tags">
+        <span>국내 인지도 {(s.markets.kr.awareness * 100).toFixed(2)}%</span>
+        <span>광고 예산 월 {wonShort(ads)}</span>
       </div>
-      {f ? <FlowBars flow={f} unit={ind.unit} /> : <div className="tiny muted">하루가 지나면 쌓입니다.</div>}
-      <div className="tiny muted">
-        국내 인지도 {(s.markets.kr.awareness * 100).toFixed(2)}% · 광고 예산 월 {wonShort(ads)}
-      </div>
-    </div>
+    </section>
   );
 }
 
@@ -664,8 +684,8 @@ function MarketUsers({ s }: { s: GameState }) {
   if (ms.length < 2) return null;
   const total = Math.max(1, totalUsers(s));
   return (
-    <div className="pd-tile">
-      <div className="pd-tile-label">시장별 {industry(s.company.industry).unit}</div>
+    <section className="pl-card">
+      <h3 className="pl-head">시장별 {industry(s.company.industry).unit}</h3>
       <div className="cf-list">
         {[...ms]
           .sort((a, b) => s.markets[b].users - s.markets[a].users)
@@ -681,12 +701,19 @@ function MarketUsers({ s }: { s: GameState }) {
             </div>
           ))}
       </div>
-    </div>
+    </section>
   );
 }
 
 // 기능 그림(카테고리별 앱 화면 미리보기, assets/features/*.png)
-const FEAT_ART = Object.fromEntries(Object.entries(import.meta.glob<string>('../../assets/features/*.png', { eager: true, import: 'default' })).map(([path, url]) => [path.split('/').pop()!.replace('.png', ''), url]));
+const FEAT_ART = Object.fromEntries(
+  Object.entries(
+    import.meta.glob<string>('../../assets/features/*.png', {
+      eager: true,
+      import: 'default',
+    }),
+  ).map(([path, url]) => [path.split('/').pop()!.replace('.png', ''), url]),
+);
 
 // 기능 탭(Startup Company식): 위 요약(잠재 고객·사용자·매력도 구성 / 다음 출시·작업량·기능 수) + 기능 카드 줄(그림·레벨·업그레이드)
 function Features({ s, v }: { s: GameState; v: View }) {
@@ -724,17 +751,17 @@ function Features({ s, v }: { s: GameState; v: View }) {
     const costName = cost.kind === 'pay' ? '지불 의사' : '인사이트';
     const qi = s.product.roadmap.findIndex((r) => r.id === f.id);
     const art = FEAT_ART[f.cat];
+    const nowIt = qi === 0 ? s.product.roadmap[0] : null;
+    const nowNeed = nowIt ? itemNeed(nowIt) : null;
+    const nowPct = nowIt && nowNeed ? ((nowIt.devDone + nowIt.designDone) / (nowNeed.dev + nowNeed.design)) * 100 : 0;
     return (
-      <div key={f.id} className={`fc ${lv > 0 ? 'own' : ''} ${lock && !lv && !q ? 'locked' : ''}`} data-testid={`feat-${f.id}`}>
-        <div className="fc-art">
-          {art ? <img src={art} alt="" draggable={false} /> : <span className={`cat ${f.cat}`}>{CAT_NAME[f.cat]}</span>}
-          {lv > 0 && <span className="fc-lv">Lv {lv}</span>}
-          {q > 0 && <span className="fc-q">{qi === 0 ? '만드는 중' : `순서 ${qi + 1}번`}</span>}
-        </div>
+      <div key={f.id} className={`fc ${lv > 0 ? 'own' : ''} ${qi === 0 ? 'now' : q > 0 ? 'queued' : ''} ${lock && !lv && !q ? 'locked' : ''}`} data-testid={`feat-${f.id}`}>
+        <div className="fc-art">{art ? <img src={art} alt="" draggable={false} /> : <span className={`cat ${f.cat}`}>{CAT_NAME[f.cat]}</span>}</div>
         <div className="fc-body">
-          <div className="row" style={{ gap: 6 }}>
-            <span className={`cat ${f.cat}`}>{CAT_NAME[f.cat]}</span>
-            <b className="grow fc-name">{f.name}</b>
+          <div className="fc-top">
+            <b className="fc-name">{f.name}</b>
+            {lv > 0 && <span className="fc-lv">Lv {lv}</span>}
+            {q > 0 && <span className="fc-q">{qi === 0 ? '만드는 중' : `순서 ${qi + 1}번`}</span>}
           </div>
           {f.levels > 1 && (
             <span className="pd-dots" title={`레벨 ${lv}/${f.levels}`}>
@@ -744,24 +771,34 @@ function Features({ s, v }: { s: GameState; v: View }) {
             </span>
           )}
           <div className="fc-fx">{f.desc}</div>
-        </div>
-        <div className="fc-foot">
-          {lock ? (
-            <span className="tiny muted" data-testid={`feat-lock-${f.id}`}>
-              {lv + q >= f.levels ? (lv >= f.levels ? (f.levels > 1 ? '최고 레벨' : '완성') : f.levels > 1 ? '최고 레벨까지 순서에 있음' : '만드는 순서에 있음') : cost.n > insightHave(s, cost.kind) && lock.endsWith('부족') ? `${costName} ${num(cost.n)} 필요 · 지금 ${num(insightHave(s, cost.kind))}` : lock}
-            </span>
-          ) : (
-            <>
-              <span className="tiny muted grow">
-                {dayText(days)}
-                {cost.n > 0 && ` · ${costName} ${num(cost.n)}`}
+          {qi === 0 && (
+            <div className="fc-prog">
+              <span className="ms-bar">
+                <div style={{ width: `${nowPct}%` }} />
               </span>
-              <button className="btn small" onClick={() => add(f)}>
-                {lv + q === 0 ? '만들기' : '업그레이드'}
-              </button>
-            </>
+              <b>{Math.round(nowPct)}%</b>
+            </div>
           )}
         </div>
+        {!(lock && q > 0) && (
+          <div className="fc-foot">
+            {lock ? (
+              <span className="tiny muted" data-testid={`feat-lock-${f.id}`}>
+                {lv + q >= f.levels ? (lv >= f.levels ? (f.levels > 1 ? '최고 레벨' : '완성') : f.levels > 1 ? '최고 레벨까지 순서에 있음' : '만드는 순서에 있음') : cost.n > insightHave(s, cost.kind) && lock.endsWith('부족') ? `${costName} ${num(cost.n)} 필요 · 지금 ${num(insightHave(s, cost.kind))}` : lock}
+              </span>
+            ) : (
+              <>
+                <span className="tiny muted grow">
+                  {dayText(days)}
+                  {cost.n > 0 && ` · ${costName} ${num(cost.n)}`}
+                </span>
+                <button className="btn small" onClick={() => add(f)}>
+                  {lv + q === 0 ? '만들기' : '업그레이드'}
+                </button>
+              </>
+            )}
+          </div>
+        )}
       </div>
     );
   };
@@ -772,9 +809,8 @@ function Features({ s, v }: { s: GameState; v: View }) {
       const fs = list.filter((f) => f.cat === c);
       return (
         <div key={c} className="fc-group">
-          <div className="fc-group-head">
+          <div className="fc-group-head" title={CAT_ROLE[c]}>
             <span className={`cat ${c}`}>{CAT_NAME[c]}</span>
-            <span>{CAT_ROLE[c]}</span>
             <b>{fs.length}개</b>
           </div>
           <div className="fc-row">{fs.map(card)}</div>
@@ -784,89 +820,85 @@ function Features({ s, v }: { s: GameState; v: View }) {
 
   return (
     <div className="col">
-      <div className="fs-top">
-        <div className="fs-col">
-          <div className="pd-kv">
-            <span>지금 {ind.unit}</span>
-            <b title={num(totalUsers(s))}>{totalUsers(s) >= 1e5 ? countShort(totalUsers(s)) : num(totalUsers(s))}</b>
-          </div>
-          <div className="pd-kv fs-appeal" tabIndex={0}>
-            <span>매력도</span>
-            <b className="row" style={{ gap: 6 }}>
-              {face !== 'empty' && <PxIcon id={face} size={16} />}
-              {hasMvp(s) ? bd.total.toFixed(1) : '출시 전'}
-            </b>
-            <div className="fs-pop" data-testid="appeal-breakdown">
-              <div className="fs-pop-title">매력도는 어디서 오나</div>
-              {bd.parts.length === 0 && <div className="tiny muted">아직 만든 기능이 없습니다.</div>}
-              {bd.parts.map((x) => (
-                <div key={x.id} className="pd-kv">
-                  <span>{x.name}</span>
-                  <b>{pctOf(x.pts)}</b>
-                </div>
-              ))}
-              {bd.bonus !== 0 && (
-                <div className="pd-kv">
-                  <span>사건·평판</span>
-                  <b>{pctOf(bd.bonus)}</b>
-                </div>
-              )}
+      <div className="wk-stats">
+        <div className="wk-stat">
+          <span>지금 {ind.unit}</span>
+          <b title={num(liveUsers(s))}>{liveUsers(s) >= 1e5 ? countShort(liveUsers(s)) : num(liveUsers(s))}</b>
+        </div>
+        <div className="wk-stat fs-appeal" tabIndex={0}>
+          <span>매력도</span>
+          <b className="row" style={{ gap: 6 }}>
+            {face !== 'empty' && <PxIcon id={face} size={16} />}
+            {hasMvp(s) ? bd.total.toFixed(1) : '출시 전'}
+          </b>
+          <div className="fs-pop" data-testid="appeal-breakdown">
+            <div className="fs-pop-title">매력도는 어디서 오나</div>
+            {bd.parts.length === 0 && <div className="tiny muted">아직 만든 기능이 없습니다.</div>}
+            {bd.parts.map((x) => (
+              <div key={x.id} className="pd-kv">
+                <span>{x.name}</span>
+                <b>{pctOf(x.pts)}</b>
+              </div>
+            ))}
+            {bd.bonus !== 0 && (
               <div className="pd-kv">
-                <span>UX 완성도</span>
-                <b className="pos">{signed(bd.polish)}</b>
+                <span>사건·평판</span>
+                <b>{pctOf(bd.bonus)}</b>
               </div>
+            )}
+            <div className="pd-kv">
+              <span>UX 완성도</span>
+              <b className="pos">{signed(bd.polish)}</b>
+            </div>
+            <div className="pd-kv">
+              <span>버그(품질 {quality(s)}점)</span>
+              <b className={bd.quality < 1 ? 'neg' : ''}>{signed(bd.quality - 1)}</b>
+            </div>
+            {bd.complexity < 1 && (
               <div className="pd-kv">
-                <span>버그(품질 {quality(s)}점)</span>
-                <b className={bd.quality < 1 ? 'neg' : ''}>{signed(bd.quality - 1)}</b>
+                <span>기능이 너무 많아 복잡함</span>
+                <b className="neg">{signed(bd.complexity - 1)}</b>
               </div>
-              {bd.complexity < 1 && (
-                <div className="pd-kv">
-                  <span>기능이 너무 많아 복잡함</span>
-                  <b className="neg">{signed(bd.complexity - 1)}</b>
-                </div>
-              )}
-              {bd.other !== 0 && (
-                <div className="pd-kv">
-                  <span>기간 효과</span>
-                  <b className={bd.other < 0 ? 'neg' : 'pos'}>{signed(bd.other)}</b>
-                </div>
-              )}
-              <div className="pd-kv fs-sum">
-                <span>합계</span>
-                <b>{bd.total.toFixed(1)}</b>
+            )}
+            {bd.other !== 0 && (
+              <div className="pd-kv">
+                <span>기간 효과</span>
+                <b className={bd.other < 0 ? 'neg' : 'pos'}>{signed(bd.other)}</b>
               </div>
+            )}
+            <div className="pd-kv fs-sum">
+              <span>합계</span>
+              <b>{bd.total.toFixed(1)}</b>
             </div>
           </div>
         </div>
-        <div className="fs-col">
-          <div className="pd-kv">
-            <span>다음 기능 출시까지</span>
-            <b>{s.product.roadmap.length ? dayText(v.etas[0]) : '-'}</b>
+        <div className="wk-stat">
+          <span>다음 기능 출시까지</span>
+          <b>{s.product.roadmap.length ? dayText(v.etas[0]) : '-'}</b>
+        </div>
+        <div className="wk-stat" title="하루 작업량(개발 / 디자인)">
+          <span>하루 작업량</span>
+          <b>
+            {v.rate.dev.toFixed(2)} / {v.rate.design.toFixed(1)}
+          </b>
+        </div>
+        <div className="wk-stat" data-testid="insight" title="고객 인사이트 · 지불 의사">
+          <span>인사이트 · 지불 의사</span>
+          <b>
+            {num(insightHave(s, 'insight'))} · {num(insightHave(s, 'pay'))}
+          </b>
+        </div>
+        {v.rate.upkeep >= 0.05 && (
+          <div className="wk-stat">
+            <span>유지보수로 빠지는 개발</span>
+            <b className="neg">{Math.round(v.rate.upkeep * 100)}%</b>
           </div>
-          <div className="pd-kv">
-            <span>하루 작업량(개발 / 디자인)</span>
-            <b>
-              {v.rate.dev.toFixed(2)} / {v.rate.design.toFixed(1)}
-            </b>
-          </div>
-          <div className="pd-kv" data-testid="insight">
-            <span>고객 인사이트 · 지불 의사</span>
-            <b>
-              {num(insightHave(s, 'insight'))} · {num(insightHave(s, 'pay'))}
-            </b>
-          </div>
-          {v.rate.upkeep >= 0.05 && (
-            <div className="pd-kv">
-              <span>유지보수로 빠지는 개발</span>
-              <b className="neg">{Math.round(v.rate.upkeep * 100)}%</b>
-            </div>
-          )}
-          <div className="pd-kv">
-            <span>만든 기능 · 최고 레벨</span>
-            <b>
-              {builtCount}개 · Lv {maxLv}
-            </b>
-          </div>
+        )}
+        <div className="wk-stat">
+          <span>만든 기능 · 최고 레벨</span>
+          <b>
+            {builtCount}개 · Lv {maxLv}
+          </b>
         </div>
       </div>
       {hasMvp(s) && (
@@ -885,12 +917,16 @@ function Features({ s, v }: { s: GameState; v: View }) {
         </div>
       )}
       {msg && <div className="warn">{msg}</div>}
-      <div className="section-title">우리 제품 기능 {mine.length}개</div>
-      {mine.length ? groups(mine) : <div className="tiny muted">아직 없습니다. 아래에서 만들 기능을 고르세요.</div>}
-      <div className="section-title">새로 만들 수 있는 기능 {can.length}개</div>
-      {groups(can)}
+      <h3 className="wk-sect">
+        우리 제품 기능 <em>{mine.length}</em>
+      </h3>
+      {mine.length ? groups(mine) : <div className="wk-empty small">아직 없습니다</div>}
+      <h3 className="wk-sect">
+        새로 만들 수 있는 기능 <em>{can.length}</em>
+      </h3>
+      {can.length ? groups(can) : <div className="wk-empty small">지금 더 만들 수 있는 기능이 없습니다</div>}
       {locked.length > 0 && (
-        <button className="btn ghost small" style={{ alignSelf: 'flex-start' }} onClick={() => setShowLocked((x) => !x)}>
+        <button className="wk-fold" onClick={() => setShowLocked((x) => !x)}>
           {showLocked ? '나중에 열리는 기능 접기' : `나중에 열리는 기능 ${locked.length}개 보기`}
         </button>
       )}
@@ -899,24 +935,82 @@ function Features({ s, v }: { s: GameState; v: View }) {
   );
 }
 
-function Roadmap({ s, v, openSchedule, goFeatures }: { s: GameState; v: View; openSchedule?: () => void; goFeatures: () => void }) {
+// A-183 개발 일정: 끝나는 날로 주 단위 묶음(이번 주·다음 주·2주 뒤·3~4주 뒤·그 뒤·멈춤)
+const shortDate = (day: number) => formatDate(day).slice(5).replace('.', '/');
+
+function sprintOf(s: GameState, to: number | null): { key: string; name: string; range: string } {
+  if (to === null) return { key: 'stall', name: '멈춤', range: '만드는 사람이 없어 끝나지 않습니다' };
+  const w0 = weekStartOf(s.day);
+  const w = Math.floor((to - w0) / 7);
+  const range = (a: number, b: number) => `${shortDate(w0 + a * 7)} ~ ${shortDate(w0 + b * 7 + 6)}`;
+  if (w <= 0) return { key: 'w0', name: '이번 주 출시', range: range(0, 0) };
+  if (w === 1) return { key: 'w1', name: '다음 주 출시', range: range(1, 1) };
+  if (w === 2) return { key: 'w2', name: '2주 뒤', range: range(2, 2) };
+  if (w <= 4) return { key: 'w4', name: '3~4주 뒤', range: range(3, 4) };
+  if (w <= 8) return { key: 'w8', name: '두 달 안', range: range(5, 8) };
+  return { key: 'later', name: '그 뒤', range: `${shortDate(w0 + 63)}부터` };
+}
+
+// 개발 일정 맨 위 요약: 이번 주 출시 수 · 다음 출시 · 약속 기한 여유
+function SprintSummary({ s, v }: { s: GameState; v: View }) {
+  const spans = itemSpans(s, v.etas);
+  const w0 = weekStartOf(s.day);
+  const thisWeek = spans.filter((x) => x.to !== null && x.to < w0 + 7).length;
+  const last = spans[spans.length - 1]?.to ?? null;
+  const promises = s.milestones?.list.filter((m) => m.status === 'active' && m.needs && m.deadline !== undefined) ?? [];
+  const worst = promises.map((m) => ({ m, f: forecast(s, m) })).sort((a, b) => a.f.daysLeft - a.f.mid - (b.f.daysLeft - b.f.mid))[0];
   return (
-    <div className="row" style={{ alignItems: 'flex-start' }}>
+    <div className="rm-summary" data-testid="sprint-summary">
+      <div>
+        <span>이번 주 출시</span>
+        <b>{thisWeek}개</b>
+      </div>
+      <div>
+        <span>순서를 다 끝내는 날</span>
+        <b>{last === null ? '멈춤' : shortDate(last)}</b>
+      </div>
+      <div>
+        <span>약속 기한 여유</span>
+        <b className={worst ? (worst.f.risk === 'late' ? 'fin-bad' : worst.f.risk === 'tight' ? '' : 'fin-good') : 'muted'}>
+          {worst ? (isFinite(worst.f.mid) ? `${worst.f.daysLeft - worst.f.mid >= 0 ? '' : '−'}${Math.abs(worst.f.daysLeft - worst.f.mid)}일 · ${worst.m.from}` : `멈춤 · ${worst.m.from}`) : '약속 없음'}
+        </b>
+      </div>
+    </div>
+  );
+}
+
+function Roadmap({ s, v, openSchedule, goFeatures }: { s: GameState; v: View; openSchedule?: () => void; goFeatures: () => void }) {
+  const spans = itemSpans(s, v.etas);
+  return (
+    <div className="wk-road">
       <div className="col grow">
         {s.product.roadmap.length === 0 && (
-          <div className="warn">
-            만들 기능이 없습니다.{' '}
+          <div className="wk-empty">
+            <PxIcon id="box" size={32} />
+            <b>만들 기능이 없습니다</b>
             <button className="btn small" onClick={goFeatures}>
               기능 고르기
             </button>
           </div>
         )}
+        {s.product.roadmap.length > 0 && <SprintSummary s={s} v={v} />}
         {s.product.roadmap.map((it, i) => {
           const f = feature(it.id);
           const need = itemNeed(it);
           const tot = need.dev + need.design;
+          // A-183 주 단위 묶음: 끝나는 주가 바뀌는 곳에 묶음 머리
+          const span = spans[i];
+          const sprint = sprintOf(s, span.to);
+          const head = i === 0 || sprintOf(s, spans[i - 1].to).key !== sprint.key;
           return (
-            <div key={`${it.id}-${it.level}`} className={`rm-item ${i === 0 ? 'first' : ''}`} data-testid={`roadmap-${i}`}>
+            <Fragment key={`${it.id}-${it.level}`}>
+            {head && (
+              <div className={`rm-sprint ${sprint.key}`}>
+                <b>{sprint.name}</b>
+                <span>{sprint.range}</span>
+              </div>
+            )}
+            <div className={`rm-item ${i === 0 ? 'first' : ''}`} data-testid={`roadmap-${i}`}>
               <div className="row">
                 <span className="pd-order">{i + 1}</span>
                 <span className={`cat ${f.cat}`}>{CAT_NAME[f.cat]}</span>
@@ -924,6 +1018,21 @@ function Roadmap({ s, v, openSchedule, goFeatures }: { s: GameState; v: View; op
                   {f.name}
                   {f.levels > 1 ? ` Lv${it.level}` : ''}
                 </b>
+                {(() => {
+                  // 약속(A-177): 이 기능을 조건으로 쥔 약속과 기한. 기한보다 늦게 끝나면 빨강
+                  const pm = promiseFor(s, it.id, it.level);
+                  if (!pm) return null;
+                  const late = !isFinite(v.etas[i]) || s.day + v.etas[i] > pm.deadline!;
+                  return (
+                    <span className={`chip ${late ? 'red' : 'blue'}`} data-testid={`roadmap-promise-${i}`} title={`${pm.from}와 약속한 기능입니다. 빼거나 뒤로 미루면 약속을 지키기 어렵습니다.`}>
+                      약속 · {formatDate(pm.deadline!).slice(5)}까지
+                    </span>
+                  );
+                })()}
+                {/* A-183 숨은 일(A-181): 점검으로 찾음 / 늦게 드러남 / 약속 기능인데 아직 점검 전 */}
+                {it.found === 'review' && <span className="chip amber" title="점검 회의에서 찾은 숨은 일이 더해졌습니다">점검으로 찾은 일 +</span>}
+                {it.found === 'late' && <span className="chip red" title="마무리 무렵에야 드러난 숨은 일이 더해졌습니다">늦게 드러난 일 +</span>}
+                {!it.found && promiseFor(s, it.id, it.level) && !promiseFor(s, it.id, it.level)!.checked && <span className="chip" title="약속 기능은 숨은 일이 있을 수 있습니다. 점검 회의에서 확인합니다">점검 전</span>}
                 <button className="btn small ghost" disabled={i === 0} onClick={() => act((g) => moveRoadmap(g, i, -1))}>
                   ▲
                 </button>
@@ -942,44 +1051,65 @@ function Roadmap({ s, v, openSchedule, goFeatures }: { s: GameState; v: View; op
                 <span className="muted grow">
                   {i === 0 ? '만드는 중' : '대기'} · {Math.round(((it.devDone + it.designDone) / tot) * 100)}%
                 </span>
-                <b>{isFinite(v.etas[i]) ? `${dayText(v.etas[i])} 뒤 출시 (${formatDate(s.day + v.etas[i])})` : '멈춤'}</b>
+                <span className="rm-dates" title={isFinite(v.etas[i]) ? `${dayText(v.etas[i])} 뒤 출시 (${formatDate(s.day + v.etas[i])})` : '만드는 사람이 없어 멈춤'}>
+                  {isFinite(span.from) ? shortDate(span.from) : '-'} → <b>{span.to === null ? '멈춤' : shortDate(span.to)}</b>
+                  {span.to !== null && isFinite(span.from) ? ` · ${Math.max(1, span.to - Math.max(s.day, span.from))}일` : ''}
+                </span>
               </div>
             </div>
+            </Fragment>
           );
         })}
-        <Help text="맨 위 기능부터 하나씩 만듭니다. ▲▼로 순서를 바꾸고 ✕로 뺄 수 있습니다. 파란 막대는 개발, 보라 막대는 디자인 진행입니다." />
+        <Help text="맨 위 기능부터 하나씩 만듭니다. 끝나는 주로 묶어 보여 줍니다. ▲▼로 순서를 바꾸면 날짜가 바로 바뀝니다. 약속한 기능은 기한 칩이 붙고, 기한보다 늦게 끝나면 빨강입니다. 파란 막대는 개발, 보라 막대는 디자인 진행입니다." />
       </div>
       <Builders s={s} v={v} openSchedule={openSchedule} />
     </div>
   );
 }
 
+// 출시 기록. 화면(A-179): 표 → 가운데 큰 개수 + 판정 칩 요약 + 납작한 줄(판정 색 타일 · 이름 · 날짜 · 판정 칩)
 function ShipLog({ s }: { s: GameState }) {
-  if (s.product.shipped.length === 0) return <div className="warn">아직 출시한 기능이 없습니다.</div>;
+  if (s.product.shipped.length === 0)
+    return (
+      <div className="wk-empty">
+        <PxIcon id="box" size={32} />
+        <b>아직 출시한 기능이 없습니다</b>
+      </div>
+    );
+  const list = s.product.shipped;
+  const full = list.filter((x) => x.result === 'full').length;
+  const partial = list.filter((x) => x.result === 'partial').length;
   return (
-    <table className="t">
-      <thead>
-        <tr>
-          <th>날짜</th>
-          <th>기능</th>
-          <th>판정</th>
-        </tr>
-      </thead>
-      <tbody>
-        {[...s.product.shipped].reverse().map((x, i) => {
+    <div className="pl pl-log">
+      <section className="pl-hero">
+        <span className="wk-kicker">출시 기록</span>
+        <h2 className="wk-count">
+          {list.length}
+          <small>번</small>
+        </h2>
+        <div className="pl-tags">
+          <span className="ok">완전 수행 {full}</span>
+          <span className="mid">부분 수행 {partial}</span>
+          <span className="bad">버그 많음 {list.length - full - partial}</span>
+        </div>
+      </section>
+      <ol className="pl-ships">
+        {[...list].reverse().map((x, i) => {
           const f = feature(x.id);
+          const st = x.result === 'full' ? 'ok' : x.result === 'partial' ? 'mid' : 'bad';
           return (
-            <tr key={i}>
-              <td>{formatDate(x.day)}</td>
-              <td>
+            <li key={i} className={`pl-ship ${st}`}>
+              <span className="pl-tile">{st === 'ok' ? <PixelCheck /> : <PxIcon id={st === 'mid' ? 'warn' : 'siren'} size={18} />}</span>
+              <b>
                 {f.name}
                 {f.levels > 1 ? ` Lv${x.level}` : ''}
-              </td>
-              <td>{x.result === 'full' ? <span className="chip green">완전 수행</span> : x.result === 'partial' ? <span className="chip amber">부분 수행(버그 조금)</span> : <span className="chip red">버그 많음</span>}</td>
-            </tr>
+              </b>
+              <time>{formatDate(x.day)}</time>
+              {x.result === 'full' ? <span className="chip green">완전 수행</span> : x.result === 'partial' ? <span className="chip amber">부분 수행(버그 조금)</span> : <span className="chip red">버그 많음</span>}
+            </li>
           );
         })}
-      </tbody>
-    </table>
+      </ol>
+    </div>
   );
 }

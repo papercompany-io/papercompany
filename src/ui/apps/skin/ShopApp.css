@@ -1,0 +1,48 @@
+/* 화면(A-179): 상점 — 커리어·업무와 같은 톤. 가운데 큰 책상 수, 알약 분류 탭, 그림 타일은 1px 테두리 납작한 카드 + 아래 이름·가격, 배지는 토큰 색(놓임 = 흰 픽셀 체크), 작은 글자는 픽셀 글꼴 */
+
+.sh2 { gap: 14px; min-width: 320px; container-type: inline-size; }
+
+.sh2-head { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 0 2px; text-align: center; }
+.sh2-kicker { font-family: var(--pixel); font-size: 11px; font-weight: 400; color: var(--accent-text); -webkit-font-smoothing: none; }
+.sh2-big { margin: 0; font-size: 36px; font-weight: 800; line-height: 1.15; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.sh2-lead { margin: 0; font-size: var(--fs-md); color: var(--text-3); cursor: help; word-break: keep-all; }
+
+/* 분류 탭: 알약(.rk .tab 모양), 오른쪽 옮기기·치우기 */
+.sh2 .shop-bar { justify-content: center; gap: 8px 12px; }
+.sh2.sh2 .shop-tabs { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; border: none; border-radius: 0; overflow: visible; background: none; }
+.sh2.sh2 .shop-tabs button { padding: 7px 13px; border: none; border-radius: var(--r-full); background: var(--surface-tile); color: var(--text-2); font-size: var(--fs-md); font-weight: 600; }
+.sh2.sh2 .shop-tabs button:hover { background: var(--surface-sel); color: var(--text); }
+.sh2.sh2 .shop-tabs button.on { background: var(--text); color: var(--surface); }
+.sh2 .shop-tools .btn { border-radius: var(--r-full); }
+
+/* 그림 타일: 납작한 카드, 위 그림 칸(회색) + 아래 이름·가격 */
+.sh2 .shop-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+.sh2.sh2 .shop-tile { aspect-ratio: auto; flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 8px; padding: 8px 8px 10px; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface); text-align: left; font: inherit; color: var(--text); }
+.sh2.sh2 .shop-tile:hover { background: var(--surface); border-color: var(--line-strong); }
+.sh2.sh2 .shop-tile.placed { border-color: var(--accent); background: var(--surface-hover); }
+.sh2.sh2 .shop-tile.stored { border-color: var(--caution); }
+.sh2.sh2 .shop-tile.blocked { background: var(--surface-sunk); border-color: var(--line); }
+.sh2.sh2 .st-img { width: 100%; height: auto; aspect-ratio: 1; padding: 8px; box-sizing: border-box; border-radius: var(--r-md); background: var(--surface-tile); }
+.sh2.sh2 .shop-tile.placed .st-img { background: var(--surface); }
+.sh2-cap { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: 0 4px; }
+.sh2-cap b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-md); font-weight: 700; }
+.sh2-cap em { font-style: normal; font-family: var(--pixel); font-size: 11px; font-weight: 400; color: var(--text-3); -webkit-font-smoothing: none; }
+.sh2 .shop-tile.placed .sh2-cap em { color: var(--accent-text); }
+.sh2 .shop-tile.stored .sh2-cap em { color: var(--caution-text); }
+.sh2 .shop-tile.blocked .sh2-cap { opacity: 0.6; }
+
+/* 배지: 토큰 색, 그림자 없음 */
+.sh2.sh2 .st-badge { top: -7px; right: -7px; min-width: 24px; height: 24px; padding: 0 7px; border-radius: var(--r-sm); background: var(--negative); color: var(--text-on-accent); box-shadow: 0 0 0 2px var(--surface); font-family: var(--pixel); font-size: 11px; font-weight: 400; -webkit-font-smoothing: none; }
+.sh2.sh2 .st-badge.placed { padding: 0; background: var(--accent); }
+.sh2.sh2 .st-badge.placed svg { width: 14px; height: 11px; }
+.sh2.sh2 .st-badge.stored { background: var(--caution); color: var(--text); }
+
+/* 말풍선: 그림자 대신 테두리 */
+.sh2.sh2 .st-tip { border-color: var(--line-strong); border-radius: var(--r-md); box-shadow: none; }
+.sh2.sh2 .st-meta { font-family: var(--pixel); font-size: 11px; font-weight: 400; -webkit-font-smoothing: none; }
+
+@container (max-width: 520px) {
+  .sh2-big { font-size: 30px; }
+  .sh2 .shop-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .sh2 .shop-tools { margin-left: 0; }
+}

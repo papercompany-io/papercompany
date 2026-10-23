@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { DATA, DEPT_IDS, dept } from '../../core/data';
 import { formatDate } from '../../core/calendar';
 import { seatsAvailable } from '../../core/office';
-import { deptUnlocked } from '../../core/employees';
+import { deptInIndustry, deptUnlocked } from '../../core/employees';
 import { NO_END, acceptCounter, careerLevel, arrivalRate, closePosting, createPosting, hireWarning, negotiate, negotiation, postingFull, postingOpenEnded, postingWarnings, rejectApplicant, setAutoHire } from '../../core/hiring';
 import { PixelAvatar } from '../office/Avatar';
 import { marketSalary, maxSpeedOf, speedOf } from '../../core/staff';
@@ -308,7 +308,7 @@ function DeptDropdown({ value, onChange }: { value: DeptId; onChange: (d: DeptId
       </button>
       {open && (
         <div className="dd-list" role="listbox">
-          {DEPT_IDS.map((d) => {
+          {DEPT_IDS.filter((d) => deptInIndustry(s, d)).map((d) => {
             const on = deptUnlocked(s, d);
             return (
               <button

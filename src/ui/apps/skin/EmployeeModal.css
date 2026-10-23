@@ -1,0 +1,35 @@
+/* 화면(A-180): 사무실 직원 창 — 직원 상세(A-179) 톤. 부서색은 머리 왼쪽 띠와 아바타 바탕에만, 아래에 행동 버튼 묶음. 루트 .epm 아래로만 */
+
+.modal.emp-modal.epm { width: 440px; max-width: calc(100vw - 32px); padding: 0; gap: 0; overflow: hidden; border-radius: var(--r-lg); background: var(--surface); }
+
+.epm-head { position: relative; display: flex; align-items: center; gap: 14px; padding: 18px 18px 14px; border-left: 4px solid var(--dc); background: color-mix(in srgb, var(--dc) 10%, var(--surface)); }
+.epm-avatar { width: 60px; height: 60px; flex: none; border-radius: var(--r-sm); background: color-mix(in srgb, var(--dc) 24%, var(--surface)); image-rendering: pixelated; overflow: hidden; }
+.epm-id { display: flex; flex-direction: column; gap: 3px; min-width: 0; padding-right: 30px; }
+.epm-kicker { font-family: var(--pixel); font-size: 11px; color: var(--text-3); -webkit-font-smoothing: none; }
+.epm-name { font-size: var(--fs-xl); font-weight: 800; color: var(--text); line-height: 1.2; }
+.epm-now { font-size: var(--fs-sm); color: var(--text-3); }
+.epm-now em { font-style: normal; font-weight: 700; color: var(--text-2); margin-left: 4px; }
+.epm-x { position: absolute; top: 12px; right: 12px; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; padding: 0; border: none; border-radius: var(--r-full); background: var(--surface-tile); color: var(--text-2); font-size: 18px; line-height: 1; cursor: pointer; }
+.epm-x:hover { background: var(--surface-sel); color: var(--text); }
+
+.epm-body { padding: 14px 18px 4px; }
+
+.epm-foot { display: flex; flex-direction: column; gap: 10px; padding: 12px 18px 16px; }
+.epm-msg { padding: 8px 10px; border-radius: var(--r-sm); font-size: var(--fs-sm); }
+.epm-msg.ok { background: color-mix(in srgb, var(--positive) 12%, var(--surface)); color: var(--positive-press, var(--text)); }
+.epm-msg.err { background: color-mix(in srgb, var(--negative) 12%, var(--surface)); color: var(--negative-press); }
+
+.epm-acts { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 8px; }
+.epm-acts .btn { justify-content: center; min-height: 44px; padding: 8px 10px; font-weight: 700; }
+.epm-acts .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.epm-main { display: flex; flex-direction: column; align-items: center; gap: 1px; line-height: 1.2; }
+.epm-main small { font-family: var(--pixel); font-size: 11px; font-weight: 400; opacity: 0.85; -webkit-font-smoothing: none; }
+
+.epm-sub { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-top: 10px; border-top: 1px solid var(--line); }
+.epm-link { padding: 0; border: none; background: none; color: var(--accent-text); font-size: var(--fs-sm); cursor: pointer; }
+.epm-link:hover { text-decoration: underline; }
+
+@media (max-width: 480px) {
+  .epm-acts { grid-template-columns: 1fr 1fr; }
+  .epm-main { grid-column: 1 / -1; }
+}

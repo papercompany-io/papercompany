@@ -272,7 +272,7 @@ export function Office({ onCeo, onEmployee, pulseCeo, keysEnabled, floats = [] }
             key={`hit-${a.id}`}
             className="actor-hit"
             data-testid={a.kind === 'ceo' ? 'ceo' : `emp-${a.id}`}
-            title={a.kind === 'ceo' ? 'CEO 개인 일정' : '직원 정보'}
+            title={a.kind === 'ceo' ? 'CEO 일정' : '직원 정보'}
             style={{ left: a.box[0] * sc, top: a.box[1] * sc, width: a.box[2] * sc, height: a.box[3] * sc }}
             onClick={() => click(a)}
             onMouseEnter={() => (hover.current = a.id)}
@@ -387,7 +387,7 @@ function NameTag({ a, s, sc, pulse, onClick }: { a: Actor; s: GameState; sc: num
       <div className={`nametag ceo ${pulse ? 'pulse' : ''}`} style={style} onClick={onClick} data-testid="ceo-tag">
         {pulse && <div className="tag-arrow">클릭!</div>}
         <div className="tag-name">나 · 대표</div>
-        <div className="tag-sub">{awayOuting(s) ? `외출 중 · ${awayOuting(s)!.title}` : 'CEO 개인 일정'}</div>
+        <div className="tag-sub">{awayOuting(s) ? `외출 중 · ${awayOuting(s)!.title}` : 'CEO 일정'}</div>
       </div>
     );
   }

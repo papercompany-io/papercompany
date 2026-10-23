@@ -1,14 +1,18 @@
 // F10 재무 메뉴: FN-01 보유 자금·장부, FN-02 비용, FN-03 손익(DEC-030 순서), VL-01 기업가치
 // 화면 짜임은 채용 메뉴(A-88)를 따름: 왼쪽 회색 판(이번 달·요약 줄·막대), 오른쪽 카드 목록(월별 기록)
+// 화면(A-179): 업무·커리어와 같은 톤 — 가운데 큰 손익·기업가치, 알약 탭·거르기, 돈 두 판은 납작한 옅은 면, 작은 라벨은 픽셀 글꼴(skin/FinanceApp.css)
 import { useState } from 'react';
-import { formatDate, formatMonth } from '../../core/calendar';
+import { daysInMonthOf, formatDate, formatMonth } from '../../core/calendar';
 import { currentPL, debtBalance, loanInterestDue, loanPrincipalDue, runwayMonths } from '../../core/finance';
 import { wonShort } from '../../core/format';
+import { monthPlan } from '../../core/forecast';
 import { computeValuation } from '../../core/valuation';
-import { useGame } from '../store';
+import { applyForLoan, earlyRepayCost, loanBlock, loanHint, repayEarly } from '../../core/loans';
+import { act, useGame } from '../store';
 import { Money, Tabs, Help } from '../common';
 import type { MonthPL } from '../../core/types';
 import './apps.css';
+import './skin/FinanceApp.css';
 
 type PLMonth = Omit<MonthPL, 'cashAfter'> & { cashAfter?: number; partial?: boolean };
 type Line = [string, (m: PLMonth) => number];
@@ -46,7 +50,7 @@ function costGroups(m: PLMonth): { label: string; v: number }[] {
 export function FinanceApp() {
   const [tab, setTab] = useState<'pl' | 'cash' | 'value'>('pl');
   return (
-    <div className="col fin">
+    <div className="col fin fn2">
       <Tabs
         tabs={[
           { id: 'pl', label: '이번 달' },
@@ -63,36 +67,38 @@ export function FinanceApp() {
   );
 }
 
-// Startup Company 예산 화면처럼: 위 달 고르기, 왼쪽 빨간 판(나가는 돈), 오른쪽 초록 판(들어오는 돈), 아래 회색 판(통장)
-// 이번 달은 지금까지 실제로 들어오고 나간 돈이 쌓이고, 지난 달은 정산된 값(A-153)
+// Startup Company 예산 화면처럼: 왼쪽 빨간 판(나가는 돈), 오른쪽 초록 판(들어오는 돈), 아래 회색 판(통장)
+// A-184 기간 고르기 없이 이번 달 한 달치를 한꺼번에 보여 줌. 돈은 하루에 1/30씩 실제로 오가고, 지난 달은 아래 손익표
 function PLView() {
   const s = useGame();
   const cur: PLMonth = { ...currentPL(s), partial: true };
   const months: PLMonth[] = [...s.plHistory.slice(-5), cur];
-  const all: PLMonth[] = [...s.plHistory, cur]; // 달 고르기에는 지난 달 전부
+  const plan: PLMonth = monthPlan(s);
   const [table, setTable] = useState(false);
-  const [pick, setPick] = useState<string | null>(null); // A-153 고른 달. 없으면 이번 달
-  const shownM = all.find((m) => m.month === pick) ?? cur;
-  const monthName = `${formatMonth(shownM.month)}${shownM.partial ? ' (진행 중)' : ''}`;
   const rw = runwayMonths(s);
-  const spent = shownM.revenue - shownM.netIncome;
+  const spent = plan.revenue - plan.netIncome;
+  const perDay = (spent - plan.tax - (plan.interest ?? 0) - plan.recruiting - plan.other) / daysInMonthOf(s.day); // 날마다 나눠 빠지는 몫(광고비 포함)
   const debt = debtBalance(s);
   const lenders = [...new Set((s.loans ?? []).map((l) => l.lender))].join(', ');
+  const monthName = formatMonth(plan.month);
   return (
     <div className="col">
-      <label className="fin-months">
-        <span>기간</span>
-        <select data-testid="fin-month" value={shownM.partial ? '' : shownM.month} onChange={(e) => setPick(e.target.value || null)}>
-          {[...all].reverse().map((m) => (
-            <option key={m.month} value={m.partial ? '' : m.month}>
-              {m.partial ? `이번 달 (${formatMonth(m.month)})` : formatMonth(m.month)}
-            </option>
-          ))}
-        </select>
-      </label>
+      <div className={`fn2-head ${plan.netIncome < 0 ? 'bad' : ''}`}>
+        <span className="fn2-kicker">
+          {monthName} 한 달 {plan.netIncome < 0 ? '적자' : '흑자'}
+        </span>
+        <h2 className={`fn2-big ${plan.netIncome < 0 ? 'fin-bad' : 'fin-good'}`}>
+          {plan.netIncome > 0 ? '+' : ''}
+          {man(plan.netIncome)}만원
+        </h2>
+        <p className="fn2-sub">
+          하루에 {man(perDay)}만원씩 나갑니다
+          <Help text="한 달에 들어오고 나가는 돈입니다. 월급·월세·복지비 같은 돈은 월급일에 한꺼번에 빠지지 않고 날마다 한 달치를 나눠 빠지고, 매출도 날마다 들어옵니다. 들어오는 돈은 지금 고객 수가 이어진다고 본 값입니다. 법인세·대출 이자·원금은 매월 1일에 나가고, 홍보비·광고비·이벤트 비용은 쓰는 날 바로 빠집니다. 지난 달은 아래 손익표에서 봅니다." />
+        </p>
+      </div>
       <div className="fin-budget">
-        <MoneyList tone="out" title={`나가는 돈 · ${monthName}`} items={costGroups(shownM)} total={spent} empty={shownM.partial ? '아직 나간 돈이 없습니다' : '나간 돈이 없습니다'} />
-        <MoneyList tone="in" title={`들어오는 돈 · ${monthName}`} items={REVENUES.map(([label, f]) => ({ label, v: f(shownM) }))} total={shownM.revenue} empty={shownM.partial ? '아직 번 돈이 없습니다' : '들어온 돈이 없습니다'} />
+        <MoneyList tone="out" title={`나가는 돈 · ${monthName}`} items={costGroups(plan)} total={spent} empty="나가는 돈이 없습니다" />
+        <MoneyList tone="in" title={`들어오는 돈 · ${monthName}`} items={REVENUES.map(([label, f]) => ({ label, v: f(plan) }))} total={plan.revenue} empty="아직 버는 돈이 없습니다" />
       </div>
       <div className="fin-bank">
         <div className="fb-row">
@@ -119,22 +125,67 @@ function PLView() {
           <span>이대로 버틸 수 있는 기간</span>
           <b className={rw !== null && rw < 3 ? 'fin-bad' : ''}>{rw === null ? '계속(흑자)' : rw > 120 ? '10년 넘게' : `${rw.toFixed(1)}개월`}</b>
         </div>
-        <div className="fb-row big">
-          <span>
-            {shownM.partial ? '이번 달' : formatMonth(shownM.month)} {shownM.netIncome < 0 ? '적자' : '흑자'}
-            <Help text="손익 = 들어오는 돈 − 나가는 돈. 이번 달은 지금까지 실제로 쌓인 돈이고, 위 기간에서 지난 달을 고르면 정산된 결과를 봅니다. 매월 1일(월급일)에 지난달을 정산합니다. 홍보비·광고비·이벤트 비용은 쓰는 날 바로 빠지고, 나머지는 정산일에 빠집니다." />
-          </span>
-          <b className={shownM.netIncome < 0 ? 'fin-bad' : 'fin-good'}>
-            {shownM.netIncome > 0 ? '+' : ''}
-            {man(shownM.netIncome)}만원
-          </b>
-        </div>
       </div>
+      {!s.public && <LoanDesk />}
       <button className="btn small ghost fin-more" onClick={() => setTable((t) => !t)}>
         {table ? '지난 달 손익표 접기' : '지난 달 손익표 보기'}
       </button>
       {table && <PLTable months={months} />}
     </div>
+  );
+}
+
+// A-185 대출 판: 받은 대출은 미리 갚기, 받을 수 있는 곳은 신청(버틸 기간이 짧을 때만, 막히면 이유를 말로)
+function LoanDesk() {
+  const s = useGame();
+  const loans = s.loans ?? [];
+  const [sure, setSure] = useState<string | null>(null); // 미리 갚기는 한 번 더 눌러야 실행
+  const offers = (['policy', 'bank'] as const).filter((k) => !loans.some((l) => l.kind === k));
+  return (
+    <section className="fin-bank fin-loans" data-testid="fin-loans">
+      <div className="fb-head">대출</div>
+      {loans.map((l) => {
+        const { principal, fee } = earlyRepayCost(s, l);
+        const short = s.cash < principal + fee;
+        return (
+          <div key={l.id} className="fb-row">
+            <span className="fb-stack">
+              {l.lender}
+              <small>
+                남은 원금 {man(principal)}만원{fee > 0 ? ` · 미리 갚으면 수수료 ${man(fee)}만원` : ' · 미리 갚아도 수수료 없음'}
+              </small>
+            </span>
+            <button
+              className={`btn small ${sure === l.id ? 'red' : 'ghost'}`}
+              data-testid={`loan-repay-${l.kind}`}
+              disabled={short}
+              title={short ? '통장 잔고가 모자랍니다' : undefined}
+              onClick={() => {
+                if (sure !== l.id) return setSure(l.id);
+                act((g) => repayEarly(g, l.id));
+                setSure(null);
+              }}
+            >
+              {sure === l.id ? `${man(principal + fee)}만원 갚기` : '미리 갚기'}
+            </button>
+          </div>
+        );
+      })}
+      {offers.map((k) => {
+        const why = loanBlock(s, k);
+        return (
+          <div key={k} className="fb-row">
+            <span className="fb-stack">
+              {k === 'policy' ? '정책자금' : '은행 대출'}
+              <small>{why ?? loanHint(s, k)}</small>
+            </span>
+            <button className="btn small" data-testid={`loan-apply-${k}`} disabled={!!why} onClick={() => act((g) => applyForLoan(g, k))}>
+              {k === 'policy' ? '신청' : '빌리기'}
+            </button>
+          </div>
+        );
+      })}
+    </section>
   );
 }
 
@@ -277,13 +328,16 @@ function ValueView() {
   const v = computeValuation(s);
   const methodName = { scorecard: '매출 전: 스코어카드(또는 사용자 기반)', revenue: '매출 발생 뒤: 연 환산 매출 × 매출 배수(또는 사용자 기반)', profit: '흑자 지속: 영업이익 × 이익 배수', market: '상장사: 시가총액' }[v.method];
   return (
-    <section className="hire-form">
-      <div className="hf-title">
-        지금 산정한 기업가치
-        <Help text={`계산법: ${methodName}. HUD의 기업가치는 매월 1일 정산과 투자 수락 때 갱신한 값이고, 투자 라운드와 Exit은 이 화면처럼 그때그때 다시 산정합니다.`} />
-      </div>
-      <div className="fin-big">
-        <Money v={v.value} testId="value-now" />
+    <section className="hire-form fn2-value">
+      <div className="fn2-head">
+        <span className="fn2-kicker">지금 산정한 기업가치</span>
+        <h2 className="fn2-big fin-big">
+          <Money v={v.value} testId="value-now" />
+        </h2>
+        <p className="fn2-sub">
+          {methodName.split(':')[0]} 기준
+          <Help text={`계산법: ${methodName}. HUD의 기업가치는 매월 1일 정산과 투자 수락 때 갱신한 값이고, 투자 라운드와 Exit은 이 화면처럼 그때그때 다시 산정합니다.`} />
+        </p>
       </div>
       <div className="hf-summary">
         <div className="hf-sum">

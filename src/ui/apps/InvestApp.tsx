@@ -1,7 +1,9 @@
 // F08 투자 메뉴: FR-01 단계 사다리, FR-13 라운드 열기, FR-11 룸·투자금, FR-10 투자사 레터, FR-06·07 협상·판정,
 // FR-09 클럽딜, FR-08 제안서 수락·거절, EQ-02 희석, EQ-03 지분 구조
 // 화면 짜임(A-107): 채용처럼 왼쪽 회색 판(라운드 열기·진행·제안서) + 오른쪽 카드(지난 라운드·할 일), 말은 쉽게("받을 돈", "내 지분")
+// 화면(A-179): 커리어·업무 창과 같은 톤 — 알약 탭, 탭마다 가운데 큰 숫자(받을 돈·D-day·제안 금액·관심·내 지분) + 회색 한 줄, 납작한 회색 칸, 색 타일 + 흰 픽셀 표식 사다리, 칸칸이 차는 막대. 긴 설명은 title로
 import { PxIcon } from '../icons';
+import { PixelCheck, PixelFlag } from '../pixelMarks';
 import { useState } from 'react';
 import { DATA, investor, stage, stageIndex } from '../../core/data';
 import { formatDate } from '../../core/calendar';
@@ -31,10 +33,11 @@ import {
 import { externalChannelId } from '../../core/messenger';
 import { computeValuation } from '../../core/valuation';
 import { act, useGame } from '../store';
-import { Tabs, chanceLabel, Help } from '../common';
+import { Tabs, chanceLabel } from '../common';
 import { esopEntry, esopFree, investorPct, topUpEsop } from '../../core/equity';
 import type { GameState, Round, StageId } from '../../core/types';
 import './apps.css';
+import './skin/InvestApp.css';
 
 type Tab = 'round' | 'investors' | 'cap';
 
@@ -48,7 +51,7 @@ export function InvestApp({ initialStage, openChat }: { initialStage?: string; o
   const r = activeRound(s);
   const [tab, setTab] = useState<Tab>('round');
   return (
-    <div className="col inv-app">
+    <div className="col inv-app iv2">
       <Ladder />
       <Tabs
         tabs={[
@@ -76,8 +79,8 @@ function Ladder() {
       {DATA.funding.stages.slice(0, 7).map((st, i) => {
         const cls = funded.has(st.id as StageId) ? 'done' : i === cur ? 'cur' : i === cur + 1 ? 'next' : '';
         return (
-          <li key={st.id} className={`inv-step ${cls}`}>
-            <span className="inv-step-dot">{cls === 'done' ? '✓' : ''}</span>
+          <li key={st.id} className={`inv-step ${cls}`} title={st.name}>
+            <span className="inv-step-dot">{cls === 'done' ? <PixelCheck /> : cls === 'cur' ? <PixelFlag /> : i + 1}</span>
             <span className="inv-step-name">{st.name}</span>
             {cls === 'next' && <small>다음</small>}
           </li>
@@ -110,15 +113,33 @@ function RoundTab({ initialStage, goInvestors }: { initialStage?: string; goInve
 
   if (r?.status === 'offer') return <OfferView r={r} />;
   if (r?.status === 'open') return <OpenRound r={r} goInvestors={goInvestors} />;
-  if (s.career.challenge === 'bootstrap') return <div className="warn">무투자 도전 중입니다. 투자를 받을 수 없습니다. 매출로 키우세요!</div>;
-  if (s.public) return <div className="card ok">상장사입니다. 투자 라운드 대신 주식 메뉴에서 주가·지분을 관리합니다.</div>;
+  if (s.career.challenge === 'bootstrap')
+    return (
+      <div className="iv2-empty">
+        <PxIcon id="lock" />
+        <b>무투자 도전 중입니다. 투자를 받을 수 없습니다. 매출로 키우세요!</b>
+      </div>
+    );
+  if (s.public)
+    return (
+      <div className="iv2-empty">
+        <PxIcon id="chart" />
+        <b>상장사입니다. 투자 라운드 대신 주식 메뉴에서 주가·지분을 관리합니다.</b>
+      </div>
+    );
 
   return (
     <div className="hire-layout">
-      <section className="hire-form">
-        <div className="hf-title inv-title">
-          새 투자 라운드
-          <Help text={`라운드는 원할 때 언제든 열 수 있고, 실패해도 다시 열 수 있습니다. 다만 맞지 않는 시점에 열면 실패하기 쉽고, 진행하는 ${DATA.funding.roundDays}일 동안 투자자 미팅 초대가 자주 옵니다(수락하면 하루~이틀 자리를 비움).`} />
+      <section className="hire-form iv2-main">
+        <div className="iv2-hero" title={`라운드는 원할 때 언제든 열 수 있고, 실패해도 다시 열 수 있습니다. 다만 맞지 않는 시점에 열면 실패하기 쉽고, 진행하는 ${DATA.funding.roundDays}일 동안 투자자 미팅 초대가 자주 옵니다(수락하면 하루~이틀 자리를 비움).`}>
+          <span className="iv2-kicker">새 {st.name} 라운드 · 받을 돈</span>
+          <b className="iv2-big good" data-testid="preview-amount" title="투자금 = 투자 뒤 회사 가치 × 내줄 지분">
+            {wonShort(m.amount)}
+          </b>
+          <span className="iv2-sub inv-mine">
+            내 지분 <b>{pct(fp, 1)}</b> → <b>{pct(safe ? fp : fp * (1 - room), 1)}</b>
+            {safe && ' (SAFE는 다음 지분 라운드에서 줄어듭니다)'}
+          </span>
         </div>
         <div className="hf-row">
           <div className="hf-field">
@@ -163,23 +184,13 @@ function RoundTab({ initialStage, goInvestors }: { initialStage?: string; goInve
             <span>투자 뒤 회사 가치</span>
             <b data-testid="preview-post">{wonShort(m.postValue)}</b>
           </div>
-          <div className="hf-sum" title="투자금 = 투자 뒤 회사 가치 × 내줄 지분">
-            <span>받을 돈</span>
-            <b className="fin-good" data-testid="preview-amount">
-              {wonShort(m.amount)}
-            </b>
-          </div>
-        </div>
-        <div className="inv-mine">
-          내 지분 <b>{pct(fp, 1)}</b> → <b>{pct(safe ? fp : fp * (1 - room), 1)}</b>
-          {safe && <span className="muted"> (SAFE는 다음 지분 라운드에서 줄어듭니다)</span>}
         </div>
         {safe && (
-          <div className="ok tiny">
-            SAFE: 지금은 주식을 주지 않고 돈만 받습니다. 다음 지분 라운드에서 회사 가치 상한 {wonShort(m.postValue)}과 할인 {DATA.funding.safe.discount * 100}% 중 유리한 가격으로 주식이 됩니다.
+          <div className="iv2-note" title={`SAFE: 지금은 주식을 주지 않고 돈만 받습니다. 다음 지분 라운드에서 회사 가치 상한 ${wonShort(m.postValue)}과 할인 ${DATA.funding.safe.discount * 100}% 중 유리한 가격으로 주식이 됩니다.`}>
+            SAFE · 지금은 돈만 받기 · 상한 {wonShort(m.postValue)} · 할인 {DATA.funding.safe.discount * 100}%
           </div>
         )}
-        <div className="hf-label">이 단계에 맞는 때인가요?</div>
+        <div className="iv2-sect">이 단계에 맞는 때인가요?</div>
         <div className="inv-checks">
           {conds.length === 0 && <span className="muted">특별한 조건이 없습니다.</span>}
           {conds.map((c) => (
@@ -202,8 +213,12 @@ function RoundTab({ initialStage, goInvestors }: { initialStage?: string; goInve
         </button>
       </section>
       <section className="post-list">
-        <div className="hf-title">지난 라운드</div>
-        {s.safes.length > 0 && <div className="post-card inv-note">아직 주식으로 바뀌지 않은 SAFE {wonShort(s.safes.reduce((a, x) => a + x.amount, 0))}. 다음 지분 라운드에서 주식이 됩니다.</div>}
+        <div className="iv2-sect">지난 라운드</div>
+        {s.safes.length > 0 && (
+          <div className="post-card inv-note" title="다음 지분 라운드에서 주식이 됩니다.">
+            아직 주식으로 바뀌지 않은 SAFE <b>{wonShort(s.safes.reduce((a, x) => a + x.amount, 0))}</b>
+          </div>
+        )}
         {history.length === 0 ? <div className="empty-note">아직 연 라운드가 없습니다.</div> : <RoundHistory rounds={history} />}
       </section>
     </div>
@@ -226,17 +241,19 @@ function OpenRound({ r, goInvestors }: { r: Round; goInvestors: () => void }) {
   ];
   return (
     <div className="hire-layout">
-      <section className="hire-form" data-testid="round-open-card">
-        <div className="hf-title inv-title">
-          {stage(r.stage).name} 라운드 진행 중
-          <span className="chip amber">D-{left}</span>
-        </div>
-        <div className="pc-time" style={{ ['--dc' as string]: 'var(--accent)' }}>
-          <i style={{ width: `${timeFrac * 100}%` }} />
-        </div>
-        <div className="pc-foot">
-          <span>{formatDate(r.openedDay)} 시작</span>
-          <span>{formatDate(r.endDay)} 끝</span>
+      <section className="hire-form iv2-main" data-testid="round-open-card">
+        <div className="iv2-hero">
+          <span className="iv2-kicker">{stage(r.stage).name} 라운드 진행 중 · 마감까지</span>
+          <b className="iv2-big">D-{left}</b>
+          <div className="iv2-time">
+            <div className="pc-time" style={{ ['--dc' as string]: 'var(--accent)' }}>
+              <i style={{ width: `${timeFrac * 100}%` }} />
+            </div>
+            <div className="pc-foot">
+              <span>{formatDate(r.openedDay)} 시작</span>
+              <span>{formatDate(r.endDay)} 끝</span>
+            </div>
+          </div>
         </div>
         <div className="hf-summary">
           <div className="hf-sum">
@@ -252,13 +269,15 @@ function OpenRound({ r, goInvestors }: { r: Round; goInvestors: () => void }) {
             <b className="fin-good">{wonShort(m.amount)}</b>
           </div>
         </div>
-        <div className="fb-row">
-          <span>리드 투자사</span>
-          <b data-testid="round-lead">{r.leadId ? investor(r.leadId).name : '아직 없음'}</b>
-        </div>
-        <div className="fb-row">
-          <span>함께하는 투자사</span>
-          <b data-testid="round-co">{co.length ? co.map((id) => investor(id).name).join(', ') : '없음'}</b>
+        <div className="iv2-rows">
+          <div className="fb-row">
+            <span>리드 투자사</span>
+            <b data-testid="round-lead">{r.leadId ? investor(r.leadId).name : '아직 없음'}</b>
+          </div>
+          <div className="fb-row">
+            <span>함께하는 투자사</span>
+            <b data-testid="round-co">{co.length ? co.map((id) => investor(id).name).join(', ') : '없음'}</b>
+          </div>
         </div>
         {err && <div className="err">{err}</div>}
         <div className="row">
@@ -282,11 +301,11 @@ function OpenRound({ r, goInvestors }: { r: Round; goInvestors: () => void }) {
         </div>
       </section>
       <section className="post-list">
-        <div className="hf-title">할 일</div>
+        <div className="iv2-sect">할 일</div>
         <div className="post-card inv-todo">
           {steps.map(([label, ok], i) => (
             <div key={label} className={ok ? 'ok' : ''}>
-              <span className="inv-todo-n">{ok ? '✓' : i + 1}</span>
+              <span className="inv-todo-n">{ok ? <PixelCheck /> : i + 1}</span>
               {label}
             </div>
           ))}
@@ -305,19 +324,25 @@ function OfferView({ r }: { r: Round }) {
   const [err, setErr] = useState<string | null>(null);
   return (
     <div className="hire-layout">
-      <section className="hire-form inv-offer" data-testid="offer">
-        <div className="hf-label">
-          {stage(r.stage).name} {o.instrument === 'safe' ? 'SAFE ' : ''}투자 제안서
-        </div>
-        <div className="inv-big fin-good" data-testid="offer-amount">
-          {wonShort(o.amount)}
-        </div>
-        <div className="inv-sub">
-          통장 {wonShort(s.cash)} → <b>{wonShort(s.cash + o.amount)}</b>
+      <section className="hire-form inv-offer iv2-main" data-testid="offer">
+        <div className="iv2-hero">
+          <span className="iv2-kicker">
+            {stage(r.stage).name} {o.instrument === 'safe' ? 'SAFE ' : ''}투자 제안서
+          </span>
+          <b className="iv2-big good" data-testid="offer-amount">
+            {wonShort(o.amount)}
+          </b>
+          <span className="iv2-sub">
+            통장 {wonShort(s.cash)} → <b>{wonShort(s.cash + o.amount)}</b>
+          </span>
         </div>
         {o.down && <div className="warn">지난번보다 낮은 회사 가치입니다(다운라운드). 받으면 직원 사기와 명성이 떨어집니다.</div>}
-        {o.instrument === 'safe' && <div className="ok tiny">SAFE라 지금은 지분이 줄지 않습니다. 회사 가치 상한 {wonShort(o.safeCap ?? 0)}, 할인 {DATA.funding.safe.discount * 100}%로 다음 지분 라운드에서 주식이 됩니다.</div>}
-        {o.safeShares > 0 && <div className="tiny">이번에 예전 SAFE가 주식 {o.safeShares.toLocaleString('ko-KR')}주로 바뀝니다.</div>}
+        {o.instrument === 'safe' && (
+          <div className="iv2-note" title={`SAFE라 지금은 지분이 줄지 않습니다. 회사 가치 상한 ${wonShort(o.safeCap ?? 0)}, 할인 ${DATA.funding.safe.discount * 100}%로 다음 지분 라운드에서 주식이 됩니다.`}>
+            SAFE · 지금은 지분이 줄지 않음 · 상한 {wonShort(o.safeCap ?? 0)} · 할인 {DATA.funding.safe.discount * 100}%
+          </div>
+        )}
+        {o.safeShares > 0 && <div className="iv2-note">이번에 예전 SAFE가 주식 {o.safeShares.toLocaleString('ko-KR')}주로 바뀝니다.</div>}
         <div className="hf-summary">
           <div className="hf-sum" title="협상 반영 프리밸류">
             <span>회사 가치</span>
@@ -347,7 +372,7 @@ function OfferView({ r }: { r: Round }) {
         </div>
       </section>
       <section className="post-list">
-        <div className="hf-title">누가 얼마나</div>
+        <div className="iv2-sect">누가 얼마나</div>
         {o.shares.map((x, i) => (
           <div key={x.investorId} className="post-card" style={{ ['--dc' as string]: i === 0 ? 'var(--accent)' : 'var(--c-gray-400)' }}>
             <div className="pc-head">
@@ -448,7 +473,7 @@ function InvestorsTab({ openChat }: { openChat?: (channelId: string) => void }) 
       <ol className="inv-guide">
         {['이번 라운드에 맞는 투자사 고르기', '레터를 보내 관심 올리기', '투자 결정 요청 → 리드 정하기'].map((g, i) => (
           <li key={g} className={!open ? '' : step > i + 1 ? 'done' : step === i + 1 ? 'now' : ''}>
-            <span>{step > i + 1 && open ? '✓' : i + 1}</span>
+            <span>{step > i + 1 && open ? <PixelCheck /> : i + 1}</span>
             {g}
           </li>
         ))}
@@ -456,7 +481,7 @@ function InvestorsTab({ openChat }: { openChat?: (channelId: string) => void }) 
       {!open && <div className="empty-note">진행 중인 라운드가 없습니다. 라운드 탭에서 라운드를 열면 투자사에 연락할 수 있습니다.</div>}
       <div className="hire-layout inv-pick">
         <section className="inv-list2">
-          <div className="hf-label">{open ? `${stage(open.stage).name}에 맞는 투자사 ${good.length}곳` : '투자사'}</div>
+          <div className="iv2-sect">{open ? `${stage(open.stage).name}에 맞는 투자사 ${good.length}곳` : '투자사'}</div>
           {good.map(row)}
           {bad.length > 0 && (
             <>
@@ -495,13 +520,15 @@ function InvestorPanel({ inv, open, openChat }: { inv: Inv; open: Round | null; 
   const canWrite = !!open && !t?.decision && !isLead && !t?.coInvest;
   const st = invStatus(open, inv.id);
   return (
-    <section className="hire-form inv-panel">
+    <section className="hire-form inv-panel iv2-main">
       <div className="inv-head">
         <b>{inv.name}</b>
         <span className="chip">{inv.kind}</span>
         {st.text && <span className={`chip ${st.tone}`}>{st.text}</span>}
       </div>
-      <div className="inv-desc">{inv.desc}</div>
+      <div className="inv-desc" title={inv.desc}>
+        {inv.desc}
+      </div>
       <div className="of-tags">
         {inv.stages.map((x) => (
           <span key={x} className={open && x === open.stage ? 'hit' : ''}>
@@ -513,32 +540,31 @@ function InvestorPanel({ inv, open, openChat }: { inv: Inv; open: Round | null; 
       {open && !fit && <div className="warn">이 투자사는 {stage(open.stage).name} 단계에 잘 투자하지 않습니다. 맞는 투자사를 고르는 게 좋습니다.</div>}
 
       {open && (
-        <div className="inv-interest-big">
-          <div className="hf-label">이 투자사의 관심</div>
-          <div className="emp-bar inv-interest">
-            <span />
-            <div className="meter">
-              <div style={{ width: `${t?.interest ?? 0}%` }} />
-            </div>
-            <b data-testid={`interest-${inv.id}`}>{t?.interest ?? 0}</b>
+        <div className="inv-interest-big iv2-hero">
+          <span className="iv2-kicker">이 투자사의 관심</span>
+          <b className="iv2-big" data-testid={`interest-${inv.id}`}>
+            {t?.interest ?? 0}
+          </b>
+          <div className="meter iv2-meter" title={`관심 ${t?.interest ?? 0} / 100`}>
+            <div style={{ width: `${t?.interest ?? 0}%` }} />
           </div>
         </div>
       )}
 
       {canWrite && (
         <>
-          <div className="hf-label">레터 보내기 · 보낼수록 관심이 올라갑니다</div>
+          <div className="iv2-sect" title="보낼수록 관심이 올라갑니다">
+            레터 보내기
+          </div>
           <div className="inv-letters">
-            {DATA.funding.letters.map((l) => {
+            {DATA.funding.letters.map((l, li) => {
               const sent = t?.sent.includes(l.id);
               return (
                 <div key={l.id} className={`inv-letter ${sent ? 'sent' : ''}`}>
+                  <span className="iv2-tile">{sent ? <PixelCheck /> : li + 1}</span>
                   <div className="inv-letter-text">
-                    <b>
-                      {sent ? '✓ ' : ''}
-                      {l.name}
-                    </b>
-                    <span>{l.desc}</span>
+                    <b>{l.name}</b>
+                    <span title={l.desc}>{l.desc}</span>
                     {l.id === 'proposal' && !sent && (
                       <div className="seg inv-ask">
                         {DATA.funding.valuationAsks.map((a) => (
@@ -627,8 +653,12 @@ function CapTab() {
   const pcts = pctsSumTo100(s.capTable.map((c) => c.shares));
   return (
     <div className="hire-layout">
-      <section className="hire-form">
-        <div className="hf-title">누가 회사를 얼마나 갖고 있나</div>
+      <section className="hire-form iv2-main">
+        <div className="iv2-hero">
+          <span className="iv2-kicker">내 지분</span>
+          <b className="iv2-big">{pct(founderPct(s), 1)}</b>
+          <span className="iv2-sub">누가 회사를 얼마나 갖고 있나</span>
+        </div>
         <div className="inv-capbar">
           {s.capTable.map((c, i) => (
             <div key={c.holderId} title={`${c.name} ${pcts[i]}`} style={{ flex: c.shares, background: capColor(c.kind, i) }} />
@@ -652,7 +682,7 @@ function CapTab() {
         </div>
         {s.equityHistory.length > 1 && (
           <>
-            <div className="hf-label">내 지분 변화</div>
+            <div className="iv2-sect">내 지분 변화</div>
             <div className="inv-hist">
               {s.equityHistory.map((h, i) => (
                 <div key={i} className="emp-bar">
@@ -673,8 +703,9 @@ function CapTab() {
           <div className="post-card" style={{ ['--dc' as string]: s.company.board < 30 ? 'var(--negative)' : 'var(--accent)' }}>
             <div className="pc-head">
               <span className="pc-dot" />
-              <b>이사회 신뢰</b>
-              <Help text="투자자 지분이 과반이면 이사회가 대표를 평가합니다. 매출이 줄면 신뢰가 떨어지고, 0이 되면 대표에서 해임됩니다(회사 종료)." />
+              <b className="iv2-help" title="투자자 지분이 과반이면 이사회가 대표를 평가합니다. 매출이 줄면 신뢰가 떨어지고, 0이 되면 대표에서 해임됩니다(회사 종료).">
+                이사회 신뢰
+              </b>
               <span className="pc-hired">{Math.round(s.company.board)}</span>
             </div>
             <div className="pc-time">
@@ -700,8 +731,9 @@ function EsopCard() {
     <div className="post-card" style={{ ['--dc' as string]: 'var(--c-gray-400)' }}>
       <div className="pc-head">
         <span className="pc-dot" />
-        <b>직원 몫(ESOP)</b>
-        <Help text="ESOP 풀을 만들면 모든 주주가 같은 비율로 조금씩 줄지만, 핵심 직원에게 스톡옵션을 줘 오래 함께할 수 있습니다. 옵션은 직원 관리에서 줍니다(2년 20% → 3년 40% → 4년 80% → 5년 100%)." />
+        <b className="iv2-help" title="ESOP 풀을 만들면 모든 주주가 같은 비율로 조금씩 줄지만, 핵심 직원에게 스톡옵션을 줘 오래 함께할 수 있습니다. 옵션은 직원 관리에서 줍니다(2년 20% → 3년 40% → 4년 80% → 5년 100%).">
+          직원 몫(ESOP)
+        </b>
       </div>
       {pool ? (
         <div className="pc-stats">

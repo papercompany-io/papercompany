@@ -7,6 +7,8 @@ import { act } from './store';
 import { play } from './sound';
 import { PxIcon, type PxId } from './icons';
 import { COLORS as WORK_COLORS, contractDue, contractPace, daysText } from './apps/ScheduleApp';
+import { forecast, KIND_NAME, milestones } from '../core/milestones';
+import { RISK_TEXT } from './apps/MilestoneCard';
 import './feedback.css';
 
 const ICON: Record<Notice['kind'], PxId> = { info: 'talk', good: 'check', bad: 'warn', urgent: 'siren', achievement: 'trophy', mission: 'star' };
@@ -220,6 +222,37 @@ function ContractStackCard({ s, onOpen }: { s: GameState; onOpen: (app: string, 
   );
 }
 
+// 약속 카드(A-177): 진행 중인 약속 중 가장 급한 하나(늦을 것 같음 → 빠듯함 → 기한 가까운 순)를 외주 카드처럼 늘 붙여 둠. 누르면 CEO 일정
+const RISK_RANK = { late: 0, tight: 1, ok: 2, done: 3 } as const;
+function PromiseStackCard({ s, onOpen }: { s: GameState; onOpen: (app: string, arg?: string) => void }) {
+  const act = milestones(s).filter((m) => m.status === 'active');
+  if (!act.length) return null;
+  const rows = act.map((m) => ({ m, f: forecast(s, m) })).sort((a, b) => RISK_RANK[a.f.risk] - RISK_RANK[b.f.risk] || a.f.daysLeft - b.f.daysLeft);
+  const { m, f } = rows[0];
+  const r = RISK_TEXT[f.risk];
+  return (
+    <button className={`ss-card promise ${f.risk === 'late' ? 'late' : ''}`} data-testid="stack-milestone" onClick={() => onOpen('schedule')}>
+      <div className="ss-head">
+        <PxIcon id="clock" size={16} />
+        <b className="ss-from">
+          약속 · {KIND_NAME[m.kind]} {m.from}
+        </b>
+        <span className={`ss-due ${f.risk === 'late' ? 'bad' : ''}`}>{f.daysLeft >= 0 ? `${f.daysLeft}일 남음` : `${-f.daysLeft}일 지남`}</span>
+      </div>
+      <div className="ss-progress">
+        <b>{Math.floor(f.progress * 100)}%</b>
+        <div className="bar grow">
+          <div style={{ width: `${f.progress * 100}%`, background: f.risk === 'late' ? 'var(--negative)' : f.risk === 'tight' ? 'var(--caution)' : 'var(--positive)' }} />
+        </div>
+      </div>
+      <span className="ss-sub">
+        {m.title} · {r.text}
+        {rows.length > 1 ? ` · 약속 ${rows.length}개 진행 중` : ''}
+      </span>
+    </button>
+  );
+}
+
 export function SideStack({ s, onOpen }: { s: GameState; onOpen: (app: string, arg?: string) => void }) {
   const [hidden, setHidden] = useState<string[]>([]);
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -245,11 +278,13 @@ export function SideStack({ s, onOpen }: { s: GameState; onOpen: (app: string, a
     return out.filter((x) => !hidden.includes(x.key));
   })();
   const contract = !!s.contracts?.active;
-  if (!items.length && !contract) return null;
+  const promise = milestones(s).some((m) => m.status === 'active');
+  if (!items.length && !contract && !promise) return null;
   const show = items.slice(0, STACK_MAX);
   return (
     <div className="side-stack" data-testid="side-stack" onPointerDown={(e) => e.stopPropagation()}>
       <ContractStackCard s={s} onOpen={onOpen} />
+      <PromiseStackCard s={s} onOpen={onOpen} />
       {show.map((it) => {
         const open = expanded === it.key && it.decision;
         return (

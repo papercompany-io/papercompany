@@ -2,7 +2,7 @@
 // 배치는 Startup Company를 따릅니다(A-83): 화면 전체 사무실, 위 가로 막대, 왼쪽 세로 메뉴, 메뉴를 누르면 가운데 창. 책상·가구 배치는 상점에서 시작(A-87).
 import { ProductCard } from './apps/ProductApp';
 import { paydayForecast } from '../core/forecast';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { advance, isRunning, setSpeed } from '../core/sim';
 import { autoSkipDue, clockHour, clockText, inNight, shownDay, workingLate } from '../core/night';
 import { dateOf, formatDate } from '../core/calendar';
@@ -11,8 +11,8 @@ import { DATA, industry, market, MARKET_IDS } from '../core/data';
 import { currentPL, runwayMonths } from '../core/finance';
 import { computeValuation } from '../core/valuation';
 import { coreFeatures, featureLevel, hasMvp, quality } from '../core/product';
-import { totalUsers } from '../core/market';
-import { marketRanking, myRank, overallRanking } from '../core/ranking';
+import { liveUsers } from '../core/market';
+import { myRank, rankings } from '../core/ranking';
 import { activeMissions, missionProgress, STAGE_NAMES } from '../core/progress';
 import { founderAge } from '../core/career';
 import { burningActive } from '../core/burning';
@@ -20,12 +20,13 @@ import { act, getGame, timeHold, touch, useGame } from './store';
 import { AppPanel, Sidebar, defaultBox, type AppId, type WinBox } from './Desktop';
 import { Office } from './office/Office';
 import { EmployeeModal } from './EmployeeModal';
+import { MeetingModal } from './MeetingModal';
 import { DevPanel } from './DevPanel';
 import { Money, useTween } from './common';
 import { ServiceLogo } from './logo';
 import { nextHint } from './hints';
 import { requestAutosave } from './autosave';
-import { countShort, pct } from '../core/format';
+import { countShort, pct, wonShort } from '../core/format';
 import { play, type Sfx } from './sound';
 import { getSettings, toggleAutoSkip, useSettings } from './meta';
 import { Toasts, DecisionModal, Confetti, SideStack } from './Feedback';
@@ -274,7 +275,8 @@ export function Game({ continued, notice, clearNotice, onEnded }: Props) {
         {confetti > 0 && <Confetti key={confetti} />}
       </main>
 
-      {urgent && (
+      {s.meeting && <MeetingModal />}
+      {urgent && !s.meeting && (
         <DecisionModal
           d={urgent}
           onClose={() => setUrgentId(null)}
@@ -284,7 +286,20 @@ export function Game({ continued, notice, clearNotice, onEnded }: Props) {
           }}
         />
       )}
-      {empModal && <EmployeeModal id={empModal} onClose={() => setEmpModal(null)} />}
+      {empModal && (
+        <EmployeeModal
+          id={empModal}
+          onClose={() => setEmpModal(null)}
+          onDm={(id) => {
+            setEmpModal(null);
+            openDesktop('messenger', `dm-${id}`);
+          }}
+          onManage={() => {
+            setEmpModal(null);
+            openDesktop('employees');
+          }}
+        />
+      )}
       {waitAsk && (
         <WaitTimeModal
           what={waitAsk}
@@ -340,6 +355,37 @@ function settingsSpeed() {
   return getSettings().defaultSpeed || 1;
 }
 
+// A-184 자금이 바뀔 때: 숫자가 잠깐 초록(들어옴)·빨강(나감)으로 빛나고, 바뀐 만큼이 아래 런웨이 줄에 잠깐 떴다 사라짐
+type CashPop = { id: number; d: number };
+function CashFlash({ cash, children }: { cash: number; children: ReactNode }) {
+  const prev = useRef(cash);
+  const seq = useRef(0);
+  const [pops, setPops] = useState<CashPop[]>([]);
+  const [tone, setTone] = useState<{ k: number; up: boolean } | null>(null);
+  useEffect(() => {
+    const d = cash - prev.current;
+    prev.current = cash;
+    if (Math.abs(d) < 1e4) return; // 만원 아래 끝전은 그냥 넘김
+    const id = ++seq.current;
+    setTone({ k: id, up: d > 0 });
+    setPops((p) => [...p.slice(-2), { id, d }]);
+    window.setTimeout(() => setPops((p) => p.filter((x) => x.id !== id)), 1300); // 다음 변화가 와도 지우지 않고 제때 사라지게
+  }, [cash]);
+  return (
+    <span className="cash-flash">
+      <span key={tone?.k ?? 0} className={tone ? (tone.up ? 'cf-up' : 'cf-down') : ''}>
+        {children}
+      </span>
+      {pops.map((p) => (
+        <span key={p.id} className={`cash-pop ${p.d > 0 ? 'up' : 'down'}`} aria-hidden>
+          {p.d > 0 ? '+' : '−'}
+          {wonShort(Math.abs(p.d))}
+        </span>
+      ))}
+    </span>
+  );
+}
+
 // 위 가로 막대(Startup Company식): 왼쪽 회사, 가운데 자금·지표, 오른쪽 날짜·시각·배속·저장(DT-05)
 function TopBar({ s }: { s: GameState }) {
   const d = dateOf(shownDay(s));
@@ -353,6 +399,7 @@ function TopBar({ s }: { s: GameState }) {
   const rw = runwayMonths(s);
   const net = currentPL(s).netIncome;
   const cashShown = useTween(s.cash);
+  const users = liveUsers(s); // 하루 끝에 한꺼번에 바뀌지 않고 시간 따라 오르내림(A-174)
   const cores = coreFeatures(s);
   const coreDone = cores.filter((f) => featureLevel(s, f.id) >= 1).length;
   return (
@@ -364,7 +411,9 @@ function TopBar({ s }: { s: GameState }) {
             <div className="tb-stat cash" title={`회사 자금 · 이번 달 손익 ${net >= 0 ? '흑자' : '적자'}`}>
               <PxIcon id="coin" size={18} />
               <div>
-                <Money v={Math.round(cashShown)} testId="hud-cash" />
+                <CashFlash cash={s.cash}>
+                  <Money v={Math.round(cashShown)} testId="hud-cash" />
+                </CashFlash>
                 <span className={net >= 0 ? 'up' : 'down'}>{net >= 0 ? '▲' : '▼'}</span>
                 <small className={fc.cashAfter <= 0 || (rw !== null && rw < 3) ? 'bad' : ''}>런웨이 {rw === null ? '흑자' : rw > 120 ? '10년+' : `${rw.toFixed(1)}개월`}</small>
               </div>
@@ -378,11 +427,11 @@ function TopBar({ s }: { s: GameState }) {
                 <small data-testid="hud-equity">내 지분 {founderPct(s) >= 0.9995 ? '100%' : pct(founderPct(s))}</small>
               </div>
             </div>
-            <div className="tb-stat" title={`${industry(s.company.industry).unit} ${Math.floor(totalUsers(s)).toLocaleString('ko-KR')}`}>
+            <div className="tb-stat" title={`${industry(s.company.industry).unit} ${Math.floor(users).toLocaleString('ko-KR')}`}>
               <PxIcon id="users" size={18} />
               <div>
                 {/* 100만 넘으면 짧게(A-158): 3,400만 · 4.2억 */}
-                <span data-testid="hud-users">{totalUsers(s) >= 1e6 ? countShort(totalUsers(s)) : Math.floor(totalUsers(s)).toLocaleString('ko-KR')}</span>
+                <span data-testid="hud-users">{users >= 1e6 ? countShort(users) : Math.floor(users).toLocaleString('ko-KR')}</span>
                 <small>{hasMvp(s) ? `품질 ${quality(s)}점` : `핵심 기능 ${coreDone}/${cores.length}`}</small>
               </div>
             </div>
@@ -507,10 +556,10 @@ function SideCards({ s, onOpen }: { s: GameState; onOpen: (a: AppId) => void }) 
 // 오른쪽 아래: 시장 랭킹 요약(누르면 시장 랭킹 창). 가장 고객이 많은 시장의 순위를 보여 줍니다.
 function RankCard({ s, onOpen }: { s: GameState; onOpen: () => void }) {
   const launched = MARKET_IDS.filter((m) => s.markets[m].launched);
-  const all = overallRanking(s);
-  const mine = myRank(all);
-  const best = launched.length ? launched.map((m) => ({ m, r: myRank(marketRanking(s, m)) })).filter((x) => x.r).sort((a, b) => b.r!.users - a.r!.users)[0] : undefined;
-  const list = best ? marketRanking(s, best.m) : all;
+  const rk = rankings(s);
+  const mine = myRank(rk.overall);
+  const best = launched.length ? launched.map((m) => ({ m, r: myRank(rk.markets[m]) })).filter((x) => x.r).sort((a, b) => b.r!.users - a.r!.users)[0] : undefined;
+  const list = best ? rk.markets[best.m] : rk.overall;
   const head = list.slice(0, 3);
   return (
     <button className="ms-card rank-card" data-testid="rank-card" onClick={onOpen}>

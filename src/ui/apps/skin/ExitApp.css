@@ -1,0 +1,69 @@
+/* 화면(A-179): 매각·IPO — 가운데 큰 "받을 돈", 납작한 회색 칸, 제안·준비·무산 카드, 매각·IPO 고르기 카드(색 타일 + 흰 픽셀 그림, 칸칸이 차는 가능성 막대) */
+.ex2 { width: 100%; max-width: 760px; min-width: 320px; margin: 0 auto; gap: 14px; container-type: inline-size; }
+.ex2-head { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 0 2px; text-align: center; }
+.ex2-kicker { font-family: var(--pixel); font-size: 11px; font-weight: 400; color: var(--accent-text); -webkit-font-smoothing: none; }
+.ex2-big { margin: 0; font-size: 40px; font-weight: 800; line-height: 1.15; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; word-break: keep-all; cursor: help; }
+.ex2-big .money { font-size: inherit; font-weight: inherit; }
+.ex2-lead { margin: 0; max-width: 460px; font-size: var(--fs-md); line-height: 1.5; color: var(--text-3); word-break: keep-all; }
+
+/* 요약: 납작한 회색 칸 */
+.ex2-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.ex2-stats > div { position: relative; display: flex; flex-direction: column; gap: 4px; min-width: 0; padding: 38px 16px 14px; border-radius: var(--r-lg); background: var(--surface-tile); }
+.ex2-stats .px { position: absolute; left: 14px; top: 12px; }
+.ex2-stats span { font-family: var(--pixel); font-size: 11px; font-weight: 400; color: var(--text-3); -webkit-font-smoothing: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ex2-stats b { font-size: var(--fs-xl); font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ex2-stats .money { font-size: inherit; font-weight: inherit; }
+
+/* 카드: 1px 테두리, 그림자 없음 */
+.ex2-card, .ex2-choice { display: flex; flex-direction: column; gap: 10px; min-width: 0; padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface); box-shadow: none; }
+.ex2-offer { border-color: var(--positive); background: var(--positive-soft); }
+.ex2-prep { border-color: var(--accent); background: var(--surface-hover); }
+.ex2-failed { border-color: var(--negative); background: var(--negative-soft); }
+.ex2-card-head { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.ex2-card-head .chip { flex: none; margin-left: auto; font-family: var(--pixel); font-size: 11px; font-weight: 400; -webkit-font-smoothing: none; }
+.ex2-card-title { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ex2-card-title b { font-size: var(--fs-lg); font-weight: 800; word-break: keep-all; }
+.ex2-card-title span { font-size: var(--fs-sm); color: var(--text-3); word-break: keep-all; }
+.ex2-failed .ex2-card-title b { color: var(--negative-press); }
+.ex2-tile { flex: none; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: var(--r-sm); background: var(--tc, var(--accent)); }
+.ex2-tile svg { width: 30px; height: 30px; }
+
+/* 제안 금액 줄 */
+.ex2-rows { display: flex; flex-direction: column; border-radius: var(--r-md); background: var(--surface); overflow: hidden; }
+.ex2-rows > div { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 10px 14px; font-size: var(--fs-md); }
+.ex2-rows > div + div { border-top: 1px solid var(--line); }
+.ex2-rows span { min-width: 0; color: var(--text-2); }
+.ex2-rows b { font-size: var(--fs-lg); font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ex2-rows .total b { font-size: var(--fs-2xl); color: var(--positive-press); }
+.ex2-note { font-size: var(--fs-sm); line-height: 1.5; color: var(--text-2); word-break: keep-all; }
+.ex2-note[title] { cursor: help; }
+.ex2-note.bad { color: var(--negative-press); font-weight: 600; }
+.ex2-btns { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+
+/* 칸칸이 차는 막대 */
+.ex2-bar { height: 12px; border: 1px solid var(--line-strong); background: repeating-linear-gradient(90deg, var(--surface-tile) 0 6px, var(--surface) 6px 8px); }
+.ex2-bar > div { height: 100%; background: repeating-linear-gradient(90deg, var(--accent) 0 6px, transparent 6px 8px); }
+
+/* 매각·IPO 고르기 */
+.ex2-sect { margin: 6px 2px 0; font-size: var(--fs-lg); font-weight: 700; cursor: help; }
+.ex2-choices { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.ex2-choice:hover { border-color: var(--line-strong); }
+.ex2-choice > .btn { align-self: stretch; }
+.ex2-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.ex2-tags span { padding: 3px 7px; border-radius: var(--r-xs); background: var(--surface-tile); color: var(--text-2); font-family: var(--pixel); font-size: 11px; -webkit-font-smoothing: none; }
+.ex2-chance { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: baseline; gap: 6px 10px; cursor: help; }
+.ex2-chance > span { font-family: var(--pixel); font-size: 11px; color: var(--text-3); -webkit-font-smoothing: none; }
+.ex2-chance > b { justify-self: end; font-size: var(--fs-md); font-weight: 800; }
+.ex2-chance .ex2-bar { grid-column: 1 / -1; }
+.ex2-chance.good > b { color: var(--positive-press); }
+.ex2-chance.good .ex2-bar > div { background: repeating-linear-gradient(90deg, var(--positive) 0 6px, transparent 6px 8px); }
+.ex2-chance.low > b { color: var(--negative-press); }
+.ex2-chance.low .ex2-bar > div { background: repeating-linear-gradient(90deg, var(--negative) 0 6px, transparent 6px 8px); }
+
+@container (max-width: 520px) {
+  .ex2-big { font-size: 32px; }
+  .ex2-stats, .ex2-choices { grid-template-columns: minmax(0, 1fr); }
+  .ex2-stats > div { padding: 12px 14px 12px 46px; }
+  .ex2-stats .px { top: 50%; transform: translateY(-50%); }
+  .ex2-btns .btn { flex: 1; }
+}

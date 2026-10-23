@@ -1,0 +1,71 @@
+/* 화면(A-179): AI 도입 — 가운데 지금 쓰는 모델(큰 글자) + 체감·적응 막대, 납작한 회색 요약 칸, 왼쪽 부서별 적용률 판 + 오른쪽 모델 카드(회사 색 타일 + 흰 픽셀 그림). 효과 수치는 계속 숨김 */
+.ai2 { width: 100%; max-width: 960px; min-width: 320px; margin: 0 auto; gap: 14px; container-type: inline-size; }
+.ai2-head { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 8px 0 2px; text-align: center; }
+.ai2-kicker { font-family: var(--pixel); font-size: 11px; font-weight: 400; color: var(--accent-text); -webkit-font-smoothing: none; }
+.ai2-cur { display: flex; align-items: center; justify-content: center; gap: 12px; max-width: 100%; min-width: 0; }
+.ai2-big { margin: 0; min-width: 0; font-size: 30px; font-weight: 800; line-height: 1.2; letter-spacing: -0.02em; word-break: keep-all; }
+.ai2-lead { margin: 0; font-size: var(--fs-md); color: var(--text-3); }
+.ai2-head .chip { font-family: var(--pixel); font-size: 11px; font-weight: 400; -webkit-font-smoothing: none; cursor: help; }
+.ai2-tile { flex: none; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border-radius: var(--r-sm); background: var(--dc, var(--accent)); }
+.ai2-tile svg { width: 34px; height: 34px; }
+.ai2-tile.small { width: 36px; height: 36px; }
+.ai2-tile.small svg { width: 28px; height: 28px; }
+.ai2-tile.small .px { width: 18px; height: 18px; }
+.ai2-adapt { display: grid; grid-template-columns: auto minmax(0, 1fr) 44px; align-items: center; gap: 10px; width: min(100%, 360px); margin-top: 4px; cursor: help; }
+.ai2-adapt > span { font-family: var(--pixel); font-size: 11px; color: var(--text-3); -webkit-font-smoothing: none; }
+.ai2-adapt > b { text-align: right; font-size: var(--fs-lg); font-weight: 800; font-variant-numeric: tabular-nums; }
+.ai2-bar { height: 12px; border: 1px solid var(--line-strong); background: repeating-linear-gradient(90deg, var(--surface-tile) 0 6px, var(--surface) 6px 8px); }
+.ai2-bar > div { height: 100%; background: repeating-linear-gradient(90deg, var(--accent) 0 6px, transparent 6px 8px); }
+
+.ai2-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.ai2-stats > div { position: relative; display: flex; flex-direction: column; gap: 4px; min-width: 0; padding: 38px 16px 14px; border-radius: var(--r-lg); background: var(--surface-tile); }
+.ai2-stats .px { position: absolute; left: 14px; top: 12px; }
+.ai2-stats span { font-family: var(--pixel); font-size: 11px; color: var(--text-3); -webkit-font-smoothing: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ai2-stats b { font-size: var(--fs-xl); font-weight: 800; font-variant-numeric: tabular-nums; }
+.ai2-stats .money { font-size: inherit; font-weight: inherit; }
+
+.ai2-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 16px; align-items: start; }
+.ai2-panel, .ai2-models { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.ai2-panel { padding: 14px 16px; border-radius: var(--r-lg); background: var(--surface-sunk); }
+.ai2-sect { margin: 0 2px 2px; font-size: var(--fs-lg); font-weight: 700; }
+.ai2-sect[title] { cursor: help; }
+.ai2-empty { padding: 16px; border-radius: var(--r-lg); background: var(--surface); text-align: center; font-size: var(--fs-md); color: var(--text-3); word-break: keep-all; }
+
+/* 부서 줄 */
+.ai2-dept { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: var(--r-md); background: var(--surface); }
+.ai2-dname { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; min-width: 0; }
+.ai2-dname b { font-size: var(--fs-md); font-weight: 700; }
+.ai2-dname > span:not(.chip):not(.ai2-sq) { font-family: var(--pixel); font-size: 11px; color: var(--text-3); -webkit-font-smoothing: none; }
+.ai2-dname .chip { margin-left: auto; font-family: var(--pixel); font-size: 11px; font-weight: 400; -webkit-font-smoothing: none; cursor: help; }
+.ai2-sq { flex: none; width: 10px; height: 10px; background: var(--dc); }
+.ai2-drow { display: grid; grid-template-columns: minmax(0, 1fr) 44px; align-items: center; gap: 10px; }
+.ai2-drow input { width: 100%; min-width: 0; accent-color: var(--dc, var(--accent)); }
+.ai2-drow b { text-align: right; font-size: var(--fs-lg); font-weight: 800; font-variant-numeric: tabular-nums; }
+
+/* 모델 카드 */
+.ai2-model { display: flex; flex-direction: column; gap: 8px; min-width: 0; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface); box-shadow: none; }
+.ai2-model:hover { border-color: var(--line-strong); }
+.ai2-model.on { border-color: var(--accent); background: var(--surface-hover); }
+.ai2-model.soon { border-style: dashed; background: var(--surface-sunk); }
+.ai2-model.soon .ai2-tile { background: var(--surface-tile); }
+.ai2-model.soon b, .ai2-model.soon .ai2-style { color: var(--text-3); }
+.ai2-mhead { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.ai2-mname { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.ai2-mname b { font-size: var(--fs-lg); font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ai2-mname span { font-family: var(--pixel); font-size: 11px; color: var(--text-3); -webkit-font-smoothing: none; }
+.ai2-style { font-size: var(--fs-sm); line-height: 1.45; color: var(--text-2); word-break: keep-all; }
+.ai2-tags { display: flex; flex-wrap: wrap; gap: 6px 12px; }
+.ai2-tag { display: inline-flex; align-items: center; gap: 4px; font-size: var(--fs-xs); font-weight: 600; color: var(--text-3); }
+.ai2-tag .chip { font-family: var(--pixel); font-size: 11px; font-weight: 400; -webkit-font-smoothing: none; }
+.ai2-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-top: 8px; border-top: 1px solid var(--line); }
+.ai2-foot span { font-size: var(--fs-sm); font-weight: 700; color: var(--text-2); font-variant-numeric: tabular-nums; }
+
+@container (max-width: 640px) {
+  .ai2-layout { grid-template-columns: minmax(0, 1fr); }
+}
+@container (max-width: 520px) {
+  .ai2-big { font-size: 24px; }
+  .ai2-stats { grid-template-columns: minmax(0, 1fr); }
+  .ai2-stats > div { padding: 12px 14px 12px 46px; }
+  .ai2-stats .px { top: 50%; transform: translateY(-50%); }
+}

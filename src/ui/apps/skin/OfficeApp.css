@@ -1,0 +1,49 @@
+/* 화면(A-179): 사무실 — 커리어·업무와 같은 톤. 가운데 큰 사무실 이름, 책상 칸은 납작한 칸, 요약은 회색 칸, 매물 카드는 1px 테두리 납작한 면(지금 여기 = 파랑 테두리 + 옅은 파랑), 작은 라벨은 픽셀 글꼴 */
+
+.of2 { gap: 14px; min-width: 320px; container-type: inline-size; }
+
+.of2-head { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 0 2px; text-align: center; }
+.of2-kicker { font-family: var(--pixel); font-size: 11px; font-weight: 400; color: var(--accent-text); -webkit-font-smoothing: none; }
+.of2-big { margin: 0; font-size: 32px; font-weight: 800; line-height: 1.2; letter-spacing: -0.02em; word-break: keep-all; }
+.of2-lead { margin: 0; max-width: 460px; font-size: var(--fs-md); line-height: 1.5; color: var(--text-3); word-break: keep-all; }
+
+/* 책상 칸: 가운데, 칸 하나 = 책상 하나 */
+.of2-seats { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 16px; border-radius: var(--r-lg); background: var(--surface-sunk); }
+.of2.of2 .of-seats { justify-content: center; gap: 2px; max-width: 520px; }
+.of2.of2 .of-seats i, .of2.of2 .of-legend i { width: 14px; height: 14px; border-radius: 0; border: 1px dashed var(--line-strong); background: transparent; }
+.of2.of2 .of-seats i.sat, .of2.of2 .of-legend i.sat { border: none; background: var(--accent); }
+.of2.of2 .of-seats i.empty, .of2.of2 .of-legend i.empty { border: none; background: var(--accent-soft); }
+.of2.of2 .of-seats span { font-family: var(--pixel); font-size: 11px; -webkit-font-smoothing: none; }
+.of2.of2 .of-legend { justify-content: center; gap: 6px 14px; margin: 0; font-family: var(--pixel); font-size: 11px; font-weight: 400; -webkit-font-smoothing: none; }
+.of2.of2 .of-legend i { width: 10px; height: 10px; }
+
+/* 요약 칸 */
+.of2-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.of2-stats > div { display: flex; flex-direction: column; gap: 4px; min-width: 0; padding: 12px 14px; border-radius: var(--r-lg); background: var(--surface-tile); }
+.of2-stats span { font-family: var(--pixel); font-size: 11px; font-weight: 400; color: var(--text-3); -webkit-font-smoothing: none; }
+.of2-stats b { font-size: 18px; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.of2-sect { display: flex; align-items: center; gap: 8px; margin: 6px 2px 0; font-size: var(--fs-lg); font-weight: 700; }
+
+/* 매물 카드 */
+.of2 .of-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
+.of2.of2 .of-card { gap: 10px; padding: 14px; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface); }
+.of2.of2 .of-card.here { padding: 14px; border: 1px solid var(--accent); background: var(--surface-hover); }
+.of2.of2 .of-card.blocked { opacity: 1; background: var(--surface-sunk); border-color: var(--line); }
+.of2.of2 .of-card.blocked .of-name, .of2.of2 .of-card.blocked .of-cap { color: var(--text-3); }
+.of2-card-head { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.of2 .of-name { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.of2.of2 .of-here { position: static; flex: none; padding: 2px 6px; border-radius: var(--r-xs); background: var(--accent); color: var(--text-on-accent); font-family: var(--pixel); font-size: 11px; font-weight: 400; -webkit-font-smoothing: none; }
+.of2.of2 .of-cap b { font-size: 26px; }
+.of2.of2 .of-tags span { padding: 2px 6px; border-radius: var(--r-xs); font-family: var(--pixel); font-size: 11px; font-weight: 400; -webkit-font-smoothing: none; }
+.of2 .of-money { padding-top: 8px; }
+.of2.of2 .of-block { padding: 7px 10px; border-radius: var(--r-md); background: var(--negative-soft); font-size: var(--fs-sm); font-weight: 600; cursor: help; }
+.of2 .warn { border-radius: var(--r-md); }
+
+@container (max-width: 520px) {
+  .of2-big { font-size: 26px; }
+  .of2 .of-grid { grid-template-columns: 1fr; }
+  .of2-stats { gap: 6px; }
+  .of2-stats > div { padding: 10px; }
+  .of2-stats b { font-size: var(--fs-lg); }
+}

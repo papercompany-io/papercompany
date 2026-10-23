@@ -1,9 +1,12 @@
 // 시장 메뉴(RV-01·PD-02 확장): 시장별 수요·점유율·인지도·광고 예산, 해외 진출, 경쟁사와 인수(M&A), 대기업 계약, 수익 구조(LTV·CAC)
 // 화면 짜임(A-113): 채용처럼 왼쪽 회색 판(고른 시장 · 고객이 들고 나는 줄 · 광고 · 팀 지시) + 오른쪽 시장 카드. 공식 대신 쉬운 말
+// 화면(A-179): 업무·커리어와 같은 톤 — 가운데 큰 고객 수 + 납작한 회색 칸 요약, 알약 탭, 칸칸이 차는 점유율·진행 막대, 색 타일 국기, 설명 문장은 title로(skin/MarketApp.css)
 import { useState } from 'react';
 import { DATA, industry, market, MARKET_IDS } from '../../core/data';
 import { activeCampaigns } from '../../core/ads';
 import { Ads } from './AdsPanel';
+import { AdSales } from './AdSalesPanel';
+import { adSalesOf, adSalesOn, liveAdDeals } from '../../core/adsales';
 import { infraPerUser, launchBlock, launchMarket, revenuePerUser, roomState, setAdBudget, shares, totalUsers, deptCoverage } from '../../core/market';
 import { ROOM_LINE } from '../../core/marketing';
 import { LossBars } from './CustomerFlow';
@@ -18,6 +21,7 @@ import { Tabs, Help } from '../common';
 import { play } from '../sound';
 import type { DeptId, GameState, MarketId, MarketState } from '../../core/types';
 import './apps.css';
+import './skin/MarketApp.css';
 
 const SHARE_COLORS = ['#e5484d', '#f0a020', '#8b63e8', '#11a3a6', '#7a8597', '#c46be0', '#b5651d', '#5c6bc0'];
 
@@ -25,9 +29,12 @@ function n(v: number): string {
   return Math.round(v).toLocaleString('ko-KR');
 }
 
-export function MarketApp() {
+type MarketTab = 'markets' | 'ads' | 'adsales' | 'comp' | 'ent' | 'econ';
+
+export function MarketApp({ initialTab }: { initialTab?: string }) {
   const s = useGame();
-  const [tab, setTab] = useState<'markets' | 'ads' | 'comp' | 'ent' | 'econ'>('markets');
+  const sells = adSalesOn(s);
+  const [tab, setTab] = useState<MarketTab>(initialTab === 'adsales' && sells ? 'adsales' : 'markets');
   const [msg, setMsg] = useState<string | null>(null);
   const ind = industry(s.company.industry);
   const launched = MARKET_IDS.filter((m) => s.markets[m].launched);
@@ -37,24 +44,24 @@ export function MarketApp() {
     return f ? a + (f.inbound + f.viral + f.sales + f.paid - f.lost) * 30 : a;
   }, 0);
   return (
-    <div className="col mkt">
-      <div className="emp-top">
-        <div className="hf-sum">
-          <span>전체 {ind.unit}</span>
-          <b>{n(totalUsers(s))}</b>
-        </div>
-        <div className="hf-sum" title="최근 2주 평균을 한 달로 환산">
+    <div className="col mkt mk2">
+      <div className={`mk2-head ${tab === 'ads' ? 'slim' : ''}`}>
+        <span className="mk2-kicker">전체 {ind.unit}</span>
+        <h2 className="mk2-big">{n(totalUsers(s))}</h2>
+      </div>
+      <div className="mk2-stats">
+        <div className="mk2-stat" title="최근 2주 평균을 한 달로 환산">
           <span>한 달에 늘어나는 {ind.unit}</span>
           <b className={net < 0 ? 'fin-bad' : net > 0 ? 'fin-good' : ''}>
             {net > 0 ? '+' : ''}
             {n(net)}
           </b>
         </div>
-        <div className="hf-sum">
+        <div className="mk2-stat">
           <span>진출한 시장</span>
           <b>{launched.length}곳</b>
         </div>
-        <div className="hf-sum">
+        <div className="mk2-stat">
           <span>한 달 광고비</span>
           <b>{wonShort(ads)}</b>
         </div>
@@ -63,8 +70,12 @@ export function MarketApp() {
         tabs={[
           { id: 'markets', label: '시장' },
           { id: 'ads', label: `광고${activeCampaigns(s).length ? ` · 캠페인 ${activeCampaigns(s).length}` : ''}` },
+          // A-182 광고 판매 산업은 대기업 계약 대신 광고 판매(광고주 제안·계약)
+          ...(sells
+            ? [{ id: 'adsales' as const, label: `광고 판매 ${liveAdDeals(s).length}${adSalesOf(s).offers.some((o) => !o.left) ? ` · 제안 ${adSalesOf(s).offers.filter((o) => !o.left).length}` : ''}` }]
+            : []),
           { id: 'comp', label: `경쟁사 ${s.competitors.filter((c) => c.alive).length}` },
-          { id: 'ent', label: `대기업 계약 ${s.enterprise.filter((d) => d.endDay > s.day).length}` },
+          ...(sells ? [] : [{ id: 'ent' as const, label: `대기업 계약 ${s.enterprise.filter((d) => d.endDay > s.day).length}` }]),
           { id: 'econ', label: '고객 한 명의 값' },
         ]}
         value={tab}
@@ -73,6 +84,7 @@ export function MarketApp() {
       {msg && <div className="warn">{msg}</div>}
       {tab === 'markets' && <Markets setMsg={setMsg} goAds={() => setTab('ads')} />}
       {tab === 'ads' && <Ads setMsg={setMsg} />}
+      {tab === 'adsales' && <AdSales setMsg={setMsg} />}
       {tab === 'comp' && <Competitors setMsg={setMsg} />}
       {tab === 'ent' && <Enterprise />}
       {tab === 'econ' && <Econ />}
@@ -139,8 +151,8 @@ function Markets({ setMsg, goAds }: { setMsg: (m: string | null) => void; goAds:
               value={ms.adBudget}
               onChange={(e) => act((g) => setAdBudget(g, sel, Number(e.target.value)))}
             />
-            <div className="ew-note">
-              우리를 아는 사람 {(ms.awareness * 100).toFixed(1)}% · 지금 비율대로 채널에 나눠 씁니다.{' '}
+            <div className="ew-note mk2-aware" title="예산은 지금 비율대로 채널에 나눠 씁니다">
+              우리를 아는 사람 <b>{(ms.awareness * 100).toFixed(1)}%</b>{' '}
               <button className="pc-link" onClick={goAds}>
                 채널별로 나누기 ›
               </button>
@@ -288,7 +300,9 @@ function Competitors({ setMsg }: { setMsg: (m: string | null) => void }) {
   const list = s.competitors.filter((c) => c.alive || c.acquiredDay !== null);
   return (
     <div className="col">
-      <div className="ew-note">경쟁사는 매달 기능을 내고 투자를 받으며 따라옵니다. 회사 단계 4부터 경쟁사를 사들여 고객의 60%와 기술을 가져올 수 있습니다.</div>
+      <div className="mk2-sect" title="경쟁사는 매달 기능을 내고 투자를 받으며 따라옵니다. 회사 단계 4부터 경쟁사를 사들여 고객의 60%와 기술을 가져올 수 있습니다.">
+        경쟁사 <em>회사 단계 4부터 인수할 수 있습니다</em>
+      </div>
       {list.length === 0 && <div className="empty-note">아직 경쟁사가 없습니다.</div>}
       <div className="emp-depts">
         {list.map((c, i) => {
@@ -349,19 +363,15 @@ function Enterprise() {
   return (
     <div className="hire-layout">
       <section className="hire-form">
-        <div className="hf-title">다음 대기업 계약까지</div>
-        <div className="emp-bar inv-interest">
-          <span />
-          <div className="meter">
+        <div className="mk2-ent" title={'막대가 다 차면 대기업 계약이 하나 성사됩니다. 대표의 "대기업 영업"(경영 모드)과 세일즈팀 "대기업 영업" 지시가 채웁니다.'}>
+          <span className="mk2-kicker">다음 대기업 계약까지</span>
+          <b className="mk2-pct">{Math.min(100, Math.round((s.entPipeline / need) * 100))}%</b>
+          <div className="mk2-bar">
             <div style={{ width: `${Math.min(100, (s.entPipeline / need) * 100)}%` }} />
           </div>
-          <b>{Math.min(100, Math.round((s.entPipeline / need) * 100))}%</b>
+          {ready && <span className="mk2-hint">대기업 영업으로 채웁니다</span>}
         </div>
-        {!ready ? (
-          <div className="warn">대기업용 기능(SSO·보안 등)이 없어서 계약이 성사되지 않습니다. 제품 메뉴에서 대기업 기능을 만드세요.</div>
-        ) : (
-          <div className="ew-note">막대가 다 차면 대기업 계약이 하나 성사됩니다. 대표의 "대기업 영업"(경영 모드)과 세일즈팀 "대기업 영업" 지시가 채웁니다.</div>
-        )}
+        {!ready && <div className="warn">대기업용 기능(SSO·보안 등)이 없어서 계약이 성사되지 않습니다. 제품 메뉴에서 대기업 기능을 만드세요.</div>}
         {industry(s.company.industry).entBase <= 0 && <div className="ew-note">이 산업은 대기업 계약이 거의 없습니다.</div>}
         {live.length > 0 && (
           <div className="fb-row big">
@@ -406,16 +416,23 @@ function Econ() {
   if (!rows.length) return <div className="empty-note">출시하면 고객 한 명이 얼마를 벌어 주는지 볼 수 있습니다.</div>;
   return (
     <div className="col">
-      <div className="ew-note">
-        {ind.name}: {ind.desc}
+      <div className="mk2-sect" title={`${ind.name}: ${ind.desc}`}>
+        시장마다 <em>{ind.name}</em>
       </div>
       <div className="emp-depts">
         {rows.map((m) => (
           <EconCard key={m} s={s} m={m} infra={infra} />
         ))}
       </div>
-      <div className="ew-note">
-        고객지원팀은 필요한 만큼의 {Math.round(deptCoverage(s, 'cs') * 100)}%, 인프라팀은 {Math.round(deptCoverage(s, 'infra') * 100)}%를 채우고 있습니다. 고객이 늘면 사람이 더 필요합니다.
+      <div className="mk2-stats" title="고객이 늘면 사람이 더 필요합니다">
+        <div className="mk2-stat">
+          <span>고객지원팀이 채운 정도</span>
+          <b>{Math.round(deptCoverage(s, 'cs') * 100)}%</b>
+        </div>
+        <div className="mk2-stat">
+          <span>인프라팀이 채운 정도</span>
+          <b>{Math.round(deptCoverage(s, 'infra') * 100)}%</b>
+        </div>
       </div>
     </div>
   );

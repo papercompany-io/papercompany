@@ -230,8 +230,11 @@ function drawSuit(g: Grid) {
   col(g, 5, 14, 15, 'C'); col(g, 10, 14, 15, 'C');
 }
 
-export function drawFaceTo(pix: Pix, id: string, shirt: string, suit = false) {
-  const f = faceFor(id);
+// 표정 덮어쓰기(A-186 고객사 미팅의 몸짓: 끄덕임·팔짱·시계 봄)
+export type FaceExpr = Partial<Pick<Face, 'eyes' | 'brows' | 'mouth'>>;
+
+export function drawFaceTo(pix: Pix, id: string, shirt: string, suit = false, expr?: FaceExpr) {
+  const f = { ...faceFor(id), ...expr };
   const g: Grid = Array.from({ length: FACE_W }, () => Array<string>(FACE_W).fill('.'));
   drawFace(g, f);
   if (suit) drawSuit(g);

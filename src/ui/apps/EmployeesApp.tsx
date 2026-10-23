@@ -1,12 +1,13 @@
 // F05 직원·조직 앱: EM-01 목록과 상세(만족도·건강·숙련·특성), EM-02 부서 배치, EM-04 퇴사·해고, 팀장, 부서 지시(MG-03),
 // WF-01~04 복지와 근무 방침, 연봉 인상, EQ-04 스톡옵션 지급
+// 화면(A-179): 커리어·업무와 같은 톤 — 가운데 큰 인원수, 납작한 회색 요약 칸, 알약 탭·거르기, 칸칸이 차는 막대, 작은 라벨은 픽셀 글꼴. 긴 설명은 title로
 import { burningActive, burningBlock, burningCost, startBurning } from '../../core/burning';
 import { useState } from 'react';
 import { DATA, DEPT_IDS, dept, ordersFor, trait } from '../../core/data';
 import { formatDate } from '../../core/calendar';
-import { deptMembers, deptUnlocked, headcountByDept, moveDept, severance } from '../../core/employees';
+import { deptInIndustry, deptMembers, deptUnlocked, headcountByDept, moveDept, severance } from '../../core/employees';
 import { monthlySalary, payrollWithBenefits, welfareMonthly } from '../../core/finance';
-import { avgHealth, avgSat, deptOutput, demoteLead, fire, giveRaise, healthTarget, isSick, leadInfo, marketSalary, output, promoteLead, satTarget, employeeSpeed } from '../../core/staff';
+import { avgHealth, avgSat, bonusBlock, bonusCost, deptOutput, demoteLead, fire, giveBonus, giveRaise, healthTarget, isSick, leadInfo, marketSalary, output, promoteLead, satTarget, employeeSpeed } from '../../core/staff';
 import { esopEntry, esopFree, grantOptions, unvestedOptions, vestedFraction } from '../../core/equity';
 import { orderOf } from '../../core/orders';
 import { commandOrder } from '../../core/reactions';
@@ -17,6 +18,8 @@ import { wonShort } from '../../core/format';
 import type { DeptId, Employee, GameState, WorkPolicy } from '../../core/types';
 import './apps.css';
 import { EmpOrderSelect } from './MessengerApp';
+import { PixelCheck } from '../pixelMarks';
+import './skin/EmployeesApp.css';
 
 function meterCls(v: number) {
   return v < 35 ? 'bad' : v < 55 ? 'warnc' : '';
@@ -48,57 +51,75 @@ export function EmployeeDetail({ e, openDm, compact }: { e: Employee; openDm?: (
     setMsg(err ? { text: err, ok: false } : { text: ok, ok: true });
   };
   return (
-    <div className="col" data-testid="emp-detail">
-      <div className="tiny muted">
-        {kind} · {dept(e.dept).name}팀{e.lead ? ' 팀장' : ''} · 입사 {formatDate(e.joinedDay)} · 경력 {e.years}년 · 속도 {employeeSpeed(e)}%
+    <div className="col emd" data-testid="emp-detail">
+      <div className="emd-meta">
+        {kind} · {dept(e.dept).name}팀{e.lead ? ' 팀장' : ''} · 입사 {formatDate(e.joinedDay)} · 경력 {e.years}년
       </div>
-      <div className="row" style={{ flexWrap: 'wrap', gap: 4 }}>
-        {e.traits.map((t) => (
-          <span key={t} className="chip amber" title={trait(t)?.desc}>
-            {trait(t)?.name}
-          </span>
-        ))}
-        {isSick(s, e) && <span className="chip red">병가 ~{formatDate(e.sickUntil!)}</span>}
-        {e.leaving !== null && <span className="chip red">퇴사 예정 {formatDate(e.leaving)}</span>}
-      </div>
-      <div className="tiny">{e.traits.map((t) => `${trait(t)?.name}: ${trait(t)?.desc}`).join(' ')}</div>
-      <Meter v={e.sat} label={`만족도 (목표 ${Math.round(st.value)})`} />
-      <Meter v={e.health} label={`건강 (목표 ${Math.round(healthTarget(s, e))})`} />
-      <Meter v={e.skill} label="숙련" />
-      <div className="tiny">
-        하루 작업량 <b>{output(s, e).toFixed(2)}</b> · 월급 {e.salary.toLocaleString('ko-KR')}원 (시장 {Math.round(ms / 1e4).toLocaleString('ko-KR')}만원)
+      {(e.traits.length > 0 || isSick(s, e) || e.leaving !== null) && (
+        <div className="emd-chips" title={e.traits.map((t) => `${trait(t)?.name}: ${trait(t)?.desc}`).join('\n')}>
+          {e.traits.map((t) => (
+            <span key={t} className="chip amber" title={trait(t)?.desc}>
+              {trait(t)?.name}
+            </span>
+          ))}
+          {isSick(s, e) && <span className="chip red">병가 ~{formatDate(e.sickUntil!)}</span>}
+          {e.leaving !== null && <span className="chip red">퇴사 예정 {formatDate(e.leaving)}</span>}
+        </div>
+      )}
+      <div className="emd-meters">
+        <Meter v={e.sat} label={`만족도 (목표 ${Math.round(st.value)})`} />
+        <Meter v={e.health} label={`건강 (목표 ${Math.round(healthTarget(s, e))})`} />
+        <Meter v={e.skill} label="숙련" />
       </div>
       {!compact && (
-        <div className="tiny muted">
+        <div className="emd-why">
           만족도 목표: {st.parts.map((p) => `${p.label} ${p.v >= 0 ? '+' : ''}${Math.round(p.v)}`).join(' · ')}
         </div>
       )}
+      <div className="emd-stats">
+        <div>
+          <span>하루 작업량</span>
+          <b>{output(s, e).toFixed(2)}</b>
+        </div>
+        <div>
+          <span>속도</span>
+          <b>{employeeSpeed(e)}%</b>
+        </div>
+        <div>
+          <span>월급</span>
+          <b>{e.salary.toLocaleString('ko-KR')}원</b>
+        </div>
+        <div>
+          <span>시장 월급</span>
+          <b>{Math.round(ms / 1e4).toLocaleString('ko-KR')}만원</b>
+        </div>
+      </div>
       {e.options > 0 && (
-        <div className="tiny">
-          스톡옵션 {e.options.toLocaleString('ko-KR')}주 · 베스팅 {Math.round(vestedFraction(s, e) * 100)}% (미베스팅 {unvestedOptions(s, e).toLocaleString('ko-KR')}주)
+        <div className="emd-line">
+          스톡옵션 <b>{e.options.toLocaleString('ko-KR')}주</b> · 베스팅 {Math.round(vestedFraction(s, e) * 100)}% (미베스팅 {unvestedOptions(s, e).toLocaleString('ko-KR')}주)
         </div>
       )}
       {!compact && (
         <>
-          <label className="tiny row">
-            맡은 일
+          <label className="emd-field">
+            <span>맡은 일</span>
             <EmpOrderSelect e={e} onErr={(m) => m && setMsg({ text: m, ok: false })} />
           </label>
-          <label className="tiny row">
-            부서 이동
+          <label className="emd-field">
+            <span>부서 이동</span>
             <select
               data-testid="move-dept"
               value={e.dept}
               onChange={(ev) => run((g) => moveDept(g, e.id, ev.target.value as DeptId), `${e.name}님을 옮겼습니다. 좌석은 다음 날 옮기고, 새 직무라 숙련이 조금 줄어듭니다.`)}
             >
-              {DEPT_IDS.map((d) => (
+              {DEPT_IDS.filter((d) => deptInIndustry(s, d)).map((d) => (
                 <option key={d} value={d} disabled={!deptUnlocked(s, d)}>
                   {dept(d).name}
                 </option>
               ))}
             </select>
           </label>
-          <div className="row" style={{ flexWrap: 'wrap', gap: 6 }}>
+          <div className="emd-acts">
             {!e.lead ? (
               <button className="btn small" data-testid="promote" onClick={() => run((g) => promoteLead(g, e.id), '팀장이 되었습니다(월급 15% 인상).')}>
                 팀장 세우기
@@ -110,6 +131,9 @@ export function EmployeeDetail({ e, openDm, compact }: { e: Employee; openDm?: (
             )}
             <button className="btn small ghost" data-testid="raise" onClick={() => run((g) => giveRaise(g, e.id, 0.1), '월급을 10% 올렸습니다.')}>
               연봉 10% 인상
+            </button>
+            <button className="btn small ghost" data-testid="bonus" disabled={!!bonusBlock(s, e)} title={bonusBlock(s, e) ?? '월급 한 달치를 보너스로 줍니다. 만족도가 가득 차지만, 처우가 그대로면 차츰 원래대로 돌아옵니다.'} onClick={() => run((g) => giveBonus(g, e.id), '보너스를 줬습니다. 만족도가 가득 찼습니다.')}>
+              보너스 {Math.round(bonusCost(e) / 1e4).toLocaleString('ko-KR')}만원
             </button>
             {esopEntry(s) && (
               <button className="btn small ghost" data-testid="grant" onClick={() => run((g) => grantOptions(g, e, Math.min(esopFree(g), Math.round(esopEntry(g)!.shares * (e.grade === 'S' ? 0.06 : e.grade === 'A' ? 0.04 : 0.02)))), '스톡옵션을 줬습니다(베스팅 2년 20%, 3년 40%, 4년 80%, 5년 100%).')}>
@@ -127,8 +151,8 @@ export function EmployeeDetail({ e, openDm, compact }: { e: Employee; openDm?: (
                   해고
                 </button>
               ) : (
-                <span className="row">
-                  <span className="tiny">위로금 {Math.round(severance(e) / 1e4).toLocaleString('ko-KR')}만원, 팀 분위기 하락</span>
+                <span className="emd-fire">
+                  <span>위로금 {Math.round(severance(e) / 1e4).toLocaleString('ko-KR')}만원, 팀 분위기 하락</span>
                   <button className="btn small red" data-testid="fire-confirm" onClick={() => run((g) => fire(g, e.id), '해고했습니다.')}>
                     확정
                   </button>
@@ -140,7 +164,7 @@ export function EmployeeDetail({ e, openDm, compact }: { e: Employee; openDm?: (
           </div>
         </>
       )}
-      {msg && <div className={`tiny ${msg.ok ? 'ok' : 'err'}`}>{msg.text}</div>}
+      {msg && <div className={`emd-msg ${msg.ok ? 'ok' : 'err'}`}>{msg.text}</div>}
     </div>
   );
 }
@@ -161,31 +185,32 @@ export function EmployeesApp({ openDm }: { openDm: (id: string) => void }) {
   const n = s.employees.length;
 
   return (
-    <div className="col emp">
-      {/* 위 요약 줄: 채용 공고 요약 줄처럼 이름·숫자만 */}
-      <div className="emp-top">
-        <div className="hf-sum">
-          <span>직원</span>
-          <b data-testid="emp-total">{n}명</b>
-        </div>
-        <div className="hf-sum" title="4대보험·퇴직연금 회사 부담 포함">
-          <span>한 달 월급</span>
-          <b>{wonShort(pay.total)}</b>
-        </div>
-        <div className="hf-sum">
+    <div className="col emp em2">
+      {/* 위: 가운데 큰 인원수 + 한 달 월급 한 줄, 아래 납작한 회색 요약 칸 */}
+      <div className="em2-head">
+        <span className="em2-kicker">우리 회사 직원</span>
+        <h2 className="em2-big" data-testid="emp-total">
+          {n}명
+        </h2>
+        <p className="em2-lead" title="4대보험·퇴직연금 회사 부담 포함">
+          한 달 월급 {wonShort(pay.total)}
+        </p>
+      </div>
+      <div className="em2-stats">
+        <div>
           <span>한 달 복지비</span>
           <b>{wonShort(welfareMonthly(s))}</b>
         </div>
-        <div className="hf-sum">
+        <div>
           <span>평균 만족</span>
-          <b className={n && avgSat(s) < 40 ? 'fin-bad' : ''}>{n ? Math.round(avgSat(s)) : '-'}</b>
+          <b className={n && avgSat(s) < 40 ? 'neg' : ''}>{n ? Math.round(avgSat(s)) : '-'}</b>
         </div>
-        <div className="hf-sum">
+        <div>
           <span>평균 건강</span>
-          <b className={n && avgHealth(s) < 40 ? 'fin-bad' : ''}>{n ? Math.round(avgHealth(s)) : '-'}</b>
+          <b className={n && avgHealth(s) < 40 ? 'neg' : ''}>{n ? Math.round(avgHealth(s)) : '-'}</b>
         </div>
-        <div className="hf-sum" title="이 회사에서 지금까지">
-          <span>나간 사람 · 뽑은 사람</span>
+        <div title="이 회사에서 지금까지">
+          <span>나간 · 뽑은 사람</span>
           <b>
             {s.stats.quits + s.stats.fired} · {s.stats.hires}
           </b>
@@ -202,7 +227,10 @@ export function EmployeesApp({ openDm }: { openDm: (id: string) => void }) {
       />
       {tab === 'people' &&
         (n === 0 ? (
-          <div className="empty-note">아직 직원이 없습니다. 채용 메뉴에서 공고를 올려 직원을 뽑으세요.</div>
+          <div className="em2-empty">
+            <b>아직 직원이 없습니다</b>
+            <span>채용 메뉴에서 공고를 올려 직원을 뽑으세요.</span>
+          </div>
         ) : (
           <>
             <div className="row emp-tools">
@@ -272,11 +300,16 @@ export function EmployeesApp({ openDm }: { openDm: (id: string) => void }) {
                           {dept(e.dept).name}팀{e.lead ? ' 팀장' : ''}
                         </span>
                       </div>
+                      <button className="em2-x" onClick={() => setSel(null)} title="닫기" aria-label="닫기">
+                        ×
+                      </button>
                     </div>
                     <EmployeeDetail e={e} openDm={openDm} />
                   </div>
                 ) : (
-                  <div className="empty-note">직원 카드를 누르면 자세한 정보와 할 수 있는 일이 여기 나옵니다.</div>
+                  <div className="em2-empty small" title="직원 카드를 누르면 자세한 정보와 할 수 있는 일이 여기 나옵니다.">
+                    직원을 고르면 여기 나옵니다
+                  </div>
                 )}
               </aside>
             </div>
@@ -307,6 +340,7 @@ function Depts() {
   const open = DEPT_IDS.filter((d) => deptUnlocked(s, d));
   return (
     <div className="col">
+      <div className="em2-sect">부서 {open.length}곳</div>
       <div className="emp-depts">
         {open.map((d) => {
           const li = leadInfo(s, d);
@@ -342,8 +376,8 @@ function Depts() {
                   </div>
                 </>
               ) : (
-                <div className="pc-foot">
-                  <span>아직 사람이 없습니다. 채용에서 뽑으면 일을 맡길 수 있습니다.</span>
+                <div className="pc-foot" title="채용에서 뽑으면 일을 맡길 수 있습니다.">
+                  <span>아직 사람이 없습니다</span>
                 </div>
               )}
             </div>
@@ -355,6 +389,7 @@ function Depts() {
 }
 
 // 버닝(A-131): 작은 보너스를 주고 며칠 동안 빠르게. 끝나면 지치고 한동안 다시 못 함
+const BURN_HELP = '전 직원에게 작은 보너스를 주고 며칠 동안 일을 몰아서 빨리 진행합니다. 끝나면 팀이 며칠 지치고, 한동안 다시 할 수 없습니다.';
 function Burning() {
   const s = useGame();
   const [err, setErr] = useState<string | null>(null);
@@ -363,17 +398,18 @@ function Burning() {
   const b = s.company.burning;
   return (
     <div className="hf-field" data-testid="burning">
-      <div className="hf-label">버닝</div>
+      <div className="hf-label" title={BURN_HELP}>
+        버닝
+      </div>
       {on && b ? (
         <div className="burn-on">버닝 중 · {b.until - s.day}일 남음</div>
       ) : (
-        <button className="btn small" data-testid="burning-start" disabled={!!block} title={block ?? ''} onClick={() => setErr(act((g) => startBurning(g)) ?? null)}>
+        <button className="btn small" data-testid="burning-start" disabled={!!block} title={block ?? BURN_HELP} onClick={() => setErr(act((g) => startBurning(g)) ?? null)}>
           버닝 시작 · 보너스 {wonShort(burningCost(s))}
         </button>
       )}
-      <div className="ew-note">
-        {block && !on ? `${block} ` : ''}
-        전 직원에게 작은 보너스를 주고 며칠 동안 일을 몰아서 빨리 진행합니다. 끝나면 팀이 며칠 지치고, 한동안 다시 할 수 없습니다.
+      <div className="ew-note" title={BURN_HELP}>
+        {block && !on ? block : '며칠 동안 빨라지고, 끝나면 팀이 지칩니다.'}
       </div>
       {err && <div className="err">{err}</div>}
     </div>
@@ -385,10 +421,10 @@ function Welfare() {
   const s = useGame();
   const policy = DATA.welfare.workPolicies.find((p) => p.id === s.company.workPolicy)!;
   return (
-    <div className="hire-layout">
-      <section className="post-list">
-        <div className="hf-title">
-          복지 <span className="chip">{s.company.welfare.length}개 켜짐</span>
+    <div className="em2-wf">
+      <section className="em2-wf-list">
+        <div className="em2-sect">
+          복지 <em>{s.company.welfare.length}개 켜짐</em>
         </div>
         <div className="emp-welfare-grid">
           {DATA.welfare.items.map((w) => {
@@ -402,17 +438,19 @@ function Welfare() {
                 onClick={() => act((g) => (g.company.welfare = on ? g.company.welfare.filter((x) => x !== w.id) : [...g.company.welfare, w.id]))}
               >
                 <span className="ew-check" aria-hidden>
-                  {on ? '✓' : ''}
+                  {on && <PixelCheck />}
                 </span>
                 <b>{w.name}</b>
-                <span className="ew-desc">{w.desc}</span>
+                <span className="ew-desc" title={w.desc}>
+                  {w.desc}
+                </span>
               </button>
             );
           })}
         </div>
       </section>
-      <section className="hire-form">
-        <div className="hf-title">일하는 방식</div>
+      <section className="em2-wf-side">
+        <div className="em2-sect">일하는 방식</div>
         <div className="hf-field">
           <div className="hf-label">근무 방침</div>
           <div className="seg">
@@ -428,7 +466,9 @@ function Welfare() {
           </div>
         </div>
         <div className="hf-field">
-          <div className="hf-label">매년 1월 연봉 인상</div>
+          <div className="hf-label" title="다른 회사 월급은 해마다 조금씩 오릅니다. 안 올리면 만족도가 서서히 떨어집니다.">
+            매년 1월 연봉 인상
+          </div>
           <div className="seg">
             {[0, 0.03, 0.05, 0.08].map((r) => (
               <button key={r} className={s.company.raiseRate === r ? 'on' : ''} onClick={() => act((g) => (g.company.raiseRate = r))}>
@@ -436,7 +476,9 @@ function Welfare() {
               </button>
             ))}
           </div>
-          <div className="ew-note">다른 회사 월급은 해마다 조금씩 오릅니다. 안 올리면 만족도가 서서히 떨어집니다.</div>
+          <div className="ew-note" title="다른 회사 월급은 해마다 조금씩 오릅니다.">
+            안 올리면 만족도가 서서히 떨어집니다.
+          </div>
         </div>
         <Burning />
       </section>

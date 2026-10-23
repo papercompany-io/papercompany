@@ -9,7 +9,8 @@ import { availableFeatures, canCharge, fxTotals, hasMvp, insightHave } from '../
 import { launchedMarkets, totalUsers } from '../core/market';
 import { isFull } from '../core/office';
 import { leadInfo, avgSat } from '../core/staff';
-import { DATA, featuresOf } from '../core/data';
+import { DATA, featuresOf, industry } from '../core/data';
+import { adSalesOf, adSalesOn } from '../core/adsales';
 import type { DeptId, GameState } from '../core/types';
 
 export function nextHint(s: GameState, desktopOpenedOnce: boolean): string {
@@ -47,6 +48,15 @@ export function nextHint(s: GameState, desktopOpenedOnce: boolean): string {
     const queued = bill && s.product.roadmap.some((r) => r.id === bill.id);
     return queued ? `"${bill!.name}" 기능을 만드는 중입니다. 다 만들면 그때부터 돈을 받습니다.` : `출시했지만 결제 기능이 없어 아직 돈을 받지 못합니다. 제품 메뉴 기능 탭에서 "${bill?.name ?? '결제'}" 기능을 만드세요.`;
   }
+  // A-182 광고 판매 산업: 광고 자리 → 광고 운영 담당자 → 광고주 제안 순으로 안내
+  if (adSalesOn(s) && totalUsers(s) >= 1) {
+    const fx = fxTotals(s);
+    const banner = featuresOf(s.company.industry).find((f) => f.fx.adFormat === 'banner');
+    if (!fx.adFormats.length && !s.product.roadmap.some((r) => r.id === banner?.id)) return `광고 자리가 없어 매출이 거의 없습니다. 이 앱은 광고로 법니다. 제품 메뉴 기능 탭에서 "${banner?.name ?? '배너 광고'}"부터 만드세요.`;
+    if (fx.adFormats.length && s.company.stage >= 1 && !s.employees.some((e) => e.dept === 'adops')) return '광고 자리가 생겼지만 광고주와 계약하지 않은 자리는 광고 네트워크가 싸게 채웁니다. 채용 메뉴에서 "광고 운영"(애드옵스 매니저)을 뽑으면 광고주가 직접 계약을 제안합니다.';
+    const offers = adSalesOf(s).offers.filter((o) => !o.left).length;
+    if (offers) return `광고주 제안 ${offers}건이 기다리고 있습니다. 시장·광고 메뉴 "광고 판매" 탭에서 단가와 기간을 흥정하세요.`;
+  }
   const waiting = s.applicants.filter((a) => a.status === 'waiting').length;
   if (waiting > 0) return `채용 메뉴에 지원자 ${waiting}명이 기다리고 있습니다. 오래 두면 다른 회사로 떠납니다.`;
   if (s.product.roadmap.length === 0) return '로드맵이 비었습니다. 제품 메뉴에서 다음 기능을 넣으세요. 경쟁사는 계속 따라옵니다.';
@@ -69,7 +79,7 @@ export function nextHint(s: GameState, desktopOpenedOnce: boolean): string {
   // 중후반 전략 안내(A-75): 지금 회사에서 아직 안 쓴 큰 성장 수단을 하나 짚어 줍니다.
   const fx = fxTotals(s);
   const ent = featuresOf(s.company.industry).find((f) => f.cat === 'enterprise');
-  if (s.company.stage >= 2 && ent && !fx.enterprise) return `대기업 계약은 한 건이 큰 매출입니다. 제품 메뉴에서 대기업용 기능(${ent.name} 등)을 만들고 세일즈팀에 "대기업 영업"을 맡겨 보세요.`;
+  if (s.company.stage >= 2 && ent && !fx.enterprise && industry(s.company.industry).entBase > 0) return `대기업 계약은 한 건이 큰 매출입니다. 제품 메뉴에서 대기업용 기능(${ent.name} 등)을 만들고 세일즈팀에 "대기업 영업"을 맡겨 보세요.`;
   if (s.company.stage >= 2 && fx.enterprise && s.enterprise.length === 0 && s.company.orders.sales !== 'sales_enterprise' && ceoWork(s) !== 'enterprise') return '대기업용 기능이 준비됐습니다. 세일즈팀에 "대기업 영업"을 맡기거나, 경영 모드에서 대표 주 업무를 "대기업 영업"으로 하세요.';
   const foreign = launchedMarkets(s).length;
   if (s.company.stage >= 3 && foreign === 1) return '국내 시장만으로는 점유율 상한이 있습니다. 제품 메뉴의 현지화 기능을 만들고 시장·광고 메뉴에서 해외 시장(일본·동남아부터)에 진출해 보세요.';

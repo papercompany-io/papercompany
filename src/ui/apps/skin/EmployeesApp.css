@@ -1,0 +1,130 @@
+/* 화면(A-179): 직원 관리 — 커리어·업무와 같은 톤. 가운데 큰 인원수, 납작한 회색 요약 칸, 알약 탭·거르기, 사람 카드는 1px 테두리 납작한 면, 막대는 칸칸이, 작은 라벨은 픽셀 글꼴. 직원 상세(.emd)는 사무실 직원 창에서도 같이 씀 */
+
+.em2 { gap: 14px; min-width: 320px; container-type: inline-size; }
+
+/* 위: 가운데 큰 인원수 */
+.em2-head { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 0 2px; text-align: center; }
+.em2-kicker { font-family: var(--pixel); font-size: 11px; font-weight: 400; color: var(--accent-text); -webkit-font-smoothing: none; }
+.em2-big { margin: 0; font-size: 40px; font-weight: 800; line-height: 1.1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.em2-lead { margin: 0; font-size: var(--fs-md); color: var(--text-3); cursor: help; }
+
+/* 요약 칸: 납작한 회색 */
+.em2-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.em2-stats > div { display: flex; flex-direction: column; gap: 4px; min-width: 0; padding: 12px 14px; border-radius: var(--r-lg); background: var(--surface-tile); }
+.em2-stats > div[title] { cursor: help; }
+.em2-stats span { font-family: var(--pixel); font-size: 11px; font-weight: 400; color: var(--text-3); -webkit-font-smoothing: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.em2-stats b { font-size: 18px; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.em2-stats b.neg { color: var(--negative-press); }
+
+/* 알약 탭(.rk .tab 모양) */
+.em2.em2 .tabs { flex-wrap: wrap; justify-content: center; gap: 6px; margin: 0; border-bottom: none; overflow: visible; }
+.em2.em2 .tab { margin: 0; padding: 7px 13px; border: none; border-radius: var(--r-full); background: var(--surface-tile); color: var(--text-2); font-size: var(--fs-md); }
+.em2.em2 .tab:hover { background: var(--surface-sel); color: var(--text); }
+.em2.em2 .tab.on { background: var(--text); color: var(--surface); border: none; }
+
+.em2-sect { margin: 4px 2px 0; font-size: var(--fs-lg); font-weight: 700; }
+.em2-sect em { font-style: normal; margin-left: 4px; font-family: var(--pixel); font-size: 11px; font-weight: 400; color: var(--text-3); -webkit-font-smoothing: none; }
+
+.em2-empty { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 32px 16px; border-radius: var(--r-lg); background: var(--surface-sunk); text-align: center; color: var(--text-3); font-size: var(--fs-md); }
+.em2-empty b { font-size: var(--fs-lg); color: var(--text-2); }
+.em2-empty.small { padding: 22px 14px; cursor: help; }
+
+/* 거르기·고르기 묶음: 알약 */
+.em2.em2 .seg { display: flex; flex-wrap: wrap; gap: 6px; padding: 0; border: none; border-radius: 0; background: none; }
+.em2.em2 .seg button { flex: none; padding: 6px 12px; border: none; border-radius: var(--r-full); background: var(--surface-tile); color: var(--text-2); font-size: var(--fs-sm); font-weight: 600; box-shadow: none; }
+.em2.em2 .seg button:hover { background: var(--surface-sel); color: var(--text); }
+.em2.em2 .seg button.on { background: var(--text); color: var(--surface); }
+.em2.em2 .hf-field .seg button { flex: 1; }
+.em2 .emp-tools { flex-wrap: wrap; gap: 8px; }
+.em2 .emp-tools select { border-radius: var(--r-full); }
+
+/* 사람 카드: 1px 테두리 납작한 면, 고른 카드는 파랑 테두리 + 옅은 파랑 */
+.em2 .emp-layout { grid-template-columns: minmax(0, 1fr) 320px; }
+.em2 .emp-grid { gap: 8px; }
+.em2.em2 .emp-card { padding: 12px 14px; gap: 8px; border: 1px solid var(--line); border-radius: var(--r-lg); box-shadow: none; background: var(--surface); }
+.em2.em2 .emp-card:hover { border-color: var(--line-strong); }
+.em2.em2 .emp-card.on { border-color: var(--accent); background: var(--surface-hover); box-shadow: none; }
+.em2.em2 .ac-head .pixel-avatar { border-radius: var(--r-sm); box-shadow: none; background: color-mix(in srgb, var(--dc) 22%, var(--surface)); }
+.em2 .ac-id span { font-size: var(--fs-sm); }
+.em2 .ac-traits .chip { font-family: var(--pixel); font-size: 11px; font-weight: 400; -webkit-font-smoothing: none; }
+.em2.em2 .emp-bar { grid-template-columns: 30px minmax(0, 1fr) 26px; }
+.em2.em2 .emp-bar > span { font-family: var(--pixel); font-size: 11px; font-weight: 400; -webkit-font-smoothing: none; }
+.em2 .emp-bar b.fin-bad { color: var(--negative-press); }
+.em2.em2 .ac-stats > div { border-radius: var(--r-sm); padding: 7px 4px; }
+.em2.em2 .ac-stats span { font-family: var(--pixel); font-size: 11px; font-weight: 400; -webkit-font-smoothing: none; }
+
+/* 칸칸이 차는 막대(카드·상세 공용) */
+.em2.em2 .meter, .emd.emd .meter { height: 12px; border: 1px solid var(--line-strong); border-radius: 0; background: repeating-linear-gradient(90deg, var(--surface-tile) 0 6px, var(--surface) 6px 8px); }
+.em2.em2 .emp-bar .meter { height: 10px; }
+.em2.em2 .meter > div, .emd.emd .meter > div { border-radius: 0; background: repeating-linear-gradient(90deg, var(--positive) 0 6px, transparent 6px 8px); }
+.em2.em2 .meter.warnc > div, .emd.emd .meter.warnc > div { background: repeating-linear-gradient(90deg, var(--caution) 0 6px, transparent 6px 8px); }
+.em2.em2 .meter.bad > div, .emd.emd .meter.bad > div { background: repeating-linear-gradient(90deg, var(--negative) 0 6px, transparent 6px 8px); }
+
+/* 오른쪽 상세 판: 회색 납작한 면 */
+.em2.em2 .emp-detail { position: relative; gap: 12px; padding: 16px; border: none; border-radius: var(--r-lg); background: var(--surface-sunk); }
+.em2-x { position: absolute; top: 10px; right: 10px; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; padding: 0; border: none; border-radius: var(--r-full); background: var(--surface-tile); color: var(--text-2); font-size: 18px; line-height: 1; cursor: pointer; }
+.em2-x:hover { background: var(--surface-sel); color: var(--text); }
+.em2 .emp-detail .ac-id { padding-right: 32px; }
+.em2 .emp-detail .ac-id b { font-size: var(--fs-xl); font-weight: 800; }
+
+/* 직원 상세(.emd): 직원 관리 오른쪽 판과 사무실 직원 창에서 같이 씀. 루트 .emd 아래로만 */
+.emd { gap: 10px; min-width: 0; }
+.emd-meta { font-size: var(--fs-sm); color: var(--text-3); line-height: 1.5; }
+.emd-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.emd-chips .chip { font-family: var(--pixel); font-size: 11px; font-weight: 400; -webkit-font-smoothing: none; cursor: help; }
+.emd-meters { display: flex; flex-direction: column; gap: 8px; }
+.emd-meters .row.tiny { font-size: var(--fs-sm); }
+.emd-meters .row .muted { font-family: var(--pixel); font-size: 11px; -webkit-font-smoothing: none; }
+.emd-meters .row b { font-variant-numeric: tabular-nums; }
+.emd-why { font-size: var(--fs-xs); color: var(--text-3); line-height: 1.5; }
+.emd-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.emd-stats > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: 9px 12px; border-radius: var(--r-md); background: var(--surface-tile); }
+.emd-stats span { font-family: var(--pixel); font-size: 11px; font-weight: 400; color: var(--text-3); -webkit-font-smoothing: none; }
+.emd-stats b { font-size: var(--fs-md); font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.emd-line { font-size: var(--fs-sm); color: var(--text-2); }
+.emd-field { display: grid; grid-template-columns: 64px minmax(0, 1fr); align-items: center; gap: 8px; }
+.emd-field > span { font-family: var(--pixel); font-size: 11px; color: var(--text-3); -webkit-font-smoothing: none; }
+.emd-field select { width: 100%; min-width: 0; }
+.emd-acts { display: flex; flex-wrap: wrap; gap: 6px; padding-top: 4px; }
+.emd-fire { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; width: 100%; padding: 8px 10px; border-radius: var(--r-md); background: var(--negative-soft); }
+.emd-fire > span { flex: 1 1 140px; font-size: var(--fs-sm); color: var(--negative-press); font-weight: 600; }
+.emd-msg { font-size: var(--fs-sm); }
+
+/* 부서 카드 */
+.em2 .emp-depts { gap: 8px; }
+.em2.em2 .emp-depts .post-card { gap: 10px; padding: 14px; border-radius: var(--r-lg); }
+.em2.em2 .emp-depts .pc-dot { width: 14px; height: 14px; border-radius: var(--r-xs); }
+.em2.em2 .emp-depts .pc-hired { font-family: var(--pixel); font-size: 11px; font-weight: 400; -webkit-font-smoothing: none; }
+.em2.em2 .emp-depts .pc-stats .chip { font-family: var(--pixel); font-size: 11px; font-weight: 400; -webkit-font-smoothing: none; }
+.em2.em2 .emp-depts .pc-foot { font-size: var(--fs-sm); font-weight: 500; line-height: 1.45; }
+.em2.em2 .emp-depts .pc-foot[title] { cursor: help; }
+
+/* 복지·근무: 왼쪽 복지 타일, 오른쪽 회색 판 */
+.em2-wf { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(260px, 1fr); gap: 16px; align-items: start; }
+.em2-wf-list { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.em2-wf-side { display: flex; flex-direction: column; gap: 14px; padding: 16px; border-radius: var(--r-lg); background: var(--surface-sunk); min-width: 0; }
+.em2-wf-side .em2-sect { margin: 0; }
+.em2.em2 .hf-label { font-family: var(--pixel); font-size: 11px; font-weight: 400; letter-spacing: 0; -webkit-font-smoothing: none; }
+.em2 .hf-label[title] { cursor: help; }
+.em2 .ew-note[title] { cursor: help; }
+.em2 .emp-welfare-grid { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; }
+.em2.em2 .emp-welfare { padding: 12px 14px; border-radius: var(--r-lg); }
+.em2.em2 .emp-welfare:hover { border-color: var(--line-strong); }
+.em2.em2 .emp-welfare.on { border-color: var(--positive); background: var(--positive-soft); }
+.em2.em2 .ew-check { width: 24px; height: 24px; border-radius: var(--r-sm); border: none; background: var(--surface-tile); }
+.em2.em2 .emp-welfare.on .ew-check { background: var(--positive); }
+.em2 .ew-desc { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: keep-all; }
+.em2 [data-testid='burning'] .btn { align-self: flex-start; }
+
+/* 좁은 창 */
+@container (max-width: 760px) {
+  .em2 .emp-layout { grid-template-columns: 1fr; }
+  .em2 .emp-side { position: static; }
+  .em2-wf { grid-template-columns: 1fr; }
+}
+@container (max-width: 520px) {
+  .em2-big { font-size: 32px; }
+  .em2-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .em2 .emp-grid, .em2 .emp-depts, .em2 .emp-welfare-grid { grid-template-columns: 1fr; }
+  .em2 .emp-tools select { flex: 1 1 100%; }
+}

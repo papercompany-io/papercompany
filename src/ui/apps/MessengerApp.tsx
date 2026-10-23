@@ -1,10 +1,12 @@
 // F06 메신저(A-93, 슬랙처럼): MG-01 채널 구성(#전체·팀 채널·그룹·DM·외부 연락처), MG-03 부서 지시(맡은 일 선택지), DC-01 메시지 속 결정 버튼.
 // 왼쪽 사이드바(접히는 묶음·안 읽음 굵게·DM 상태 점), 채널 머리(설명·구성원 얼굴), 날짜 구분선·"새 메시지" 구분선,
 // 같은 사람이 이어 보낸 말은 묶음, 보고 있는 채널에 새 말이 오면 "입력 중…"을 잠깐 보여 준 뒤 하나씩 나타남.
+import { bondLabel, contactsOf } from '../../core/contacts';
+import { concernName } from '../../core/meeting';
 import { Help } from '../common';
 import { PxIcon } from '../icons';
 import { useEffect, useRef, useState } from 'react';
-import { DATA, dept, ordersFor } from '../../core/data';
+import { DATA, dept, orderDef, ordersFor } from '../../core/data';
 import { dateOf } from '../../core/calendar';
 import { orderOf } from '../../core/orders';
 import { DM_ACTIONS, commandOrder, dmAction } from '../../core/reactions';
@@ -14,6 +16,8 @@ import { empOrderOf } from '../../core/assign';
 import { readChannel, readTalk } from '../talkJev';
 import { delegateAway, isFullDay, outingEffect, outingRange, outingTravel, outings } from '../../core/outings';
 import { OutingOfferActions } from './ScheduleApp';
+import { MilestoneCard } from './MilestoneCard';
+import { milestones } from '../../core/milestones';
 import { createGroup, markRead, teamChannelId } from '../../core/messenger';
 import { deptMembers } from '../../core/employees';
 import { deptOutput, isSick } from '../../core/staff';
@@ -215,6 +219,7 @@ export function MessengerApp({ initial, openInvest }: { initial?: string; openIn
                         <span className="mg-hash">{c.kind === 'external' ? '@' : c.kind === 'group' ? '●' : '#'}</span>
                       )}
                       <span className="mg-label">{c.name}</span>
+                      {e && <span className="mg-task" title={orderDef(empOrderOf(s, e))?.name}>{orderDef(empOrderOf(s, e))?.name}</span>}
                       {unread && <span className="mg-badge">{c.unread > 99 ? '99+' : c.unread}</span>}
                     </button>
                   );
@@ -222,6 +227,41 @@ export function MessengerApp({ initial, openInvest }: { initial?: string; openIn
             </div>
           );
         })}
+        {/* 아는 사람(A-186): 고객사 미팅에서 만난 사람. 친밀도는 말로만, 알아낸 걱정은 말풍선 설명으로 */}
+        {contactsOf(s).length > 0 && (
+          <div className="mg-sec" data-testid="mg-contacts">
+            <div className="mg-sec-title">
+              <button className="mg-fold" onClick={() => setFolded(folded.includes('아는 사람') ? folded.filter((x) => x !== '아는 사람') : [...folded, '아는 사람'])}>
+                <span className={`mg-caret ${folded.includes('아는 사람') ? 'folded' : ''}`}>
+                  <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden>
+                    <path d="M3 5 L7 9.5 L11 5 Z" fill="currentColor" />
+                  </svg>
+                </span>{' '}
+                아는 사람
+              </button>
+            </div>
+            {!folded.includes('아는 사람') &&
+              [...contactsOf(s)]
+                .sort((a, b) => b.metDay - a.metDay)
+                .map((c) => {
+                  const chId = s.channels.find((x) => x.kind === 'external' && x.name.startsWith(c.company + ' '))?.id;
+                  const worries = c.known.map(concernName).join(', ');
+                  return (
+                    <button key={c.id} data-testid={`contact-${c.id}`} className={`mg-item mg-contact ${chId === sel ? 'on' : ''}`} onClick={() => chId && open(chId)} title={worries ? `알아낸 걱정: ${worries}` : '아직 걱정을 모릅니다'}>
+                      <span className="mg-mini">
+                        <PixelAvatar id={c.id} color="#5b6b82" suit={c.role !== 'user'} size={18} />
+                      </span>
+                      <span className="mg-label">
+                        {c.name} {c.title}
+                      </span>
+                      <span className="mg-task">
+                        {c.company} · {bondLabel(c)}
+                      </span>
+                    </button>
+                  );
+                })}
+          </div>
+        )}
       </aside>
 
       <section className="msg-main mg-main">
@@ -289,6 +329,7 @@ export function MessengerApp({ initial, openInvest }: { initial?: string; openIn
                       <MsgText m={m} />
                       {m.decisionId && <MsgDecision id={m.decisionId} />}
                       {m.outingId && <MsgOuting id={m.outingId} />}
+                      {m.milestoneId && <MsgMilestone id={m.milestoneId} />}
                     </div>
                   </div>
                 )}
@@ -503,6 +544,18 @@ export function EmpOrderSelect({ e, onErr }: { e: Employee; onErr?: (m: string |
 }
 
 // 대표 외출 초대(A-101): 메시지 속 카드에서 바로 수락·거절
+// 약속 제안(A-177): 메시지 속에서 바로 받거나 거절
+function MsgMilestone({ id }: { id: string }) {
+  const s = useGame();
+  const m = milestones(s).find((x) => x.id === id);
+  if (!m) return null;
+  return (
+    <div className="mg-attach">
+      <MilestoneCard m={m} compact />
+    </div>
+  );
+}
+
 function MsgOuting({ id }: { id: string }) {
   const s = useGame();
   const [err, setErr] = useState<string | null>(null);
@@ -591,8 +644,8 @@ function TeamOrders({ deptId, onErr }: { deptId: DeptId; onErr: (e: string | nul
     <div className="mg-box">
       <div className="mg-box-head">
         <b>맡은 일</b>
-        <span>고른 일은 바꿀 때까지 팀이 매일 계속합니다. 사람별로 다른 일을 맡길 수도 있습니다.</span>
-        <Help text="팀 일이 기본이고, 아래 사람별 목록에서 한 사람만 다른 일을 맡길 수 있습니다. 위 입력칸에 '하늘님은 버그 수정해 주세요'처럼 써도 됩니다. 자주 바꾸면 만족도가 조금 떨어집니다. 회사 단계가 오르면 고를 수 있는 일이 늘어납니다." />
+        <span>바꿀 때까지 매일 계속</span>
+        <Help text="고른 일은 바꿀 때까지 팀이 매일 계속합니다. 팀 일이 기본이고, 아래 사람별 목록에서 한 사람만 다른 일을 맡길 수 있습니다. 위 입력칸에 '하늘님은 버그 수정해 주세요'처럼 써도 됩니다. 자주 바꾸면 만족도가 조금 떨어집니다. 회사 단계가 오르면 고를 수 있는 일이 늘어납니다." />
       </div>
       <div className="mg-orders">
         {ordersFor(deptId).map((o) => {
@@ -610,7 +663,7 @@ function TeamOrders({ deptId, onErr }: { deptId: DeptId; onErr: (e: string | nul
               }}
             >
               <b>{o.name}</b>
-              <span>{locked ? `단계 ${o.stage}부터` : refused === o.id ? '거절됨 · 다시 누르면 강행' : o.desc}</span>
+              {(locked || refused === o.id) && <span>{locked ? `단계 ${o.stage}부터` : '거절됨 · 다시 누르면 강행'}</span>}
             </button>
           );
         })}
