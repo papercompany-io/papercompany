@@ -1446,6 +1446,10 @@ input[type='checkbox'] { accent-color: var(--accent); width: 16px; height: 16px;
 .tb-late { font-size: var(--fs-sm); font-weight: 800; color: var(--c-amber-800); background: var(--c-amber-300); border-radius: var(--r-full); padding: 1px 8px; white-space: nowrap; }
 .tb-skip { display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 9px; border: none; border-radius: var(--r-xs); background: rgba(255, 255, 255, 0.12); color: var(--c-white); font-size: var(--fs-sm); font-weight: 700; white-space: nowrap; cursor: pointer; }
 .tb-skip:hover { background: rgba(255, 255, 255, 0.2); color: var(--chrome-active); }
+/* 자동 빨리 감기 켜짐(A-159): 켜져 있으면 주황 글자, 실제로 감는 동안 아이콘이 깜빡임 */
+.tb-skip.on { color: var(--chrome-active); background: rgba(255, 255, 255, 0.18); }
+.tb-skip.fast svg { animation: ffBlink 0.8s ease-in-out infinite; }
+@keyframes ffBlink { 50% { opacity: 0.35; } }
 
 /* 화면(A-152): 답장·투자 대화 — 선택지는 한 줄에 하나(이름·설명 / 오른쪽 비용, "기본" 표시), 답한 뒤 짧게, 레터 카드, 투자사 대화 아래 상태 줄 */
 .dc-choices { display: flex; flex-direction: column; gap: 6px; }

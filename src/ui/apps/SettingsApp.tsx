@@ -2,7 +2,7 @@
 // 화면 짜임(A-106): 회색 판 묶음마다 "이름 왼쪽 · 조작 오른쪽" 줄. 켜고 끄는 건 스위치
 import { useState } from 'react';
 import { setMuted, setVolume, soundSettings, play } from '../sound';
-import { setSettings, useSettings } from '../meta';
+import { setAutoSkip, setSettings, useSettings } from '../meta';
 import { saveNow } from '../autosave';
 import { toggleFullscreen, isElectron } from '../../platform/save';
 import './apps.css';
@@ -75,7 +75,7 @@ export function SettingsApp() {
         <Row title="축하 연출 보이기" sub="종이 꽃가루와 떠오르는 숫자.">
           <Switch label="축하 연출 보이기" on={st.animations} onChange={(v) => setSettings({ animations: v })} />
         </Row>
-        <Row title="퇴근 뒤 시간 건너뛰기" sub="18시가 지나면 시계는 다음 날 9시까지 흐릅니다. 위 막대의 건너뛰기 버튼으로 언제든 아침으로 넘어갈 수 있습니다.">
+        <Row title="퇴근 뒤 밤 빨리 감기" sub="18시가 지나면 시계는 다음 날 9시까지 흐릅니다. 켜 두면 밤을 빠르게 흘려 보냅니다. 밤에는 위 막대의 빨리 감기 버튼으로도 켜고 끌 수 있습니다.">
           <div className="seg" data-testid="auto-skip-night">
             {(
               [
@@ -84,7 +84,7 @@ export function SettingsApp() {
                 ['always', '바로'],
               ] as const
             ).map(([v, label]) => (
-              <button key={v} className={st.autoSkipNight === v ? 'on' : ''} onClick={() => setSettings({ autoSkipNight: v })}>
+              <button key={v} className={st.autoSkipNight === v ? 'on' : ''} onClick={() => setAutoSkip(v)}>
                 {label}
               </button>
             ))}

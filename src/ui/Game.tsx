@@ -4,7 +4,7 @@ import { ProductCard } from './apps/ProductApp';
 import { paydayForecast } from '../core/forecast';
 import { useEffect, useRef, useState } from 'react';
 import { advance, isRunning, setSpeed } from '../core/sim';
-import { autoSkipDue, clockHour, clockText, inNight, shownDay, skipNight, workingLate } from '../core/night';
+import { autoSkipDue, clockHour, clockText, inNight, shownDay, workingLate } from '../core/night';
 import { dateOf, formatDate } from '../core/calendar';
 import { founderPct } from '../core/equity';
 import { DATA, industry, market, MARKET_IDS } from '../core/data';
@@ -27,7 +27,7 @@ import { nextHint } from './hints';
 import { requestAutosave } from './autosave';
 import { countShort, pct } from '../core/format';
 import { play, type Sfx } from './sound';
-import { getSettings, useSettings } from './meta';
+import { getSettings, toggleAutoSkip, useSettings } from './meta';
 import { Toasts, DecisionModal, Confetti, SideStack } from './Feedback';
 import type { GameState } from '../core/types';
 import { PxIcon } from './icons';
@@ -104,8 +104,7 @@ export function Game({ continued, notice, clearNotice, onEnded }: Props) {
       last = now;
       if (g && isRunning(g) && !timeHold.nego) {
         const day = g.day;
-        advance(g, dt);
-        if (autoSkipDue(g, getSettings().autoSkipNight)) skipNight(g); // 퇴근 뒤 자동 건너뛰기(A-149)
+        advance(g, dt, autoSkipDue(g, getSettings().autoSkipNight)); // 퇴근 뒤 자동 빨리 감기(A-159)
         const important = g.day !== day || g.events.length > 0 || !isRunning(g);
         if (important || now - lastTouch.current > 150) {
           lastTouch.current = now;
@@ -347,6 +346,9 @@ function TopBar({ s }: { s: GameState }) {
   const frac = (clockHour(s) - DATA.time.workStartHour) / 24; // 테두리: 출근(9시)부터 다음 날 9시까지 한 바퀴
   const night = inNight(s);
   const late = workingLate(s);
+  const autoSkip = useSettings().autoSkipNight;
+  const due = autoSkipDue(s, autoSkip);
+  const fast = isRunning(s) && due; // 멈춰 있으면 감는 중이 아님
   const fc = paydayForecast(s);
   const rw = runwayMonths(s);
   const net = currentPL(s).netIncome;
@@ -415,7 +417,7 @@ function TopBar({ s }: { s: GameState }) {
           <span className={`tb-clock ${night ? 'night' : ''}`} title={night ? '퇴근 뒤 시각' : '현재 시각'} data-testid="hud-clock">
             {clockText(s)}
           </span>
-          {/* 퇴근 뒤(A-149): 야근 중인 사람 수와 다음 날 아침으로 건너뛰기 */}
+          {/* 퇴근 뒤(A-149): 야근 중인 사람 수와 자동 빨리 감기 켜고 끄기(A-159, 밤에만 보임) */}
           {night && late.length > 0 && (
             <span className="tb-late" data-testid="hud-late" title={`야근 중: ${late.map((e) => e.name).join(', ')}`}>
               야근 {late.length}명
@@ -423,15 +425,24 @@ function TopBar({ s }: { s: GameState }) {
           )}
           {night && (
             <button
-              className="tb-skip"
+              className={`tb-skip ${autoSkip !== 'off' ? 'on' : ''} ${fast ? 'fast' : ''}`}
               data-testid="skip-night"
-              title="다음 날 아침 9시로 건너뜁니다. 야근한 만큼의 일은 그대로 반영됩니다."
+              aria-pressed={autoSkip !== 'off'}
+              title={
+                autoSkip === 'off'
+                  ? '켜면 밤을 빠르게 흘려 보냅니다. 다음 밤에도 켜져 있습니다.'
+                  : !due
+                    ? '야근하는 사람이 모두 퇴근하면 빨리 감습니다. 누르면 끕니다.'
+                    : fast
+                      ? '아침까지 빨리 감는 중입니다. 누르면 끕니다.'
+                      : '시간이 다시 흐르면 아침까지 빨리 감습니다. 누르면 끕니다.'
+              }
               onClick={() => {
-                act((g) => skipNight(g));
+                toggleAutoSkip();
                 play('click');
               }}
             >
-              아침으로 <SkipIcon />
+              빨리 감기 <FastIcon />
             </button>
           )}
           {/* 버닝 중(A-131) */}
@@ -529,11 +540,10 @@ const PauseIcon = () => (
     <rect x="7" y="1" width="3" height="10" fill="currentColor" />
   </svg>
 );
-// 건너뛰기(▶▶|)
-const SkipIcon = () => (
-  <svg width="14" height="12" viewBox="0 0 14 12">
+// 빨리 감기(▶▶)
+const FastIcon = () => (
+  <svg width="12" height="12" viewBox="0 0 12 12">
     <path d="M1 1 L6 6 L1 11 Z M6 1 L11 6 L6 11 Z" fill="currentColor" />
-    <rect x="11" y="1" width="2" height="10" fill="currentColor" />
   </svg>
 );
 const PlayIcon = ({ n }: { n: number }) => (

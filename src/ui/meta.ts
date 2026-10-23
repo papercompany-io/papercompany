@@ -43,11 +43,12 @@ export interface Settings {
   defaultSpeed: number;
   toasts: boolean;
   animations: boolean;
-  autoSkipNight: AutoSkip; // 퇴근 뒤 자동 건너뛰기(A-149)
+  autoSkipNight: AutoSkip; // 퇴근 뒤 자동 빨리 감기(A-149, A-159)
+  autoSkipLast: Exclude<AutoSkip, 'off'>; // 위 막대 버튼으로 다시 켤 때 쓸 마지막 방식(A-159)
 }
 
 const SKEY = 'papercompany.settings';
-let settings: Settings = { autoPauseUrgent: true, defaultSpeed: 1, toasts: true, animations: true, autoSkipNight: 'off' };
+let settings: Settings = { autoPauseUrgent: true, defaultSpeed: 1, toasts: true, animations: true, autoSkipNight: 'off', autoSkipLast: 'always' };
 try {
   const raw = localStorage.getItem(SKEY);
   if (raw) settings = { ...settings, ...(JSON.parse(raw) as Partial<Settings>) };
@@ -70,6 +71,17 @@ export function setSettings(patch: Partial<Settings>) {
   } catch {
     /* 무시 */
   }
+}
+
+// 자동 빨리 감기 방식 바꾸기: 끌 때는 켜져 있던 방식을 기억해 둠(A-159)
+export function setAutoSkip(mode: AutoSkip) {
+  const cur = settings.autoSkipNight;
+  setSettings(mode === 'off' && cur !== 'off' ? { autoSkipNight: mode, autoSkipLast: cur } : { autoSkipNight: mode });
+}
+
+// 위 막대 빨리 감기 버튼(A-159): 꺼져 있으면 마지막 방식으로 켜고, 켜져 있으면 끔
+export function toggleAutoSkip() {
+  setAutoSkip(settings.autoSkipNight === 'off' ? settings.autoSkipLast : 'off');
 }
 
 export function useSettings(): Settings {

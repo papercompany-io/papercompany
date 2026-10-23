@@ -49,15 +49,23 @@ export function isRunning(s: GameState): boolean {
   return !s.ended && s.speed > 0 && !s.pauseReason;
 }
 
-export function advance(s: GameState, realMs: number) {
+// 밤 빨리 감기(A-159): 배속이 반영된 시간 1ms가 밤 시계를 몇 ms 움직일지. 1보다 작으면 안 됨(빨리 감기가 더 느려짐)
+// 배속과 상관없이 밤 한 번이 실제 nightFastMs만에 지나가도록 배속만큼 나눔
+function nightBoost(s: GameState): number {
+  return Math.max(1, T.nightMs / (T.nightFastMs * s.speed));
+}
+
+// nightFast: 퇴근 뒤 밤만 빠르게 흘려 보냄(A-159, 위 막대·설정의 자동 빨리 감기). 아침이 되면 남은 시간은 보통 빠르기로 씀
+export function advance(s: GameState, realMs: number, nightFast = false) {
   if (!isRunning(s)) return;
   let ms = Math.min(realMs, 1000) * s.speed;
   while (ms > 0 && isRunning(s)) {
     // 퇴근 뒤(A-149): 다음 날 9시까지 시계만 흐름. 야근 효과는 하루 끝(endDay)의 근무 정책이 매김
     if (s.nightMs !== undefined) {
-      const step = Math.min(ms, T.nightMs - s.nightMs);
+      const boost = nightFast ? nightBoost(s) : 1;
+      const step = Math.min(ms * boost, T.nightMs - s.nightMs);
       s.nightMs += step;
-      ms -= step;
+      ms -= step / boost;
       if (s.nightMs >= T.nightMs - 1e-6) endDay(s);
       continue;
     }

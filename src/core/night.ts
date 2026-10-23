@@ -1,7 +1,6 @@
 // A-149 퇴근 뒤 시간(Startup Company식): 18시에 근무가 끝나도 시계는 다음 날 9시까지 흐르고, 야근하는 사람만 자리에 남습니다.
-// 야근의 출력·건강·만족도 효과는 예전처럼 근무 정책(welfare.json workPolicies)이 하루 단위로 매기므로, 밤을 건너뛰어도 잃는 것이 없습니다.
+// 야근의 출력·건강·만족도 효과는 예전처럼 근무 정책(welfare.json workPolicies)이 하루 단위로 매기므로, 밤을 빨리 감아도 잃는 것이 없습니다.
 import { DATA } from './data';
-import { endDay } from './sim';
 import type { Employee, GameState } from './types';
 
 const T = DATA.time;
@@ -61,13 +60,7 @@ export function atDesk(s: GameState, id: string): boolean {
   return !!e && overtimeUntil(s, e) > h;
 }
 
-// 다음 날 아침으로 건너뛰기(위 막대 버튼·자동 건너뛰기)
-export function skipNight(s: GameState) {
-  if (!inNight(s) || s.ended) return;
-  endDay(s);
-}
-
-// 자동 건너뛰기: 'always'는 퇴근하자마자, 'quiet'는 야근하던 사람(대표 포함)이 모두 퇴근하면
+// 자동 빨리 감기(A-159, 예전엔 한 번에 건너뛰기): 'always'는 퇴근하자마자, 'quiet'는 야근하던 사람(대표 포함)이 모두 퇴근하면
 export function autoSkipDue(s: GameState, mode: AutoSkip): boolean {
   if (!inNight(s) || mode === 'off') return false;
   if (mode === 'always') return true;

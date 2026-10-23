@@ -1,7 +1,8 @@
 {
-  "_note": "DT-05 [예시값](A-09). dayMs = 1x 배속에서 근무 시간(9~18시)의 실제 길이, nightMs = 퇴근 뒤(18시~다음 날 9시)의 실제 길이(A-149)",
+  "_note": "DT-05 [예시값](A-09). dayMs = 1x 배속에서 근무 시간(9~18시)의 실제 길이, nightMs = 퇴근 뒤(18시~다음 날 9시)의 실제 길이(A-149), nightFastMs = 빨리 감기로 밤 한 번이 지나가는 실제 길이(A-159)",
   "dayMs": 20000,
   "nightMs": 15000,
+  "nightFastMs": 1500,
   "workStartHour": 9,
   "workEndHour": 18,
   "slotsPerDay": 8,
