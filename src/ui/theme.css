@@ -2065,3 +2065,17 @@ input[type='checkbox'] { accent-color: var(--accent); width: 16px; height: 16px;
   left: calc(var(--side-w) + 322px + (100% - var(--side-w) - 322px - 228px) / 2);
   max-width: min(640px, calc(100% - var(--side-w) - 322px - 240px));
 }
+
+/* 화면(A-190): 오른쪽 아래 알림은 최근 세 장만 카드로, 나머지는 위 한 줄("알림 N개 더", 종류 색 점)로 묶음. 토스트 열은 오른쪽 도구 버튼(배치 수정·확대) 왼쪽으로 */
+.toasts { right: 100px; }
+.toast-more {
+  pointer-events: auto; display: inline-flex; align-items: center; gap: 4px; padding: 5px 10px; border: 1px solid var(--line); border-radius: var(--r-full);
+  background: var(--surface); color: var(--text-2); font: inherit; font-size: var(--fs-sm); font-weight: 700; box-shadow: var(--sh-2); cursor: pointer; animation: toastIn 200ms var(--ease) both;
+}
+.toast-more:hover { color: var(--text); box-shadow: var(--sh-3); }
+.tm-dot { width: 7px; height: 7px; padding: 0; border-radius: 50%; background: var(--accent); flex: none; }
+.tm-good, .tm-mission { background: var(--positive); }
+.tm-bad { background: var(--caution); }
+.tm-urgent { background: var(--negative); }
+.tm-achievement { background: var(--gold-d); }
+.tm-dot:last-of-type { margin-right: 4px; }

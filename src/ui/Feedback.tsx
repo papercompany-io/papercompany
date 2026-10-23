@@ -15,6 +15,7 @@ const ICON: Record<Notice['kind'], PxId> = { info: 'talk', good: 'check', bad: '
 const LABEL: Record<Notice['kind'], string> = { info: '알림', good: '좋은 소식', bad: '주의', urgent: '긴급', achievement: '업적 달성', mission: '목표 완료' };
 // 알림이 떠 있는 시간. 남은 시간은 토스트 아래 막대로 보여 줍니다.
 const lifeOf = (k: Notice['kind']) => (k === 'urgent' || k === 'achievement' || k === 'mission' ? 9000 : 5500);
+const TOAST_MAX = 3;
 
 export function Toasts({ s, enabled, onOpen }: { s: GameState; enabled: boolean; onOpen: (app: string, arg?: string) => void }) {
   const seen = useRef<string | null>(s.notices.length ? s.notices[s.notices.length - 1].id : null);
@@ -28,8 +29,15 @@ export function Toasts({ s, enabled, onOpen }: { s: GameState; enabled: boolean;
     seen.current = list[list.length - 1].id;
     if (!enabled) return;
     const now = Date.now();
-    setShown((cur) => [...cur, ...fresh.slice(-4).map((n) => ({ ...n, at: now }))].slice(-5));
+    setShown((cur) => [...cur, ...fresh.slice(-8).map((n) => ({ ...n, at: now }))].slice(-9));
   });
+  // A-190: 최근 TOAST_MAX장만 카드로, 나머지는 위 한 줄로 묶음(누르면 잠깐 모두 펼침). 묶인 알림도 제 시간이 지나면 사라짐
+  const [open, setOpen] = useState(false);
+  const folded = shown.length > TOAST_MAX && !open ? shown.slice(0, -TOAST_MAX) : [];
+  const cards = folded.length ? shown.slice(-TOAST_MAX) : shown;
+  useEffect(() => {
+    if (shown.length <= TOAST_MAX) setOpen(false);
+  }, [shown.length]);
 
   useEffect(() => {
     if (!shown.length) return;
@@ -42,7 +50,15 @@ export function Toasts({ s, enabled, onOpen }: { s: GameState; enabled: boolean;
 
   return (
     <div className="toasts" data-testid="toasts">
-      {shown.map((n) => (
+      {(folded.length > 0 || (open && shown.length > TOAST_MAX)) && (
+        <button className="toast-more" data-testid="toasts-more" onClick={() => setOpen(!open)}>
+          {folded.map((n) => (
+            <i key={n.id} className={`tm-dot tm-${n.kind}`} />
+          ))}
+          {open ? '접기' : `알림 ${folded.length}개 더`}
+        </button>
+      )}
+      {cards.map((n) => (
         <button
           key={n.id}
           className={`toast ${n.kind} ${n.app ? 'link' : ''}`}
