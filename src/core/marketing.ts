@@ -5,7 +5,7 @@ import { adMix, adSlots, campaignBlock, campaignCost, campaignDef, channelDef, c
 import { demand, growthRoom, launchedMarkets, totalUsers, unitWord, type RoomState } from './market';
 import { dateOf } from './calendar';
 import { countShort, josa } from './format';
-import { post, teamChannelId } from './messenger';
+import { post } from './messenger';
 import { hasMvp } from './product';
 import type { GainWhy, GameState } from './types';
 
@@ -172,7 +172,7 @@ export function marketingMonth(s: GameState) {
     lines.push(...channelNotes(s));
     if (auto.length) lines.push('', '[맡겨 주신 광고] ' + auto.join(' '));
     const speaker = team.find((e) => e.lead) ?? [...team].sort((a, b) => b.skill - a.skill)[0];
-    post(s, teamChannelId('marketing'), speaker.name, lines.join('\n'), 'npc');
+    post(s, speaker.squadId ? `sq-${speaker.squadId}` : 'all', speaker.name, lines.join('\n'), 'npc');
   } else {
     if (!s.flags.includes('custreport-tip')) {
       s.flags.push('custreport-tip');

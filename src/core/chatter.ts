@@ -5,7 +5,8 @@ import chatter from '../data/chatter.json';
 import { orderDef } from './data';
 import { empOrderOf } from './assign';
 import { runwayMonths } from './finance';
-import { getChannel, teamChannelId } from './messenger';
+import { getChannel } from './messenger';
+import { squadChannelId } from './squads';
 import { isSick } from './staff';
 import { moodOf, type Mood } from './talk';
 import type { Employee, GameState } from './types';
@@ -56,12 +57,12 @@ export function chatterSlot(s: GameState, slot: number) {
   if (r() >= Math.min(F.maxChance, F.slotChance + F.perEmployee * awake.length)) return;
   const pick = <T,>(xs: T[]): T => xs[Math.floor(r() * xs.length)];
 
-  // 채널: 두 사람 이상인 팀 채널, 아니면 #전체
-  const teams = [...new Set(awake.map((e) => e.dept))].filter((d) => awake.filter((e) => e.dept === d).length >= 2 && getChannel(s, teamChannelId(d)));
+  // 채널: 두 사람 이상 깨어 있는 부서 채널(A-237), 아니면 #전체
+  const teams = [...new Set(awake.map((e) => e.squadId).filter((x): x is string => !!x))].filter((q) => awake.filter((e) => e.squadId === q).length >= 2 && getChannel(s, squadChannelId(q)));
   const inTeam = teams.length > 0 && r() < F.teamShare;
-  const dept = inTeam ? pick(teams) : null;
-  const pool = dept ? awake.filter((e) => e.dept === dept) : awake;
-  const chId = dept ? teamChannelId(dept) : 'all';
+  const team = inTeam ? pick(teams) : null;
+  const pool = team ? awake.filter((e) => e.squadId === team) : awake;
+  const chId = team ? squadChannelId(team) : 'all';
   if (!getChannel(s, chId)) return;
 
   // 주제: 조건이 맞는 상황 주제는 더 자주, 조건이 안 맞으면 빠짐

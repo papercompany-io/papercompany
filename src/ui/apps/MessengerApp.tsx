@@ -1,28 +1,28 @@
-// F06 메신저(A-93, 슬랙처럼): MG-01 채널 구성(#전체·부서 채널과 그 안의 팀 채널(A-226)·DM·외부 연락처), MG-03 부서 지시(맡은 일 선택지), DC-01 메시지 속 결정 버튼.
+// F06 메신저(A-93, 슬랙처럼): MG-01 채널 구성(#전체·대표가 만든 부서 채널(A-237)·DM·외부 연락처), MG-03 부서 지시(맡은 일 선택지), DC-01 메시지 속 결정 버튼.
 // 왼쪽 사이드바(접히는 묶음·안 읽음 굵게·DM 상태 점), 채널 머리(설명·구성원 얼굴), 날짜 구분선·"새 메시지" 구분선,
 // 같은 사람이 이어 보낸 말은 묶음, 보고 있는 채널에 새 말이 오면 "입력 중…"을 잠깐 보여 준 뒤 하나씩 나타남.
 import { bondLabel, contactsOf } from '../../core/contacts';
 import { concernName } from '../../core/meeting';
 import { Help } from '../common';
+import { DescSelect } from '../DescSelect';
 import { PxIcon } from '../icons';
 import { useEffect, useRef, useState } from 'react';
-import { DATA, DEPT_IDS, dept, orderDef, ordersFor } from '../../core/data';
+import { DATA, dept, orderDef, ordersFor } from '../../core/data';
 import { dateOf } from '../../core/calendar';
 import { orderOf } from '../../core/orders';
 import { DM_ACTIONS, commandOrder, dmAction } from '../../core/reactions';
 import { answerSaid, postSaid, setEmpOrder } from '../../core/talk';
 import { answerChannel, postChannelSaid } from '../../core/chat';
 import { empOrderOf, groupOrder } from '../../core/assign';
-import { setSquadOrder, squad, squadMembers, squadsOf } from '../../core/squads';
+import { setSquadOrder, squad, squadChannelId, squadJobs, squadMembers, squadsOf } from '../../core/squads';
 import { readChannel, readTalk } from '../talkAi';
-import { delegateAway, isFullDay, outingEffect, outingRange, outingTravel, outings } from '../../core/outings';
+import { awayOuting, delegateAway, isFullDay, outingEffect, outingRange, outingTravel, outings } from '../../core/outings';
 import { OutingOfferActions } from './ScheduleApp';
 import { MilestoneCard } from './MilestoneCard';
 import { milestones } from '../../core/milestones';
-import { isChatterChannel, markRead, teamChannelId } from '../../core/messenger';
+import { isChatterChannel, markRead } from '../../core/messenger';
 import { setSettings, useSettings } from '../meta';
-import { deptMembers } from '../../core/employees';
-import { deptOutput, isOff, isSick } from '../../core/staff';
+import { isOff, isSick } from '../../core/staff';
 import { act, getGame, useGame } from '../store';
 import { DecisionView } from '../Feedback';
 import { InvestPeek, InvestorBar } from './InvestApp';
@@ -118,7 +118,7 @@ export function MessengerApp({ initial, openInvest }: { initial?: string; openIn
   const pending = s.decisions.filter((d) => !d.resolved);
   const groups: { title: string; kind: Channel['kind'][] }[] = [
     { title: '채널', kind: ['all'] },
-    { title: '부서·팀', kind: ['team'] }, // 부서 채널 아래에 그 부서 안의 팀 채널(A-226)
+    { title: '부서', kind: ['team'] }, // 대표가 만든 부서 채널(A-237)
     { title: '다이렉트 메시지', kind: ['dm'] },
     { title: '외부 연락처', kind: ['external'] },
   ];
@@ -130,9 +130,7 @@ export function MessengerApp({ initial, openInvest }: { initial?: string; openIn
   const sq = squad(s, ch.squadId);
   const topic =
     sq
-      ? `${dept(sq.dept).name}팀 안의 팀 · ${squadMembers(s, sq.id).length}명 · 맡은 일 ${orderDef(sq.order ?? orderOf(s, sq.dept))?.name ?? ''}${sq.order ? '' : '(부서 일)'}`
-      : ch.kind === 'team' && ch.dept
-      ? `${dept(ch.dept).name}팀 ${deptMembers(s, ch.dept).length}명 · 하루 작업량 ${deptOutput(s, ch.dept).toFixed(1)}`
+      ? `부서 · ${squadMembers(s, sq.id).length}명${squadJobs(s, sq.id).map((d) => ` · ${dept(d).name} ${squadMembers(s, sq.id).filter((e) => e.dept === d).length}`).join('')}`
       : ch.kind === 'all'
         ? '회사 소식 · 합류·퇴사·공지'
         : ch.kind === 'external'
@@ -147,8 +145,9 @@ export function MessengerApp({ initial, openInvest }: { initial?: string; openIn
       <aside className="msg-side mg-side">
         <div className="mg-ws">
           <b>{s.company.name}</b>
-          <span>
-            <i className="mg-dot on" /> 대표 · 나
+          {/* 대표가 외근 중이면 점·글씨를 비활성 색으로(직원 자리 비움과 같은 표시) */}
+          <span className={awayOuting(s) ? 'mg-off' : ''}>
+            <i className={`mg-dot ${awayOuting(s) ? 'away' : 'on'}`} /> 대표 · 나
           </span>
           {/* 직원 수 · 일하는 중(A-135): 누르면 일하는 중인 직원 목록, 이름을 누르면 DM */}
           {s.employees.length > 0 && (() => {
@@ -189,8 +188,6 @@ export function MessengerApp({ initial, openInvest }: { initial?: string; openIn
         )}
         {groups.map((g) => {
           const items = s.channels.filter((c) => g.kind.includes(c.kind));
-          // 부서 순서대로, 부서 채널 바로 아래에 그 부서 안의 팀 채널(A-226)
-          if (g.title === '부서·팀') items.sort((a, b) => DEPT_IDS.indexOf(a.dept!) - DEPT_IDS.indexOf(b.dept!) || (a.squadId ? 1 : 0) - (b.squadId ? 1 : 0));
           if (!items.length) return null;
           const isFolded = folded.includes(g.title);
           return (
@@ -223,7 +220,7 @@ export function MessengerApp({ initial, openInvest }: { initial?: string; openIn
                   const e = c.kind === 'dm' ? s.employees.find((x) => x.id === c.memberIds[0]) : undefined;
                   const unread = c.unread > 0 && c.id !== sel && !(muteChatter && isChatterChannel(c));
                   return (
-                    <button key={c.id} data-testid={`ch-${c.id}`} className={`mg-item ${c.squadId ? 'mg-sub' : ''} ${c.id === sel ? 'on' : ''} ${unread ? 'unread' : ''}`} onClick={() => open(c.id)}>
+                    <button key={c.id} data-testid={`ch-${c.id}`} className={`mg-item ${c.id === sel ? 'on' : ''} ${unread ? 'unread' : ''} ${e && presence(s, e) === 'away' ? 'mg-off' : ''}`} onClick={() => open(c.id)}>
                       {e ? (
                         <span className="mg-mini">
                           <PixelAvatar id={e.id} color={dept(e.dept).color} size={18} />
@@ -336,7 +333,7 @@ export function MessengerApp({ initial, openInvest }: { initial?: string; openIn
                       {!grouped && (
                         <div className="mg-meta">
                           <b>{m.kind === 'player' ? `${m.from} (나)` : m.from}</b>
-                          {empByName(s, m.from) && <span className="mg-role">{dept(empByName(s, m.from)!.dept).name}팀</span>}
+                          {empByName(s, m.from) && <span className="mg-role">{dept(empByName(s, m.from)!.dept).name}{squad(s, empByName(s, m.from)!.squadId) ? ` · ${squad(s, empByName(s, m.from)!.squadId)!.name}` : ''}</span>}
                           <span className="mg-time">{timeOf(m.at)}</span>
                         </div>
                       )}
@@ -370,11 +367,6 @@ export function MessengerApp({ initial, openInvest }: { initial?: string; openIn
             <>
               <ChatInput channelId={ch.id} placeholder={`${ch.name}에 메시지 쓰기 — 예: 이번 주는 버그 수정에 집중해 주세요`} onErr={setErr} />
               <SquadOrders squadId={sq.id} onErr={setErr} />
-            </>
-          ) : ch.kind === 'team' && ch.dept ? (
-            <>
-              <ChatInput channelId={ch.id} placeholder={`${ch.name}에 메시지 쓰기 — 예: 하늘님은 버그 수정, 나머지는 기능 개발해 주세요`} onErr={setErr} />
-              <TeamOrders deptId={ch.dept} onErr={setErr} />
             </>
           ) : ch.kind === 'all' && s.employees.length > 0 ? (
             <ChatInput channelId={ch.id} placeholder="모두에게 메시지 쓰기 — 이름을 부르면 그 사람이, 팀 이름과 일을 말하면 그 팀이 답합니다" onErr={setErr} />
@@ -454,11 +446,8 @@ function DmActions({ empId, name, busy, onErr }: { empId: string; name: string; 
     });
   };
   return (
-    <div className="mg-box">
-      <div className="mg-box-head">
-        <b>{name}님에게</b>
-        <span>{waiting ? `${name}님이 답을 쓰는 중…` : '직접 써도 됩니다. 일을 바꾸라고 하거나 칭찬·질책하면 기분과 업무에 반영됩니다.'}</span>
-      </div>
+    <div className="mg-dm">
+      {waiting && <div className="mg-box-head">{name}님이 답을 쓰는 중…</div>}
       <form
         className="mg-write"
         onSubmit={(ev) => {
@@ -522,101 +511,98 @@ function ChatInput({ channelId, placeholder, onErr }: { channelId: string; place
   );
 }
 
-// 사람별 맡은 일(A-147): 팀 일을 따르거나 이 사람만 다른 일. 부서 안의 팀에 들어 있으면 그 팀의 일이 "팀 일"(A-226)
+// 사람별 맡은 일(A-147): 부서 일을 따르거나 이 사람만 다른 일(예외). 부서 없는 사람은 "소속 없음"의 일(A-237)
 export function EmpOrderSelect({ e, onErr }: { e: Employee; onErr?: (m: string | null) => void }) {
   const s = useGame();
   const team = groupOrder(s, e);
+  const q = squad(s, e.squadId);
+  const from = `${q ? q.name : '소속 없음'} 일`; // 사람별 예외가 없으면 부서 일(A-237)
   const cur = empOrderOf(s, e);
+  const teamDef = ordersFor(e.dept).find((o) => o.id === team);
   return (
-    <select
+    <DescSelect
       className="emp-order"
-      data-testid={`emp-order-${e.id}`}
+      testId={`emp-order-${e.id}`}
       value={cur === team ? '' : cur}
-      onChange={(ev) => {
-        const err = act((g) => setEmpOrder(g, e.id, ev.target.value || null, teamChannelId(e.dept))) ?? null;
-        onErr?.(err);
-      }}
-    >
-      <option value="">팀 일 따름 ({ordersFor(e.dept).find((o) => o.id === team)?.name})</option>
-      {ordersFor(e.dept)
-        .filter((o) => o.id !== team)
-        .map((o) => (
-          <option key={o.id} value={o.id} disabled={s.company.stage < o.stage}>
-            {o.name}
-            {s.company.stage < o.stage ? ` (단계 ${o.stage})` : ''}
-          </option>
-        ))}
-    </select>
+      options={[
+        { value: '', label: `${from} 따름`, note: teamDef?.name, desc: teamDef?.desc },
+        ...ordersFor(e.dept)
+          .filter((o) => o.id !== team)
+          .map((o) => ({ value: o.id, label: o.name, desc: o.desc, disabled: s.company.stage < o.stage, note: s.company.stage < o.stage ? `단계 ${o.stage}부터` : undefined })),
+      ]}
+      onChange={(v) => onErr?.(act((g) => setEmpOrder(g, e.id, v || null, q ? squadChannelId(q.id) : `dm-${e.id}`)) ?? null)}
+    />
   );
 }
 
 // 팀 맡은 일 고르기(A-200): 팀 앱·직원 창·제품·시장이 같은 부품을 씀. 팀이 거절하면 select가 원래 일로 돌아가므로
 // 이유를 onErr로 알리고(없으면 옆에 한 줄), 거절된 일은 "다시 고르면 강행"으로 표시합니다.
-// 부서 안에 팀이 있으면(A-226) 앞에 "맡길 곳"(부서 전체·팀) 선택칸이 붙어, 버그 수정·외주·기능 개발을 팀 하나에 맡길 수 있음
-export function TeamOrderSelect({ d, testId, className, onErr }: { d: DeptId; testId?: string; className?: string; onErr?: (m: string | null) => void }) {
+// d = 직무. 이 직무 사람이 있는 부서가 있으면(A-237) 앞에 "맡길 곳"(소속 없음·부서) 선택칸이 붙어, 버그 수정·외주·기능 개발을 부서마다 맡길 수 있음
+// plain = 맡길 곳 칸 없이 소속 없음의 일만(부서 탭 소속 없음 페이지)
+export function TeamOrderSelect({ d, testId, className, onErr, plain }: { d: DeptId; testId?: string; className?: string; onErr?: (m: string | null) => void; plain?: boolean }) {
   const s = useGame();
   const [err, setErr] = useState<string | null>(null);
   const [target, setTarget] = useState<string>('');
   const pb = s.company.orderPushback;
   const refused = pb && pb.dept === d && s.day - pb.day <= 2 ? pb.order : null;
   const report = onErr ?? setErr;
-  const squads = squadsOf(s, d);
+  const squads = squadsOf(s).filter((q) => squadMembers(s, q.id).some((e) => e.dept === d));
   const sq = squads.find((q) => q.id === target);
-  const pickTarget = squads.length > 0 && (
-    <select className={className} data-testid={testId ? `${testId}-target` : undefined} value={sq ? sq.id : ''} onChange={(ev) => setTarget(ev.target.value)} aria-label="맡길 곳">
-      <option value="">{dept(d).name}팀 전체</option>
-      {squads.map((q) => (
-        <option key={q.id} value={q.id}>
-          {q.name}
-        </option>
-      ))}
-    </select>
+  const pickTarget = !plain && squads.length > 0 && (
+    <DescSelect
+      className={className}
+      testId={testId ? `${testId}-target` : undefined}
+      ariaLabel="맡길 곳"
+      value={sq ? sq.id : ''}
+      onChange={setTarget}
+      options={[
+        { value: '', label: '소속 없음', desc: '부서에 넣지 않은 사람이 하는 회사 기본 일입니다.' },
+        ...squads.map((q) => ({ value: q.id, label: q.name, desc: `이 부서 ${dept(d).name} ${squadMembers(s, q.id).filter((e) => e.dept === d).length}명이 따로 맡을 일을 정합니다.` })),
+      ]}
+    />
   );
   if (sq)
     return (
       <>
         {pickTarget}
-        <SquadOrderSelect squadId={sq.id} className={className} testId={testId} onErr={report} />
+        <SquadOrderSelect squadId={sq.id} d={d} className={className} testId={testId} onErr={report} />
         {!onErr && err && <span className="order-err">{err}</span>}
       </>
     );
   return (
     <>
       {pickTarget}
-      <select className={className} data-testid={testId} value={orderOf(s, d)} onChange={(ev) => report(act((g) => commandOrder(g, d, ev.target.value)) ?? null)}>
-        {ordersFor(d).map((o) => {
+      <DescSelect
+        className={className}
+        testId={testId}
+        value={orderOf(s, d)}
+        onChange={(v) => report(act((g) => commandOrder(g, d, v)) ?? null)}
+        options={ordersFor(d).map((o) => {
           const locked = s.company.stage < o.stage;
-          return (
-            <option key={o.id} value={o.id} disabled={locked}>
-              {o.name}
-              {locked ? ` (단계 ${o.stage})` : refused === o.id ? ' (거절됨 · 다시 고르면 강행)' : ''}
-            </option>
-          );
+          return { value: o.id, label: o.name, desc: o.desc, disabled: locked, note: locked ? `단계 ${o.stage}부터` : refused === o.id ? '거절됨 · 다시 고르면 강행' : undefined };
         })}
-      </select>
+      />
       {!onErr && err && <span className="order-err">{err}</span>}
     </>
   );
 }
 
-// 부서 안의 팀 맡은 일(A-226): "부서 일 따름" 또는 그 부서의 일 하나
-export function SquadOrderSelect({ squadId, className, testId, onErr }: { squadId: string; className?: string; testId?: string; onErr?: (m: string | null) => void }) {
+// 부서가 한 직무(d)에 맡긴 일(A-237). 부서의 직무 일은 늘 정해져 있음(사람이 들어올 때 하던 일을 이어받음)
+export function SquadOrderSelect({ squadId, d, className, testId, onErr }: { squadId: string; d: DeptId; className?: string; testId?: string; onErr?: (m: string | null) => void }) {
   const s = useGame();
   const q = squad(s, squadId);
   if (!q) return null;
   return (
-    <select className={className} data-testid={testId ?? `squad-order-${squadId}`} value={q.order ?? ''} onChange={(ev) => onErr?.(act((g) => setSquadOrder(g, squadId, ev.target.value || null)) ?? null)}>
-      <option value="">부서 일 따름 ({orderDef(orderOf(s, q.dept))?.name})</option>
-      {ordersFor(q.dept).map((o) => {
+    <DescSelect
+      className={className}
+      testId={testId ?? `squad-order-${squadId}-${d}`}
+      value={q.orders[d] ?? orderOf(s, d)}
+      onChange={(v) => onErr?.(act((g) => setSquadOrder(g, squadId, d, v)) ?? null)}
+      options={ordersFor(d).map((o) => {
         const locked = s.company.stage < o.stage;
-        return (
-          <option key={o.id} value={o.id} disabled={locked}>
-            {o.name}
-            {locked ? ` (단계 ${o.stage})` : ''}
-          </option>
-        );
+        return { value: o.id, label: o.name, desc: o.desc, disabled: locked, note: locked ? `단계 ${o.stage}부터` : undefined };
       })}
-    </select>
+    />
   );
 }
 
@@ -709,108 +695,49 @@ function MsgDecision({ id }: { id: string }) {
   );
 }
 
-// MG-03 부서 지시 v2: 팀 전체가 맡을 일을 고릅니다(바꿀 때까지 매일 그 일을 함, A-41). 슬랙 입력창 자리에 놓인 상자
-function TeamOrders({ deptId, onErr }: { deptId: DeptId; onErr: (e: string | null) => void }) {
-  const s = useGame();
-  const cur = orderOf(s, deptId);
-  const pb = s.company.orderPushback;
-  const refused = pb && pb.dept === deptId && s.day - pb.day <= 2 ? pb.order : null;
-  const team = deptMembers(s, deptId);
-  const personal = team.filter((e) => empOrderOf(s, e) !== cur).length;
-  return (
-    <div className="mg-box">
-      <div className="mg-box-head">
-        <b>맡은 일</b>
-        <span>바꿀 때까지 매일 계속</span>
-        <Help text="고른 일은 바꿀 때까지 팀이 매일 계속합니다. 팀 일이 기본이고, 아래 사람별 목록에서 한 사람만 다른 일을 맡길 수 있습니다. 위 입력칸에 '하늘님은 버그 수정해 주세요'처럼 써도 됩니다. 자주 바꾸면 만족도가 조금 떨어집니다. 회사 단계가 오르면 고를 수 있는 일이 늘어납니다." />
-      </div>
-      <div className="mg-orders">
-        {ordersFor(deptId).map((o) => {
-          const locked = s.company.stage < o.stage;
-          return (
-            <button
-              key={o.id}
-              className={`mg-order ${cur === o.id ? 'on' : ''} ${refused === o.id ? 'refused' : ''}`}
-              data-testid={`order-${o.id}`}
-              disabled={locked}
-              title={locked ? `회사 단계 ${o.stage}부터` : o.desc}
-              onClick={() => {
-                const e = act((g) => commandOrder(g, deptId, o.id));
-                onErr(e ?? null);
-              }}
-            >
-              <b>{o.name}</b>
-              {(locked || refused === o.id) && <span>{locked ? `단계 ${o.stage}부터` : '거절됨 · 다시 누르면 강행'}</span>}
-            </button>
-          );
-        })}
-      </div>
-      {team.length > 0 && (
-        <details className="mg-people" open={personal > 0}>
-          <summary>
-            사람별 맡은 일 <span className="muted">{personal > 0 ? `· 따로 맡은 사람 ${personal}명` : '· 모두 팀 일'}</span>
-          </summary>
-          {team.map((e) => (
-            <div key={e.id} className="mg-person">
-              <span>
-                {e.name}
-                {e.lead ? ' (팀장)' : ''}
-              </span>
-              <EmpOrderSelect e={e} onErr={onErr} />
-            </div>
-          ))}
-        </details>
-      )}
-    </div>
-  );
-}
-
-// 부서 안의 팀 채널(A-226): 팀이 맡을 일 버튼(부서 일 따름 포함) + 팀원별 맡은 일
+// 부서 채널(A-237): 이 부서가 직무별로 맡을 일 + 사람별 맡은 일
 function SquadOrders({ squadId, onErr }: { squadId: string; onErr: (e: string | null) => void }) {
   const s = useGame();
   const q = squad(s, squadId);
   if (!q) return null;
   const team = squadMembers(s, squadId);
-  const choose = (id: string | null) => onErr(act((g) => setSquadOrder(g, squadId, id)) ?? null);
+  const jobs = squadJobs(s, squadId);
   return (
     <div className="mg-box">
       <div className="mg-box-head">
         <b>{q.name} 맡은 일</b>
         <span>바꿀 때까지 매일 계속</span>
-        <Help text="팀에 일을 맡기면 이 팀 사람은 부서 일 대신 그 일을 합니다. 부서 일 따름을 고르면 다시 부서 전체와 같은 일을 합니다. 며칠 안에 또 바꾸면 팀원 만족도가 조금 떨어집니다." />
+        <Help text="부서는 직무마다 하는 일이 하나씩 있습니다. 바꾸면 이 부서의 그 직무 사람이 모두 그 일로 옮깁니다. 한 사람만 다르게 하려면 아래 사람별 예외에서 고릅니다. 위 입력칸에 '버그 수정에 집중해 주세요'처럼 써도 됩니다. 며칠 안에 또 바꾸면 만족도가 조금 떨어집니다." />
       </div>
-      <div className="mg-orders">
-        <button className={`mg-order ${q.order === null ? 'on' : ''}`} data-testid="squad-order-none" onClick={() => choose(null)}>
-          <b>부서 일 따름</b>
-          <span>{orderDef(orderOf(s, q.dept))?.name}</span>
-        </button>
-        {ordersFor(q.dept).map((o) => {
-          const locked = s.company.stage < o.stage;
-          return (
-            <button key={o.id} className={`mg-order ${q.order === o.id ? 'on' : ''}`} data-testid={`squad-order-${o.id}`} disabled={locked} title={locked ? `회사 단계 ${o.stage}부터` : o.desc} onClick={() => choose(o.id)}>
-              <b>{o.name}</b>
-              {locked && <span>단계 {o.stage}부터</span>}
-            </button>
-          );
-        })}
-      </div>
-      {team.length === 0 ? (
-        <div className="muted tiny">아직 팀원이 없습니다. 직원 관리의 팀 탭에서 사람을 넣습니다.</div>
+      {jobs.length === 0 ? (
+        <div className="muted tiny">아직 사람이 없습니다. 직원 관리의 부서 탭에서 사람을 넣습니다.</div>
       ) : (
-        <details className="mg-people">
-          <summary>
-            팀원별 맡은 일 <span className="muted">· {team.length}명</span>
-          </summary>
-          {team.map((e) => (
-            <div key={e.id} className="mg-person">
-              <span>
-                {e.name}
-                {e.lead ? ' (팀장)' : ''}
-              </span>
-              <EmpOrderSelect e={e} onErr={onErr} />
-            </div>
-          ))}
-        </details>
+        <>
+          <div className="mg-sq-jobs">
+            {jobs.map((d) => (
+              <label key={d} className="mg-person">
+                <span>
+                  {dept(d).name} {team.filter((e) => e.dept === d).length}명
+                </span>
+                <SquadOrderSelect squadId={squadId} d={d} onErr={onErr} />
+              </label>
+            ))}
+          </div>
+          <details className="mg-people">
+            <summary>
+              사람별 예외 <span className="muted">· {team.filter((e) => !!e.order).length ? `따로 하는 사람 ${team.filter((e) => !!e.order).length}명` : '없음'}</span>
+            </summary>
+            {team.map((e) => (
+              <div key={e.id} className="mg-person">
+                <span>
+                  {e.name} · {dept(e.dept).name}
+                  {e.lead ? ' (팀장)' : ''}
+                </span>
+                <EmpOrderSelect e={e} onErr={onErr} />
+              </div>
+            ))}
+          </details>
+        </>
       )}
     </div>
   );

@@ -38,7 +38,7 @@ export function channelMembers(s: GameState, chId: string): Employee[] {
   const ch = getChannel(s, chId);
   if (!ch) return [];
   if (ch.kind === 'all') return s.employees.filter((e) => e.leaving === null || e.leaving > s.day);
-  if (ch.kind === 'team' && ch.squadId) return s.employees.filter((e) => e.squadId === ch.squadId); // 부서 안의 팀(A-226)
+  if (ch.kind === 'team' && ch.squadId) return s.employees.filter((e) => e.squadId === ch.squadId); // 부서(A-237)
   if (ch.kind === 'team' && ch.dept) return s.employees.filter((e) => e.dept === ch.dept);
   return s.employees.filter((e) => ch.memberIds.includes(e.id));
 }
@@ -83,7 +83,8 @@ export function ruleRead(s: GameState, chId: string, members: Employee[], text: 
     });
   let tOrd: string | null = null;
   if (verb && !Object.keys(assigns).length) {
-    const pool = DATA.orders.orders.filter((o) => s.company.stage >= o.stage && (ch.kind !== 'team' || o.dept === ch.dept));
+    // 부서 채널이면 그 부서에 있는 직무의 일만(A-237)
+    const pool = DATA.orders.orders.filter((o) => s.company.stage >= o.stage && (!ch.squadId || members.some((e) => e.dept === o.dept)) && (!ch.dept || o.dept === ch.dept));
     tOrd = best(t, keyed(pool))?.def.id ?? null;
   }
   return {
@@ -140,13 +141,14 @@ export function answerChannel(s: GameState, chId: string, raw: string, read: Cha
       if (!quiet && lead) post(s, chId, lead.name, fill(s, lead, pick(s, R.cant)), 'npc');
       continue;
     }
-    // 부서 안의 팀 채널에서 그 부서 일을 말하면 그 팀의 맡은 일만 바꿈(A-226)
-    if (ch.squadId && ch.dept === d) {
+    // 부서 채널에서 그 부서에 있는 직무의 일을 말하면 이 부서의 그 직무 일만 바꿈(A-237)
+    const jobMates = members.filter((e) => e.dept === d);
+    if (ch.squadId && jobMates.length) {
       const q = squad(s, ch.squadId);
-      const who = members.find((e) => e.lead) ?? members[0];
-      if (q && q.order === od.id) {
-        if (!quiet && who) post(s, chId, who.name, fill(s, who, pick(s, R.same)), 'npc');
-      } else setSquadOrder(s, ch.squadId, od.id, false, quiet);
+      const who = jobMates.find((e) => e.lead) ?? jobMates[0];
+      if (q && q.orders[d] === od.id) {
+        if (!quiet) post(s, chId, who.name, fill(s, who, pick(s, R.same)), 'npc');
+      } else setSquadOrder(s, ch.squadId, d, od.id, false, quiet);
       continue;
     }
     const already = teamOrder(s, d) === od.id;

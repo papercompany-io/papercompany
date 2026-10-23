@@ -31,7 +31,8 @@ export interface Employee {
   options: number; // 받은 스톡옵션 주식 수(EQ-04)
   optionDay: number | null; // 옵션 받은 날(베스팅 기준)
   sickUntil: number | null; // 병가(WF-03)
-  offUntil?: number | null; // 집에 보냄·휴가(A-231). 이 날 전까지 쉼(작업량 0)
+  offFrom?: number; // 1일·3일 휴가(A-231, A-236). 오늘 일을 끝내고 이 날부터 쉼
+  offUntil?: number | null; // 이 날 전까지 쉼(작업량 0)
   leaveDay?: number; // 마지막으로 쉬게 한 날(A-231)
   leaving: number | null; // 퇴사 예정일
   lastRaiseDay: number;
@@ -39,15 +40,15 @@ export interface Employee {
   bubble: { text: string; until: number } | null; // OF-05 머리 위 말풍선
   dmDay?: Partial<Record<string, number>>; // DM 행동별 마지막 날(A-94: 자주 하면 효과 줄어듦)
   order?: string | null; // 개인 업무(A-147). 없으면 팀 맡은 일을 따름
-  squadId?: string | null; // 부서 안의 팀(A-226). 없으면 부서 바로 아래
+  squadId?: string | null; // 소속 부서(=팀, A-237). 없으면 부서 없음. dept는 직무(개발·디자인…)
 }
 
-// 부서 안의 팀(A-226): 대표가 만들고 이름 붙임. order가 있으면 팀원은 부서 일 대신 그 일을 함
+// 부서(=팀, A-237): 대표가 만들고 이름 붙인 사람 묶음. 직무가 섞여도 됨.
+// orders[직무]가 있으면 이 부서의 그 직무 사람은 직무 기본 일(company.orders) 대신 그 일을 함
 export interface Squad {
   id: string;
-  dept: DeptId;
   name: string;
-  order: string | null; // null = 부서 맡은 일을 따름
+  orders: Partial<Record<DeptId, string>>;
   orderDay?: number; // 맡은 일을 마지막으로 바꾼 날(잦은 변경은 만족 하락)
 }
 
@@ -148,7 +149,7 @@ export interface Channel {
   kind: 'all' | 'team' | 'dm' | 'external'; // 예전 저장의 'group'(그룹 메시지)은 불러올 때 지움(A-226)
   name: string;
   dept?: DeptId;
-  squadId?: string; // 부서 안의 팀 채널(A-226). 없으면 부서 채널
+  squadId?: string; // 부서 채널(A-237). 예전 저장의 직무 채널(team-개발 등)은 불러올 때 지움
   memberIds: string[];
   messages: Message[];
   unread: number;
@@ -516,7 +517,7 @@ export interface Company {
   burning?: { until: number; ready: number; tired: boolean }; // 버닝(A-131): until까지 가속, ready부터 다시 가능, tired = 끝난 뒤 피로를 줬는지
   welfare: string[];
   orders: Partial<Record<DeptId, string>>;
-  squads?: Squad[]; // 부서 안의 팀(A-226). 예전 저장엔 없음
+  squads?: Squad[]; // 부서(A-237). 예전 저장엔 없음
   autoHire: Partial<Record<DeptId, number>>; // HR-07 위임 채용 목표 인원
   autoHireLevel: string;
   ceoMode: 'founder' | 'executive'; // CA-03

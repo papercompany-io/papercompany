@@ -131,12 +131,12 @@ function companyBlock(s: GameState): string {
   const last = p.shipped[p.shipped.length - 1];
   const next = p.roadmap.slice(0, 2).map((r) => feature(r.id).name);
   const bugs = p.bugs < 15 ? '거의 없음' : p.bugs < 40 ? '조금 있음' : '많음';
-  const c = s.contracts?.active;
+  const cs = s.contracts?.actives ?? [];
   const offers = s.contracts?.offers.length ?? 0;
   return [
     `[회사] ${s.company.name}(${industry(s.company.industry).name}${svc ? `, 서비스 "${svc}"` : ''}), 직원 ${s.employees.length}명, 자금 사정 ${money}, 근무 방침 ${POLICY_WORD[s.company.workPolicy] ?? '보통'}.`,
     `[제품] ${userWord}. ${last ? `최근 출시: "${feature(last.id).name}". ` : ''}다음에 만들 기능: ${next.length ? next.map((n) => `"${n}"`).join(', ') : '정해지지 않음'}. 버그: ${bugs}.`,
-    `[외주] ${c ? `"${c.title}"(${c.client}) 진행 중` : '진행 중인 일감 없음'}${offers ? `, 새로 들어온 제안 ${offers}건` : ''}.`,
+    `[외주] ${cs.length ? `${cs.map((c) => `"${c.title}"(${c.client})`).join(', ')} 진행 중` : '진행 중인 일감 없음'}${offers ? `, 새로 들어온 제안 ${offers}건` : ''}.`,
   ].join('\n');
 }
 

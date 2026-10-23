@@ -4,7 +4,7 @@
 import { dept, orderDef } from './data';
 import { deptMembers } from './employees';
 import { runwayMonths } from './finance';
-import { post, teamChannelId } from './messenger';
+import { post } from './messenger';
 import { notify } from './notify';
 import { pick, rand } from './rng';
 import { hasTrait, isSick, marketSalary, satTarget } from './staff';
@@ -100,7 +100,7 @@ export function commandOrder(s: GameState, d: DeptId, orderId: string, said = tr
   if (!o || o.dept !== d) return '이 부서의 지시가 아닙니다.';
   if (s.company.stage < o.stage) return `회사 단계 ${o.stage}부터 내릴 수 있는 지시입니다.`;
   if (s.company.orders[d] === orderId) return null;
-  const ch = teamChannelId(d);
+  const ch = 'all'; // 직무 전체 지시는 #전체에서 답함(직무 채널 없음, A-237)
   const team = deptMembers(s, d).filter((e) => !isSick(s, e));
   const apply = () => {
     s.company.orders[d] = orderId;

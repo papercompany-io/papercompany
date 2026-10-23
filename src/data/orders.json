@@ -2,8 +2,7 @@
   "_note": "MG-03 부서 지시 v2(DEC-026, DEC-032): 부서마다 지금 맡은 일(상시 지시)을 하나 고르면 끝날 때까지가 아니라 바꿀 때까지 매일 출력이 그 일에 들어갑니다. MG-04 판정은 기능 출시 품질·캠페인 결과로 보고합니다. stage = 고를 수 있는 회사 단계(DC-05 늘어나는 선택지)",
   "orders": [
     { "id": "dev_build", "dept": "dev", "name": "로드맵 기능 개발", "desc": "제품 로드맵 맨 앞 기능부터 만듭니다.", "stage": 0 },
-    { "id": "dev_stabilize", "dept": "dev", "name": "안정화·버그 수정", "desc": "버그를 줄여 이탈과 장애를 막습니다.", "stage": 0 },
-    { "id": "dev_debt", "dept": "dev", "name": "기술 부채 정리", "desc": "버그를 크게 줄이고, 이후 개발에서 버그가 덜 생기게 합니다.", "stage": 2 },
+    { "id": "dev_stabilize", "dept": "dev", "name": "안정화·기술 부채 정리", "desc": "버그를 줄여 이탈과 장애를 막고, 쌓인 기술 부채도 조금씩 갚습니다.", "stage": 0 },
     { "id": "dev_contract", "dept": "dev", "name": "외주 작업", "desc": "개발팀이 받은 외주 일감을 합니다(끝내면 대금). 일감이 없으면 로드맵을 합니다.", "stage": 0 },
     { "id": "design_build", "dept": "design", "name": "기능 디자인", "desc": "로드맵 기능의 디자인 작업을 합니다.", "stage": 0 },
     { "id": "design_polish", "dept": "design", "name": "UX 다듬기", "desc": "완성도(매력도 배율)를 높입니다.", "stage": 0 },
@@ -31,8 +30,8 @@
   ],
   "defaults": { "dev": "dev_build", "design": "design_build", "sales": "sales_direct", "marketing": "mkt_content", "hr": "hr_recruit", "cs": "cs_support", "infra": "infra_reliability", "finlegal": "fl_compliance", "ai": "ai_tools", "adops": "ao_sell" },
   "squads": {
-    "_note": "A-226 부서 안의 팀 [예시값]. maxPerDept = 부서마다 만들 수 있는 팀 수, nameMax = 팀 이름 최대 글자. 팀 맡은 일을 recentDays일 안에 또 바꾸면 팀원 만족이 recentSat만큼 떨어짐(개인 업무 A-147과 같은 대가)",
-    "maxPerDept": 5, "nameMax": 12, "recentDays": 3, "recentSat": 2
+    "_note": "A-237 부서(=팀) [예시값]. max = 만들 수 있는 부서 수, nameMax = 부서 이름 최대 글자. 부서 맡은 일을 recentDays일 안에 또 바꾸면 팀원 만족이 recentSat만큼 떨어짐(개인 업무 A-147과 같은 대가)",
+    "max": 10, "nameMax": 12, "recentDays": 3, "recentSat": 2
   },
   "outage": {
     "_note": "A-143 기술 부채 → 장애 → 이탈·언론 → 투자 관심 [예시값]. 장애 확률 × (1 + debtProb × 기술 부채), 심각도 × (1 + debtSev × 기술 부채). 심각도 majorSev 넘는 큰 장애면 뉴스와 함께 결정 카드(기술 부채 debtCard 이상이면 '오래된 모듈 연쇄 장애', 아니면 '전면 중단')를 띄우고, 투자사는 investDays일 동안 결정 확률에서 investPenalty만큼(날이 갈수록 줄어듦) 깎아 봄",

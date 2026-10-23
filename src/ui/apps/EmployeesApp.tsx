@@ -8,7 +8,7 @@ import { DATA, DEPT_IDS, dept, trait } from '../../core/data';
 import { formatDate } from '../../core/calendar';
 import { severance } from '../../core/employees';
 import { monthlySalary, payrollWithBenefits } from '../../core/finance';
-import { bonusBlock, bonusCost, demoteLead, fire, giveBonus, giveRaise, healthTarget, isOff, isSick, leaveBlock, leaveOption, marketSalary, output, promoteLead, satTarget, sendLeave, employeeSpeed, type LeaveId } from '../../core/staff';
+import { bonusBlock, bonusCost, demoteLead, fire, giveBonus, giveRaise, healthTarget, hasLeave, isOff, isSick, leaveBlock, leaveOption, marketSalary, output, promoteLead, satTarget, sendLeave, employeeSpeed, type LeaveId } from '../../core/staff';
 import { esopEntry, esopFree, grantOptions, unvestedOptions, vestedFraction } from '../../core/equity';
 import { act, useGame } from '../store';
 import { Tabs } from '../common';
@@ -17,7 +17,7 @@ import { wonShort } from '../../core/format';
 import type { Employee, GameState, WorkPolicy } from '../../core/types';
 import './apps.css';
 import { EmpOrderSelect } from './MessengerApp';
-import { setSquad, squadsOf } from '../../core/squads';
+import { setSquad, squad, squadsOf } from '../../core/squads';
 import { HireTab } from './HiringApp';
 import { TeamApp, type OpenApp } from './TeamApp';
 import { AiApp } from './AiApp';
@@ -30,13 +30,13 @@ function meterCls(v: number) {
 
 export function Meter({ v, label }: { v: number; label: string }) {
   return (
-    <div className="col" style={{ gap: 2 }}>
-      <div className="row tiny">
-        <span className="muted grow">{label}</span>
+    <div className="emd-meter">
+      <div className="emd-meter-head">
+        <span>{label}</span>
         <b>{Math.round(v)}</b>
       </div>
       <div className={`meter ${meterCls(v)}`}>
-        <div style={{ width: `${v}%` }} />
+        <div style={{ width: `${Math.max(0, Math.min(100, v))}%` }} />
       </div>
     </div>
   );
@@ -56,9 +56,9 @@ export function EmployeeDetail({ e, openDm, compact }: { e: Employee; openDm?: (
   return (
     <div className="col emd" data-testid="emp-detail">
       <div className="emd-meta">
-        {kind} · {dept(e.dept).name}팀{e.lead ? ' 팀장' : ''} · 입사 {formatDate(e.joinedDay)} · 경력 {e.years}년
+        {kind} · {dept(e.dept).name}{e.lead ? ' 팀장' : ''} · {squad(s, e.squadId)?.name ?? '소속 없음'} · 입사 {formatDate(e.joinedDay)} · 경력 {e.years}년
       </div>
-      {(e.traits.length > 0 || isSick(s, e) || isOff(s, e) || e.leaving !== null) && (
+      {(e.traits.length > 0 || isSick(s, e) || hasLeave(s, e) || e.leaving !== null) && (
         <div className="emd-chips" title={e.traits.map((t) => `${trait(t)?.name}: ${trait(t)?.desc}`).join('\n')}>
           {e.traits.map((t) => (
             <span key={t} className="chip amber" title={trait(t)?.desc}>
@@ -66,7 +66,7 @@ export function EmployeeDetail({ e, openDm, compact }: { e: Employee; openDm?: (
             </span>
           ))}
           {isSick(s, e) && <span className="chip red">병가 ~{formatDate(e.sickUntil!)}</span>}
-          {isOff(s, e) && <span className="chip">쉬는 중 ~{formatDate(e.offUntil!)}</span>}
+          {hasLeave(s, e) && <span className="chip">{isOff(s, e) ? `휴가 중 ~${formatDate(e.offUntil! - 1)}` : `내일부터 ${e.offUntil! - e.offFrom!}일 휴가`}</span>}
           {e.leaving !== null && <span className="chip red">퇴사 예정 {formatDate(e.leaving)}</span>}
         </div>
       )}
@@ -105,24 +105,22 @@ export function EmployeeDetail({ e, openDm, compact }: { e: Employee; openDm?: (
       )}
       {!compact && (
         <>
+          {/* 부서(A-237): 부서를 먼저, 하는 일은 그 부서 기준(예외만 여기서) */}
           <label className="emd-field">
-            <span>맡은 일</span>
+            <span>부서</span>
+            <select data-testid="emp-squad" value={e.squadId ?? ''} onChange={(ev) => { const err = act((g) => setSquad(g, e.id, ev.target.value || null)); if (err) setMsg({ text: err, ok: false }); }}>
+              <option value="">소속 없음</option>
+              {squadsOf(s).map((q) => (
+                <option key={q.id} value={q.id}>
+                  {q.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="emd-field">
+            <span>하는 일</span>
             <EmpOrderSelect e={e} onErr={(m) => m && setMsg({ text: m, ok: false })} />
           </label>
-          {/* 부서 안의 팀(A-226): 그 부서에 팀이 있을 때만 */}
-          {squadsOf(s, e.dept).length > 0 && (
-            <label className="emd-field">
-              <span>소속 팀</span>
-              <select data-testid="emp-squad" value={e.squadId ?? ''} onChange={(ev) => { const err = act((g) => setSquad(g, e.id, ev.target.value || null)); if (err) setMsg({ text: err, ok: false }); }}>
-                <option value="">팀 없음 ({dept(e.dept).name}팀 바로 아래)</option>
-                {squadsOf(s, e.dept).map((q) => (
-                  <option key={q.id} value={q.id}>
-                    {q.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
           <div className="emd-acts act-row">
             <button className="btn small act-main" data-testid="bonus" disabled={!!bonusBlock(s, e)} title={bonusBlock(s, e) ?? '떨어진 만족도만큼 보너스를 줍니다(많이 떨어졌을수록 비쌈). 만족도가 가득 차지만, 처우가 그대로면 차츰 원래대로 돌아옵니다.'} onClick={() => run((g) => giveBonus(g, e.id), '보너스를 줬습니다. 만족도가 가득 찼습니다.')}>
               보너스 <small>{Math.round(bonusCost(e) / 1e4).toLocaleString('ko-KR')}만원</small>
@@ -195,7 +193,7 @@ export function EmployeesApp({ openDm, initial, openApp }: { openDm: (id: string
         tabs={[
           { id: 'people', label: `직원 ${s.employees.length}` },
           { id: 'hire', label: waiting ? `채용 · 지원자 ${waiting}` : '채용' },
-          { id: 'team', label: '팀' },
+          { id: 'team', label: '부서' },
           { id: 'welfare', label: '복지·근무' },
           ...(s.company.stage >= 1 ? [{ id: 'ai' as const, label: 'AI 도입' }] : []),
         ]}
@@ -373,7 +371,7 @@ function Welfare() {
   );
 }
 
-// 집에 보내기·3일 휴가(A-231): 쉬는 동안 일을 하지 않는 대신 건강·만족이 오름. 직원 관리·사무실 직원 창이 같은 버튼을 씀
+// 1일·3일 휴가(A-231, A-236): 쉬는 동안 일을 하지 않는 대신 건강·만족이 오름. 직원 관리·사무실 직원 창이 같은 버튼을 씀
 export function LeaveButtons({ e, run }: { e: Employee; run: (fn: (g: GameState) => string | null, ok: string) => void }) {
   const s = useGame();
   const why = leaveBlock(s, e);
@@ -387,8 +385,8 @@ export function LeaveButtons({ e, run }: { e: Employee; run: (fn: (g: GameState)
             className="btn small ghost"
             data-testid={`leave-${id}`}
             disabled={!!why}
-            title={why ?? `${o.days === 1 ? '오늘 하루' : `${o.days}일 동안`} 일을 하지 않고 쉽니다. 건강과 만족도가 오릅니다.`}
-            onClick={() => run((g) => sendLeave(g, e.id, id), id === 'home' ? `${e.name}님을 집에 보냈습니다. 오늘은 쉽니다.` : `${e.name}님이 ${o.days}일 휴가를 떠났습니다.`)}
+            title={why ?? `오늘 일을 끝내고 내일부터 ${o.days}일 동안 쉽니다. 건강과 만족도가 오릅니다.`}
+            onClick={() => run((g) => sendLeave(g, e.id, id), `${e.name}님이 내일부터 ${o.days}일 휴가를 갑니다. 오늘 일은 끝까지 합니다.`)}
           >
             {o.name}
           </button>

@@ -347,13 +347,13 @@ export function addBugs(s: GameState, work: number, mult: number) {
   if (mult > 1.05) s.product.debt = Math.min(1.5, s.product.debt + work * 0.0004 * (mult - 1));
 }
 
-export function fixBugs(s: GameState, work: number, kind: 'stabilize' | 'debt' | 'infra') {
+export function fixBugs(s: GameState, work: number, kind: 'stabilize' | 'infra') {
   const W = codebase(s);
   const scale = 100 / (W + 150);
-  if (kind === 'stabilize') s.product.bugs = Math.max(0, s.product.bugs - work * 1.3 * scale);
-  if (kind === 'debt') {
-    s.product.bugs = Math.max(0, s.product.bugs - work * 0.7 * scale);
-    s.product.debt = Math.max(0, s.product.debt - work * 0.002 * (300 / (W + 300)));
+  if (kind === 'stabilize') {
+    // A-240: 안정화·기술 부채 정리 한 일. 예전 안정화(버그 1.3)와 부채 정리(버그 0.7 + 부채 0.002)의 중간
+    s.product.bugs = Math.max(0, s.product.bugs - work * 1.0 * scale);
+    s.product.debt = Math.max(0, s.product.debt - work * 0.0012 * (300 / (W + 300)));
   }
   if (kind === 'infra') s.product.bugs = Math.max(0, s.product.bugs - work * 0.4 * scale);
 }

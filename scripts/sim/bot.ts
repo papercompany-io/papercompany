@@ -293,11 +293,11 @@ function opsStep(s: GameState) {
   else if (s.company.ceoMode === 'founder') {
     // 외주(A-79): 돈이 빠듯하면 가장 짧은 일감을 받아 2칸을 씁니다.
     const ct = s.contracts;
-    if (ct && !ct.active && ct.offers.length && s.cash < 25000000) acceptContract(s, [...ct.offers].sort((a, b) => a.work - b.work)[0].id);
+    if (ct && !ct.actives?.length && ct.offers.length && s.cash < 25000000) acceptContract(s, [...ct.offers].sort((a, b) => a.work - b.work)[0].id);
     // 실무 모드(A-101): 기본 업무 하나 + 초대받은 외출(투자 미팅·네트워킹·고객사 방문)은 겹치지 않고 돈이 되면 수락
     // 결제 기능(A-111)이 없으면 영업해 봐야 매출이 없으므로, 개발자가 없을 땐 결제까지 대표가 직접 만듭니다(유능한 플레이어)
     const devNeeded = !hasMvp(s) || (!NOVICE && !canCharge(s) && !s.employees.some((e) => e.dept === 'dev'));
-    setCeoWork(s, s.contracts?.active && s.cash < 25000000 ? 'contract' : devNeeded ? 'dev' : 'sales');
+    setCeoWork(s, s.contracts?.actives?.length && s.cash < 25000000 ? 'contract' : devNeeded ? 'dev' : 'sales');
     for (const o of outings(s).filter((x) => x.status === 'offer' && x.kind !== 'review')) if (o.cost * 20 < s.cash && energyOk(s)) acceptOuting(s, o.id);
   } else {
     // 경영 모드(A-101): 결재가 밀리면 결재, 아니면 대기업 영업. 외출 초대는 실무 모드와 같이 수락

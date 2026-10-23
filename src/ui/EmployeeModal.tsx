@@ -16,6 +16,7 @@ import { act, useGame } from './store';
 import { Tabs } from './common';
 import { PixelAvatar } from './office/Avatar';
 import { EmployeeDetail, LeaveButtons } from './apps/EmployeesApp';
+import { squad } from '../core/squads';
 import { DeptPage, hasSpecialWork, type OpenApp } from './apps/TeamApp';
 import './apps/skin/EmployeeModal.css';
 
@@ -45,7 +46,7 @@ export function EmployeeModal({ id, onClose, onDm, onManage, openApp, onEmployee
           <div className="epm-id">
             <b className="epm-name">{e.name}</b>
             <span className="epm-kicker">
-              {dept(e.dept).name}팀 · {e.lead ? '팀장' : kind} · 입사 {formatDate(e.joinedDay)} · 경력 {e.years}년
+              {dept(e.dept).name} · {e.lead ? '팀장' : kind} · {squad(s, e.squadId)?.name ?? '소속 없음'} · 입사 {formatDate(e.joinedDay)} · 경력 {e.years}년
             </span>
             <span className="epm-now">
               지금 하는 일 <em data-testid="emp-status">{orderLabel(s, e.dept)}</em>

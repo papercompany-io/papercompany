@@ -55,7 +55,7 @@ interface Props {
 export function Setup({ mode, wealth = 0, legacy, challenge: careerChallenge = null, owned = null, onDone, onCancel }: Props) {
   const profile = useProfile();
   const lg = legacy ?? profile.legacy;
-  const [step, setStep] = useState(mode === 'new' ? 0 : 1);
+  const [step, setStep] = useState(mode === 'new' ? 0 : 4);
   const [founderName, setFounderName] = useState('');
   const [challenge, setChallenge] = useState<string | null>(null);
   const [industry, setIndustry] = useState<IndustryId>('saas');
@@ -80,7 +80,10 @@ export function Setup({ mode, wealth = 0, legacy, challenge: careerChallenge = n
   const service = { field: INDUSTRIES.find((x) => x.id === industry)!.name, name: serviceName.trim() || name.trim() || '우리 서비스', logo };
   const cof = DATA.candidates.cofounders.find((c) => c.id === cofounderId);
 
+  // 화면 순서: 창업자(0) → 회사 이름(4) → 산업(1) → 창업자 스펙(2) → 첫 행보(5). 3(창업 팀)은 건너뜁니다.
   const steps = ['창업자', '산업', '창업자 스펙', '창업 팀', '회사 이름', '첫 행보'];
+  const order = [0, 4, 1, 2, 5];
+  const pos = order.indexOf(step);
 
   const confirmTeam = () => {
     if (cof && equity < cof.minEquity) {
@@ -89,7 +92,7 @@ export function Setup({ mode, wealth = 0, legacy, challenge: careerChallenge = n
       return;
     }
     setTeamMsg(null);
-    setStep(4);
+    setStep(5);
   };
 
   const finish = (wantsAngel: boolean) => {
@@ -103,8 +106,8 @@ export function Setup({ mode, wealth = 0, legacy, challenge: careerChallenge = n
         <div className="setup-head">
           <div className="setup-title">창업 신청서</div>
           <div className="setup-steps">
-            {steps.map((t, i) => ({ t, i })).filter((x) => x.i !== 3).map(({ t, i }, n) => (
-              <span key={t} className={i === step ? 'on' : i < step ? 'done' : ''}>
+            {order.map((i) => ({ t: steps[i], i })).map(({ t, i }, n) => (
+              <span key={t} className={i === step ? 'on' : n < pos ? 'done' : ''}>
                 {n + 1}. {t}
               </span>
             ))}
@@ -139,7 +142,7 @@ export function Setup({ mode, wealth = 0, legacy, challenge: careerChallenge = n
               ) : (
                 <span />
               )}
-              <button className="btn big" data-testid="founder-confirm" disabled={founderName.trim().length < 2} onClick={() => setStep(1)}>
+              <button className="btn big" data-testid="founder-confirm" disabled={founderName.trim().length < 2} onClick={() => setStep(4)}>
                 다음
               </button>
             </div>
@@ -197,17 +200,9 @@ export function Setup({ mode, wealth = 0, legacy, challenge: careerChallenge = n
               </div>
             </div>
             <div className="row" style={{ justifyContent: 'space-between' }}>
-              {mode === 'new' ? (
-                <button className="btn ghost" onClick={() => setStep(0)}>
-                  이전
-                </button>
-              ) : onCancel ? (
-                <button className="btn ghost" onClick={onCancel}>
-                  커리어 화면으로
-                </button>
-              ) : (
-                <span />
-              )}
+              <button className="btn ghost" onClick={() => setStep(4)}>
+                이전
+              </button>
               <button className="btn big" data-testid="industry-confirm" onClick={() => setStep(2)}>
                 다음
               </button>
@@ -275,7 +270,7 @@ export function Setup({ mode, wealth = 0, legacy, challenge: careerChallenge = n
               <div className="tiny muted" style={{ marginTop: 8 }}>
                 남은 크레딧은 회사 자금으로 넘어가지 않습니다.
               </div>
-              <button className="btn big" data-testid="spec-confirm" style={{ marginTop: 14 }} onClick={() => setStep(4)}>
+              <button className="btn big" data-testid="spec-confirm" style={{ marginTop: 14 }} onClick={() => setStep(5)}>
                 확정
               </button>
             </div>
@@ -368,10 +363,18 @@ export function Setup({ mode, wealth = 0, legacy, challenge: careerChallenge = n
               </div>
             )}
             <div className="row" style={{ justifyContent: 'space-between' }}>
-              <button className="btn ghost" onClick={() => setStep(2)}>
-                이전
-              </button>
-              <button className="btn big" data-testid="name-confirm" disabled={!!nameErr} onClick={() => setStep(5)}>
+              {mode === 'new' ? (
+                <button className="btn ghost" onClick={() => setStep(0)}>
+                  이전
+                </button>
+              ) : onCancel ? (
+                <button className="btn ghost" onClick={onCancel}>
+                  커리어 화면으로
+                </button>
+              ) : (
+                <span />
+              )}
+              <button className="btn big" data-testid="name-confirm" disabled={!!nameErr} onClick={() => setStep(1)}>
                 다음
               </button>
             </div>
@@ -392,7 +395,7 @@ export function Setup({ mode, wealth = 0, legacy, challenge: careerChallenge = n
                 <span className="tiny muted">자본금으로 제품과 매출부터 만듭니다. 투자는 나중에 언제든 열 수 있습니다.</span>
               </button>
             </div>
-            <button className="btn ghost" style={{ alignSelf: 'flex-start' }} onClick={() => setStep(4)}>
+            <button className="btn ghost" style={{ alignSelf: 'flex-start' }} onClick={() => setStep(2)}>
               이전
             </button>
           </div>

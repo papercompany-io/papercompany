@@ -8,7 +8,7 @@ import { deptMembers, employee, releaseSeat, severance } from './employees';
 import { book } from './finance';
 import { mod, addMod } from './mods';
 import { notify, float } from './notify';
-import { post, teamChannelId, onEmployeeLeft } from './messenger';
+import { post, onEmployeeLeft } from './messenger';
 import { deskCapacity, desks, officeComfort } from './office';
 import { rand, randInt } from './rng';
 import { aiMultiplier } from './aiadopt';
@@ -55,8 +55,13 @@ export function isSick(s: GameState, e: Employee) {
   return e.sickUntil !== null && e.sickUntil > s.day;
 }
 
-// 집에 보냄·휴가 중(A-231)
+// 휴가 중(A-231, A-236): 보낸 다음 날부터 days일. 오늘 하던 일은 끝까지 함
 export function isOff(s: GameState, e: Employee) {
+  return !!e.offUntil && e.offUntil > s.day && (e.offFrom ?? 0) <= s.day;
+}
+
+// 휴가가 잡혀 있음(내일부터 쉴 예정 포함)
+export function hasLeave(s: GameState, e: Employee) {
   return !!e.offUntil && e.offUntil > s.day;
 }
 
@@ -70,24 +75,25 @@ export function leaveOption(id: LeaveId) {
 // 쉬게 할 수 없는 이유(없으면 null)
 export function leaveBlock(s: GameState, e: Employee): string | null {
   if (isSick(s, e)) return '병가 중입니다.';
-  if (isOff(s, e)) return '이미 쉬는 중입니다.';
+  if (hasLeave(s, e)) return '이미 휴가가 잡혀 있습니다.';
   if (e.leaving !== null) return '퇴사 예정입니다.';
   if (e.leaveDay !== undefined && s.day - e.leaveDay < LEAVE.coolDays) return `최근에 쉬었습니다(${LEAVE.coolDays - (s.day - e.leaveDay)}일 뒤 다시).`;
   return null;
 }
 
-// 집에 보내기(오늘 하루)·3일 휴가(A-231): 쉬는 동안 일을 하지 않는 대신 건강·만족이 바로 오름
+// 1일·3일 휴가(A-231, A-236): 오늘 일은 끝까지 하고 다음 날부터 쉼. 쉬는 동안 일을 하지 않는 대신 건강·만족이 바로 오름
 export function sendLeave(s: GameState, empId: string, id: LeaveId): string | null {
   const e = employee(s, empId);
   if (!e) return '직원을 찾을 수 없습니다.';
   const why = leaveBlock(s, e);
   if (why) return why;
   const o = leaveOption(id);
-  e.offUntil = s.day + o.days;
+  e.offFrom = s.day + 1;
+  e.offUntil = s.day + 1 + o.days;
   e.leaveDay = s.day;
   e.health = Math.min(100, e.health + o.health);
   e.sat = Math.min(100, e.sat + o.sat);
-  float(s, id === 'home' ? '퇴근' : '휴가', 'good', e.seatId ?? undefined);
+  float(s, '휴가', 'good', e.seatId ?? undefined);
   return null;
 }
 
@@ -248,7 +254,7 @@ export function staffMonth(s: GameState, january: boolean) {
       e.leaving = s.day + 14;
       e.bubble = { text: 'box', until: e.leaving };
       notify(s, `${e.name}님이 퇴사 의사를 밝혔습니다(2주 뒤). 만족도 ${Math.round(e.sat)}.`, 'bad', 'employees');
-      post(s, teamChannelId(e.dept), e.name, '대표님, 고민 끝에 회사를 떠나기로 했습니다. 2주 동안 인수인계하겠습니다.', 'npc');
+      post(s, `dm-${e.id}`, e.name, '대표님, 고민 끝에 회사를 떠나기로 했습니다. 2주 동안 인수인계하겠습니다.', 'npc');
     }
   }
   if (january && s.company.raiseRate > 0) {
@@ -291,7 +297,7 @@ export function promoteLead(s: GameState, empId: string): string | null {
   e.salary = Math.round((e.salary * 1.15) / 10000) * 10000;
   e.sat = Math.min(100, e.sat + 12);
   e.bubble = { text: 'star', until: s.day + 5 };
-  post(s, teamChannelId(e.dept), '시스템', `${e.name}님이 ${dept(e.dept).name}팀 팀장이 되었습니다(월급 15% 인상).`, 'system');
+  post(s, 'all', '시스템', `${e.name}님이 ${dept(e.dept).name} 팀장이 되었습니다(월급 15% 인상).`, 'system');
   return null;
 }
 
