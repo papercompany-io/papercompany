@@ -2079,3 +2079,11 @@ input[type='checkbox'] { accent-color: var(--accent); width: 16px; height: 16px;
 .tm-urgent { background: var(--negative); }
 .tm-achievement { background: var(--gold-d); }
 .tm-dot:last-of-type { margin-right: 4px; }
+
+/* 화면(A-191): 팀 앱이 늘어 메뉴가 16개 — 높이 1000px 아래 화면에서는 메뉴 버튼을 조금 작게 해 마지막(설정)까지 한 화면에 */
+@media (max-height: 1000px) {
+  .sidebar { gap: 1px; padding: 6px 4px; }
+  .sb-item { gap: 2px; padding: 2px 2px 2px; }
+  .sb-icon { width: 32px; height: 32px; }
+  .sb-icon svg { width: 20px; height: 20px; }
+}

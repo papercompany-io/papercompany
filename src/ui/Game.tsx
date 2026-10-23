@@ -298,6 +298,11 @@ export function Game({ continued, notice, clearNotice, onEnded }: Props) {
             setEmpModal(null);
             openDesktop('employees');
           }}
+          openApp={(app, arg) => {
+            setEmpModal(null);
+            openDesktop(app, arg);
+          }}
+          onEmployee={(id) => setEmpModal(id)}
         />
       )}
       {waitAsk && (

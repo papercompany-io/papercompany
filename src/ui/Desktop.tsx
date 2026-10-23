@@ -22,11 +22,12 @@ import { NewsApp } from './apps/NewsApp';
 import { RankingApp } from './apps/RankingApp';
 import { CareerApp } from './apps/CareerApp';
 import { SettingsApp } from './apps/SettingsApp';
+import { TeamApp } from './apps/TeamApp';
 import { AppIcon, APP_COLORS } from './icons';
 import type { GameState } from '../core/types';
 import './desktop.css';
 
-export type AppId = 'schedule' | 'messenger' | 'product' | 'market' | 'hiring' | 'employees' | 'ai' | 'office' | 'shop' | 'invest' | 'finance' | 'exit' | 'stock' | 'news' | 'career' | 'ranking' | 'settings';
+export type AppId = 'schedule' | 'messenger' | 'product' | 'market' | 'hiring' | 'employees' | 'team' | 'ai' | 'office' | 'shop' | 'invest' | 'finance' | 'exit' | 'stock' | 'news' | 'career' | 'ranking' | 'settings';
 
 // 일정은 왼쪽 메뉴에 없음: 사무실에서 대표(나)를 눌러야만 열림(창 제목·알림 연결용으로 목록에는 둠)
 export const APPS: { id: AppId; name: string; unit: string; desc: string; stage: number; publicOnly?: boolean; noMenu?: boolean }[] = [
@@ -36,6 +37,7 @@ export const APPS: { id: AppId; name: string; unit: string; desc: string; stage:
   { id: 'market', name: '시장·광고', unit: 'RV 시장·경쟁', desc: '고객·광고·경쟁사', stage: 1 },
   { id: 'hiring', name: '채용', unit: 'F04 채용', desc: '공고·지원자·위임', stage: 0 },
   { id: 'employees', name: '직원 관리', unit: 'F05 직원·조직', desc: '직원·팀장·복지', stage: 0 },
+  { id: 'team', name: '팀', unit: 'A-191 부서 일', desc: '부서별 하는 일·지시', stage: 0 }, // A-191: 부서마다 하는 일 페이지(마케팅·고객지원·세일즈…)
   { id: 'ai', name: 'AI 도입', unit: 'F07 AI 도입', desc: '모델·적용률', stage: 1 },
   { id: 'shop', name: '상점', unit: 'OF-07 상점', desc: '책상·가구 사서 놓기', stage: 0 },
   { id: 'office', name: '사무실', unit: 'OF-07 사무실', desc: '넓이·이전', stage: 0 },
@@ -256,6 +258,7 @@ export function AppPanel({
         {app === 'schedule' && <ScheduleApp />}
         {app === 'hiring' && <HiringApp />}
         {app === 'employees' && <EmployeesApp openDm={(id) => setApp('messenger', `dm-${id}`)} />}
+        {app === 'team' && <TeamApp key={arg} initial={arg} openApp={setApp} />}
         {app === 'messenger' && <MessengerApp initial={arg} openInvest={() => setApp('invest')} />}
         {app === 'invest' && <InvestApp initialStage={arg} openChat={(ch) => setApp('messenger', ch)} />}
         {app === 'finance' && <FinanceApp />}

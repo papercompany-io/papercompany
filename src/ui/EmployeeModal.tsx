@@ -1,5 +1,6 @@
 // OF-06 직원 클릭 정보 모달: 이름·부서·능력·만족도·건강·숙련·특성·지금 하는 일
 // 화면(A-180): 직원 상세 톤(A-179)에 맞춘 머리 + 아래 행동 버튼(보너스·DM·연봉 인상·직원 관리). 결과는 버튼 위 한 줄로
+// 화면(A-191): 한 줄 짜임 — 왼쪽 직원 정보, 오른쪽 그 직원 부서가 하는 일 페이지(팀 앱과 같은 DeptPage, 바로 조작). 오른쪽 사람 칩을 누르면 같은 팀의 다른 직원으로
 import { useState } from 'react';
 import { dept } from '../core/data';
 import { orderLabel } from '../core/orders';
@@ -8,9 +9,10 @@ import type { GameState } from '../core/types';
 import { act, useGame } from './store';
 import { PixelAvatar } from './office/Avatar';
 import { EmployeeDetail } from './apps/EmployeesApp';
+import { DeptPage, type OpenApp } from './apps/TeamApp';
 import './apps/skin/EmployeeModal.css';
 
-export function EmployeeModal({ id, onClose, onDm, onManage }: { id: string; onClose: () => void; onDm: (id: string) => void; onManage: () => void }) {
+export function EmployeeModal({ id, onClose, onDm, onManage, openApp, onEmployee }: { id: string; onClose: () => void; onDm: (id: string) => void; onManage: () => void; openApp?: OpenApp; onEmployee?: (id: string) => void }) {
   const s = useGame();
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
   const e = s.employees.find((x) => x.id === id);
@@ -25,7 +27,8 @@ export function EmployeeModal({ id, onClose, onDm, onManage }: { id: string; onC
   };
   return (
     <div className="modal-bg" onClick={onClose}>
-      <div className="modal emp-modal epm" data-testid="employee-modal" onClick={(ev) => ev.stopPropagation()} style={{ ['--dc' as string]: color }}>
+      <div className={`modal emp-modal epm ${openApp ? 'wide' : ''}`} data-testid="employee-modal" onClick={(ev) => ev.stopPropagation()} style={{ ['--dc' as string]: color }}>
+        <div className="epm-left">
         <div className="epm-head">
           <div className="epm-avatar">
             <PixelAvatar id={e.id} color={color} />
@@ -75,6 +78,12 @@ export function EmployeeModal({ id, onClose, onDm, onManage }: { id: string; onC
             </button>
           </div>
         </div>
+        </div>
+        {openApp && (
+          <div className="epm-right" data-testid="employee-modal-work">
+            <DeptPage d={e.dept} openApp={openApp} focusId={e.id} onEmployee={onEmployee} />
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,0 +1,31 @@
+/* 화면(A-191): 팀 앱·직원 창 오른쪽의 부서 페이지. 위 띠(부서색 왼쪽 줄 + 팀 이름·사람·맡은 일) + 아래 그 부서가 하는 일 화면. 루트 .dpg 아래로만 */
+
+.dpg { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.dpg-head { display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; border-left: 4px solid var(--dc); border-radius: var(--r-sm); background: color-mix(in srgb, var(--dc) 8%, var(--surface-sunk)); }
+.dpg-title { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.dpg-title b { font-size: var(--fs-lg); color: var(--text); }
+.dpg-dot { width: 10px; height: 10px; border-radius: 3px; background: var(--dc); flex: none; }
+.dpg-meta { font-size: var(--fs-sm); color: var(--text-3); }
+.dpg-order { display: grid; grid-template-columns: auto minmax(0, 260px) 1fr; align-items: center; gap: 4px 10px; }
+.dpg-order .hf-label { margin: 0; }
+.dpg-order select { min-width: 0; }
+.dpg-desc { font-size: var(--fs-sm); color: var(--text-2); min-width: 0; }
+.dpg-people { display: flex; flex-wrap: wrap; gap: 6px; }
+.dpg-person { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 3px; border: 1px solid var(--line); border-radius: var(--r-full); background: var(--surface); color: var(--text-2); font: inherit; font-size: var(--fs-sm); cursor: pointer; }
+.dpg-person canvas { border-radius: 50%; background: color-mix(in srgb, var(--dc) 24%, var(--surface)); }
+.dpg-person:disabled { cursor: default; }
+.dpg-person:not(:disabled):hover { border-color: var(--line-strong); color: var(--text); }
+.dpg-person.on { border-color: var(--dc); color: var(--text); font-weight: 700; box-shadow: inset 0 0 0 1px var(--dc); }
+.dpg-msg { margin: 0; text-align: left; }
+.dpg-body { min-width: 0; }
+
+.dpg-cover { display: flex; flex-direction: column; gap: 8px; max-width: 520px; }
+.dpg-cover-row { display: flex; align-items: center; gap: 10px; }
+.dpg-cover-row .meter { flex: 1; }
+.dpg-cover-row b { font-variant-numeric: tabular-nums; }
+.dpg-cover .btn { align-self: flex-start; }
+
+.dpg-empty { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 48px 16px; text-align: center; color: var(--text-2); }
+.dpg-empty b { font-size: var(--fs-lg); color: var(--text); }
+
+@media (max-width: 760px) { .dpg-order { grid-template-columns: 1fr; } }

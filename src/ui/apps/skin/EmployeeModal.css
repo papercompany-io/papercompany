@@ -33,3 +33,15 @@
   .epm-acts { grid-template-columns: 1fr 1fr; }
   .epm-main { grid-column: 1 / -1; }
 }
+
+/* 화면(A-191): 한 줄 짜임 — 왼쪽 직원 정보(예전 창 그대로), 오른쪽 그 부서가 하는 일(DeptPage). 두 칸은 각자 스크롤 */
+.modal.emp-modal.epm.wide { width: min(1180px, calc(100vw - 48px)); max-height: calc(100vh - 64px); display: grid; grid-template-columns: 420px minmax(0, 1fr); }
+.epm.wide .epm-left { display: flex; flex-direction: column; min-height: 0; overflow: auto; border-right: 1px solid var(--line); }
+.epm.wide .epm-right { min-width: 0; min-height: 0; overflow: auto; padding: 16px 18px 18px; background: var(--surface); }
+/* 좁은 오른쪽 칸 안에서는 부서 화면의 두 칸 짜임(판 + 카드 목록)을 한 칸으로 */
+.epm-right .hire-layout { grid-template-columns: 1fr; }
+@media (max-width: 1000px) {
+  .modal.emp-modal.epm.wide { grid-template-columns: 1fr; overflow: auto; }
+  .epm.wide .epm-left { overflow: visible; border-right: none; border-bottom: 1px solid var(--line); }
+  .epm.wide .epm-right { overflow: visible; }
+}

@@ -551,7 +551,7 @@ function NegotiationDialog({ applicantId, onClose, onDone }: { applicantId: stri
 }
 
 // HR-07 인사팀 위임 채용: 부서별 목표 인원과 월급 수준만 정하면 인사팀이 알아서 뽑습니다(수수료: 월급의 30%).
-function AutoHire() {
+export function AutoHire() {
   const s = useGame();
   const hr = s.employees.filter((e) => e.dept === 'hr').length;
   const [msg, setMsg] = useState<string | null>(null);

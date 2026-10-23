@@ -979,7 +979,7 @@ function SprintSummary({ s, v }: { s: GameState; v: View }) {
   );
 }
 
-function Roadmap({ s, v, openSchedule, goFeatures }: { s: GameState; v: View; openSchedule?: () => void; goFeatures: () => void }) {
+export function Roadmap({ s, v, openSchedule, goFeatures }: { s: GameState; v: View; openSchedule?: () => void; goFeatures: () => void }) {
   const spans = itemSpans(s, v.etas);
   return (
     <div className="wk-road">

@@ -355,7 +355,7 @@ function Competitors({ setMsg }: { setMsg: (m: string | null) => void }) {
   );
 }
 
-function Enterprise() {
+export function Enterprise() {
   const s = useGame();
   const need = enterpriseThreshold(s);
   const ready = fxTotals(s).enterprise;
