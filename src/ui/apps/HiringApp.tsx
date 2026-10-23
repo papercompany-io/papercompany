@@ -20,7 +20,7 @@ export function HireTab() {
   const waiting = s.applicants.filter((a) => a.status === 'waiting').sort((x, y) => y.arrivedDay - x.arrivedDay || (y.id > x.id ? 1 : -1));
   const open = s.postings.filter((p) => p.status === 'open');
   // 인원·기간은 고르지 않음(A-89: 무제한, 직접 마감할 때까지)
-  const [form, setForm] = useState({ dept: 'dev' as DeptId, level: 'mid', promo: 'none' });
+  const [form, setForm] = useState({ dept: 'dev' as DeptId, level: 'junior', promo: 'none' });
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [offerFor, setOfferFor] = useState<string | null>(null);
   const warnings = postingWarnings(s);
