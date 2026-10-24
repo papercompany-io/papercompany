@@ -50,11 +50,12 @@ export function setMuted(m: boolean) {
 
 // 배경음악: 파일 하나를 반복 재생합니다. 브라우저 정책상 첫 클릭·키 입력 뒤에 시작합니다.
 let bgm: HTMLAudioElement | null = null;
+let musicOn = false; // 게임 화면에 있을 때만 켭니다
 
 function applyMusic() {
   if (!bgm) return;
   bgm.volume = muted ? 0 : musicVolume;
-  if (musicVolume > 0 && !muted) void bgm.play().catch(() => {});
+  if (musicOn && musicVolume > 0 && !muted) void bgm.play().catch(() => {});
   else bgm.pause();
 }
 
@@ -64,10 +65,14 @@ export function setMusicVolume(v: number) {
   persist();
 }
 
-export function startMusic() {
-  if (typeof window === 'undefined' || bgm) return;
-  bgm = new Audio(bgmUrl);
-  bgm.loop = true;
+export function setMusicOn(on: boolean) {
+  if (typeof window === 'undefined') return;
+  musicOn = on;
+  if (!bgm && !on) return;
+  if (!bgm) {
+    bgm = new Audio(bgmUrl);
+    bgm.loop = true;
+  }
   applyMusic();
 }
 

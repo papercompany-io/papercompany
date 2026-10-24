@@ -13,7 +13,7 @@ import { newCareer, nextCompany, ownedSpecs } from '../core/state';
 import { recordCareerInProfile, recordCompanyInProfile, retire } from '../core/career';
 import { formatDate } from '../core/calendar';
 import type { GameState } from '../core/types';
-import { play, startMusic } from './sound';
+import { play, setMusicOn } from './sound';
 
 type Screen = 'boot' | 'setup' | 'game' | 'career' | 'next' | 'ending' | 'hall';
 
@@ -41,39 +41,18 @@ export function App() {
     void loadProfile().then(setProfile);
   }, []);
   useEffect(() => onAppClosing(() => saveNow('종료')), []);
-  // 배경음악(A-246): 첫 입력이 있어야 브라우저가 소리를 허용합니다
+  // 배경음악(A-246): 게임 화면에서만 재생. 브라우저가 막으면 다음 입력 때 다시 시도
   useEffect(() => {
-    const go = () => {
-      startMusic();
-      document.removeEventListener('pointerdown', go);
-      document.removeEventListener('keydown', go);
-    };
-    document.addEventListener('pointerdown', go);
-    document.addEventListener('keydown', go);
+    setMusicOn(screen === 'game');
+    if (screen !== 'game') return;
+    const retry = () => setMusicOn(true);
+    document.addEventListener('pointerdown', retry);
+    document.addEventListener('keydown', retry);
     return () => {
-      document.removeEventListener('pointerdown', go);
-      document.removeEventListener('keydown', go);
+      document.removeEventListener('pointerdown', retry);
+      document.removeEventListener('keydown', retry);
     };
-  }, []);
-  // 화면 전체 UI 효과음: 누를 수 있는 버튼은 클릭음, 런처 아이콘·선택지 카드에 마우스를 올리면 짧은 틱
-  useEffect(() => {
-    const down = (e: PointerEvent) => {
-      const el = (e.target as HTMLElement | null)?.closest('button, .tab, select');
-      if (el && !(el as HTMLButtonElement).disabled) play('click');
-    };
-    let lastHover: Element | null = null;
-    const over = (e: MouseEvent) => {
-      const el = (e.target as HTMLElement | null)?.closest('.icon:not(.locked), .dc-choice:not(:disabled), .order:not(:disabled), .feat:not(:disabled)');
-      if (el && el !== lastHover) play('type');
-      lastHover = el ?? null;
-    };
-    document.addEventListener('pointerdown', down);
-    document.addEventListener('mouseover', over);
-    return () => {
-      document.removeEventListener('pointerdown', down);
-      document.removeEventListener('mouseover', over);
-    };
-  }, []);
+  }, [screen]);
 
   const startGame = (s: GameState) => {
     setGame(s);
