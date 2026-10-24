@@ -13,7 +13,7 @@ import { newCareer, nextCompany, ownedSpecs } from '../core/state';
 import { recordCareerInProfile, recordCompanyInProfile, retire } from '../core/career';
 import { formatDate } from '../core/calendar';
 import type { GameState } from '../core/types';
-import { play } from './sound';
+import { play, startMusic } from './sound';
 
 type Screen = 'boot' | 'setup' | 'game' | 'career' | 'next' | 'ending' | 'hall';
 
@@ -41,6 +41,20 @@ export function App() {
     void loadProfile().then(setProfile);
   }, []);
   useEffect(() => onAppClosing(() => saveNow('종료')), []);
+  // 배경음악(A-246): 첫 입력이 있어야 브라우저가 소리를 허용합니다
+  useEffect(() => {
+    const go = () => {
+      startMusic();
+      document.removeEventListener('pointerdown', go);
+      document.removeEventListener('keydown', go);
+    };
+    document.addEventListener('pointerdown', go);
+    document.addEventListener('keydown', go);
+    return () => {
+      document.removeEventListener('pointerdown', go);
+      document.removeEventListener('keydown', go);
+    };
+  }, []);
   // 화면 전체 UI 효과음: 누를 수 있는 버튼은 클릭음, 런처 아이콘·선택지 카드에 마우스를 올리면 짧은 틱
   useEffect(() => {
     const down = (e: PointerEvent) => {

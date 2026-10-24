@@ -2,7 +2,7 @@
 // 화면 짜임(A-106): 회색 판 묶음마다 "이름 왼쪽 · 조작 오른쪽" 줄. 켜고 끄는 건 스위치
 // 화면(A-179): 업무·커리어와 같은 톤 — 가운데 제목 + 설정 앱 타일, 묶음은 1px 테두리 납작한 카드, 묶음 이름·키는 픽셀 글꼴, 고르기는 알약. 긴 안내는 title로
 import { useState } from 'react';
-import { setMuted, setVolume, soundSettings, play } from '../sound';
+import { setMuted, setMusicVolume, setVolume, soundSettings, play } from '../sound';
 import { setAutoSkip, setSettings, useSettings } from '../meta';
 import { saveNow } from '../autosave';
 import { toggleFullscreen, isElectron } from '../../platform/save';
@@ -70,7 +70,24 @@ export function SettingsApp() {
           />
           <span className="set-num">{Math.round(snd.volume * 100)}</span>
         </Row>
-        <Row title="음소거">
+        {/* 배경음악(A-246): 효과음과 따로 조절, 기본은 작게 */}
+        <Row title="배경음악 음량">
+          <input
+            type="range"
+            data-testid="music-volume"
+            min={0}
+            max={1}
+            step={0.05}
+            value={snd.musicVolume}
+            disabled={snd.muted}
+            onChange={(e) => {
+              setMusicVolume(Number(e.target.value));
+              setSnd(soundSettings());
+            }}
+          />
+          <span className="set-num">{Math.round(snd.musicVolume * 100)}</span>
+        </Row>
+        <Row title="음소거" sub="효과음과 배경음악을 함께 끕니다.">
           <Switch
             label="음소거"
             on={snd.muted}

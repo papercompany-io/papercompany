@@ -1,19 +1,23 @@
 // 효과음: 외부 파일 없이 WebAudio로 짧은 칩튠 소리를 만듭니다(픽셀 아트와 맞춤).
 // 브라우저 정책상 첫 사용자 입력 뒤에 소리가 납니다. 음량·끄기는 설정(DT-08)에서 바꿉니다.
 
+import bgmUrl from '../assets/audio/paper_company_ost.m4a';
+
 export type Sfx = 'click' | 'open' | 'close' | 'coin' | 'success' | 'fail' | 'notify' | 'hire' | 'levelup' | 'warn' | 'type';
 
 let ctx: AudioContext | null = null;
 let master: GainNode | null = null;
 let volume = 0.5;
 let muted = false;
+let musicVolume = 0.25; // 배경음악 음량(작게 시작) [예시값]
 
 try {
   const raw = localStorage.getItem('papercompany.sound');
   if (raw) {
-    const v = JSON.parse(raw) as { volume?: number; muted?: boolean };
+    const v = JSON.parse(raw) as { volume?: number; muted?: boolean; musicVolume?: number };
     if (typeof v.volume === 'number') volume = v.volume;
     if (typeof v.muted === 'boolean') muted = v.muted;
+    if (typeof v.musicVolume === 'number') musicVolume = v.musicVolume;
   }
 } catch {
   /* 저장소를 못 쓰면 기본값 */
@@ -21,14 +25,14 @@ try {
 
 function persist() {
   try {
-    localStorage.setItem('papercompany.sound', JSON.stringify({ volume, muted }));
+    localStorage.setItem('papercompany.sound', JSON.stringify({ volume, muted, musicVolume }));
   } catch {
     /* 무시 */
   }
 }
 
 export function soundSettings() {
-  return { volume, muted };
+  return { volume, muted, musicVolume };
 }
 
 export function setVolume(v: number) {
@@ -40,7 +44,31 @@ export function setVolume(v: number) {
 export function setMuted(m: boolean) {
   muted = m;
   if (master) master.gain.value = muted ? 0 : volume * 0.35;
+  applyMusic();
   persist();
+}
+
+// 배경음악: 파일 하나를 반복 재생합니다. 브라우저 정책상 첫 클릭·키 입력 뒤에 시작합니다.
+let bgm: HTMLAudioElement | null = null;
+
+function applyMusic() {
+  if (!bgm) return;
+  bgm.volume = muted ? 0 : musicVolume;
+  if (musicVolume > 0 && !muted) void bgm.play().catch(() => {});
+  else bgm.pause();
+}
+
+export function setMusicVolume(v: number) {
+  musicVolume = Math.max(0, Math.min(1, v));
+  applyMusic();
+  persist();
+}
+
+export function startMusic() {
+  if (typeof window === 'undefined' || bgm) return;
+  bgm = new Audio(bgmUrl);
+  bgm.loop = true;
+  applyMusic();
 }
 
 function ac(): AudioContext | null {
