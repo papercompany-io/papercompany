@@ -1,6 +1,6 @@
 // 계정·클라우드 저장 묶음(A-247). 설정 창 아래에 붙습니다. 서버가 없거나 로그아웃이면 오프라인으로 그대로 플레이합니다.
 import { useEffect, useState } from 'react';
-import { getServerUrl, isElectronUrlEditable, online, OnlineError, setServerUrl, type Account, type CloudSaveMeta, type SaveSlot } from '../platform/online';
+import { getServerUrl, isElectronUrlEditable, isOnlineMode, online, OnlineError, setOnlineMode, setServerUrl, type Account, type CloudSaveMeta, type SaveSlot } from '../platform/online';
 import { parseSaveText, saveGame } from '../platform/save';
 import { setGame, useGame } from './store';
 import { RecoveryCodes } from './RecoveryCodes';
@@ -22,6 +22,7 @@ export function AccountPanel() {
   const [confirm, setConfirm] = useState<{ slot: SaveSlot; kind: 'load' | 'del' } | null>(null);
   const [offline, setOffline] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [onlineMode, setOnlineModeState] = useState(isOnlineMode());
 
   const set = (k: keyof Form) => (e: { target: { value: string } }) => setF({ ...f, [k]: e.target.value });
   const run = (fn: () => Promise<unknown>, okText?: string) => async () => {
@@ -167,8 +168,24 @@ export function AccountPanel() {
             <span className="tiny muted">{me.totpEnabled ? '2단계 인증 사용 중' : '2단계 인증 꺼짐'}</span>
             <button className="btn small ghost" data-testid="acc-logout" style={{ marginLeft: 'auto' }} onClick={run(async () => {
               await online.logout(); setMe(null); setCodes(null); setTotp(null); setTicket('');
+              setOnlineModeState(false);
               setF((old) => ({ ...old, password: '', code: '' }));
             })}>로그아웃</button>
+          </div>
+          <div className="row" style={{ gap: 8, alignItems: 'center' }}>
+            <span className="tiny muted" data-testid="acc-online-status">
+              {onlineMode ? '온라인 모드 · 저장 지점마다 클라우드 main에 자동으로 맞춤' : '로컬 모드 · 이 기기에만 저장되고 있습니다'}
+            </span>
+            <button
+              className="btn small ghost"
+              data-testid="acc-online-toggle"
+              onClick={run(async () => {
+                setOnlineMode(!onlineMode);
+                setOnlineModeState(!onlineMode);
+              }, onlineMode ? '온라인 모드만 껐습니다. 이제부터 전환점에도 자동 동기화를 하지 않습니다.' : '온라인 모드를 켰습니다. 지금부터 전환점마다 클라우드와 자동으로 맞춥니다.')}
+            >
+              {onlineMode ? '온라인 모드 끄기' : '이 기기도 온라인 모드로'}
+            </button>
           </div>
           {!me.totpEnabled && !totp && <button className="btn small ghost" data-testid="acc-totp-setup" onClick={run(async () => setTotp(await online.totpSetup()))}>2단계 인증 켜기</button>}
           {totp && (
