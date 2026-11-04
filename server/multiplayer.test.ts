@@ -330,4 +330,20 @@ describe('주간 도전', () => {
     expect(r.status).toBe(409);
     expect((await call('GET', '/api/mp/challenges/2020-W01', null)).status).toBe(404);
   });
+
+  test('runScheduled가 대기 중인 제출을 실제로 검증합니다(server/worker.ts의 cron 연결 배선 검증)', async () => {
+    const { runScheduled } = await import('./worker');
+    const c = await current();
+    const r = await call('POST', `/api/mp/challenges/${c.id}/runs`, 'u1', { replay: replayPayload(c) });
+    expect(r.status).toBe(202);
+    const authEnv = {
+      ...env,
+      EMAIL: { send: async () => undefined },
+      EMAIL_FROM: 'no-reply@example.com',
+      AUTH_ENCRYPTION_KEY: '0'.repeat(64),
+    };
+    await runScheduled(authEnv, NOW);
+    const v = (await (await call('GET', `/api/mp/challenges/${c.id}/leaderboard`, null)).json()) as { entries: unknown[] };
+    expect(v.entries).toHaveLength(1);
+  });
 });
