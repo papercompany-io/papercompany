@@ -35,7 +35,7 @@
   // PR·브랜치마다 만드는 미리보기 배포(Cloudflare Pages Preview deployment)용. 프로덕션과 분리된 D1·R2라 실제 데이터와 섞이지 않음.
   "previews": {
     "vars": {
-      "EMAIL_FROM": "no-reply@preview.papercompany.local",
+      "EMAIL_FROM": "no-reply-preview@cloudflare.obong.me",
       "ALLOWED_ORIGINS": ""
     },
     "d1_databases": [
@@ -53,7 +53,7 @@
     "send_email": [
       {
         "name": "EMAIL",
-        "allowed_sender_addresses": ["no-reply@preview.papercompany.local"]
+        "allowed_sender_addresses": ["no-reply-preview@cloudflare.obong.me"]
       }
     ]
   }
