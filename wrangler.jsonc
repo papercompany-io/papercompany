@@ -16,15 +16,15 @@
     {
       "binding": "DB",
       "database_name": "papercompany",
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "42bb55a9-fdbb-415a-ac73-cdc6ee1857bf",
       "migrations_dir": "migrations"
     }
   ],
   "r2_buckets": [{ "binding": "SAVES", "bucket_name": "papercompany-saves" }],
-  // 로컬 개발에서 실제 메일을 보내지 않습니다. 보내는 도메인은 배포 전에 인증해야 합니다.
-  "send_email": [{ "name": "EMAIL", "allowed_sender_addresses": ["no-reply@example.com"], "remote": false }],
+  // cloudflare.obong.me를 Email Sending에 인증해 세운 발신 도메인입니다.
+  "send_email": [{ "name": "EMAIL", "allowed_sender_addresses": ["no-reply@cloudflare.obong.me"] }],
   "vars": {
-    "EMAIL_FROM": "no-reply@example.com",
+    "EMAIL_FROM": "no-reply@cloudflare.obong.me",
     "ALLOWED_ORIGINS": ""
   },
   // 15분마다 R2 지연 삭제와 끝난 세션·코드 정리
