@@ -6,6 +6,9 @@
   "compatibility_date": "2026-11-01",
   // bcryptjs가 난수용으로 node:crypto를 불러옵니다
   "compatibility_flags": ["nodejs_compat"],
+  // Cloudflare Workers Builds가 deploy 전에 돌리는 빌드 단계. npm run build(Electron용 dist)가 아니라
+  // 웹 정적 자산(dist-web)을 만드는 build:web을 써야 assets.directory가 채워짐.
+  "build": { "command": "npm run build:web" },
   "assets": {
     "directory": "dist-web",
     "binding": "ASSETS",
