@@ -10,13 +10,14 @@ import './boot.css';
 
 interface Props {
   onNew: () => void;
-  onContinue: (s: GameState, notice: string | null) => void;
+  onContinue: (s: GameState, notice: string | null, replay: unknown) => void;
   onHall: () => void;
+  onWeekly?: () => void;
 }
 
-export function Boot({ onNew, onContinue, onHall }: Props) {
+export function Boot({ onNew, onContinue, onHall, onWeekly }: Props) {
   const [progress, setProgress] = useState(0);
-  const [checked, setChecked] = useState<{ save: GameState | null; recovered: boolean; corrupt: boolean; old: boolean } | null>(null);
+  const [checked, setChecked] = useState<{ save: GameState | null; recovered: boolean; corrupt: boolean; old: boolean; replay: unknown } | null>(null);
   const profile = useProfile();
 
   useEffect(() => {
@@ -26,7 +27,7 @@ export function Boot({ onNew, onContinue, onHall }: Props) {
 
   useEffect(() => {
     if (progress < 100 || checked) return;
-    loadGame().then((r) => setChecked({ save: r.state, recovered: r.recovered, corrupt: r.corrupt, old: r.oldVersion }));
+    loadGame().then((r) => setChecked({ save: r.state, recovered: r.recovered, corrupt: r.corrupt, old: r.oldVersion, replay: r.replay }));
   }, [progress, checked]);
 
   const done = progress >= 100;
@@ -65,7 +66,7 @@ export function Boot({ onNew, onContinue, onHall }: Props) {
               data-testid="continue"
               onClick={() => {
                 play('open');
-                onContinue(sv!, checked.recovered ? '저장 파일이 손상되어 직전 자동 저장으로 복구했습니다.' : null);
+                onContinue(sv!, checked.recovered ? '저장 파일이 손상되어 직전 자동 저장으로 복구했습니다.' : null, checked.replay);
               }}
             >
               이어하기 · {sv!.career.founderName} · {sv!.ended ? '다음 회사 준비' : sv!.company.name}
@@ -87,6 +88,9 @@ export function Boot({ onNew, onContinue, onHall }: Props) {
           <button className="btn big ghost" data-testid="hall" onClick={onHall}>
             명예의 전당 · 레거시 ({profile.legacyPoints}점)
           </button>
+          {onWeekly && <button className="btn big ghost" data-testid="weekly-open" onClick={onWeekly}>
+            주간 도전 · 온라인 순위
+          </button>}
         </div>
       )}
     </div>

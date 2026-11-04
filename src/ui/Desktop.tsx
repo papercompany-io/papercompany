@@ -21,6 +21,7 @@ import { StockApp } from './apps/StockApp';
 import { RankingApp } from './apps/RankingApp';
 import { CareerApp } from './apps/CareerApp';
 import { SettingsApp } from './apps/SettingsApp';
+import { AccountPanel } from './AccountPanel';
 import { AppIcon, APP_COLORS } from './icons';
 import type { GameState } from '../core/types';
 import './desktop.css';
@@ -406,7 +407,12 @@ export function AppPanel({
         {app === 'stock' && <StockApp />}
         {app === 'career' && <CareerApp />}
         {app === 'ranking' && <RankingApp />}
-        {app === 'settings' && <SettingsApp />}
+        {app === 'settings' && (
+          <>
+            <SettingsApp />
+            <AccountPanel />
+          </>
+        )}
       </div>
       {box && EDGES.map((k) => <div key={k} className={`app-resize ${k}`} onPointerDown={grab(k)} onPointerMove={follow} onPointerUp={drop} onPointerCancel={drop} />)}
     </div>

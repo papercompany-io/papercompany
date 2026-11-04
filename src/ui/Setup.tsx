@@ -8,6 +8,7 @@ import { pct, wonShort } from '../core/format';
 import type { Grade, IndustryId } from '../core/types';
 import { typicalSpeed } from '../core/staff';
 import { useProfile } from './meta';
+import type { WeeklyChallenge } from '../platform/online';
 import { play } from './sound';
 import { PixelAvatar } from './office/Avatar';
 import { LOGO_COLORS, LOGO_MARKS, ServiceLogo, defaultLogo } from './logo';
@@ -47,17 +48,18 @@ interface Props {
   wealth?: number; // 다음 회사: 개인 자산
   legacy?: Record<string, number>;
   challenge?: string | null;
+  weekly?: WeeklyChallenge;
   owned?: Record<string, string> | null; // 다음 회사: 이미 가진 창업자 스펙
   onDone: (c: SetupChoices) => void;
   onCancel?: () => void;
 }
 
-export function Setup({ mode, wealth = 0, legacy, challenge: careerChallenge = null, owned = null, onDone, onCancel }: Props) {
+export function Setup({ mode, wealth = 0, legacy, challenge: careerChallenge = null, weekly, owned = null, onDone, onCancel }: Props) {
   const profile = useProfile();
   const lg = legacy ?? profile.legacy;
   const [step, setStep] = useState(mode === 'new' ? 0 : 4);
   const [founderName, setFounderName] = useState('');
-  const [challenge, setChallenge] = useState<string | null>(null);
+  const [challenge, setChallenge] = useState<string | null>(weekly?.rule ?? null);
   const [industry, setIndustry] = useState<IndustryId>('saas');
   const [invest, setInvest] = useState(0);
   const [picks, setPicks] = useState<Record<string, string>>(owned ? { ...owned } : defaultPicks());
@@ -67,7 +69,7 @@ export function Setup({ mode, wealth = 0, legacy, challenge: careerChallenge = n
   const [name, setName] = useState('');
   const [serviceName, setServiceName] = useState('');
   const [logo, setLogo] = useState(defaultLogo);
-  const [seed] = useState<number>(initialSeed);
+  const [seed] = useState<number>(() => weekly?.seed ?? initialSeed());
   const [teamMsg, setTeamMsg] = useState<string | null>(null);
 
   const budget = specBudget(lg);
@@ -119,8 +121,11 @@ export function Setup({ mode, wealth = 0, legacy, challenge: careerChallenge = n
             <div className="section-title">창업자 이름</div>
             <input className="name-input" data-testid="founder-name" placeholder="예: 김대표" value={founderName} maxLength={12} onChange={(e) => setFounderName(e.target.value)} />
             <div className="tiny muted">2027년, 30세. 빈 원룸에서 책상 하나, 혼자 시작합니다. 제품을 만들고 사람을 뽑고 가구를 들이며 회사를 키우세요. 65세에 은퇴할 때까지 여러 회사를 세우며 커리어를 쌓습니다. 회사가 끝나면(매각·상장·파산) 다음 회사를 세울 수 있습니다.</div>
-            <div className="section-title">도전 모드(선택)</div>
-            <div className="cands">
+            <div className="section-title">{weekly ? '주간 도전 규칙(고정)' : '도전 모드(선택)'}</div>
+            {weekly && <div className="info" data-testid="weekly-fixed-rule">
+              {DATA.career.challenges.find((c) => c.id === weekly.rule)?.name ?? '일반 커리어'} · 정해진 시드와 규칙으로 시작합니다.
+            </div>}
+            {!weekly && <div className="cands">
               <button className={`cand challenge ${challenge === null ? 'sel' : ''}`} data-testid="challenge-none" onClick={() => setChallenge(null)}>
                 <div className="cand-name">일반</div>
                 <div className="tiny muted">기본 커리어</div>
@@ -133,7 +138,7 @@ export function Setup({ mode, wealth = 0, legacy, challenge: careerChallenge = n
                   <div className="diff" style={c.legacyMult > 1.3 ? { color: 'var(--red)' } : { color: '#2c6fa8' }}>난이도 {c.legacyMult <= 1.3 ? '보통' : c.legacyMult <= 1.4 ? '어려움' : '매우 어려움'}</div>
                 </button>
               ))}
-            </div>
+            </div>}
             <div className="row" style={{ justifyContent: 'space-between' }}>
               {onCancel ? (
                 <button className="btn ghost" onClick={onCancel}>
