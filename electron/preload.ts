@@ -13,5 +13,8 @@ contextBridge.exposeInMainWorld('pcSave', {
   writeProfile: (data: string) => ipcRenderer.invoke('profile:write', data) as Promise<boolean>,
   toggleFullscreen: () => ipcRenderer.send('app:toggle-fullscreen'),
   quit: () => ipcRenderer.send('app:quit'),
+  clearOnlineSession: () => ipcRenderer.invoke('auth:clear') as Promise<void>,
+  onlineRequest: (request: { base: string; path: string; method: string; body?: string }) =>
+    ipcRenderer.invoke('auth:request', request) as Promise<{ status: number; ok: boolean; body: unknown }>,
   talk: (req: { system: string; user: string; schema: unknown; maxTokens: number }) => ipcRenderer.invoke('talk:chat', req) as Promise<string | null>,
 });
