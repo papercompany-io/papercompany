@@ -2,14 +2,12 @@
 // AccountPanel(설정 안 계정 묶음)과 같은 online API를 쓰지만, 부팅 화면에 맞는 어두운 배색으로 따로 그립니다.
 import { useState } from 'react';
 import { online, OnlineError, setOnlineMode } from '../platform/online';
-import { parseSaveText, saveGame } from '../platform/save';
-import type { GameState } from '../core/types';
 import { RecoveryCodes } from './RecoveryCodes';
 
 type Step = 'login' | 'register' | 'codes' | 'verify' | 'second';
 
-export function BootOnline({ onDone, onCancel }: {
-  readonly onDone: (loaded: GameState | null) => void; // loaded: 클라우드에 있던 판(없으면 null, 새 커리어로)
+export function BootOnline({ onLoggedIn, onCancel }: {
+  readonly onLoggedIn: () => void; // 로그인 성공: Boot가 다시 online.me()로 확인해 로비를 보여줌
   readonly onCancel: () => void;
 }) {
   const [step, setStep] = useState<Step>('login');
@@ -24,20 +22,9 @@ export function BootOnline({ onDone, onCancel }: {
   const [err, setErr] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
 
-  async function afterLogin() {
+  function afterLogin() {
     setOnlineMode(true);
-    try {
-      const { data } = await online.getSave('main');
-      const s = parseSaveText(data);
-      if (s) {
-        await saveGame(s);
-        onDone(s);
-        return;
-      }
-    } catch {
-      /* 클라우드에 저장이 없으면 새 커리어로 시작 */
-    }
-    onDone(null);
+    onLoggedIn();
   }
 
   const run = (fn: () => Promise<void>) => async () => {
@@ -56,7 +43,7 @@ export function BootOnline({ onDone, onCancel }: {
   const login = run(async () => {
     const r = await online.login(username, password);
     if ('needTotp' in r) { setTicket(r.ticket); setStep('second'); return; }
-    await afterLogin();
+    afterLogin();
   });
   const register = run(async () => {
     const r = await online.register(username, email, password);
@@ -71,7 +58,7 @@ export function BootOnline({ onDone, onCancel }: {
   });
   const second = run(async () => {
     await (useRecovery ? online.loginRecovery(ticket, code) : online.loginTotp(ticket, code));
-    await afterLogin();
+    afterLogin();
   });
 
   const field = (value: string, onChange: (v: string) => void, label: string, type = 'text', testid?: string) => (

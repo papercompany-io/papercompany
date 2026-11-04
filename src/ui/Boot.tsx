@@ -104,7 +104,7 @@ export function Boot({ onNew, onContinue, onHall, onWeekly }: Props) {
               onNew();
             }}
           >
-            {live ? '새 커리어(지금 저장은 덮어씁니다)' : !sv ? '로컬로 시작' : '새 커리어 시작'}
+            {live ? '새 커리어(지금 저장은 덮어씁니다)' : !sv && !me ? '로컬로 시작' : '새 커리어 시작'}
           </button>
           <button className="btn big ghost" data-testid="hall" onClick={onHall}>
             명예의 전당 · 레거시 ({profile.legacyPoints}점)
@@ -117,10 +117,9 @@ export function Boot({ onNew, onContinue, onHall, onWeekly }: Props) {
       {done && checked && onlinePick && (
         <BootOnline
           onCancel={() => setOnlinePick(false)}
-          onDone={(loaded) => {
-            play('open');
-            if (loaded) onContinue(loaded, null, null);
-            else onNew();
+          onLoggedIn={() => {
+            setOnlinePick(false);
+            void online.me().then((r) => setMe(r.state === 'in' ? r.account : null));
           }}
         />
       )}
