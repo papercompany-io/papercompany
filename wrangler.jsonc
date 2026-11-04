@@ -28,5 +28,30 @@
     "ALLOWED_ORIGINS": ""
   },
   // 15분마다 R2 지연 삭제와 끝난 세션·코드 정리
-  "triggers": { "crons": ["*/15 * * * *"] }
+  "triggers": { "crons": ["*/15 * * * *"] },
+  // PR·브랜치마다 만드는 미리보기 배포(Cloudflare Pages Preview deployment)용. 프로덕션과 분리된 D1·R2라 실제 데이터와 섞이지 않음.
+  "previews": {
+    "vars": {
+      "EMAIL_FROM": "no-reply@preview.papercompany.local",
+      "ALLOWED_ORIGINS": ""
+    },
+    "d1_databases": [
+      {
+        "binding": "DB",
+        "database_id": "a6120786-c2a1-45d6-b374-11ba4d0b17f4"
+      }
+    ],
+    "r2_buckets": [
+      {
+        "binding": "SAVES",
+        "bucket_name": "papercompany-saves-preview"
+      }
+    ],
+    "send_email": [
+      {
+        "name": "EMAIL",
+        "allowed_sender_addresses": ["no-reply@preview.papercompany.local"]
+      }
+    ]
+  }
 }
