@@ -27,7 +27,7 @@ import { DevPanel } from './DevPanel';
 import { Money, useTween } from './common';
 import { ServiceLogo } from './logo';
 import { nextHint } from './hints';
-import { requestAutosave } from './autosave';
+import { requestAutosave, takeSyncWarning } from './autosave';
 import { countShort, pct, wonShort } from '../core/format';
 import { play, type Sfx } from './sound';
 import { getSettings, toggleAutoSkip, useSettings } from './meta';
@@ -67,6 +67,9 @@ interface Win {
 export function Game({ continued, notice, clearNotice, onEnded }: Props) {
   const s = useGame();
   const settings = useSettings();
+  // 온라인 동기화(A-251) 알림: autosave.ts의 syncToCloud가 충돌을 해소하면 여기서 한 번 알려줌
+  const [syncWarning, setSyncWarning] = useState<string | null>(null);
+  const scheduleSyncCheck = () => setTimeout(() => { const w = takeSyncWarning(); if (w) setSyncWarning(w); }, 300);
   const [wins, setWins] = useState<Win[]>([]);
   const zTop = useRef(0);
   const winCount = useRef(0);
@@ -151,8 +154,8 @@ export function Game({ continued, notice, clearNotice, onEnded }: Props) {
     for (const e of evs) {
       if (e.type === 'offerReady') showApp('invest');
       if (e.type === 'needsTime' && !isRunning(s) && !s.ended && !waitDismissed.current) setWaitAsk(e.what);
-      if (e.type === 'autosave') requestAutosave(e.reason);
-      if (e.type === 'exitResult' || e.type === 'bankrupt' || e.type === 'companyEnded') requestAutosave('판 종료');
+      if (e.type === 'autosave') { requestAutosave(e.reason); scheduleSyncCheck(); }
+      if (e.type === 'exitResult' || e.type === 'bankrupt' || e.type === 'companyEnded') { requestAutosave('판 종료'); scheduleSyncCheck(); }
       if (e.type === 'sfx') sounds.add(e.sound);
       if (e.type === 'hired') sounds.add('hire');
       if (e.type === 'confetti' && settings.animations) {
@@ -313,6 +316,14 @@ export function Game({ continued, notice, clearNotice, onEnded }: Props) {
           <div className="notice">
             {notice}
             <button className="btn small ghost" onClick={clearNotice}>
+              확인
+            </button>
+          </div>
+        )}
+        {syncWarning && (
+          <div className="notice">
+            {syncWarning}
+            <button className="btn small ghost" onClick={() => setSyncWarning(null)}>
               확인
             </button>
           </div>
