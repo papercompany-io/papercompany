@@ -1,4 +1,5 @@
 // DT-01 앱 실행과 부팅 연출: 가상 OS 로고와 진행 막대, 클릭하면 건너뜀. 끝나면 시작 메뉴(이어하기·새 커리어·명예의 전당·레거시).
+// 저장이 없는 처음 진입은 로컬·온라인 선택지도 띄움(A-251), 온라인을 고르고 로그인하면 클라우드 main 칸이 있었을 때 이어하기로, 없으면 새 커리어로 넘깁니다.
 import { useEffect, useState } from 'react';
 import type { GameState } from '../core/types';
 import { loadGame } from '../platform/save';
@@ -6,6 +7,7 @@ import { useProfile } from './meta';
 import { formatDate } from '../core/calendar';
 import { wonShort } from '../core/format';
 import { play } from './sound';
+import { BootOnline } from './BootOnline';
 import './boot.css';
 
 interface Props {
@@ -18,6 +20,7 @@ interface Props {
 export function Boot({ onNew, onContinue, onHall, onWeekly }: Props) {
   const [progress, setProgress] = useState(0);
   const [checked, setChecked] = useState<{ save: GameState | null; recovered: boolean; corrupt: boolean; old: boolean; replay: unknown } | null>(null);
+  const [onlinePick, setOnlinePick] = useState(false);
   const profile = useProfile();
 
   useEffect(() => {
@@ -56,7 +59,7 @@ export function Boot({ onNew, onContinue, onHall, onWeekly }: Props) {
           <div className="boot-skip">클릭하면 건너뜁니다</div>
         </>
       )}
-      {done && checked && (
+      {done && checked && !onlinePick && (
         <div className="boot-choices" onClick={(e) => e.stopPropagation()}>
           {checked.corrupt && <div className="err">저장 파일을 읽지 못했습니다. 새 커리어로 시작하세요.</div>}
           {checked.old && <div className="warn">이전 버전(MVP) 저장 파일은 이어할 수 없습니다. 새 커리어를 시작하세요.</div>}
@@ -75,6 +78,12 @@ export function Boot({ onNew, onContinue, onHall, onWeekly }: Props) {
               </span>
             </button>
           )}
+          {!live && !sv && (
+            <button className="btn big" data-testid="boot-online-open" onClick={() => setOnlinePick(true)}>
+              로그인하고 온라인으로 시작
+              <span className="boot-meta">다른 기기에서도 같은 판이 자동으로 맞습니다</span>
+            </button>
+          )}
           <button
             className={`btn big ${live ? 'ghost' : ''}`}
             data-testid="new-career"
@@ -83,7 +92,7 @@ export function Boot({ onNew, onContinue, onHall, onWeekly }: Props) {
               onNew();
             }}
           >
-            {live ? '새 커리어(지금 저장은 덮어씁니다)' : '새 커리어 시작'}
+            {live ? '새 커리어(지금 저장은 덮어씁니다)' : !sv ? '로컬로 시작' : '새 커리어 시작'}
           </button>
           <button className="btn big ghost" data-testid="hall" onClick={onHall}>
             명예의 전당 · 레거시 ({profile.legacyPoints}점)
@@ -92,6 +101,16 @@ export function Boot({ onNew, onContinue, onHall, onWeekly }: Props) {
             주간 도전 · 온라인 순위
           </button>}
         </div>
+      )}
+      {done && checked && onlinePick && (
+        <BootOnline
+          onCancel={() => setOnlinePick(false)}
+          onDone={(loaded) => {
+            play('open');
+            if (loaded) onContinue(loaded, null, null);
+            else onNew();
+          }}
+        />
       )}
     </div>
   );

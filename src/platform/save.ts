@@ -151,7 +151,27 @@ function replayOf(text: string | null): unknown {
 
 export async function saveGame(s: GameState, replay: unknown = null): Promise<boolean> {
   const copy = { ...s, events: [], replay };
-  return api().write(JSON.stringify(copy));
+  const ok = await api().write(JSON.stringify(copy));
+  if (ok) markLocalSaveTime();
+  return ok;
+}
+
+// 로컬 저장이 변한 시각(밀리초). 저장 파일 안에는 넣지 않고 로컬에만 둡니다 —
+// 온라인 동기화가 클라우드와 이 기기 중 어느 쪽이 더 새로운지 비교할 때만 씁니다.
+const LOCAL_SAVE_TIME_KEY = 'papercompany.save.localUpdatedAt';
+function markLocalSaveTime(): void {
+  try {
+    localStorage.setItem(LOCAL_SAVE_TIME_KEY, String(Date.now()));
+  } catch {
+    /* 무시 */
+  }
+}
+export function localSaveTime(): number {
+  try {
+    return Number(localStorage.getItem(LOCAL_SAVE_TIME_KEY)) || 0;
+  } catch {
+    return 0;
+  }
 }
 
 export async function clearSave(): Promise<void> {

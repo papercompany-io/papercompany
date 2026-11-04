@@ -73,6 +73,25 @@ const K_URL = 'pc-online-url';
 const DEFAULT_BASE = (import.meta.env.VITE_API_BASE as string | undefined) ?? '/api';
 export const isElectronUrlEditable = () => isElectron();
 
+// 온라인 모드(이 기기에서 지금 커리어를 클라우드와 자동으로 맞출지). 로그인 상태와는 별개 스위치입니다.
+// 로그아웃하면 자동으로 꺼집니다(로컬 데이터는 남습니다).
+const K_ONLINE_MODE = 'pc-online-mode';
+export function isOnlineMode(): boolean {
+  try {
+    return localStorage.getItem(K_ONLINE_MODE) === '1';
+  } catch {
+    return false;
+  }
+}
+export function setOnlineMode(on: boolean): void {
+  try {
+    if (on) localStorage.setItem(K_ONLINE_MODE, '1');
+    else localStorage.removeItem(K_ONLINE_MODE);
+  } catch {
+    /* 무시 */
+  }
+}
+
 export function getServerUrl(): string {
   return localStorage.getItem(K_URL) ?? (isElectron() ? '' : DEFAULT_BASE);
 }
@@ -141,7 +160,7 @@ export const online = {
   loginTotp: (ticket: string, code: string) => call<Session>('POST', '/auth/login/totp', { ticket, code }),
   loginRecovery: (ticket: string, code: string) => call<Session>('POST', '/auth/login/recovery', { ticket, code }),
   logout: async () => {
-    try { await call('POST', '/auth/logout', {}); } finally { await window.pcSave?.clearOnlineSession?.(); }
+    try { await call('POST', '/auth/logout', {}); } finally { setOnlineMode(false); await window.pcSave?.clearOnlineSession?.(); }
   },
   me: async (): Promise<MeResult> => {
     if (!getServerUrl()) return { state: 'offline' };
