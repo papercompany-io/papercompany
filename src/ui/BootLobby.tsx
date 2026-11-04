@@ -1,7 +1,7 @@
 // A-251 보강: 로그인 상태면 Boot 화면 안에서 계정 이름·로그아웃·클라우드 저장 슬롯 목록을 보여주는 로비 블록.
 // 새로고침해도 로그인이 유지되도록 Boot.tsx가 부팅 때 online.me()로 상태를 확인한 뒤 이 컴포넌트를 보여줍니다.
 import { useEffect, useState } from 'react';
-import { online, type Account, type CloudSaveMeta, type SaveSlot } from '../platform/online';
+import { online, setOnlineMode, type Account, type CloudSaveMeta, type SaveSlot } from '../platform/online';
 import { parseSaveText, saveGame } from '../platform/save';
 import type { GameState } from '../core/types';
 
@@ -32,6 +32,7 @@ export function BootLobby({ me, onLogout, onLoaded }: {
       const s = parseSaveText(data);
       if (!s) throw new Error('이 저장을 읽지 못했습니다.');
       if (!(await saveGame(s))) throw new Error('이 기기에 저장하지 못했습니다.');
+      setOnlineMode(true); // 로비는 로그인 상태에서만 뜨니, 여기서 불러오면 이 기기도 온라인 모드로 맞춤
       onLoaded(s);
     } catch (e) {
       setErr(e instanceof Error ? e.message : '불러오지 못했습니다.');
@@ -44,9 +45,11 @@ export function BootLobby({ me, onLogout, onLoaded }: {
     setBusy('logout');
     try {
       await online.logout();
-      onLogout();
+    } catch {
+      // online.logout()은 서버 호출이 실패해도 로컬 세션은 이미 정리함(finally). 화면도 로그아웃된 것으로 넘김.
     } finally {
       setBusy(null);
+      onLogout();
     }
   };
 

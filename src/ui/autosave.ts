@@ -2,7 +2,7 @@
 // 온라인 모드(A-251)면 로컬 저장과 같은 시점에 클라우드 main 칸도 올립니다. 충돌(409)은 최신 쪽을 그대로 적용합니다.
 import { saveGame, localSaveTime, parseSaveText } from '../platform/save';
 import { isOnlineMode, online, OnlineError } from '../platform/online';
-import { exportCommandRecording, getGame, setGame } from './store';
+import { exportCommandRecording, getGame } from './store';
 
 let lastSyncWarning: string | null = null;
 export function takeSyncWarning(): string | null {
@@ -24,9 +24,10 @@ async function syncToCloud(text: string): Promise<void> {
       if (cloud.updatedAt > localSaveTime()) {
         const s = parseSaveText(cloud.data);
         if (s) {
+          // 지금 플레이 중인 상태를 통보 없이 바꾸면 진행을 잃으니, 로컬 저장 파일만 최신으로 맞추고
+          // 화면 메모리(setGame)는 그대로 둡니다. 다음 "이어하기"에서 이 판으로 열립니다.
           await saveGame(s);
-          setGame(s);
-          lastSyncWarning = '다른 기기에서 더 최근에 저장한 판으로 맞췄습니다.';
+          lastSyncWarning = '다른 기기에서 더 최근에 저장한 판이 있습니다. 지금 판은 그대로 두고, 다음에 이어할 때 그 판이 열립니다.';
           return;
         }
       }
