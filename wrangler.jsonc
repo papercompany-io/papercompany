@@ -1,0 +1,32 @@
+// 페이퍼컴퍼니 서버(A-249). 배포 전에 database_id·EMAIL_FROM을 실제 값으로 바꾸세요. 절차는 server/auth/README.md.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "papercompany",
+  "main": "server/worker.ts",
+  "compatibility_date": "2026-11-01",
+  // bcryptjs가 난수용으로 node:crypto를 불러옵니다
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": "dist-web",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "papercompany",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "r2_buckets": [{ "binding": "SAVES", "bucket_name": "papercompany-saves" }],
+  // 로컬 개발에서 실제 메일을 보내지 않습니다. 보내는 도메인은 배포 전에 인증해야 합니다.
+  "send_email": [{ "name": "EMAIL", "allowed_sender_addresses": ["no-reply@example.com"], "remote": false }],
+  "vars": {
+    "EMAIL_FROM": "no-reply@example.com",
+    "ALLOWED_ORIGINS": ""
+  },
+  // 15분마다 R2 지연 삭제와 끝난 세션·코드 정리
+  "triggers": { "crons": ["*/15 * * * *"] }
+}

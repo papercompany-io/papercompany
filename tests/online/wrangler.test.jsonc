@@ -1,0 +1,11 @@
+// 테스트 전용 설정. 배포 설정(wrangler.jsonc)과 달리 메일은 로컬(.eml 파일)로만 씁니다.
+{
+  "name": "papercompany-test",
+  "main": "../../server/worker.ts",
+  "compatibility_date": "2026-11-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "d1_databases": [{ "binding": "DB", "database_name": "papercompany-test", "database_id": "00000000-0000-0000-0000-000000000000", "migrations_dir": "../../migrations" }],
+  "r2_buckets": [{ "binding": "SAVES", "bucket_name": "papercompany-saves-test" }],
+  "send_email": [{ "name": "EMAIL" }],
+  "vars": { "EMAIL_FROM": "no-reply@example.com", "ALLOWED_ORIGINS": "" }
+}
