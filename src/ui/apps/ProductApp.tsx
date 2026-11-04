@@ -12,14 +12,14 @@ import { Ads } from './AdsPanel';
 import { activeCampaigns } from '../../core/ads';
 import { Fragment, useEffect, useState } from 'react';
 import { DATA, feature, gradeOutput, industry, featuresOf, featureWork, priceTierDef, type FeatureDef, type FeatureFx } from '../../core/data';
-import { addGrow, addToRoadmap, appeal, appealBreakdown, appealRank, canCharge, coreFeatures, etaDays, featureLevel, featureLock, growCap, growLevel, growPlan, growTarget, hasMvp, insightCost, insightHave, itemName, itemNeed, moveRoadmap, quality, removeFromRoadmap, ROADMAP_MAX } from '../../core/product';
+import { appeal, appealBreakdown, appealRank, canCharge, coreFeatures, etaDays, featureLevel, featureLock, growCap, growLevel, growPlan, growTarget, hasMvp, insightCost, insightHave, itemName, itemNeed, quality, ROADMAP_MAX } from '../../core/product';
 import { formatDate, formatMonth } from '../../core/calendar';
 import { growthRoom, launchedMarkets, liveUsers, revenuePerUser, totalUsers, unitWord } from '../../core/market';
 import { ROOM_LINE } from '../../core/marketing';
 import { AxisChart, FlowBars, flowAll } from './CustomerFlow';
 import { countShort, wonCompact, wonShort } from '../../core/format';
 import { TeamOrderSelect } from './MessengerApp';
-import { act, useGame } from '../store';
+import { dispatch, useGame } from '../store';
 import { Tabs, Help, useTween } from '../common';
 import { ServiceLogo } from '../logo';
 import { PxIcon } from '../icons';
@@ -301,7 +301,7 @@ function MvpStatus({ s, v, openSchedule, openHiring, goFeatures }: { s: GameStat
   const designCount = s.employees.filter((e) => e.dept === 'design').length;
   const maxRate = Math.max(0.5, v.rate.ceo, v.rate.team, v.rate.design);
   const fillCores = () => {
-    act((g) => missing.forEach((c) => addToRoadmap(g, c.id)));
+    dispatch({ type: 'addToRoadmap', featureIds: missing.map((c) => c.id) });
     play('click');
   };
   const people = [
@@ -582,7 +582,7 @@ function NowList({ s, v, goFeatures }: { s: GameState; v: View; goFeatures: () =
           {promiseChip(0)}
           <span className="grow" />
           <span className="pl-chip">{isFinite(v.etas[0]) ? `출시까지 ${dayText(v.etas[0])}` : '멈춤'}</span>
-          <button className="btn small ghost" data-testid="roadmap-remove-0" title="만드는 순서에서 빼기" onClick={() => act((g) => removeFromRoadmap(g, 0))}>
+          <button className="btn small ghost" data-testid="roadmap-remove-0" title="만드는 순서에서 빼기" onClick={() => dispatch({ type: 'removeFromRoadmap', index: 0 })}>
             ✕
           </button>
         </div>
@@ -606,13 +606,13 @@ function NowList({ s, v, goFeatures }: { s: GameState; v: View; goFeatures: () =
               {to === null ? '멈춤' : shortDate(to)}
             </span>
             <span className="nl-ctl">
-              <button className="btn small ghost" disabled={i === 1} title="위로" onClick={() => act((g) => moveRoadmap(g, i, -1))}>
+              <button className="btn small ghost" disabled={i === 1} title="위로" onClick={() => dispatch({ type: 'moveRoadmap', index: i, dir: -1 })}>
                 ▲
               </button>
-              <button className="btn small ghost" disabled={i === list.length - 1} title="아래로" onClick={() => act((g) => moveRoadmap(g, i, 1))}>
+              <button className="btn small ghost" disabled={i === list.length - 1} title="아래로" onClick={() => dispatch({ type: 'moveRoadmap', index: i, dir: 1 })}>
                 ▼
               </button>
-              <button className="btn small ghost" data-testid={`roadmap-remove-${i}`} title="빼기" onClick={() => act((g) => removeFromRoadmap(g, i))}>
+              <button className="btn small ghost" data-testid={`roadmap-remove-${i}`} title="빼기" onClick={() => dispatch({ type: 'removeFromRoadmap', index: i })}>
                 ✕
               </button>
             </span>
@@ -728,13 +728,13 @@ function Features({ s, v }: { s: GameState; v: View }) {
   const face = !hasMvp(s) ? 'empty' : bd.total >= compAvg ? 'star' : bd.total >= compAvg * 0.7 ? 'check' : 'warn';
 
   const add = (f: FeatureDef) => {
-    const err = act((g) => addToRoadmap(g, f.id));
-    setMsg(err ?? null);
+    const err = dispatch({ type: 'addToRoadmap', featureIds: [f.id] });
+    setMsg(typeof err === 'string' ? err : null);
     if (!err) play('click');
   };
   const grow = (f: FeatureDef) => {
-    const err = act((g) => addGrow(g, f.id));
-    setMsg(err ?? null);
+    const err = dispatch({ type: 'addGrow', featureId: f.id });
+    setMsg(typeof err === 'string' ? err : null);
     if (!err) play('click');
   };
 
@@ -958,7 +958,7 @@ function Features({ s, v }: { s: GameState; v: View }) {
             <span className="pl-lab">가격</span>
             <div className="seg">
               {(['low', 'standard', 'premium'] as PriceTier[]).map((t) => (
-                <button key={t} className={s.product.priceTier === t ? 'on' : ''} data-testid={`price-${t}`} title={priceTierDef(t).desc} onClick={() => act((g) => (g.product.priceTier = t))}>
+                <button key={t} className={s.product.priceTier === t ? 'on' : ''} data-testid={`price-${t}`} title={priceTierDef(t).desc} onClick={() => dispatch({ type: 'setPriceTier', tier: t })}>
                   {priceTierDef(t).name}
                 </button>
               ))}
@@ -1105,13 +1105,13 @@ export function Roadmap({ s, v, openSchedule, goFeatures, builders = true }: { s
                 {it.found === 'review' && <span className="chip amber" title="점검 회의에서 찾은 숨은 일이 더해졌습니다">점검으로 찾은 일 +</span>}
                 {it.found === 'late' && <span className="chip red" title="마무리 무렵에야 드러난 숨은 일이 더해졌습니다">늦게 드러난 일 +</span>}
                 {!it.found && promiseFor(s, it.id, it.level) && !promiseFor(s, it.id, it.level)!.checked && <span className="chip" title="약속 기능은 숨은 일이 있을 수 있습니다. 점검 회의에서 확인합니다">점검 전</span>}
-                <button className="btn small ghost" disabled={i === 0} onClick={() => act((g) => moveRoadmap(g, i, -1))}>
+                <button className="btn small ghost" disabled={i === 0} onClick={() => dispatch({ type: 'moveRoadmap', index: i, dir: -1 })}>
                   ▲
                 </button>
-                <button className="btn small ghost" disabled={i === s.product.roadmap.length - 1} onClick={() => act((g) => moveRoadmap(g, i, 1))}>
+                <button className="btn small ghost" disabled={i === s.product.roadmap.length - 1} onClick={() => dispatch({ type: 'moveRoadmap', index: i, dir: 1 })}>
                   ▼
                 </button>
-                <button className="btn small ghost" data-testid={`roadmap-remove-${i}`} onClick={() => act((g) => removeFromRoadmap(g, i))}>
+                <button className="btn small ghost" data-testid={`roadmap-remove-${i}`} onClick={() => dispatch({ type: 'removeFromRoadmap', index: i })}>
                   ✕
                 </button>
               </div>

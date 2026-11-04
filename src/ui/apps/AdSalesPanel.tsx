@@ -11,19 +11,15 @@ import {
   adCapacity,
   adFlow,
   adFormatDef,
-  adNegotiation,
   adRevenueSplit,
   adSizeDef,
   adSalesOf,
   adTierDef,
-  breakAdDeal,
   breakPenalty,
-  declineAdOffer,
   impsText,
   liveAdDeals,
   negotiateAd,
   offerWait,
-  setAdAutoRenew,
   type AdDeal,
   type DealFlow,
 } from '../../core/adsales';
@@ -31,7 +27,7 @@ import { formatDate } from '../../core/calendar';
 import { josa, won, wonShort } from '../../core/format';
 import { fxTotals } from '../../core/product';
 import { PixelAvatar } from '../office/Avatar';
-import { act, timeHold, useGame } from '../store';
+import { dispatch, timeHold, useGame } from '../store';
 import type { GameState } from '../../core/types';
 
 const TIER_COLOR: Record<string, string> = { local: 'var(--positive)', mid: 'var(--c-blue-500)', big: 'var(--caution)', global: 'var(--c-violet-600)' };
@@ -174,7 +170,7 @@ export function AdSales({ setMsg, inTeam }: { setMsg: (m: string | null) => void
                   <button className="btn small green" data-testid={`ad-nego-${o.id}`} disabled={full} title={full ? '맡을 수 있는 계약이 가득 찼습니다' : undefined} onClick={() => setTalk(o.id)}>
                     {o.nego ? '흥정 이어가기' : '흥정 시작'}
                   </button>
-                  <button className="btn small ghost" onClick={() => act((g) => declineAdOffer(g, o.id))}>
+                  <button className="btn small ghost" onClick={() => dispatch({ type: 'declineAdOffer', offerId: o.id })}>
                     거절
                   </button>
                 </div>
@@ -252,7 +248,7 @@ function DealCard({ s, d, x, setMsg }: { s: GameState; d: AdDeal; x: DealFlow | 
       {live && (
         <div className="ads2-deal-acts">
           <label className="ads2-renew" title="켜 두면 기간이 끝날 때 같은 조건으로 계속 이어집니다. 끄면 이번 기간이 끝날 때 위약금 없이 끝납니다.">
-            <input type="checkbox" data-testid={`ad-renew-${d.id}`} checked={d.autoRenew} onChange={(e) => act((g) => setAdAutoRenew(g, d.id, e.target.checked))} />
+            <input type="checkbox" data-testid={`ad-renew-${d.id}`} checked={d.autoRenew} onChange={(e) => dispatch({ type: 'setAdAutoRenew', dealId: d.id, on: e.target.checked })} />
             자동 연장
           </label>
           {ask ? (
@@ -262,7 +258,7 @@ function DealCard({ s, d, x, setMsg }: { s: GameState; d: AdDeal; x: DealFlow | 
                 className="btn small red"
                 data-testid={`ad-break-${d.id}`}
                 onClick={() => {
-                  const err = act((g) => breakAdDeal(g, d.id));
+                  const err = dispatch({ type: 'breakAdDeal', dealId: d.id }) as string | null | undefined;
                   setMsg(err ?? `${d.advertiser} 계약을 해지했습니다. 위약금 ${wonShort(fee)}을 냈습니다.`);
                   setAsk(false);
                 }}
@@ -290,10 +286,7 @@ function AdNegotiationDialog({ offerId, onClose, onDone }: { offerId: string; on
   const o = adSalesOf(s).offers.find((x) => x.id === offerId);
   // 창을 열면 광고주가 먼저 첫 제안을 말함
   useEffect(() => {
-    act((g) => {
-      const x = g.adSales?.offers.find((v) => v.id === offerId);
-      if (x) adNegotiation(g, x);
-    });
+    dispatch({ type: 'openAdNegotiation', offerId });
   }, [offerId]);
   const open = o?.open ?? 1000;
   const step = Math.max(10, Math.round(open / 50 / 10) * 10);
@@ -340,12 +333,12 @@ function AdNegotiationDialog({ offerId, onClose, onDone }: { offerId: string; on
   const fmt = adFormatDef(o.format).name;
   const daily = (o.max * ecpm) / 1000;
   const send = () => {
-    const r = act((g) => negotiateAd(g, o.id, ecpm, days))!;
+    const r = dispatch({ type: 'negotiateAd', offerId: o.id, ecpm, days }) as ReturnType<typeof negotiateAd>;
     setErr(r.ok ? null : r.message);
     if (r.signed) setDoneMsg(r.message);
   };
   const take = () => {
-    const r = act((g) => acceptAdCounter(g, o.id))!;
+    const r = dispatch({ type: 'acceptAdCounter', offerId: o.id }) as ReturnType<typeof acceptAdCounter>;
     if (!r.ok) setErr(r.message);
     else setDoneMsg(r.message);
   };

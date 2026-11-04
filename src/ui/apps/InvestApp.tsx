@@ -10,32 +10,24 @@ import { formatDate } from '../../core/calendar';
 import { totalShares } from '../../core/equity';
 import { pct, pctsSumTo100, wonShort } from '../../core/format';
 import {
-  acceptOffer,
   activeRound,
-  askCoInvest,
-  closeForOffer,
   coInvestProbability,
   coInvestors,
   decisionProbability,
   fits,
   letterGain,
   pendingDecision,
-  rejectOffer,
-  requestDecision,
   roundMath,
   selectableStages,
-  sendLetter,
   stageConditions,
-  startRound,
   canSafe,
-  cancelRound,
 } from '../../core/funding';
 import { externalChannelId } from '../../core/messenger';
 import { computeValuation } from '../../core/valuation';
-import { act, useGame } from '../store';
+import { dispatch, useGame } from '../store';
 import { Tabs, chanceLabel } from '../common';
 import { ExitApp } from './ExitApp';
-import { esopEntry, esopFree, investorPct, topUpEsop } from '../../core/equity';
+import { esopEntry, esopFree, investorPct } from '../../core/equity';
 import type { GameState, LetterThread, Round, StageId } from '../../core/types';
 import './apps.css';
 import './skin/InvestApp.css';
@@ -211,7 +203,7 @@ function RoundTab({ initialStage, goInvestors }: { initialStage?: string; goInve
           className="btn big"
           data-testid="round-open"
           onClick={() => {
-            const e = act((g) => startRound(g, stageId, room, safeOk ? instrument : 'equity'));
+            const e = dispatch({ type: 'startRound', stage: stageId, room, instrument: safeOk ? instrument : 'equity' }) as string | null | undefined;
             setErr(e ?? null);
             if (!e) goInvestors();
           }}
@@ -289,7 +281,7 @@ function OpenRound({ r, goInvestors }: { r: Round; goInvestors: () => void }) {
         {err && <div className="err">{err}</div>}
         <div className="row">
           {!r.leadId && (
-            <button className="btn ghost" data-testid="round-cancel" onClick={() => setErr(act((g) => cancelRound(g, r.id)) ?? null)}>
+            <button className="btn ghost" data-testid="round-cancel" onClick={() => setErr((dispatch({ type: 'cancelRound', roundId: r.id }) as string | null | undefined) ?? null)}>
               라운드 취소
             </button>
           )}
@@ -299,7 +291,7 @@ function OpenRound({ r, goInvestors }: { r: Round; goInvestors: () => void }) {
             data-testid="round-close-offer"
             disabled={!r.leadId}
             onClick={() => {
-              const e = act((g) => closeForOffer(g, r.id));
+              const e = dispatch({ type: 'closeForOffer', roundId: r.id }) as string | null | undefined;
               setErr(e ?? null);
             }}
           >
@@ -369,11 +361,11 @@ function OfferView({ r }: { r: Round }) {
         </div>
         {err && <div className="err">{err}</div>}
         <div className="row">
-          <button className="btn red" data-testid="offer-reject" onClick={() => setErr(act((g) => rejectOffer(g, r.id)) ?? null)}>
+          <button className="btn red" data-testid="offer-reject" onClick={() => setErr((dispatch({ type: 'rejectOffer', roundId: r.id }) as string | null | undefined) ?? null)}>
             거절
           </button>
           <div className="grow" />
-          <button className="btn green big" data-testid="offer-accept" onClick={() => setErr(act((g) => acceptOffer(g, r.id)) ?? null)}>
+          <button className="btn green big" data-testid="offer-accept" onClick={() => setErr((dispatch({ type: 'acceptOffer', roundId: r.id }) as string | null | undefined) ?? null)}>
             받기
           </button>
         </div>
@@ -532,7 +524,7 @@ function InvestorPanel({ inv, open, openChat }: { inv: Inv; open: Round | null; 
   // 보낸 직후 관심이 얼마나 바뀌었는지 보여 줌(답장은 다음 날 와서 이유를 알려 줌)
   const send = (letterId: string, name: string) => {
     const v = letterGain(s, open!, inv.id, letterId, ask);
-    const e = act((g) => sendLetter(g, open!.id, inv.id, letterId, ask)) ?? null;
+    const e = (dispatch({ type: 'sendLetter', roundId: open!.id, investorId: inv.id, letterId, askId: ask }) as string | null | undefined) ?? null;
     setErr(e);
     setGain(e ? null : { name, v });
   };
@@ -602,7 +594,7 @@ function InvestorPanel({ inv, open, openChat }: { inv: Inv; open: Round | null; 
             </span>
             <span className="inv-why">{dp.factors.filter((f) => f.value < 0 || f.mult).map((f) => f.label).join(' · ') || '좋은 조건입니다'}</span>
           </div>
-          <button className="btn green" data-testid={`decide-${inv.id}`} onClick={() => setErr(act((g) => requestDecision(g, open!.id, inv.id)) ?? null)}>
+          <button className="btn green" data-testid={`decide-${inv.id}`} onClick={() => setErr((dispatch({ type: 'requestDecision', roundId: open!.id, investorId: inv.id }) as string | null | undefined) ?? null)}>
             요청
           </button>
         </div>
@@ -621,7 +613,7 @@ function InvestorPanel({ inv, open, openChat }: { inv: Inv; open: Round | null; 
               참여 가능성 <b>{chanceLabel(cp)}</b>
             </span>
           </div>
-          <button className="btn green" data-testid={`coinvest-${inv.id}`} onClick={() => setErr(act((g) => askCoInvest(g, open!.id, inv.id)) ?? null)}>
+          <button className="btn green" data-testid={`coinvest-${inv.id}`} onClick={() => setErr((dispatch({ type: 'askCoInvest', roundId: open!.id, investorId: inv.id }) as string | null | undefined) ?? null)}>
             제안
           </button>
         </div>
@@ -784,7 +776,7 @@ function EsopCard() {
       )}
       <div className="row">
         {[0.05, 0.1].map((p) => (
-          <button key={p} className="btn small ghost" data-testid={`esop-${p * 100}`} onClick={() => setErr(act((g) => topUpEsop(g, p)) ?? null)}>
+          <button key={p} className="btn small ghost" data-testid={`esop-${p * 100}`} onClick={() => setErr((dispatch({ type: 'topUpEsop', pct: p }) as string | null | undefined) ?? null)}>
             {pool ? '늘리기' : '만들기'} {p * 100}%
           </button>
         ))}

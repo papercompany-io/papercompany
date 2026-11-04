@@ -11,8 +11,8 @@ import { DATA, dept, orderDef, ordersFor } from '../../core/data';
 import { dateOf } from '../../core/calendar';
 import { orderOf } from '../../core/orders';
 import { DM_ACTIONS, commandOrder, dmAction } from '../../core/reactions';
-import { answerSaid, postSaid, setEmpOrder } from '../../core/talk';
-import { answerChannel, postChannelSaid } from '../../core/chat';
+import { postSaid, setEmpOrder } from '../../core/talk';
+import { postChannelSaid } from '../../core/chat';
 import { empOrderOf, groupOrder } from '../../core/assign';
 import { setSquadOrder, squad, squadChannelId, squadJobs, squadMembers, squadsOf } from '../../core/squads';
 import { readChannel, readTalk } from '../talkAi';
@@ -20,10 +20,10 @@ import { awayOuting, delegateAway, isFullDay, outingEffect, outingRange, outingT
 import { OutingOfferActions } from './ScheduleApp';
 import { MilestoneCard } from './MilestoneCard';
 import { milestones } from '../../core/milestones';
-import { isChatterChannel, markRead } from '../../core/messenger';
+import { isChatterChannel } from '../../core/messenger';
 import { setSettings, useSettings } from '../meta';
 import { isOff, isSick } from '../../core/staff';
-import { act, getGame, useGame } from '../store';
+import { dispatch, getGame, isRecordingCommands, useGame } from '../store';
 import { DecisionView } from '../Feedback';
 import { InvestPeek, InvestorBar } from './InvestApp';
 import { PixelAvatar } from '../office/Avatar';
@@ -90,7 +90,7 @@ export function MessengerApp({ initial, openInvest }: { initial?: string; openIn
     const n = ch.messages.length;
     setNewFrom(ch.unread > 0 && ch.unread < n ? ch.messages[n - ch.unread].id : null);
     setShown(n);
-    if (ch.unread) act((g) => markRead(g, ch.id));
+    if (ch.unread) dispatch({ type: 'markRead', channelIds: [ch.id] });
   }, [ch.id]);
 
   // 보고 있는 채널에 새 말이 오면: 사람이 보낸 말은 "입력 중…"을 글 길이만큼 보여 준 뒤 하나씩, 시스템·내 말은 바로
@@ -104,7 +104,7 @@ export function MessengerApp({ initial, openInvest }: { initial?: string; openIn
       return;
     }
     if (!next) {
-      if (ch.unread) act((g) => markRead(g, ch.id));
+      if (ch.unread) dispatch({ type: 'markRead', channelIds: [ch.id] });
       return;
     }
     const wait = next.kind === 'npc' ? 800 + Math.min(1800, next.text.length * 30) : 0;
@@ -210,7 +210,7 @@ export function MessengerApp({ initial, openInvest }: { initial?: string; openIn
                 )}
                 {/* 외부 연락처 한 번에 읽기(A-201): 안 읽은 연락이 있을 때만 */}
                 {g.title === '외부 연락처' && items.some((c) => c.unread > 0) && (
-                  <button className="mg-read-all" data-testid="ext-read-all" title="외부 연락처를 모두 읽음으로 표시합니다" onClick={() => act((gs) => items.forEach((c) => markRead(gs, c.id)))}>
+                  <button className="mg-read-all" data-testid="ext-read-all" title="외부 연락처를 모두 읽음으로 표시합니다" onClick={() => dispatch({ type: 'markRead', channelIds: items.map((c) => c.id) })}>
                     모두 읽음
                   </button>
                 )}
@@ -435,14 +435,15 @@ function DmActions({ empId, name, busy, onErr }: { empId: string; name: string; 
   const send = () => {
     const said = text;
     if (!said.trim()) return;
-    const err = act((g) => postSaid(g, empId, said)) ?? null;
+    const err = (dispatch({ type: 'postSaid', empId, said }) as ReturnType<typeof postSaid>) ?? null;
     onErr(err);
     if (err) return;
     setText('');
     push(async () => {
       const g0 = getGame();
-      const read = g0 ? await readTalk(g0, empId, said) : null;
-      act((g) => answerSaid(g, empId, said, read));
+      // 주간 도전 기록 중에는 서버가 같은 결과를 내도록 LLM 해석 없이 기본 답을 씁니다
+      const read = g0 && !isRecordingCommands() ? await readTalk(g0, empId, said) : null;
+      dispatch({ type: 'answerSaid', empId, said, read });
     });
   };
   return (
@@ -468,7 +469,7 @@ function DmActions({ empId, name, busy, onErr }: { empId: string; name: string; 
             data-testid={`dm-${a.id}`}
             disabled={busy || waiting}
             title={a.say}
-            onClick={() => onErr(act((g) => dmAction(g, empId, a.id)) ?? null)}
+            onClick={() => onErr((dispatch({ type: 'dmAction', empId, action: a.id }) as ReturnType<typeof dmAction>) ?? null)}
           >
             {a.label}
           </button>
@@ -485,14 +486,14 @@ function ChatInput({ channelId, placeholder, onErr }: { channelId: string; place
   const send = () => {
     const said = text;
     if (!said.trim()) return;
-    const err = act((g) => postChannelSaid(g, channelId, said)) ?? null;
+    const err = (dispatch({ type: 'postChannelSaid', channelId, said }) as ReturnType<typeof postChannelSaid>) ?? null;
     onErr(err);
     if (err) return;
     setText('');
     push(async () => {
       const g0 = getGame();
-      const read = g0 ? await readChannel(g0, channelId, said) : null;
-      act((g) => answerChannel(g, channelId, said, read));
+      const read = g0 && !isRecordingCommands() ? await readChannel(g0, channelId, said) : null;
+      dispatch({ type: 'answerChannel', channelId, said, read });
     });
   };
   return (
@@ -530,7 +531,7 @@ export function EmpOrderSelect({ e, onErr }: { e: Employee; onErr?: (m: string |
           .filter((o) => o.id !== team)
           .map((o) => ({ value: o.id, label: o.name, desc: o.desc, disabled: s.company.stage < o.stage, note: s.company.stage < o.stage ? `단계 ${o.stage}부터` : undefined })),
       ]}
-      onChange={(v) => onErr?.(act((g) => setEmpOrder(g, e.id, v || null, q ? squadChannelId(q.id) : `dm-${e.id}`)) ?? null)}
+      onChange={(v) => onErr?.((dispatch({ type: 'setEmpOrder', empId: e.id, orderId: v || null, channelId: q ? squadChannelId(q.id) : `dm-${e.id}` }) as ReturnType<typeof setEmpOrder>) ?? null)}
     />
   );
 }
@@ -576,7 +577,7 @@ export function TeamOrderSelect({ d, testId, className, onErr, plain }: { d: Dep
         className={className}
         testId={testId}
         value={orderOf(s, d)}
-        onChange={(v) => report(act((g) => commandOrder(g, d, v)) ?? null)}
+        onChange={(v) => report((dispatch({ type: 'commandOrder', dept: d, orderId: v }) as ReturnType<typeof commandOrder>) ?? null)}
         options={ordersFor(d).map((o) => {
           const locked = s.company.stage < o.stage;
           return { value: o.id, label: o.name, desc: o.desc, disabled: locked, note: locked ? `단계 ${o.stage}부터` : refused === o.id ? '거절됨 · 다시 고르면 강행' : undefined };
@@ -597,7 +598,7 @@ export function SquadOrderSelect({ squadId, d, className, testId, onErr }: { squ
       className={className}
       testId={testId ?? `squad-order-${squadId}-${d}`}
       value={q.orders[d] ?? orderOf(s, d)}
-      onChange={(v) => onErr?.(act((g) => setSquadOrder(g, squadId, d, v)) ?? null)}
+      onChange={(v) => onErr?.((dispatch({ type: 'setSquadOrder', squadId, dept: d, orderId: v }) as ReturnType<typeof setSquadOrder>) ?? null)}
       options={ordersFor(d).map((o) => {
         const locked = s.company.stage < o.stage;
         return { value: o.id, label: o.name, desc: o.desc, disabled: locked, note: locked ? `단계 ${o.stage}부터` : undefined };

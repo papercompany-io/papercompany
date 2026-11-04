@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { eventDef, resolveDecision } from '../core/events';
 import { wonShort } from '../core/format';
 import type { GameState, Notice, PendingDecision } from '../core/types';
-import { act } from './store';
+import { dispatch } from './store';
 import { play } from './sound';
 import { PxIcon, type PxId } from './icons';
 import { COLORS as WORK_COLORS, contractDue, contractPace, daysText } from './apps/ScheduleApp';
@@ -111,7 +111,7 @@ export function DecisionView({ d, onDone }: { d: PendingDecision; onDone?: () =>
             data-testid={`choice-${i}`}
             disabled={!c.enabled}
             onClick={() => {
-              const err = act((g) => resolveDecision(g, d.id, i));
+              const err = dispatch({ type: 'resolveDecision', decisionId: d.id, choice: i }) as ReturnType<typeof resolveDecision>;
               if (err) setRes(err);
               else {
                 play('click');
@@ -320,7 +320,7 @@ export function SideStack({ s, onOpen }: { s: GameState; onOpen: (app: string, a
           from: '긴급',
           text: n.text,
           open: () => n.app && onOpen(n.app, n.arg),
-          onDismiss: () => act((g) => g.notices.forEach((x) => x.id === n.id && (x.read = true))),
+          onDismiss: () => dispatch({ type: 'markNoticeRead', noticeId: n.id }),
         });
     // 긴급(A-221): 긴급 알림·긴급 결정은 외주·약속 카드보다도 위, 맨 위에 둠
     return out.filter((x) => !hidden.includes(x.key)).sort((a, b) => +isUrgent(b) - +isUrgent(a));

@@ -7,13 +7,14 @@
 // 계산(contractPace·contractDue)은 일정 창과 알림 카드가 같이 쓰므로 ScheduleApp에 둡니다.
 import { useState } from 'react';
 import { dept, orderDef } from '../../core/data';
-import { acceptContract, activeContracts, canStaff, contractsOpen, dropContract, setContractAlert, setContractSquad, setContractStaff, staffedOn, trustLevel, type Contract } from '../../core/contracts';
+import { activeContracts, canStaff, contractsOpen, staffedOn, trustLevel, type Contract } from '../../core/contracts';
 import { empOrderOf } from '../../core/assign';
 import { squad, squadMembers, squadsOf } from '../../core/squads';
 import { output } from '../../core/staff';
 import { PixelAvatar } from '../office/Avatar';
-import { act, useGame } from '../store';
-import type { Employee, GameState } from '../../core/types';
+import { dispatch, useGame } from '../store';
+import type { Command } from '../../core/commands';
+import type { Employee } from '../../core/types';
 import DATA from '../../data/contracts.json';
 import { Help, Money } from '../common';
 import { contractDue, contractPace, daysText } from './ScheduleApp';
@@ -90,7 +91,7 @@ export function ContractApp({ openSchedule, openDevTeam }: { openSchedule?: () =
                     <b className="ct2-pay">
                       <Money v={o.pay} />
                     </b>
-                    <button className="btn small" data-testid={`contract-take-${o.id}`} disabled={full} title={full ? `외주는 동시에 ${ST_MAX}개까지 진행할 수 있습니다.` : ok ? '' : '대표 혼자서는 기간 안에 끝내기 어렵습니다. 받은 뒤 인력을 배치하세요.'} onClick={() => act((g) => acceptContract(g, o.id))}>
+                    <button className="btn small" data-testid={`contract-take-${o.id}`} disabled={full} title={full ? `외주는 동시에 ${ST_MAX}개까지 진행할 수 있습니다.` : ok ? '' : '대표 혼자서는 기간 안에 끝내기 어렵습니다. 받은 뒤 인력을 배치하세요.'} onClick={() => dispatch({ type: 'acceptContract', contractId: o.id })}>
                       받기
                     </button>
                   </div>
@@ -101,7 +102,7 @@ export function ContractApp({ openSchedule, openDevTeam }: { openSchedule?: () =
         )}
       </div>
       <label className="ct2-alert" title="켜 두면 외주 제안 목록이 새로 바뀔 때 알림이 옵니다.">
-        <input type="checkbox" data-testid="contract-alert" checked={!!c?.alert} onChange={(e) => act((g) => setContractAlert(g, e.target.checked))} />
+        <input type="checkbox" data-testid="contract-alert" checked={!!c?.alert} onChange={(e) => dispatch({ type: 'setContractAlert', on: e.target.checked })} />
         새 제안 알림 받기
       </label>
     </div>
@@ -121,7 +122,7 @@ function Active({ a, many, openSchedule }: { a: Contract; many: boolean; openSch
   const solo = pace.staffed.filter((e) => a.staff?.includes(e.id));
   const viaSquad = pace.staffed.filter((e) => !a.staff?.includes(e.id));
   const maxRate = Math.max(pace.ceoFull, ...pace.staffed.map((e) => output(s, e)), ...pace.loose.map((e) => output(s, e)), 0.01);
-  const run = (fn: (g: GameState) => string | null) => setErr(act(fn) ?? null);
+  const run = (c: Command) => setErr((dispatch(c) as string | null | undefined) ?? null);
   return (
     <div className={`ct3 ${many ? 'many' : ''}`} data-testid={`contract-active-${a.id}`}>
       <section className={`wk-hero ${bad ? 'bad' : ''}`}>
@@ -172,7 +173,7 @@ function Active({ a, many, openSchedule }: { a: Contract; many: boolean; openSch
               {sq.name} <small>부서 배치 · {viaSquad.length}명</small>
             </b>
             <span className="ct3-fill" />
-            <button className="ct3-x" title="부서 배치 빼기(원래 부서 일로 돌아감)" onClick={() => run((g) => setContractSquad(g, a.id, null))}>
+            <button className="ct3-x" title="부서 배치 빼기(원래 부서 일로 돌아감)" onClick={() => run({ type: 'setContractSquad', contractId: a.id, squadId: null })}>
               빼기
             </button>
           </div>
@@ -181,7 +182,7 @@ function Active({ a, many, openSchedule }: { a: Contract; many: boolean; openSch
           <Row key={e.id} e={e} sub={`${dept(e.dept).name} · ${sq?.name ?? ''}`} rate={output(s, e)} max={maxRate} />
         ))}
         {solo.map((e) => (
-          <Row key={e.id} e={e} sub={`${dept(e.dept).name} · 배치`} rate={output(s, e)} max={maxRate} onRemove={() => run((g) => setContractStaff(g, a.id, e.id, false))} />
+          <Row key={e.id} e={e} sub={`${dept(e.dept).name} · 배치`} rate={output(s, e)} max={maxRate} onRemove={() => run({ type: 'setContractStaff', contractId: a.id, empId: e.id, on: false })} />
         ))}
         {pace.loose.map((e) => (
           <Row key={e.id} e={e} sub={`${dept(e.dept).name} · "외주 작업" 맡음`} rate={output(s, e)} max={maxRate} />
@@ -195,7 +196,7 @@ function Active({ a, many, openSchedule }: { a: Contract; many: boolean; openSch
               대표 일정 바꾸기
             </button>
           )}
-          <button className="btn small ghost" data-testid="contract-drop" onClick={() => run((g) => dropContract(g, a.id))}>
+          <button className="btn small ghost" data-testid="contract-drop" onClick={() => run({ type: 'dropContract', contractId: a.id })}>
             포기
           </button>
         </div>
@@ -226,7 +227,7 @@ function Row({ e, av, name, sub, rate, max, onRemove }: { e?: Employee; av?: str
 }
 
 // 인원 배치(A-238): 사람 한 명씩 또는 부서 통째로. 지금 하는 일·다른 외주 배치를 같이 보여 줌
-function Picker({ a, run }: { a: Contract; run: (fn: (g: GameState) => string | null) => void }) {
+function Picker({ a, run }: { a: Contract; run: (c: Command) => void }) {
   const s = useGame();
   const [mode, setMode] = useState<'people' | 'squad'>('people');
   const people = s.employees.filter(canStaff);
@@ -252,7 +253,7 @@ function Picker({ a, run }: { a: Contract; run: (fn: (g: GameState) => string | 
               const now = other && other.id !== a.id ? `다른 외주: ${other.title}` : other ? '이 외주 진행 중' : orderDef(empOrderOf(s, e))?.name ?? '';
               return (
                 <label key={e.id} className={`ct3-opt ${on ? 'on' : ''}`}>
-                  <input type="checkbox" data-testid={`contract-staff-${a.id}-${e.id}`} checked={on} onChange={(ev) => run((g) => setContractStaff(g, a.id, e.id, ev.target.checked))} />
+                  <input type="checkbox" data-testid={`contract-staff-${a.id}-${e.id}`} checked={on} onChange={(ev) => run({ type: 'setContractStaff', contractId: a.id, empId: e.id, on: ev.target.checked })} />
                   <PixelAvatar id={e.id} color={dept(e.dept).color} size={22} />
                   <span>
                     <b>{e.name}</b>{' '}
@@ -277,7 +278,7 @@ function Picker({ a, run }: { a: Contract; run: (fn: (g: GameState) => string | 
             const n = squadMembers(s, q.id).filter(canStaff).length;
             return (
               <label key={q.id} className={`ct3-opt ${on ? 'on' : ''}`}>
-                <input type="radio" name={`ct-sq-${a.id}`} data-testid={`contract-squad-${a.id}-${q.id}`} checked={on} disabled={n === 0} onChange={() => run((g) => setContractSquad(g, a.id, q.id))} />
+                <input type="radio" name={`ct-sq-${a.id}`} data-testid={`contract-squad-${a.id}-${q.id}`} checked={on} disabled={n === 0} onChange={() => run({ type: 'setContractSquad', contractId: a.id, squadId: q.id })} />
                 <span>
                   <b>{q.name}</b> <small>외주 가능 인력 {n}명</small>
                 </span>
@@ -286,7 +287,7 @@ function Picker({ a, run }: { a: Contract; run: (fn: (g: GameState) => string | 
             );
           })}
           {a.squadId && (
-            <button className="btn small ghost" onClick={() => run((g) => setContractSquad(g, a.id, null))}>
+            <button className="btn small ghost" onClick={() => run({ type: 'setContractSquad', contractId: a.id, squadId: null })}>
               부서 배치 빼기
             </button>
           )}

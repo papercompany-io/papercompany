@@ -3,9 +3,9 @@
 // 화면(A-179): 커리어·업무와 같은 톤 — 가운데 큰 사무실 이름, 칸칸이 놓인 책상 칸, 납작한 회색 요약 칸, 매물 카드는 1px 테두리 납작한 면
 import { useState } from 'react';
 import { OFFICE_TIERS } from '../../core/data';
-import { currentTier, deskCapacity, desks, moveBlock, moveOffice, officeComfort, seatsAvailable } from '../../core/office';
+import { currentTier, deskCapacity, desks, moveBlock, officeComfort, seatsAvailable } from '../../core/office';
 import { wonShort } from '../../core/format';
-import { act, useGame } from '../store';
+import { dispatch, useGame } from '../store';
 import { Help } from '../common';
 import './apps.css';
 import './skin/OfficeApp.css';
@@ -103,8 +103,8 @@ export function OfficeApp() {
                     className="btn small"
                     data-testid={`move-${t.id}`}
                     onClick={() => {
-                      const err = act((g) => moveOffice(g, t.id));
-                      setMsg(err ?? null);
+                      const err = dispatch({ type: 'moveOffice', tierId: t.id });
+                      setMsg(typeof err === 'string' ? err : null);
                     }}
                   >
                     이사

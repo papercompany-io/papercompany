@@ -21,12 +21,10 @@ import {
   runningChannels,
   seasonMult,
   seasonName,
-  setChannelBudget,
-  startCampaign,
 } from '../../core/ads';
 import { countShort, wonShort } from '../../core/format';
 import { unitWord } from '../../core/market';
-import { act, useGame } from '../store';
+import { dispatch, useGame } from '../store';
 import { PxIcon } from '../icons';
 import { play } from '../sound';
 import type { MarketId } from '../../core/types';
@@ -93,14 +91,14 @@ export function Ads({ setMsg }: { setMsg: (m: string | null) => void }) {
       <div className="ad-crew ad2-pills" data-testid="ad-crew">
         {mk > 0 ? (
           <>
-            <button className={s.company.adAuto ? '' : 'on'} data-testid="ad-auto-off" onClick={() => act((g) => (g.company.adAuto = false))}>
+            <button className={s.company.adAuto ? '' : 'on'} data-testid="ad-auto-off" onClick={() => dispatch({ type: 'setAdAuto', on: false })}>
               직접 정하기
             </button>
             <button
               className={s.company.adAuto ? 'on' : ''}
               data-testid="ad-auto-on"
               title="매달 초 마케팅팀이 성과가 나쁜 채널 예산을 좋은 채널로 옮기고, 지친 소재를 새로 만듭니다. 한 달 광고비 합계는 그대로입니다. 결과는 마케팅팀 채널로 보고합니다."
-              onClick={() => act((g) => (g.company.adAuto = true))}
+              onClick={() => dispatch({ type: 'setAdAuto', on: true })}
             >
               마케팅팀에 맡기기
             </button>
@@ -159,7 +157,7 @@ export function Ads({ setMsg }: { setMsg: (m: string | null) => void }) {
                 max={max}
                 step={step}
                 value={v}
-                onChange={(e) => setMsg(act((g) => setChannelBudget(g, m, c.id, Number(e.target.value))) ?? null)}
+                onChange={(e) => setMsg((dispatch({ type: 'setChannelBudget', market: m, channel: c.id, monthly: Number(e.target.value) }) as string | null | undefined) ?? null)}
               />
             </div>
           );
@@ -204,7 +202,7 @@ export function Ads({ setMsg }: { setMsg: (m: string | null) => void }) {
                         disabled={noHands}
                         title={noHands ? `지금은 채널 ${slots}개까지 운영할 수 있습니다` : `월 ${wonShort(startAmount)}로 시작합니다. 예산은 나중에 고칩니다`}
                         onClick={() => {
-                          const e = act((g) => setChannelBudget(g, m, c.id, startAmount)) ?? null;
+                          const e = (dispatch({ type: 'setChannelBudget', market: m, channel: c.id, monthly: startAmount }) as string | null | undefined) ?? null;
                           setMsg(e);
                           if (!e) setAdding(false);
                         }}
@@ -379,7 +377,7 @@ function Campaigns({ m, setMsg }: { m: MarketId; setMsg: (m: string | null) => v
                   data-testid={`campaign-${def.id}`}
                   disabled={!!block}
                   onClick={() => {
-                    const e = act((g) => startCampaign(g, def.id, m, t)) ?? null;
+                    const e = (dispatch({ type: 'startCampaign', defId: def.id, market: m, toneId: t }) as string | null | undefined) ?? null;
                     setMsg(e);
                     if (!e) play('success');
                   }}

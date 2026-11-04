@@ -3,10 +3,10 @@
 import { useState } from 'react';
 import { DATA } from '../../core/data';
 import { founderPct, founderShares, totalShares } from '../../core/equity';
-import { buyback, marketCap, resign, resignPreview, sellPreview, sellShares, setGuidance } from '../../core/public';
+import { marketCap, resignPreview, sellPreview } from '../../core/public';
 import { formatDate } from '../../core/calendar';
 import { wonShort, pct } from '../../core/format';
-import { act, useGame } from '../store';
+import { dispatch, useGame } from '../store';
 import { Money } from '../common';
 import { PxIcon } from '../icons';
 import { play } from '../sound';
@@ -113,7 +113,7 @@ export function StockApp() {
           </div>
           <div className="st2-pills">
             {DATA.public.guidanceOptions.map((o) => (
-              <button key={o.id} onClick={() => act((g) => setGuidance(g, o.id))} title={`지난 분기 대비 +${o.growth * 100}% 약속`}>
+              <button key={o.id} onClick={() => dispatch({ type: 'setGuidance', optionId: o.id })} title={`지난 분기 대비 +${o.growth * 100}% 약속`}>
                 {o.name} (+{o.growth * 100}%)
               </button>
             ))}
@@ -151,7 +151,7 @@ export function StockApp() {
                 className="btn"
                 data-testid="sell-shares"
                 onClick={() => {
-                  const err = act((g) => sellShares(g, frac));
+                  const err = dispatch({ type: 'sellShares', fraction: frac }) as string | null | undefined;
                   setMsg(err ?? null);
                   if (!err) play('coin');
                 }}
@@ -166,7 +166,7 @@ export function StockApp() {
             <b>자사주 매입</b>
           </div>
           <div className="st2-line muted">회사 자금으로 주식을 사서 없앱니다.</div>
-          <button className="btn ghost" onClick={() => setMsg(act((g) => buyback(g, Math.floor(g.cash * 0.1))) ?? '잔고 10%로 자사주를 매입했습니다.')}>
+          <button className="btn ghost" onClick={() => setMsg((dispatch({ type: 'buyback', amount: Math.floor(s.cash * 0.1) }) as string | null | undefined) ?? '잔고 10%로 자사주를 매입했습니다.')}>
             잔고 10% 매입
           </button>
         </div>
@@ -188,7 +188,7 @@ export function StockApp() {
         ) : (
           <div className="st2-confirm">
             <span className="warn">이 회사가 끝나고 커리어 화면으로 갑니다.</span>
-            <button className="btn red" data-testid="resign-confirm" onClick={() => setMsg(act((g) => resign(g)) ?? null)}>
+            <button className="btn red" data-testid="resign-confirm" onClick={() => setMsg((dispatch({ type: 'resign' }) as string | null | undefined) ?? null)}>
               확정
             </button>
             <button className="btn ghost" onClick={() => setConfirm(false)}>

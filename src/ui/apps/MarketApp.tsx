@@ -4,15 +4,15 @@
 import { useState } from 'react';
 import { industry, market, MARKET_IDS } from '../../core/data';
 import { adSalesOn } from '../../core/adsales';
-import { launchBlock, launchMarket, roomState, setAdBudget, shares } from '../../core/market';
+import { launchBlock, roomState, shares } from '../../core/market';
 import { ROOM_LINE } from '../../core/marketing';
 import { LossBars } from './CustomerFlow';
-import { acquire, acquireBlock, acquisitionPrice, competitorUsers } from '../../core/competitors';
+import { acquireBlock, acquisitionPrice, competitorUsers } from '../../core/competitors';
 import { appeal, fxTotals } from '../../core/product';
 import { enterpriseThreshold } from '../../core/orders';
 import { formatDate } from '../../core/calendar';
 import { wonShort } from '../../core/format';
-import { act, useGame } from '../store';
+import { dispatch, useGame } from '../store';
 import { Tabs, Help } from '../common';
 import { play } from '../sound';
 import type { MarketId, MarketState } from '../../core/types';
@@ -96,7 +96,7 @@ function Markets({ setMsg }: { setMsg: (m: string | null) => void }) {
                 className="btn big"
                 data-testid={`launch-${sel}`}
                 onClick={() => {
-                  const err = act((g) => launchMarket(g, sel));
+                  const err = dispatch({ type: 'launchMarket', market: sel }) as string | null | undefined;
                   setMsg(err ?? null);
                 }}
               >
@@ -146,7 +146,7 @@ function Markets({ setMsg }: { setMsg: (m: string | null) => void }) {
                 max={Math.max(2e7, Math.min(2e10, Math.ceil(s.cash / 6 / 1e6) * 1e6))}
                 step={Math.max(1e5, Math.round(Math.max(2e7, s.cash / 6) / 200 / 1e5) * 1e5)}
                 value={ms.adBudget}
-                onChange={(e) => act((g) => setAdBudget(g, sel, Number(e.target.value)))}
+                onChange={(e) => dispatch({ type: 'setAdBudget', market: sel, monthly: Number(e.target.value) })}
               />
               <div className="ew-note">
                 인지도 <b>{(ms.awareness * 100).toFixed(1)}%</b>
@@ -252,7 +252,7 @@ function Competitors({ setMsg }: { setMsg: (m: string | null) => void }) {
                       disabled={!!block}
                       title={block ?? ''}
                       onClick={() => {
-                        const err = act((g) => acquire(g, c.id));
+                        const err = dispatch({ type: 'acquire', competitorId: c.id }) as string | null | undefined;
                         setMsg(err ?? null);
                         if (!err) play('success');
                       }}

@@ -10,11 +10,11 @@ import { DEPT_IDS, dept, orderDef } from '../../core/data';
 import { deptMembers } from '../../core/employees';
 import { deptOutput, leadInfo } from '../../core/staff';
 import { EmpOrderSelect, SquadOrderSelect, TeamOrderSelect } from './MessengerApp';
-import { createSquad, removeSquad, renameSquad, setSquad, squad, squadChannelId, squadJobs, squadMembers, squadsOf, unassigned } from '../../core/squads';
+import { createSquad, renameSquad, setSquad, squad, squadChannelId, squadJobs, squadMembers, squadsOf, unassigned } from '../../core/squads';
 import { groupOrder } from '../../core/assign';
 import { deptCoverage } from '../../core/market';
 import type { DeptId, Employee } from '../../core/types';
-import { act, useGame } from '../store';
+import { dispatch, useGame } from '../store';
 import { PixelAvatar } from '../office/Avatar';
 import type { AppId } from '../Desktop';
 import { Ads } from './AdsPanel';
@@ -138,7 +138,7 @@ function PeopleRows({ people, onEmployee, setMsg }: { people: Employee[]; onEmpl
               </small>
             </span>
           </button>
-          <select aria-label={`${e.name} 부서`} data-testid={`emp-squad-${e.id}`} value={e.squadId ?? ''} onChange={(ev) => setMsg(act((g) => setSquad(g, e.id, ev.target.value || null)) ?? null)}>
+          <select aria-label={`${e.name} 부서`} data-testid={`emp-squad-${e.id}`} value={e.squadId ?? ''} onChange={(ev) => setMsg((dispatch({ type: 'setSquad', empId: e.id, squadId: ev.target.value || null }) as ReturnType<typeof setSquad>) ?? null)}>
             <option value="">소속 없음</option>
             {squadsOf(s).map((q) => (
               <option key={q.id} value={q.id}>
@@ -185,7 +185,7 @@ function SquadPage({ id, openApp, onEmployee, onDeleted }: { id: string; openApp
               className="dpg-sq-new"
               onSubmit={(ev) => {
                 ev.preventDefault();
-                const err = act((g) => renameSquad(g, id, editing)) ?? null;
+                const err = (dispatch({ type: 'renameSquad', squadId: id, name: editing }) as ReturnType<typeof renameSquad>) ?? null;
                 setMsg(err);
                 if (!err) setEditing(null);
               }}
@@ -208,7 +208,7 @@ function SquadPage({ id, openApp, onEmployee, onDeleted }: { id: string; openApp
             <button className="btn small ghost" onClick={() => openApp('messenger', squadChannelId(id))}>
               채팅방
             </button>
-            <button className="btn small ghost" data-testid={`squad-remove-${id}`} title="직원은 소속 없음으로 돌아가고 채팅방은 닫힙니다" onClick={() => (act((g) => removeSquad(g, id)), onDeleted())}>
+            <button className="btn small ghost" data-testid={`squad-remove-${id}`} title="직원은 소속 없음으로 돌아가고 채팅방은 닫힙니다" onClick={() => (dispatch({ type: 'removeSquad', squadId: id }), onDeleted())}>
               부서 삭제
             </button>
           </span>
@@ -223,7 +223,7 @@ function SquadPage({ id, openApp, onEmployee, onDeleted }: { id: string; openApp
         <div className="sq-h-row">
           <h4 className="sq-h">직원</h4>
           {others.length > 0 && (
-            <select className="sq-add" data-testid={`squad-add-${id}`} value="" onChange={(ev) => ev.target.value && setMsg(act((g) => setSquad(g, ev.target.value, id)) ?? null)}>
+            <select className="sq-add" data-testid={`squad-add-${id}`} value="" onChange={(ev) => ev.target.value && setMsg((dispatch({ type: 'setSquad', empId: ev.target.value, squadId: id }) as ReturnType<typeof setSquad>) ?? null)}>
               <option value="">+ 직원 추가</option>
               {others.map((e) => (
                 <option key={e.id} value={e.id}>
@@ -281,11 +281,7 @@ function NewSquad({ onDone }: { onDone: (id: string) => void }) {
   const [picked, setPicked] = useState<string[]>([]);
   const [err, setErr] = useState<string | null>(null);
   const make = () => {
-    const r = act((g) => {
-      const id = createSquad(g, name);
-      if (typeof id === 'string') for (const e of picked) setSquad(g, e, id);
-      return id;
-    });
+    const r = dispatch({ type: 'createSquad', name, members: picked }) as ReturnType<typeof createSquad> | undefined;
     if (!r) return;
     if (typeof r === 'object') return setErr(r.err);
     onDone(r);

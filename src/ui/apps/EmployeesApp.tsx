@@ -8,9 +8,10 @@ import { DATA, DEPT_IDS, dept, trait } from '../../core/data';
 import { formatDate } from '../../core/calendar';
 import { severance } from '../../core/employees';
 import { monthlySalary, payrollWithBenefits } from '../../core/finance';
-import { bonusBlock, bonusCost, demoteLead, fire, giveBonus, giveRaise, healthTarget, hasLeave, isOff, isSick, leaveBlock, leaveOption, marketSalary, output, promoteLead, satTarget, sendLeave, employeeSpeed, type LeaveId } from '../../core/staff';
-import { esopEntry, esopFree, grantOptions, unvestedOptions, vestedFraction } from '../../core/equity';
-import { act, useGame } from '../store';
+import { bonusBlock, bonusCost, healthTarget, hasLeave, isOff, isSick, leaveBlock, leaveOption, marketSalary, output, satTarget, employeeSpeed, type LeaveId } from '../../core/staff';
+import { esopEntry, esopFree, unvestedOptions, vestedFraction } from '../../core/equity';
+import { dispatch, useGame } from '../store';
+import type { Command } from '../../core/commands';
 import { Tabs } from '../common';
 import { PixelAvatar } from '../office/Avatar';
 import { wonShort } from '../../core/format';
@@ -49,8 +50,8 @@ export function EmployeeDetail({ e, openDm, compact }: { e: Employee; openDm?: (
   const st = satTarget(s, e);
   const kind = e.kind === 'cofounder' ? '코파운더' : e.kind === 'engineer' ? '파운딩 엔지니어' : '직원';
   const ms = marketSalary(s, e.dept, e.grade);
-  const run = (fn: (g: GameState) => string | null, ok: string) => {
-    const err = act(fn);
+  const run = (c: Command, ok: string) => {
+    const err = dispatch(c) as string | null | undefined;
     setMsg(err ? { text: err, ok: false } : { text: ok, ok: true });
   };
   return (
@@ -108,7 +109,7 @@ export function EmployeeDetail({ e, openDm, compact }: { e: Employee; openDm?: (
           {/* 부서(A-237): 부서를 먼저, 하는 일은 그 부서 기준(예외만 여기서) */}
           <label className="emd-field">
             <span>부서</span>
-            <select data-testid="emp-squad" value={e.squadId ?? ''} onChange={(ev) => { const err = act((g) => setSquad(g, e.id, ev.target.value || null)); if (err) setMsg({ text: err, ok: false }); }}>
+            <select data-testid="emp-squad" value={e.squadId ?? ''} onChange={(ev) => { const err = dispatch({ type: 'setSquad', empId: e.id, squadId: ev.target.value || null }) as ReturnType<typeof setSquad>; if (err) setMsg({ text: err, ok: false }); }}>
               <option value="">소속 없음</option>
               {squadsOf(s).map((q) => (
                 <option key={q.id} value={q.id}>
@@ -122,24 +123,24 @@ export function EmployeeDetail({ e, openDm, compact }: { e: Employee; openDm?: (
             <EmpOrderSelect e={e} onErr={(m) => m && setMsg({ text: m, ok: false })} />
           </label>
           <div className="emd-acts act-row">
-            <button className="btn small act-main" data-testid="bonus" disabled={!!bonusBlock(s, e)} title={bonusBlock(s, e) ?? '만족도를 가득 채우는 보너스입니다. 만족도가 낮을수록 비싸고, 처우가 그대로면 차츰 다시 떨어집니다.'} onClick={() => run((g) => giveBonus(g, e.id), '보너스를 줬습니다. 만족도가 가득 찼습니다.')}>
+            <button className="btn small act-main" data-testid="bonus" disabled={!!bonusBlock(s, e)} title={bonusBlock(s, e) ?? '만족도를 가득 채우는 보너스입니다. 만족도가 낮을수록 비싸고, 처우가 그대로면 차츰 다시 떨어집니다.'} onClick={() => run({ type: 'giveBonus', empId: e.id }, '보너스를 줬습니다. 만족도가 가득 찼습니다.')}>
               보너스 <small>{Math.round(bonusCost(e) / 1e4).toLocaleString('ko-KR')}만원</small>
             </button>
             <LeaveButtons e={e} run={run} />
-            <button className="btn small ghost" data-testid="raise" onClick={() => run((g) => giveRaise(g, e.id, 0.1), '월급을 10% 올렸습니다.')}>
+            <button className="btn small ghost" data-testid="raise" onClick={() => run({ type: 'giveRaise', empId: e.id, rate: 0.1 }, '월급을 10% 올렸습니다.')}>
               연봉 10% 인상
             </button>
             {!e.lead ? (
-              <button className="btn small ghost" data-testid="promote" onClick={() => run((g) => promoteLead(g, e.id), '팀장이 되었습니다(월급 15% 인상).')}>
+              <button className="btn small ghost" data-testid="promote" onClick={() => run({ type: 'promoteLead', empId: e.id }, '팀장이 되었습니다(월급 15% 인상).')}>
                 팀장 임명
               </button>
             ) : (
-              <button className="btn small ghost" onClick={() => run((g) => demoteLead(g, e.id), '팀장에서 해제했습니다.')}>
+              <button className="btn small ghost" onClick={() => run({ type: 'demoteLead', empId: e.id }, '팀장에서 해제했습니다.')}>
                 팀장 해제
               </button>
             )}
             {esopEntry(s) && (
-              <button className="btn small ghost" data-testid="grant" onClick={() => run((g) => grantOptions(g, e, Math.min(esopFree(g), Math.round(esopEntry(g)!.shares * (e.grade === 'S' ? 0.06 : e.grade === 'A' ? 0.04 : 0.02)))), '스톡옵션을 줬습니다(베스팅 2년 20%, 3년 40%, 4년 80%, 5년 100%).')}>
+              <button className="btn small ghost" data-testid="grant" onClick={() => run({ type: 'grantOptions', empId: e.id, shares: Math.min(esopFree(s), Math.round(esopEntry(s)!.shares * (e.grade === 'S' ? 0.06 : e.grade === 'A' ? 0.04 : 0.02))) }, '스톡옵션을 줬습니다(베스팅 2년 20%, 3년 40%, 4년 80%, 5년 100%).')}>
                 스톡옵션 지급
               </button>
             )}
@@ -156,7 +157,7 @@ export function EmployeeDetail({ e, openDm, compact }: { e: Employee; openDm?: (
               ) : (
                 <span className="emd-fire">
                   <span>위로금 {Math.round(severance(e) / 1e4).toLocaleString('ko-KR')}만원, 팀 분위기 하락</span>
-                  <button className="btn small red" data-testid="fire-confirm" onClick={() => run((g) => fire(g, e.id), '해고했습니다.')}>
+                  <button className="btn small red" data-testid="fire-confirm" onClick={() => run({ type: 'fire', empId: e.id }, '해고했습니다.')}>
                     확정
                   </button>
                   <button className="btn small ghost" onClick={() => setConfirmFire(false)}>
@@ -289,7 +290,7 @@ function Burning() {
       {on && b ? (
         <div className="burn-on">버닝 중 · {b.until - s.day}일 남음</div>
       ) : (
-        <button className="btn small" data-testid="burning-start" disabled={!!block} title={block ?? BURN_HELP} onClick={() => setErr(act((g) => startBurning(g)) ?? null)}>
+        <button className="btn small" data-testid="burning-start" disabled={!!block} title={block ?? BURN_HELP} onClick={() => setErr((dispatch({ type: 'startBurning' }) as ReturnType<typeof startBurning>) ?? null)}>
           버닝 시작 · 보너스 {wonShort(burningCost(s))}
         </button>
       )}
@@ -320,7 +321,7 @@ function Welfare() {
                 className={`emp-welfare ${on ? 'on' : ''}`}
                 data-testid={`welfare-${w.id}`}
                 aria-pressed={on}
-                onClick={() => act((g) => (g.company.welfare = on ? g.company.welfare.filter((x) => x !== w.id) : [...g.company.welfare, w.id]))}
+                onClick={() => dispatch({ type: 'toggleWelfare', welfareId: w.id })}
               >
                 <span className="ew-check" aria-hidden>
                   {on && <PixelCheck />}
@@ -340,7 +341,7 @@ function Welfare() {
           <div className="hf-label">근무 방침</div>
           <div className="seg">
             {DATA.welfare.workPolicies.map((p) => (
-              <button key={p.id} className={s.company.workPolicy === p.id ? 'on' : ''} data-testid={`policy-${p.id}`} onClick={() => act((g) => (g.company.workPolicy = p.id as WorkPolicy))}>
+              <button key={p.id} className={s.company.workPolicy === p.id ? 'on' : ''} data-testid={`policy-${p.id}`} onClick={() => dispatch({ type: 'setWorkPolicy', policy: p.id as WorkPolicy })}>
                 {p.name}
               </button>
             ))}
@@ -356,7 +357,7 @@ function Welfare() {
           </div>
           <div className="seg">
             {[0, 0.03, 0.05, 0.08].map((r) => (
-              <button key={r} className={s.company.raiseRate === r ? 'on' : ''} onClick={() => act((g) => (g.company.raiseRate = r))}>
+              <button key={r} className={s.company.raiseRate === r ? 'on' : ''} onClick={() => dispatch({ type: 'setRaiseRate', rate: r })}>
                 {r ? `${r * 100}%` : '안 올림'}
               </button>
             ))}
@@ -372,7 +373,7 @@ function Welfare() {
 }
 
 // 1일·3일 휴가(A-231, A-236): 쉬는 동안 일을 하지 않는 대신 건강·만족이 오름. 직원 관리·사무실 직원 창이 같은 버튼을 씀
-export function LeaveButtons({ e, run }: { e: Employee; run: (fn: (g: GameState) => string | null, ok: string) => void }) {
+export function LeaveButtons({ e, run }: { e: Employee; run: (c: Command, ok: string) => void }) {
   const s = useGame();
   const why = leaveBlock(s, e);
   return (
@@ -386,7 +387,7 @@ export function LeaveButtons({ e, run }: { e: Employee; run: (fn: (g: GameState)
             data-testid={`leave-${id}`}
             disabled={!!why}
             title={why ?? `오늘 일을 끝내고 내일부터 ${o.days}일 동안 쉽니다. 건강과 만족도가 오릅니다.`}
-            onClick={() => run((g) => sendLeave(g, e.id, id), `${e.name}님이 내일부터 ${o.days}일 휴가를 갑니다. 오늘 일은 끝까지 합니다.`)}
+            onClick={() => run({ type: 'sendLeave', empId: e.id, leave: id }, `${e.name}님이 내일부터 ${o.days}일 휴가를 갑니다. 오늘 일은 끝까지 합니다.`)}
           >
             {o.name}
           </button>

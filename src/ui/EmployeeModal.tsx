@@ -10,9 +10,9 @@ import { dept } from '../core/data';
 import { formatDate } from '../core/calendar';
 import { orderLabel } from '../core/orders';
 import { severance } from '../core/employees';
-import { bonusBlock, bonusCost, demoteLead, fire, giveBonus, giveRaise, promoteLead } from '../core/staff';
-import type { GameState } from '../core/types';
-import { act, useGame } from './store';
+import { bonusBlock, bonusCost, fire } from '../core/staff';
+import { dispatch, useGame } from './store';
+import type { Command } from '../core/commands';
 import { Tabs } from './common';
 import { PixelAvatar } from './office/Avatar';
 import { EmployeeDetail, LeaveButtons } from './apps/EmployeesApp';
@@ -32,8 +32,8 @@ export function EmployeeModal({ id, onClose, onDm, onManage, openApp, onEmployee
   const showWork = !!openApp && hasSpecialWork(e.dept); // 일반 부서(개발·디자인 등)는 업무 탭 없이 직원 정보만(A-229)
   const bonusWhy = bonusBlock(s, e);
   const raiseWhy = s.day - e.lastRaiseDay < 90 ? '최근 90일 안에 이미 올려 주었습니다.' : null;
-  const run = (fn: (g: GameState) => string | null, ok: string) => {
-    const err = act(fn);
+  const run = (c: Command, ok: string) => {
+    const err = dispatch(c) as string | null | undefined;
     setMsg(err ? { text: err, ok: false } : { text: ok, ok: true });
   };
   return (
@@ -61,21 +61,21 @@ export function EmployeeModal({ id, onClose, onDm, onManage, openApp, onEmployee
                     data-testid="employee-bonus"
                     disabled={!!bonusWhy}
                     title={bonusWhy ?? '만족도를 가득 채우는 보너스입니다. 만족도가 낮을수록 비싸고, 처우가 그대로면 차츰 다시 떨어집니다.'}
-                    onClick={() => run((g) => giveBonus(g, e.id), `${e.name}님에게 보너스를 줬습니다. 만족도가 가득 찼습니다.`)}
+                    onClick={() => run({ type: 'giveBonus', empId: e.id }, `${e.name}님에게 보너스를 줬습니다. 만족도가 가득 찼습니다.`)}
                   >
                     보너스 <small>{Math.round(bonusCost(e) / 1e4).toLocaleString('ko-KR')}만원</small>
                   </button>
-                  <button className="btn small ghost" data-testid="employee-modal-raise" disabled={!!raiseWhy} title={raiseWhy ?? '월급을 10% 올립니다.'} onClick={() => run((g) => giveRaise(g, e.id, 0.1), '월급을 10% 올렸습니다.')}>
+                  <button className="btn small ghost" data-testid="employee-modal-raise" disabled={!!raiseWhy} title={raiseWhy ?? '월급을 10% 올립니다.'} onClick={() => run({ type: 'giveRaise', empId: e.id, rate: 0.1 }, '월급을 10% 올렸습니다.')}>
                     연봉 10% 인상
                   </button>
                 </span>
                 <span className="epm-grp">
                   {!e.lead ? (
-                    <button className="btn small ghost" data-testid="employee-modal-promote" onClick={() => run((g) => promoteLead(g, e.id), '팀장이 되었습니다(월급 15% 인상).')}>
+                    <button className="btn small ghost" data-testid="employee-modal-promote" onClick={() => run({ type: 'promoteLead', empId: e.id }, '팀장이 되었습니다(월급 15% 인상).')}>
                       팀장 세우기
                     </button>
                   ) : (
-                    <button className="btn small ghost" onClick={() => run((g) => demoteLead(g, e.id), '팀장에서 내렸습니다.')}>
+                    <button className="btn small ghost" onClick={() => run({ type: 'demoteLead', empId: e.id }, '팀장에서 내렸습니다.')}>
                       팀장 해제
                     </button>
                   )}
@@ -101,7 +101,7 @@ export function EmployeeModal({ id, onClose, onDm, onManage, openApp, onEmployee
                   className="btn small red"
                   data-testid="employee-modal-fire-confirm"
                   onClick={() => {
-                    const err = act((g) => fire(g, e.id));
+                    const err = dispatch({ type: 'fire', empId: e.id }) as ReturnType<typeof fire>;
                     if (err) setMsg({ text: err, ok: false });
                     else onClose();
                   }}
