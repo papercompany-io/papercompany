@@ -18,3 +18,15 @@
 .boot-skip { color: #7d84a3; font-size: 12px; font-family: var(--pixel); }
 .boot-choices { display: flex; flex-direction: column; gap: 12px; min-width: 340px; z-index: 1; }
 .boot-meta { display: block; font-size: 12px; font-weight: 600; opacity: 0.8; margin-top: 2px; }
+
+/* 온라인 로그인·가입 폼(A-251). theme.css의 input·hf-류는 큰 흰 창 배경용이니, 어두운 부팅 배경에 맞는 값을 따로 지정. */
+.boot-online { background: rgba(14, 18, 34, 0.72); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 10px; padding: 20px 22px; backdrop-filter: blur(6px); }
+.boot-online-title { font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+.boot-online-err { background: rgba(217, 69, 59, 0.18); border: 1px solid rgba(217, 69, 59, 0.5); color: #ffb3ad; border-radius: 6px; padding: 8px 10px; font-size: 13px; }
+.boot-online-msg { color: #a8aec8; font-size: 13px; }
+.boot-field { display: flex; flex-direction: column; gap: 4px; }
+.boot-field span { font-size: 11px; font-weight: 700; color: #a8aec8; letter-spacing: 0.04em; }
+.boot-online .boot-field input[type] , .boot-online .boot-field input:not([type]) { background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.18); border-radius: 6px; padding: 8px 10px; color: #fff; font-size: 14px; }
+.boot-field input:focus { outline: none; border-color: var(--violet); }
+.boot-online .warn { background: rgba(240, 160, 32, 0.15); border: 1px solid rgba(240, 160, 32, 0.5); color: #ffd9a0; border-radius: 8px; padding: 12px 14px; }
+.boot-online .warn code { color: #fff; }
