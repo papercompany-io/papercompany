@@ -10,6 +10,7 @@ import { openRound } from '../../core/funding';
 import { deptMembers } from '../../core/employees';
 import { output } from '../../core/staff';
 import { contractWorkers, nearestContract, type Contract } from '../../core/contracts';
+import { enterpriseThreshold } from '../../core/orders';
 import { contractOf, empOrderOf } from '../../core/assign';
 import { clockHour, inNight } from '../../core/night';
 import { fxTotals, hasMvp, itemNeed } from '../../core/product';
@@ -52,8 +53,17 @@ function outingPurpose(o: Outing): string {
 // 참고: IR 점수는 투자 확률을 40점에서 최대(+20%p)로 올리고 라운드가 끝나면 0으로 돌아감.
 //       네트워크는 지원자 +30%/100점(최대 +60%), 투자사 관심 +1/10점(최대 +15). 파이프라인은 enterpriseThreshold(s)를 넘으면 대기업 계약
 export function standingWords(s: GameState): { label: string; word: string; tone: 'good' | 'mid' | 'low' }[] {
-  // TODO(human)
-  return [];
+  const words: { label: string; word: string; tone: 'good' | 'mid' | 'low' }[] = [];
+  if (!s.public && s.rounds.some((r) => r.status === 'open')) {
+    const ir = s.irPoints;
+    words.push({ label: 'IR', word: ir >= 40 ? '투자자에게 충분히 알림' : ir >= 15 ? '투자자에게 조금씩 알리는 중' : '아직 투자자에게 알리지 않음', tone: ir >= 40 ? 'good' : ir >= 15 ? 'mid' : 'low' });
+  }
+  const net = s.networkPoints;
+  words.push({ label: '네트워크', word: net >= 150 ? '인맥이 두루 넓음' : net >= 50 ? '인맥을 쌓는 중' : '인맥이 적음', tone: net >= 150 ? 'good' : net >= 50 ? 'mid' : 'low' });
+  const th = enterpriseThreshold(s);
+  const pipe = s.entPipeline / th;
+  words.push({ label: '대기업 영업', word: pipe >= 1 ? '곧 계약 성사' : pipe >= 0.4 ? '가능성을 쌓는 중' : '아직 초기 단계', tone: pipe >= 1 ? 'good' : pipe >= 0.4 ? 'mid' : 'low' });
+  return words;
 }
 
 // ── 개발 사이클 일정(A-168): 만드는 순서가 언제 시작해 언제 끝나는지를 8주 타임라인으로 ──
