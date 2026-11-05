@@ -331,7 +331,9 @@ export function bonusCost(e: Employee): number {
 
 // 줄 수 없으면 이유, 줄 수 있으면 null. 화면 버튼(disabled·title)과 giveBonus가 같이 씀
 export function bonusBlock(s: GameState, e: Employee): string | null {
-  // TODO(human)
+  const cool = DATA.hiring.bonus.coolDays;
+  const sinceLast = e.bonusDay === undefined ? Infinity : s.day - e.bonusDay;
+  if (sinceLast < cool) return `지난 보너스로부터 ${cool - sinceLast}일 뒤부터 다시 줄 수 있음`;
   return null;
 }
 
