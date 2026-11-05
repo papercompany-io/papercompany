@@ -122,7 +122,8 @@ export function setSquadOrder(s: GameState, id: string, d: DeptId, orderId: stri
   return null;
 }
 
-// 부서 맡은 일을 바꾸는 대가. members = 그 일을 바꾸는 직무 사람들, recent = recentDays일 안에 또 바꿈
+// 부서 맡은 일을 바꾸는 대가(A-237, 개인 업무 A-147과 같은 대가). members = 그 일을 바꾸는 직무 사람들, recent = recentDays일 안에 또 바꿈
 function squadOrderCost(s: GameState, members: Employee[], recent: boolean) {
-  // TODO(human)
+  if (!recent) return;
+  for (const e of members) e.sat = Math.max(0, e.sat - Q.recentSat);
 }
