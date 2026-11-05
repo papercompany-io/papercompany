@@ -11,7 +11,9 @@ export function takeSyncWarning(): string | null {
   return w;
 }
 
-async function syncToCloud(text: string): Promise<void> {
+// localBefore: 이번에 로컬에 쓰기 직전 localSaveTime(). syncToCloud 안에서 다시 localSaveTime()을 읽으면
+// saveNow가 이미 "지금"으로 찍어 둔 값이라 클라우드가 늘 더 과거로 보여 "이 기기가 최신"으로 오판한다(A-262).
+async function syncToCloud(text: string, localBefore: number): Promise<void> {
   try {
     const meta = await online.listSaves();
     const current = meta.find((m) => m.slot === 'main');
@@ -21,7 +23,7 @@ async function syncToCloud(text: string): Promise<void> {
     // 충돌: 클라우드 판이 이 기기보다 최신이면 그 판을 받아 이 기기에 반영, 아니면 이 기기 판으로 덮어씀(최신 것 우선).
     try {
       const cloud = await online.getSave('main');
-      if (cloud.updatedAt > localSaveTime()) {
+      if (cloud.updatedAt > localBefore) {
         const s = parseSaveText(cloud.data);
         if (s) {
           // 지금 플레이 중인 상태를 통보 없이 바꾸면 진행을 잃으니, 로컬 저장 파일만 최신으로 맞추고
@@ -42,9 +44,10 @@ async function syncToCloud(text: string): Promise<void> {
 export async function saveNow(_reason: string): Promise<boolean> {
   const g = getGame();
   if (!g) return false;
+  const localBefore = localSaveTime(); // saveGame이 "지금"으로 덮어쓰기 전의 값을 먼저 잡아둠(A-262)
   const replay = exportCommandRecording();
   const ok = await saveGame(g, replay);
-  if (ok && isOnlineMode()) void syncToCloud(JSON.stringify({ ...g, events: [], replay }));
+  if (ok && isOnlineMode()) void syncToCloud(JSON.stringify({ ...g, events: [], replay }), localBefore);
   return ok;
 }
 
