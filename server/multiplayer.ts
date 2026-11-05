@@ -32,6 +32,13 @@ export interface MultiplayerOptions {
 export const MP_PREFIX = '/api/mp';
 export const SAVE_SLOTS = ['main', 'backup', 'profile', 'slot1', 'slot2', 'slot3'] as const;
 export type SaveSlot = (typeof SAVE_SLOTS)[number];
+// A-264: 이 파일은 rateLimit이 전혀 없어 로기인만 하어있으면 저장(PUT)·제출(POST)·조회(GET)를 반복 호출해 D1·R2 비용을 부풀릴 수 있었음(비용 DoS).
+// auth/index.ts·talk.ts와 같은 고정 창 표(auth_rate_limits)를 재사용해 IP와 사용자별로 다 걸음.
+const MP_MIN = 60_000;
+export const MP_RATE = {
+  ip: { limit: 60, windowMs: MP_MIN }, // 미인증(IP만 있는) 요정을 포함해 모두 걸림
+  user: { limit: 60, windowMs: MP_MIN },
+} as const;
 export const LIMITS = {
   saveBytes: 4 * 1024 * 1024, // 측정: 8년 판 약 535KB. 긴 커리어 여유를 두고 4MiB
   runStateBytes: 4 * 1024 * 1024,
@@ -72,6 +79,25 @@ function json(body: unknown, status = 200): Response {
 }
 
 const bytes = (s: string) => new TextEncoder().encode(s).byteLength;
+const clientIp = (req: Request) => req.headers.get('cf-connecting-ip') ?? 'unknown';
+
+// 고정 창 요정 수 세기(auth/index.ts·talk.ts와 같은 방식, 같은 표)
+async function rateLimit(env: MultiplayerEnv, key: string, rule: { limit: number; windowMs: number }, now: number) {
+  const start = Math.floor(now / rule.windowMs) * rule.windowMs;
+  const row = await env.DB.prepare(
+    `INSERT INTO auth_rate_limits (key, window_start, count) VALUES (?, ?, 1)
+     ON CONFLICT (key) DO UPDATE SET
+       count = CASE WHEN window_start = excluded.window_start THEN count + 1 ELSE 1 END,
+       window_start = excluded.window_start
+     RETURNING count`,
+  )
+    .bind(key, start)
+    .first<{ count: number }>();
+  if ((row?.count ?? 0) > rule.limit) {
+    const retry = Math.ceil((start + rule.windowMs - now) / 1000);
+    throw new HttpError(429, 'rate_limited', '요정이 너무 많습니다. 잔시 뒤 다시 시도해 주세요.', { 'retry-after': String(retry) });
+  }
+}
 
 async function readJson(req: Request): Promise<Record<string, unknown>> {
   if (!(req.headers.get('content-type') ?? '').toLowerCase().startsWith('application/json')) {
@@ -580,6 +606,8 @@ export async function handleMultiplayer(request: Request, env: MultiplayerEnv, u
   const m = request.method.toUpperCase();
   const methodNotAllowed = () => new HttpError(405, 'method_not_allowed', '지원하지 않는 방식입니다.');
   try {
+    await rateLimit(env, `mp-ip:${clientIp(request)}`, MP_RATE.ip, now);
+    if (userId) await rateLimit(env, `mp-user:${userId}`, MP_RATE.user, now);
     let parts: string[];
     try {
       parts = url.pathname.slice(MP_PREFIX.length).split('/').filter(Boolean).map(decodeURIComponent);
