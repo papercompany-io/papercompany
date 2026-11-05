@@ -5,17 +5,25 @@ import { Setup } from './Setup';
 import { Game } from './Game';
 import { Career, Ending } from './Career';
 import { Hall } from './Hall';
-import { getGame, setGame, touch } from './store';
+import { Weekly } from './Weekly';
+import type { WeeklyChallenge } from '../platform/online';
+import { beginCommandRecording, getGame, recordTransition, restoreCommandRecording, setGame, touch, type SavedRecording } from './store';
 import { saveNow } from './autosave';
 import { getProfile, setProfile, updateProfile } from './meta';
 import { loadProfile, onAppClosing } from '../platform/save';
-import { newCareer, nextCompany, ownedSpecs } from '../core/state';
-import { recordCareerInProfile, recordCompanyInProfile, retire } from '../core/career';
+import { newCareer, nextCompany, ownedSpecs, type SetupChoices } from '../core/state';
+import { emptyProfile, recordCareerInProfile, recordCompanyInProfile, retire } from '../core/career';
 import { formatDate } from '../core/calendar';
 import type { GameState } from '../core/types';
 import { play, setMusicOn } from './sound';
 
-type Screen = 'boot' | 'setup' | 'game' | 'career' | 'next' | 'ending' | 'hall';
+type Screen = 'boot' | 'setup' | 'game' | 'career' | 'next' | 'ending' | 'hall' | 'weekly';
+
+// 주간 도전 판 표시. 도전 판은 빈 프로필로 시작해야 서버가 시드와 명령 기록만으로 다시 돌릴 수 있습니다
+const WEEKLY_FLAG = 'weekly:';
+export function isWeeklyRun(s: GameState): boolean {
+  return s.flags.some((f) => f.startsWith(WEEKLY_FLAG));
+}
 
 // 회사가 끝나면 프로필(레거시 점수·회사 랭킹·업적)에 한 번만 기록합니다.
 export function syncProfile(s: GameState) {
@@ -36,6 +44,7 @@ export function App() {
   const [screen, setScreen] = useState<Screen>('boot');
   const [notice, setNotice] = useState<string | null>(null);
   const [continued, setContinued] = useState(false);
+  const [weekly, setWeekly] = useState<WeeklyChallenge | undefined>(undefined);
 
   useEffect(() => {
     void loadProfile().then(setProfile);
@@ -54,19 +63,22 @@ export function App() {
     };
   }, [screen]);
 
-  const startGame = (s: GameState) => {
+  const startGame = (s: GameState, setup: SetupChoices, challengeId?: string) => {
     setGame(s);
+    if (challengeId) beginCommandRecording(challengeId, setup);
     setScreen('game');
   };
 
   if (screen === 'boot')
     return (
       <Boot
-        onNew={() => setScreen('setup')}
+        onNew={() => { setWeekly(undefined); setScreen('setup'); }}
         onHall={() => setScreen('hall')}
-        onContinue={(s, msg) => {
+        onWeekly={() => setScreen('weekly')}
+        onContinue={(s, msg, replay) => {
           setNotice(msg);
           setGame(s);
+          if (isWeeklyRun(s)) restoreCommandRecording(replay as SavedRecording | null);
           if (s.ended) {
             setScreen('career');
             return;
@@ -78,15 +90,21 @@ export function App() {
       />
     );
   if (screen === 'hall') return <Hall onBack={() => setScreen('boot')} />;
+  if (screen === 'weekly') return <Weekly onBack={() => setScreen('boot')} onStart={(challenge) => {
+    setWeekly(challenge);
+    setScreen('setup');
+  }} />;
   if (screen === 'setup')
     return (
       <Setup
         mode="new"
-        onCancel={() => setScreen('boot')}
+        weekly={weekly}
+        onCancel={() => setScreen(weekly ? 'weekly' : 'boot')}
         onDone={(c) => {
           setContinued(false);
-          const s = newCareer(c, getProfile());
-          startGame(s);
+          const s = newCareer(c, weekly ? emptyProfile() : getProfile());
+          if (weekly) s.flags.push(WEEKLY_FLAG + weekly.id);
+          startGame(s, c, weekly?.id);
           void saveNow('새 커리어');
         }}
       />
@@ -97,14 +115,17 @@ export function App() {
       <Setup
         mode="next"
         wealth={g.career.wealth}
-        legacy={{ ...getProfile().legacy }}
+        legacy={{ ...(isWeeklyRun(g) ? emptyProfile() : getProfile()).legacy }}
         challenge={g.career.challenge}
         owned={ownedSpecs(g)}
         onCancel={() => setScreen('career')}
         onDone={(c) => {
-          g.career.legacy = { ...getProfile().legacy };
+          const weeklyFlag = g.flags.find((f) => f.startsWith(WEEKLY_FLAG));
+          g.career.legacy = { ...(isWeeklyRun(g) ? emptyProfile() : getProfile()).legacy };
           const err = nextCompany(g, c);
           if (err) return;
+          recordTransition({ type: 'nextCompany', setup: c });
+          if (weeklyFlag) g.flags.push(weeklyFlag);
           setContinued(false);
           touch();
           setScreen('game');
@@ -119,6 +140,7 @@ export function App() {
         onNext={() => setScreen('next')}
         onRetire={() => {
           retire(g);
+          recordTransition({ type: 'retire' });
           syncProfile(g);
           void saveNow('은퇴');
           setScreen('ending');

@@ -435,9 +435,9 @@ function roadCenters(size: number): number[] {
 }
 
 // 창문 하나에 불이 켜졌는지. seed는 창문마다 고정된 0~1 값, frac은 하루 진행(0 출근 ~ 1 퇴근 무렵)
+// 창문마다 정해진 문턱(seed)보다 지금이 늦을수록 불이 켜짐 비율이 늘어남(야근하는 사무실이 하나둘 늘어나는 느낌)
 function windowLit(seed: number, frac: number): boolean {
-  // TODO(human)
-  return false;
+  return seed < 0.15 + frac * 0.35;
 }
 
 function rnd(...n: number[]): number {

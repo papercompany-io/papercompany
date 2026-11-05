@@ -16,6 +16,8 @@ interface PcSave {
   toggleFullscreen?: () => void;
   quit?: () => void;
   talk?: (req: { system: string; user: string; schema: unknown; maxTokens: number }) => Promise<string | null>; // 자유 입력 대화(A-199): LLM 답(JSON 문자열)
+  clearOnlineSession?: () => Promise<void>;
+  onlineRequest?: (request: { base: string; path: string; method: string; body?: string }) => Promise<{ status: number; ok: boolean; body: unknown }>;
 }
 
 declare global {
@@ -64,6 +66,7 @@ function parse(text: string | null): GameState | null {
   if (!text) return null;
   try {
     const s = JSON.parse(text) as GameState;
+    delete (s as { replay?: unknown }).replay; // 명령 기록은 상태에 남기지 않습니다(A-250)
     if (s && s.version === 2 && typeof s.day === 'number' && Array.isArray(s.capTable) && s.career) {
       // 예전 저장 보정: 대표 행동 "외주"(A-79)
       s.ceoAlloc.contract ??= 0;
@@ -114,6 +117,7 @@ export interface LoadResult {
   recovered: boolean; // 본 저장이 손상되어 백업으로 복구했는지
   corrupt: boolean; // 둘 다 읽지 못함
   oldVersion: boolean; // v1(MVP) 저장 — v2에서는 이어할 수 없음
+  replay: unknown; // 도전 판의 명령 기록(A-250). 형식 검사는 화면 저장소가 합니다
 }
 
 function isOld(text: string | null): boolean {
@@ -128,16 +132,46 @@ function isOld(text: string | null): boolean {
 export async function loadGame(): Promise<LoadResult> {
   const main = await api().read('main');
   const s = parse(main);
-  if (s) return { state: s, recovered: false, corrupt: false, oldVersion: false };
-  if (isOld(main)) return { state: null, recovered: false, corrupt: false, oldVersion: true };
-  const bak = parse(await api().read('backup'));
-  if (bak) return { state: bak, recovered: true, corrupt: false, oldVersion: false };
-  return { state: null, recovered: false, corrupt: main !== null, oldVersion: false };
+  if (s) return { state: s, recovered: false, corrupt: false, oldVersion: false, replay: replayOf(main) };
+  if (isOld(main)) return { state: null, recovered: false, corrupt: false, oldVersion: true, replay: null };
+  const bakText = await api().read('backup');
+  const bak = parse(bakText);
+  if (bak) return { state: bak, recovered: true, corrupt: false, oldVersion: false, replay: replayOf(bakText) };
+  return { state: null, recovered: false, corrupt: main !== null, oldVersion: false, replay: null };
 }
 
-export async function saveGame(s: GameState): Promise<boolean> {
-  const copy = { ...s, events: [] };
-  return api().write(JSON.stringify(copy));
+// 저장 파일의 replay 칸은 게임 상태 밖의 덧붙임입니다(A-250). parse가 GameState로 읽어도 게임 규칙은 이 칸을 쓰지 않습니다
+function replayOf(text: string | null): unknown {
+  try {
+    return text ? ((JSON.parse(text) as { replay?: unknown }).replay ?? null) : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function saveGame(s: GameState, replay: unknown = null): Promise<boolean> {
+  const copy = { ...s, events: [], replay };
+  const ok = await api().write(JSON.stringify(copy));
+  if (ok) markLocalSaveTime();
+  return ok;
+}
+
+// 로컬 저장이 변한 시각(밀리초). 저장 파일 안에는 넣지 않고 로컬에만 둡니다 —
+// 온라인 동기화가 클라우드와 이 기기 중 어느 쪽이 더 새로운지 비교할 때만 씁니다.
+const LOCAL_SAVE_TIME_KEY = 'papercompany.save.localUpdatedAt';
+function markLocalSaveTime(): void {
+  try {
+    localStorage.setItem(LOCAL_SAVE_TIME_KEY, String(Date.now()));
+  } catch {
+    /* 무시 */
+  }
+}
+export function localSaveTime(): number {
+  try {
+    return Number(localStorage.getItem(LOCAL_SAVE_TIME_KEY)) || 0;
+  } catch {
+    return 0;
+  }
 }
 
 export async function clearSave(): Promise<void> {
@@ -199,3 +233,6 @@ export function toggleFullscreen() {
   else if (document.fullscreenElement) void document.exitFullscreen();
   else void document.documentElement.requestFullscreen?.();
 }
+
+// 클라우드에서 받은 판도 로컬 저장과 같은 검사·보정을 거칩니다(A-247).
+export const parseSaveText = parse;

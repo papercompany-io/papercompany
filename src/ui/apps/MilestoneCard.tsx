@@ -5,9 +5,10 @@ import { feature } from '../../core/data';
 import { dateOf } from '../../core/calendar';
 import { wonShort } from '../../core/format';
 import { featureLevel } from '../../core/product';
-import { acceptMilestone, canCut, canExtend, canPush, cutScope, declineMilestone, dropMilestone, eventFee, extendDeadline, forecast, KIND_NAME, metricValue, MS, pendingReview, pushTeam, type MilestoneForecast } from '../../core/milestones';
-import { acceptOuting, declineOuting, dayName, hhmm } from '../../core/outings';
-import { act, useGame } from '../store';
+import { canCut, canExtend, canPush, eventFee, forecast, KIND_NAME, metricValue, MS, pendingReview, type MilestoneForecast } from '../../core/milestones';
+import { dayName, hhmm } from '../../core/outings';
+import { dispatch, useGame } from '../store';
+import type { Command } from '../../core/commands';
 import type { GameState, Milestone } from '../../core/types';
 
 const md = (day: number) => `${dateOf(day).getUTCMonth() + 1}/${dateOf(day).getUTCDate()}`;
@@ -100,7 +101,7 @@ function Review({ s, m, onErr }: { s: GameState; m: Milestone; onErr: (e: string
   const late = items.some((it) => it?.found === 'late');
   const early = items.some((it) => it?.found === 'review');
   const o = pendingReview(s, m);
-  const run = (f: Parameters<typeof act>[0]) => onErr((act(f) as string | null | undefined) ?? null);
+  const run = (c: Command) => onErr((dispatch(c) as string | null | undefined) ?? null);
   if (m.checked)
     return (
       <div className={`ms-review ${late ? 'late' : 'done'}`} data-testid={`ms-review-${m.id}`}>
@@ -117,10 +118,10 @@ function Review({ s, m, onErr }: { s: GameState; m: Milestone; onErr: (e: string
           <span className="chip amber">
             {o.host}님 요청 · {dayName(o.startDay)} {hhmm(o.startHour!)} 1시간
           </span>
-          <button className="btn small" data-testid={`ms-review-accept-${m.id}`} title="그 한 시간은 대표 주 업무 대신 회의를 합니다. 이동은 없습니다." onClick={() => run((g) => acceptOuting(g, o.id))}>
+          <button className="btn small" data-testid={`ms-review-accept-${m.id}`} title="그 한 시간은 대표 주 업무 대신 회의를 합니다. 이동은 없습니다." onClick={() => run({ type: 'acceptOuting', outingId: o.id })}>
             참석
           </button>
-          <button className="btn small ghost" data-testid={`ms-review-decline-${m.id}`} onClick={() => run((g) => declineOuting(g, o.id))}>
+          <button className="btn small ghost" data-testid={`ms-review-decline-${m.id}`} onClick={() => run({ type: 'declineOuting', outingId: o.id })}>
             건너뛰기
           </button>
         </>
@@ -133,7 +134,7 @@ export function MilestoneCard({ m, compact = false }: { m: Milestone; compact?: 
   const s = useGame();
   const [err, setErr] = useState<string | null>(null);
   const [lv, setLv] = useState(1);
-  const run = (f: Parameters<typeof act>[0]) => setErr((act(f) as string | null | undefined) ?? null);
+  const run = (c: Command) => setErr((dispatch(c) as string | null | undefined) ?? null);
   const shown = m.kind === 'goal' && m.status === 'offer' ? { ...m, target: m.targets![lv], level: lv } : m;
   const f = forecast(s, shown);
   const st = stakes(s, m);
@@ -178,10 +179,10 @@ export function MilestoneCard({ m, compact = false }: { m: Milestone; compact?: 
           <div className="ms-actions">
             {m.status === 'offer' ? (
               <>
-                <button className="btn small green" data-testid={`ms-accept-${m.id}`} onClick={() => run((g) => acceptMilestone(g, m.id, m.kind === 'goal' ? lv : undefined))}>
+                <button className="btn small green" data-testid={`ms-accept-${m.id}`} onClick={() => run({ type: 'acceptMilestone', milestoneId: m.id, level: m.kind === 'goal' ? lv : undefined })}>
                   {m.kind === 'goal' ? '이 수준으로 정하기' : '약속하기'}
                 </button>
-                <button className="btn small ghost" data-testid={`ms-decline-${m.id}`} onClick={() => run((g) => declineMilestone(g, m.id))}>
+                <button className="btn small ghost" data-testid={`ms-decline-${m.id}`} onClick={() => run({ type: 'declineMilestone', milestoneId: m.id })}>
                   {m.kind === 'goal' ? '이번 분기는 안 정함' : '거절'}
                 </button>
               </>
@@ -189,21 +190,21 @@ export function MilestoneCard({ m, compact = false }: { m: Milestone; compact?: 
               <>
                 {f.risk === 'late' && <span className="ms-hint">늦을 것 같습니다. 조율이 필요합니다.</span>}
                 {canCut(m) && (
-                  <button className="btn small ghost" data-testid={`ms-cut-${m.id}`} title="기능 하나를 빼고 나머지로 지킵니다. 보상이 줄고 신뢰가 조금 깎입니다." onClick={() => run((g) => cutScope(g, m.id))}>
+                  <button className="btn small ghost" data-testid={`ms-cut-${m.id}`} title="기능 하나를 빼고 나머지로 지킵니다. 보상이 줄고 신뢰가 조금 깎입니다." onClick={() => run({ type: 'cutScope', milestoneId: m.id })}>
                     범위 줄이기
                   </button>
                 )}
                 {canExtend(s, m) && (
-                  <button className="btn small ghost" data-testid={`ms-extend-${m.id}`} title="기한을 한 번 미뤄 달라고 합니다. 신뢰가 깎입니다. 기한이 너무 가까우면 받아 주지 않습니다." onClick={() => run((g) => extendDeadline(g, m.id))}>
+                  <button className="btn small ghost" data-testid={`ms-extend-${m.id}`} title="기한을 한 번 미뤄 달라고 합니다. 신뢰가 깎입니다. 기한이 너무 가까우면 받아 주지 않습니다." onClick={() => run({ type: 'extendDeadline', milestoneId: m.id })}>
                     기한 연장 요청
                   </button>
                 )}
                 {canPush(s, m) && (
-                  <button className="btn small ghost" data-testid={`ms-push-${m.id}`} title={`${MS.push.days}일 동안 팀이 더 빨리 만들지만 만족도가 떨어지고 대표가 지치고 버그가 늘어납니다.`} onClick={() => run((g) => pushTeam(g, m.id))}>
+                  <button className="btn small ghost" data-testid={`ms-push-${m.id}`} title={`${MS.push.days}일 동안 팀이 더 빨리 만들지만 만족도가 떨어지고 대표가 지치고 버그가 늘어납니다.`} onClick={() => setErr((dispatch({ type: 'pushTeam', milestoneId: m.id }) as string | null | undefined) ?? null)}>
                     팀 몰아치기
                   </button>
                 )}
-                <button className="btn small ghost" data-testid={`ms-drop-${m.id}`} title="약속을 포기합니다. 못 지켰을 때와 비슷하게 신뢰가 깎입니다." onClick={() => run((g) => dropMilestone(g, m.id))}>
+                <button className="btn small ghost" data-testid={`ms-drop-${m.id}`} title="약속을 포기합니다. 못 지켰을 때와 비슷하게 신뢰가 깎입니다." onClick={() => run({ type: 'dropMilestone', milestoneId: m.id })}>
                   포기
                 </button>
               </>

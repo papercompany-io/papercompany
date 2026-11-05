@@ -6,9 +6,9 @@ import { DATA, dept } from '../../core/data';
 import { formatDate } from '../../core/calendar';
 import { orderLabel } from '../../core/orders';
 import { isSick } from '../../core/staff';
-import { deskAt, furnitureAt, furnitureItems, itemSize, moveDesk, moveFurniture, nextRot, ownsFurniture, placeDesk, placeFurniture, removeDesk, rotateDesk, rotateFurniture, storeFurniture } from '../../core/office';
+import { deskAt, furnitureAt, furnitureItems, itemSize, nextRot, ownsFurniture } from '../../core/office';
 import type { GameState } from '../../core/types';
-import { act, getGame, useGame } from '../store';
+import { dispatch, getGame, useGame } from '../store';
 import { uiZoom } from '../meta';
 import { wonShort } from '../../core/format';
 import { Pix } from './pixel';
@@ -194,22 +194,22 @@ export function Office({ onCeo, onEmployee, pulseCeo, keysEnabled, floats = [] }
     let err: string | null = null;
     let done = false;
     if (e.mode === 'place') {
-      if (e.item === 'desk') err = act((g) => placeDesk(g, tile.gx, tile.gy, e.rot)) ?? null; // 책상은 여러 개 이어서 놓음
+      if (e.item === 'desk') err = (dispatch({ type: 'placeDesk', gx: tile.gx, gy: tile.gy, rot: e.rot }) as string | null | undefined) ?? null; // 책상은 여러 개 이어서 놓음
       else if (e.item) {
-        err = act((g) => placeFurniture(g, e.item!, tile.gx, tile.gy, e.rot)) ?? null;
+        err = (dispatch({ type: 'placeFurniture', itemId: e.item!, gx: tile.gx, gy: tile.gy, rot: e.rot }) as string | null | undefined) ?? null;
         done = !err; // 가구는 하나씩: 놓으면 배치 끝
       }
     } else if (e.mode === 'remove') {
       const d = deskAt(g0, f.x, f.y);
       const it = d ? null : furnitureAt(g0, f.x, f.y);
-      if (d) err = act((g) => removeDesk(g, d.id)) ?? null;
-      else if (it) err = act((g) => storeFurniture(g, it.id)) ?? null;
+      if (d) err = (dispatch({ type: 'removeDesk', deskId: d.id }) as string | null | undefined) ?? null;
+      else if (it) err = (dispatch({ type: 'storeFurniture', placedId: it.id }) as string | null | undefined) ?? null;
       else err = '치울 책상이나 가구를 누르세요.';
     } else if (e.mode === 'rotate') {
       const d = deskAt(g0, f.x, f.y);
       const it = d ? null : furnitureAt(g0, f.x, f.y);
-      if (d) err = act((g) => rotateDesk(g, d.id)) ?? null;
-      else if (it) err = act((g) => rotateFurniture(g, it.id)) ?? null;
+      if (d) err = (dispatch({ type: 'rotateDesk', deskId: d.id }) as string | null | undefined) ?? null;
+      else if (it) err = (dispatch({ type: 'rotateFurniture', placedId: it.id }) as string | null | undefined) ?? null;
       else err = '돌릴 책상이나 가구를 누르세요.';
     } else if (!e.pick) {
       const d = deskAt(g0, f.x, f.y);
@@ -222,7 +222,7 @@ export function Office({ onCeo, onEmployee, pulseCeo, keysEnabled, floats = [] }
     } else {
       const pick = e.pick;
       const rot = e.rot;
-      err = act((g) => (pick.kind === 'desk' ? moveDesk(g, pick.id, tile.gx, tile.gy, rot) : moveFurniture(g, pick.id, tile.gx, tile.gy, rot))) ?? null;
+      err = (dispatch(pick.kind === 'desk' ? { type: 'moveDesk', deskId: pick.id, gx: tile.gx, gy: tile.gy, rot } : { type: 'moveFurniture', placedId: pick.id, gx: tile.gx, gy: tile.gy, rot }) as string | null | undefined) ?? null;
       if (!err) e.pick = null;
     }
     setEditMsg(err);

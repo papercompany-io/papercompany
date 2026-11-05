@@ -2,9 +2,9 @@
 // 채용 짜임: 왼쪽 회색 판(지금 쓰는 AI·적응·요약·부서별 적용률) + 오른쪽 모델 카드. 효과·흔들림·부작용 확률 같은 수치는 숨기고 말로(SCREEN_GUIDE 3절).
 // 화면(A-179): 업무·커리어와 같은 톤 — 가운데 지금 쓰는 모델 이름(큰 글자) + 체감·칸칸이 차는 적응 막대, 납작한 회색 요약 칸, 왼쪽 부서별 적용률 판 + 오른쪽 모델 카드(회사 색 타일 + 흰 픽셀 그림)
 import { DATA, aiModel, aiVendor, dept } from '../../core/data';
-import { aiMonthlyCost, chooseModel, releasedModels, setAdoption } from '../../core/aiadopt';
+import { aiMonthlyCost, releasedModels } from '../../core/aiadopt';
 import { dayOfMonthKey } from '../../core/calendar';
-import { act, useGame } from '../store';
+import { dispatch, useGame } from '../store';
 import { Money } from '../common';
 import type { DeptId } from '../../core/types';
 import './apps.css';
@@ -91,7 +91,7 @@ export function AiApp() {
                       회의적 {skeptic}명
                     </span>
                   )}
-                  <input type="range" data-testid={`ai-adopt-${d}`} min={0} max={1} step={0.05} value={v} onChange={(e) => act((g) => setAdoption(g, d, Number(e.target.value)))} />
+                  <input type="range" data-testid={`ai-adopt-${d}`} min={0} max={1} step={0.05} value={v} onChange={(e) => dispatch({ type: 'setAdoption', dept: d, value: Number(e.target.value) })} />
                   <em>{Math.round(v * 100)}%</em>
                 </div>
               );
@@ -126,7 +126,7 @@ export function AiApp() {
                       ))}
                     </div>
                   </div>
-                  <button className={`btn small ${on ? 'ghost' : ''}`} data-testid={`ai-model-${m.id}`} disabled={on} onClick={() => act((g) => chooseModel(g, m.id))}>
+                  <button className={`btn small ${on ? 'ghost' : ''}`} data-testid={`ai-model-${m.id}`} disabled={on} onClick={() => dispatch({ type: 'chooseModel', modelId: m.id })}>
                     {on ? '사용 중' : s.ai.modelId ? '교체' : '도입'}
                   </button>
                 </div>

@@ -21,6 +21,7 @@ import { StockApp } from './apps/StockApp';
 import { RankingApp } from './apps/RankingApp';
 import { CareerApp } from './apps/CareerApp';
 import { SettingsApp } from './apps/SettingsApp';
+import { AccountPanel } from './AccountPanel';
 import { AppIcon, APP_COLORS } from './icons';
 import type { GameState } from '../core/types';
 import './desktop.css';
@@ -68,8 +69,7 @@ export function appOpen(s: GameState, id: AppId): boolean {
 
 // 외주 메뉴 뱃지(A-207): 업무 창 탭 이름에 붙던 "진행 중"·제안 수를 메뉴 숫자로
 function contractBadge(s: GameState): number {
-  // TODO(human)
-  return 0;
+  return s.contracts?.offers.length ?? 0;
 }
 
 export function badge(s: GameState, id: AppId): number {
@@ -406,7 +406,12 @@ export function AppPanel({
         {app === 'stock' && <StockApp />}
         {app === 'career' && <CareerApp />}
         {app === 'ranking' && <RankingApp />}
-        {app === 'settings' && <SettingsApp />}
+        {app === 'settings' && (
+          <>
+            <SettingsApp />
+            <AccountPanel />
+          </>
+        )}
       </div>
       {box && EDGES.map((k) => <div key={k} className={`app-resize ${k}`} onPointerDown={grab(k)} onPointerMove={follow} onPointerUp={drop} onPointerCancel={drop} />)}
     </div>

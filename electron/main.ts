@@ -1,5 +1,5 @@
 // DT-01 Electron 메인 프로세스: 게임 창을 열고, DT-07 저장 파일을 사용자 데이터 폴더에 읽고 씁니다.
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, safeStorage } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
 import { talkChat, type TalkChatRequest } from './openrouter';
@@ -85,6 +85,73 @@ ipcMain.handle('talk:chat', async (_e, req: TalkChatRequest) => {
 
 ipcMain.on('app:toggle-fullscreen', () => win?.setFullScreen(!win.isFullScreen()));
 ipcMain.on('app:quit', () => win?.close());
+
+// 온라인 로그인 토큰(A-247): 렌더러에 저장하지 않고 OS 키체인(safeStorage)으로 암호화해 파일에 둡니다.
+// 암호화를 못 쓰는 환경이면 디스크에 쓰지 않고 이번 실행 동안만 메모리에 둡니다.
+const tokenFile = () => path.join(saveDir(), 'online-token.bin');
+let memToken: string | null = null;
+function getToken(): string | null {
+  if (memToken) return memToken;
+  if (!safeStorage.isEncryptionAvailable()) return null;
+  try {
+    return safeStorage.decryptString(fs.readFileSync(tokenFile()));
+  } catch {
+    return null;
+  }
+}
+function setToken(token: string | null): void {
+  memToken = null;
+  try {
+    if (!token) fs.rmSync(tokenFile(), { force: true });
+    else if (safeStorage.isEncryptionAvailable()) {
+      fs.mkdirSync(saveDir(), { recursive: true });
+      fs.writeFileSync(tokenFile(), safeStorage.encryptString(token));
+    }
+    else memToken = token;
+  } catch (error) {
+    console.error('온라인 토큰 저장 실패', error);
+    memToken = token;
+  }
+}
+ipcMain.handle('auth:clear', () => setToken(null));
+ipcMain.handle('auth:request', async (_e, request: { base: string; path: string; method: string; body?: string }) => {
+  const base = new URL(request.base);
+  const local = base.hostname === 'localhost' || base.hostname === '127.0.0.1';
+  if ((base.protocol !== 'https:' && !(base.protocol === 'http:' && local)) || base.username || base.password || base.search || base.hash) {
+    throw new Error('안전하지 않은 서버 주소입니다.');
+  }
+  if (!/^\/(?:auth|mp)(?:\/|$)/.test(request.path) || !['GET', 'POST', 'PUT', 'DELETE'].includes(request.method)) {
+    throw new Error('지원하지 않는 온라인 요청입니다.');
+  }
+  const target = new URL(base.href.replace(/\/+$/, '') + request.path);
+  if (target.origin !== base.origin) throw new Error('서버 주소가 올바르지 않습니다.');
+  const saved = getToken();
+  const separator = saved?.indexOf('\n') ?? -1;
+  const headers: Record<string, string> = {};
+  if (request.body !== undefined) headers['Content-Type'] = 'application/json';
+  if (saved && separator > 0 && saved.slice(0, separator) === base.origin) {
+    headers.Authorization = `Bearer ${saved.slice(separator + 1)}`;
+  }
+  const response = await fetch(target, {
+    method: request.method,
+    headers,
+    body: request.body,
+    redirect: 'error',
+  });
+  const text = await response.text();
+  let result: unknown;
+  try {
+    result = text ? JSON.parse(text) : null;
+  } catch {
+    result = null;
+  }
+  const loginPath = ['/auth/login', '/auth/login/totp', '/auth/login/recovery'].includes(request.path);
+  if (request.method === 'POST' && loginPath && response.ok && result && typeof result === 'object' && 'token' in result && typeof result.token === 'string') {
+    setToken(`${base.origin}\n${result.token}`);
+    delete (result as { token?: string }).token;
+  }
+  return { status: response.status, ok: response.ok, body: result };
+});
 
 let win: BrowserWindow | null = null;
 let allowClose = false;

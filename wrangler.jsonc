@@ -1,0 +1,60 @@
+// 페이퍼컴퍼니 서버(A-249). 배포 전에 database_id·EMAIL_FROM을 실제 값으로 바꾸세요. 절차는 server/auth/README.md.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "papercompany",
+  "main": "server/worker.ts",
+  "compatibility_date": "2026-11-01",
+  // bcryptjs가 난수용으로 node:crypto를 불러옵니다
+  "compatibility_flags": ["nodejs_compat"],
+  // Cloudflare Workers Builds가 deploy 전에 돌리는 빌드 단계. npm run build(Electron용 dist)가 아니라
+  // 웹 정적 자산(dist-web)을 만드는 build:web을 써야 assets.directory가 채워짐.
+  "build": { "command": "npm run build:web" },
+  "assets": {
+    "directory": "dist-web",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "papercompany",
+      "database_id": "42bb55a9-fdbb-415a-ac73-cdc6ee1857bf",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "r2_buckets": [{ "binding": "SAVES", "bucket_name": "papercompany-saves" }],
+  // cloudflare.obong.me를 Email Sending에 인증해 세운 발신 도메인입니다.
+  "send_email": [{ "name": "EMAIL", "allowed_sender_addresses": ["no-reply@cloudflare.obong.me"] }],
+  "vars": {
+    "EMAIL_FROM": "no-reply@cloudflare.obong.me",
+    "ALLOWED_ORIGINS": ""
+  },
+  // 15분마다 R2 지연 삭제와 끝난 세션·코드 정리
+  "triggers": { "crons": ["*/15 * * * *"] },
+  // PR·브랜치마다 만드는 미리보기 배포(Cloudflare Pages Preview deployment)용. 프로덕션과 분리된 D1·R2라 실제 데이터와 섞이지 않음.
+  "previews": {
+    "vars": {
+      "EMAIL_FROM": "no-reply-preview@cloudflare.obong.me",
+      "ALLOWED_ORIGINS": ""
+    },
+    "d1_databases": [
+      {
+        "binding": "DB",
+        "database_id": "a6120786-c2a1-45d6-b374-11ba4d0b17f4"
+      }
+    ],
+    "r2_buckets": [
+      {
+        "binding": "SAVES",
+        "bucket_name": "papercompany-saves-preview"
+      }
+    ],
+    "send_email": [
+      {
+        "name": "EMAIL",
+        "allowed_sender_addresses": ["no-reply-preview@cloudflare.obong.me"]
+      }
+    ]
+  }
+}

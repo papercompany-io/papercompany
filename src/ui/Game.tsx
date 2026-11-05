@@ -3,7 +3,7 @@
 import { ProductCard } from './apps/ProductApp';
 import { paydayForecast } from '../core/forecast';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { advance, isRunning, setSpeed } from '../core/sim';
+import { isRunning, setSpeed } from '../core/sim';
 import { autoSkipDue, clockHour, clockText, inNight, shownDay, workingLate } from '../core/night';
 import { dateOf, formatDate } from '../core/calendar';
 import { founderPct } from '../core/equity';
@@ -16,7 +16,7 @@ import { myRank, rankings } from '../core/ranking';
 import { activeMissions, missionProgress, STAGE_NAMES } from '../core/progress';
 import { founderAge } from '../core/career';
 import { burningActive } from '../core/burning';
-import { act, getGame, timeHold, touch, useGame } from './store';
+import { act, dispatch, getGame, isRecordingCommands, TICK_MS, timeHold, touch, useGame } from './store';
 import { AppPanel, Sidebar, appOpen, appRoute, defaultBox, type AppId, type WinBox } from './Desktop';
 import { Office } from './office/Office';
 import { EmployeeModal } from './EmployeeModal';
@@ -27,7 +27,7 @@ import { DevPanel } from './DevPanel';
 import { Money, useTween } from './common';
 import { ServiceLogo } from './logo';
 import { nextHint } from './hints';
-import { requestAutosave } from './autosave';
+import { requestAutosave, takeSyncWarning } from './autosave';
 import { countShort, pct, wonShort } from '../core/format';
 import { play, type Sfx } from './sound';
 import { getSettings, toggleAutoSkip, useSettings } from './meta';
@@ -67,6 +67,9 @@ interface Win {
 export function Game({ continued, notice, clearNotice, onEnded }: Props) {
   const s = useGame();
   const settings = useSettings();
+  // 온라인 동기화(A-251) 알림: autosave.ts의 syncToCloud가 충돌을 해소하면 여기서 한 번 알려줌
+  const [syncWarning, setSyncWarning] = useState<string | null>(null);
+  const scheduleSyncCheck = () => setTimeout(() => { const w = takeSyncWarning(); if (w) setSyncWarning(w); }, 300);
   const [wins, setWins] = useState<Win[]>([]);
   const zTop = useRef(0);
   const winCount = useRef(0);
@@ -110,20 +113,27 @@ export function Game({ continued, notice, clearNotice, onEnded }: Props) {
   // 게임 루프: 실시간 진행(DEC-018). 데스크탑을 보는 동안에도 시간이 흐릅니다.
   // 설정 "긴급 알림 때 자동 일시정지"를 끄면 인수 제안·투자 제안서 도착도 멈추지 않습니다(알림·배지는 그대로, 기한 안에 답하면 됨). 파산 경고는 항상 멈춤.
   useEffect(() => {
-    if (!s || settings.autoPauseUrgent) return;
-    if (s.pauseReason === '인수 제안이 들어왔습니다' || s.pauseReason === '투자 제안서가 도착했습니다') act((g) => (g.pauseReason = null));
+    // 주간 도전 기록 중에는 서버 재실행이 멈춤 해제를 받지 않으므로 자동 해제를 하지 않습니다(직접 다시 진행)
+    if (!s || settings.autoPauseUrgent || isRecordingCommands()) return;
+    if (s.pauseReason === '인수 제안이 들어왔습니다' || s.pauseReason === '투자 제안서가 도착했습니다') dispatch({ type: 'clearPause' });
   }, [s?.pauseReason, settings.autoPauseUrgent]);
 
   useEffect(() => {
     let raf = 0;
     let last = performance.now();
+    let carry = 0; // 아직 tick으로 보내지 않은 실제 시간
     const loop = (now: number) => {
       const g = getGame();
       const dt = now - last;
       last = now;
       if (g && isRunning(g) && !timeHold.nego && !timeHold.tutorial) {
         const day = g.day;
-        advance(g, dt, autoSkipDue(g, getSettings().autoSkipNight)); // 퇴근 뒤 자동 빨리 감기(A-159)
+        // 기기마다 프레임 시간이 달라 다시 돌릴 수 있도록 고정 크기 tick 명령으로 나눕니다. 탭이 오래 멈췄다 돌아오면 1초까지만 따라잡습니다
+        carry = Math.min(carry + dt, 1000);
+        while (carry >= TICK_MS && isRunning(g) && !timeHold.nego && !timeHold.tutorial) {
+          carry -= TICK_MS;
+          dispatch({ type: 'tick', ms: TICK_MS, nightFast: autoSkipDue(g, getSettings().autoSkipNight) }); // 퇴근 뒤 자동 빨리 감기(A-159)
+        }
         const important = g.day !== day || g.events.length > 0 || !isRunning(g);
         if (important || now - lastTouch.current > 150) {
           lastTouch.current = now;
@@ -144,8 +154,8 @@ export function Game({ continued, notice, clearNotice, onEnded }: Props) {
     for (const e of evs) {
       if (e.type === 'offerReady') showApp('invest');
       if (e.type === 'needsTime' && !isRunning(s) && !s.ended && !waitDismissed.current) setWaitAsk(e.what);
-      if (e.type === 'autosave') requestAutosave(e.reason);
-      if (e.type === 'exitResult' || e.type === 'bankrupt' || e.type === 'companyEnded') requestAutosave('판 종료');
+      if (e.type === 'autosave') { requestAutosave(e.reason); scheduleSyncCheck(); }
+      if (e.type === 'exitResult' || e.type === 'bankrupt' || e.type === 'companyEnded') { requestAutosave('판 종료'); scheduleSyncCheck(); }
       if (e.type === 'sfx') sounds.add(e.sound);
       if (e.type === 'hired') sounds.add('hire');
       if (e.type === 'confetti' && settings.animations) {
@@ -159,7 +169,7 @@ export function Game({ continued, notice, clearNotice, onEnded }: Props) {
       }
       if (e.type === 'decision' && e.urgent) {
         setUrgentId(e.id);
-        if (!settings.autoPauseUrgent) act((g) => (g.pauseReason = null));
+        if (!settings.autoPauseUrgent && !isRecordingCommands()) dispatch({ type: 'clearPause' });
       }
       if (e.type === 'exitResult') sounds.add(e.success ? 'success' : 'fail');
       if (e.type === 'bankrupt') sounds.add('fail');
@@ -184,7 +194,7 @@ export function Game({ continued, notice, clearNotice, onEnded }: Props) {
   // CO-02: 엔젤 투자를 고른 경우 처음 들어올 때 투자 메뉴을 엽니다.
   useEffect(() => {
     if (s?.wantsAngelOnStart) {
-      act((g) => (g.wantsAngelOnStart = false));
+      dispatch({ type: 'ackAngelOnStart' });
       showApp('invest', 'angel');
       setOpenedOnce(true);
     }
@@ -200,9 +210,9 @@ export function Game({ continued, notice, clearNotice, onEnded }: Props) {
         setDev((d) => !d);
       } else if (e.key === ' ') {
         e.preventDefault();
-        act((g) => setSpeed(g, g.speed > 0 && !g.pauseReason ? 0 : g.speed || settingsSpeed()));
+        { const g = getGame(); if (g) dispatch({ type: 'setSpeed', speed: g.speed > 0 && !g.pauseReason ? 0 : g.speed || settingsSpeed() }); };
       } else if (e.key === '1' || e.key === '2' || e.key === '3') {
-        act((g) => setSpeed(g, [1, 2, 4][Number(e.key) - 1]));
+        dispatch({ type: 'setSpeed', speed: [1, 2, 4][Number(e.key) - 1] });
       } else if (e.key === 'Tab' && !e.altKey && !e.ctrlKey && !e.metaKey && winCount.current >= 2) {
         // A-218: Tab = 뒤에 가려진 창 중 가장 최근에 쓴 창을 앞으로(두 창 사이를 오감). Shift+Tab = 가장 오래 안 쓴 창(차례로 다 돎)
         setWins((ws) => {
@@ -287,7 +297,7 @@ export function Game({ continued, notice, clearNotice, onEnded }: Props) {
               <b className="hint-title">일시정지</b>
               <span>{s.pauseReason}</span>
             </div>
-            <button className="btn green" data-testid="pause-resume" onClick={() => act((g) => setSpeed(g, g.speed || 1))}>
+            <button className="btn green" data-testid="pause-resume" onClick={() => dispatch({ type: 'setSpeed', speed: s.speed || 1 })}>
               ▶ 계속 <kbd>Space</kbd>
             </button>
           </div>
@@ -306,6 +316,14 @@ export function Game({ continued, notice, clearNotice, onEnded }: Props) {
           <div className="notice">
             {notice}
             <button className="btn small ghost" onClick={clearNotice}>
+              확인
+            </button>
+          </div>
+        )}
+        {syncWarning && (
+          <div className="notice">
+            {syncWarning}
+            <button className="btn small ghost" onClick={() => setSyncWarning(null)}>
               확인
             </button>
           </div>
@@ -362,7 +380,7 @@ export function Game({ continued, notice, clearNotice, onEnded }: Props) {
         <WaitTimeModal
           what={waitAsk}
           onResume={() => {
-            act((g) => setSpeed(g, g.speed || settingsSpeed()));
+            dispatch({ type: 'setSpeed', speed: getGame()?.speed || settingsSpeed() });
             setWaitAsk(null);
           }}
           onStay={() => {
@@ -568,7 +586,7 @@ function TopBar({ s }: { s: GameState }) {
                 title={sp === 0 ? '일시정지 (스페이스)' : `${sp}배속 (${sp === 4 ? 3 : sp})`}
                 className={`sp sp${sp} ${s.speed === sp && (sp === 0 || !s.pauseReason) ? 'on' : ''}`}
                 onClick={() => {
-                  act((g) => setSpeed(g, sp));
+                  dispatch({ type: 'setSpeed', speed: sp });
                   play('click');
                 }}
               >

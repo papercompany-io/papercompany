@@ -4,11 +4,11 @@ import { DATA, DEPT_IDS, dept } from '../../core/data';
 import { formatDate } from '../../core/calendar';
 import { seatsAvailable } from '../../core/office';
 import { deptInIndustry, deptUnlocked } from '../../core/employees';
-import { NO_END, acceptCounter, careerLevel, arrivalRate, closePosting, createPosting, hireWarning, negotiate, negotiation, postingFull, postingOpenEnded, postingWarnings, rejectApplicant, setAutoHire } from '../../core/hiring';
+import { NO_END, acceptCounter, careerLevel, arrivalRate, createPosting, hireWarning, negotiate, postingFull, postingOpenEnded, postingWarnings, setAutoHire } from '../../core/hiring';
 import { PixelAvatar } from '../office/Avatar';
 import { marketSalary, maxSpeedOf, speedOf } from '../../core/staff';
 import { trait } from '../../core/data';
-import { act, timeHold, useGame } from '../store';
+import { dispatch, timeHold, useGame } from '../store';
 import type { Applicant, DeptId, Grade, Posting } from '../../core/types';
 import './apps.css';
 
@@ -93,7 +93,7 @@ export function HireTab() {
           disabled={seatsAvailable(s) === 0}
           title={seatsAvailable(s) === 0 ? '빈 자리가 없습니다. 사무실을 넓히거나 책상을 놓으세요.' : ''}
           onClick={() => {
-            const e = act((g) => createPosting(g, form));
+            const e = dispatch({ type: 'createPosting', input: form }) as ReturnType<typeof createPosting>;
             setMsg(e ? { ok: false, text: e } : { ok: true, text: `${dept(form.dept).name} 공고를 올렸습니다. 지원자는 하루 중 아무 때나 한 명씩 들어옵니다.` });
           }}
         >
@@ -143,7 +143,7 @@ export function HireTab() {
                     <button className="btn small" data-testid={`hire-${a.id}`} onClick={() => setOfferFor(a.id)}>
                       {a.nego ? '협상 이어가기' : '협상'}
                     </button>
-                    <button className="btn small ghost" onClick={() => act((g) => rejectApplicant(g, a.id))}>
+                    <button className="btn small ghost" onClick={() => dispatch({ type: 'rejectApplicant', applicantId: a.id })}>
                       불합격
                     </button>
                   </div>
@@ -181,7 +181,7 @@ export function HireTab() {
                           {wait} · {p.hired}
                         </b>
                       </div>
-                      <button className="btn small ghost" onClick={() => act((g) => closePosting(g, p.id))}>
+                      <button className="btn small ghost" onClick={() => dispatch({ type: 'closePosting', postingId: p.id })}>
                         마감
                       </button>
                     </div>
@@ -333,16 +333,12 @@ function NegotiationDialog({ applicantId, onClose, onDone }: { applicantId: stri
   const warn = hireWarning(s, salary);
   const man = (v: number) => `${(v / 1e4).toLocaleString()}만원`;
   const send = () => {
-    const r = act((g) => {
-      const ap = g.applicants.find((x) => x.id === a.id);
-      if (ap) negotiation(g, ap);
-      return negotiate(g, a.id, salary, bonus);
-    })!;
+    const r = dispatch({ type: 'negotiate', applicantId: a.id, salary, bonus }) as ReturnType<typeof negotiate>;
     setErr(r.ok ? null : r.message);
     if (r.hired) setDoneMsg(r.message);
   };
   const take = () => {
-    const r = act((g) => acceptCounter(g, a.id))!;
+    const r = dispatch({ type: 'acceptCounter', applicantId: a.id }) as ReturnType<typeof acceptCounter>;
     if (!r.ok) setErr(r.message);
     else setDoneMsg(r.message);
   };
@@ -500,7 +496,7 @@ export function AutoHire() {
         <span className="tiny">월급 수준</span>
         <div className="seg">
           {DATA.hiring.salaryLevels.map((l) => (
-            <button key={l.id} className={s.company.autoHireLevel === l.id ? 'on' : ''} onClick={() => act((g) => (g.company.autoHireLevel = l.id))}>
+            <button key={l.id} className={s.company.autoHireLevel === l.id ? 'on' : ''} onClick={() => dispatch({ type: 'setAutoHireLevel', level: l.id })}>
               {l.name}
             </button>
           ))}
@@ -525,13 +521,13 @@ export function AutoHire() {
                 <td className="r">{have}</td>
                 <td>
                   <div className="row">
-                    <button className="btn small ghost" disabled={t <= 0} onClick={() => setMsg(act((g) => setAutoHire(g, d, t - 1)) ?? null)}>
+                    <button className="btn small ghost" disabled={t <= 0} onClick={() => setMsg((dispatch({ type: 'setAutoHire', dept: d, target: t - 1 }) as ReturnType<typeof setAutoHire>) ?? null)}>
                       −
                     </button>
                     <b className="num" data-testid={`auto-${d}`}>
                       {t || '꺼짐'}
                     </b>
-                    <button className="btn small ghost" data-testid={`auto-plus-${d}`} onClick={() => setMsg(act((g) => setAutoHire(g, d, Math.max(t, have) + 1)) ?? null)}>
+                    <button className="btn small ghost" data-testid={`auto-plus-${d}`} onClick={() => setMsg((dispatch({ type: 'setAutoHire', dept: d, target: Math.max(t, have) + 1 }) as ReturnType<typeof setAutoHire>) ?? null)}>
                       +
                     </button>
                   </div>

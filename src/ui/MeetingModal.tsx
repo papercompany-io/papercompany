@@ -10,7 +10,6 @@ import {
   bringCompanion,
   companionCandidates,
   concernName,
-  leaveMeeting,
   meetingAdvice,
   meetingHand,
   meetingStages,
@@ -25,7 +24,7 @@ import {
   type HandCard,
 } from '../core/meeting';
 import type { Contact, Meeting } from '../core/types';
-import { act, useGame } from './store';
+import { dispatch, useGame } from './store';
 import { PixelAvatar } from './office/Avatar';
 import type { FaceExpr } from './office/face';
 import { PxIcon, type PxId } from './icons';
@@ -98,7 +97,7 @@ export function MeetingModal() {
   const left = Math.round(m.minutesLeft / 10);
 
   const play = (h: HandCard) => {
-    const e = act((s) => playCard(s, h.id, h.target ? (target ?? undefined) : undefined));
+    const e = dispatch({ type: 'playCard', card: h.id, targetId: h.target ? (target ?? undefined) : undefined }) as ReturnType<typeof playCard>;
     setErr(e ?? null);
     if (!e) setPicked(null); // 다음 상대는 비서 권유를 따름
   };
@@ -205,7 +204,7 @@ export function MeetingModal() {
               <label className="mtg-mate">
                 <PxIcon id="users" size={14} />
                 <span>함께 온 직원</span>
-                <select data-testid="meeting-companion" value={m.companion ?? ''} onChange={(ev) => setErr(act((s) => bringCompanion(s, ev.target.value || null)) ?? null)}>
+                <select data-testid="meeting-companion" value={m.companion ?? ''} onChange={(ev) => setErr((dispatch({ type: 'bringCompanion', empId: ev.target.value || null }) as ReturnType<typeof bringCompanion>) ?? null)}>
                   <option value="">혼자 왔습니다</option>
                   {mates.map((e) => (
                     <option key={e.id} value={e.id}>
@@ -258,7 +257,7 @@ export function MeetingModal() {
                 대화 기록 {m.log.length}줄 {showLog ? '접기' : '보기'}
               </button>
               {err && <span className="err">{err}</span>}
-              <button className="btn small ghost" data-testid="meeting-auto" onClick={() => setErr(act((s) => autoFinish(s)) ?? null)} title="남은 시간은 준비한 자료대로 진행합니다. 직접 할 때보다 결과가 낮습니다">
+              <button className="btn small ghost" data-testid="meeting-auto" onClick={() => setErr((dispatch({ type: 'autoFinish' }) as ReturnType<typeof autoFinish>) ?? null)} title="남은 시간은 준비한 자료대로 진행합니다. 직접 할 때보다 결과가 낮습니다">
                 알아서 진행
               </button>
             </div>
@@ -403,7 +402,7 @@ function MeetingResult({ m, last }: { m: Meeting; last: boolean }) {
       </div>
       <div className="mtg-result-foot">
         <span className="muted">만난 사람은 메신저 "아는 사람"에 남습니다.</span>
-        <button className="btn green" data-testid="meeting-close" onClick={() => act((s) => leaveMeeting(s))}>
+        <button className="btn green" data-testid="meeting-close" onClick={() => dispatch({ type: 'leaveMeeting' })}>
           회의실 나가기
         </button>
       </div>

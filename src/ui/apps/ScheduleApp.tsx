@@ -4,21 +4,23 @@
 // A-177: 약속(마일스톤) — 오른쪽 맨 위 약속 카드(받기·목표 수준·조율), 타임라인에 약속 줄(기한 깃발 + 예상 범위), 왼쪽 판에 약속 신뢰
 // A-168: 대표는 회사의 개발 사이클 일정을 관리 — 왼쪽 판(지금·컨디션·주 업무·쌓인 것) + 오른쪽 8주 타임라인(만드는 순서의 시작~끝·출시·외주 마감·대표 외출). 점수·효율 숫자는 말로
 import { DATA, dept, feature } from '../../core/data';
-import { slotParts, actionDef, approveMultiplier, ceoEnergy, ceoWork, efficiency, executiveBlock, setCeoMode, setCeoWork, workChoices } from '../../core/ceo';
+import { slotParts, actionDef, approveMultiplier, ceoEnergy, ceoWork, efficiency, executiveBlock, workChoices } from '../../core/ceo';
 import { dateOf } from '../../core/calendar';
 import { openRound } from '../../core/funding';
 import { deptMembers } from '../../core/employees';
 import { output } from '../../core/staff';
 import { contractWorkers, nearestContract, type Contract } from '../../core/contracts';
+import { enterpriseThreshold } from '../../core/orders';
 import { contractOf, empOrderOf } from '../../core/assign';
 import { clockHour, inNight } from '../../core/night';
 import { fxTotals, hasMvp, itemNeed } from '../../core/product';
 import { productView } from './ProductApp';
 import { MilestoneCard, RISK_TEXT } from './MilestoneCard';
 import { forecast, KIND_NAME, milestones, openMilestones, trustWord } from '../../core/milestones';
-import { delegates, acceptOuting, awayOuting, cancelOuting, dayName, declineOuting, hhmm, isFullDay, outingConflict, outingRange, outingTravel, outings, outingTpl, todayOutings } from '../../core/outings';
+import { delegates, awayOuting, dayName, hhmm, isFullDay, outingConflict, outingRange, outingTravel, outings, outingTpl, todayOutings } from '../../core/outings';
 import { useState } from 'react';
-import { act, useGame } from '../store';
+import { dispatch, useGame } from '../store';
+import type { Command } from '../../core/commands';
 import type { ActionId, GameState, Outing } from '../../core/types';
 import './apps.css';
 
@@ -51,8 +53,17 @@ function outingPurpose(o: Outing): string {
 // 참고: IR 점수는 투자 확률을 40점에서 최대(+20%p)로 올리고 라운드가 끝나면 0으로 돌아감.
 //       네트워크는 지원자 +30%/100점(최대 +60%), 투자사 관심 +1/10점(최대 +15). 파이프라인은 enterpriseThreshold(s)를 넘으면 대기업 계약
 export function standingWords(s: GameState): { label: string; word: string; tone: 'good' | 'mid' | 'low' }[] {
-  // TODO(human)
-  return [];
+  const words: { label: string; word: string; tone: 'good' | 'mid' | 'low' }[] = [];
+  if (!s.public && s.rounds.some((r) => r.status === 'open')) {
+    const ir = s.irPoints;
+    words.push({ label: 'IR', word: ir >= 40 ? '투자자에게 충분히 알림' : ir >= 15 ? '투자자에게 조금씩 알리는 중' : '아직 투자자에게 알리지 않음', tone: ir >= 40 ? 'good' : ir >= 15 ? 'mid' : 'low' });
+  }
+  const net = s.networkPoints;
+  words.push({ label: '네트워크', word: net >= 150 ? '인맥이 두루 넓음' : net >= 50 ? '인맥을 쌓는 중' : '인맥이 적음', tone: net >= 150 ? 'good' : net >= 50 ? 'mid' : 'low' });
+  const th = enterpriseThreshold(s);
+  const pipe = s.entPipeline / th;
+  words.push({ label: '대기업 영업', word: pipe >= 1 ? '곧 계약 성사' : pipe >= 0.4 ? '가능성을 쌓는 중' : '아직 초기 단계', tone: pipe >= 1 ? 'good' : pipe >= 0.4 ? 'mid' : 'low' });
+  return words;
 }
 
 // ── 개발 사이클 일정(A-168): 만드는 순서가 언제 시작해 언제 끝나는지를 8주 타임라인으로 ──
@@ -120,7 +131,7 @@ export function ScheduleApp() {
   const work = ceoWork(s);
   const list = outings(s);
   const offers = list.filter((o) => o.status === 'offer').sort((a, b) => a.startDay - b.startDay);
-  const run = (f: Parameters<typeof act>[0]) => setErr((act(f) as string | null | undefined) ?? null);
+  const run = (c: Command) => setErr((dispatch(c) as string | null | undefined) ?? null);
   const energy = energyWord(ceoEnergy(s));
   const v = productView(s);
   const bars = cycleBars(s, v);
@@ -180,7 +191,7 @@ export function ScheduleApp() {
                   data-testid={`work-${a}`}
                   disabled={!!blocked}
                   title={blocked ?? ''}
-                  onClick={() => run((g) => setCeoWork(g, a))}
+                  onClick={() => run({ type: 'setCeoWork', work: a })}
                 >
                   <div className="wt-head">
                     <b>{actionDef(a).name}</b>
@@ -196,10 +207,10 @@ export function ScheduleApp() {
         <div>
           <div className="hf-label">대표 모드</div>
           <div className="seg">
-            <button className={!exec ? 'on' : ''} data-testid="mode-founder" onClick={() => run((g) => setCeoMode(g, 'founder'))}>
+            <button className={!exec ? 'on' : ''} data-testid="mode-founder" onClick={() => run({ type: 'setCeoMode', mode: 'founder' })}>
               실무 모드
             </button>
-            <button className={exec ? 'on' : ''} data-testid="mode-executive" disabled={!!execErr} title={execErr ?? ''} onClick={() => run((g) => setCeoMode(g, 'executive'))}>
+            <button className={exec ? 'on' : ''} data-testid="mode-executive" disabled={!!execErr} title={execErr ?? ''} onClick={() => run({ type: 'setCeoMode', mode: 'executive' })}>
               경영 모드
             </button>
           </div>
@@ -420,7 +431,7 @@ export function ScheduleApp() {
             {picked.status === 'done' ? (
               <span className="chip">다녀옴</span>
             ) : s.day < picked.startDay ? (
-              <button className="btn small ghost" onClick={() => run((g) => cancelOuting(g, picked.id))} title="비용은 돌려받지 못하고, 상대가 서운해합니다">
+              <button className="btn small ghost" onClick={() => run({ type: 'cancelOuting', outingId: picked.id })} title="비용은 돌려받지 못하고, 상대가 서운해합니다">
                 취소
               </button>
             ) : (
@@ -476,7 +487,7 @@ export function OutingOfferActions({ o, onErr }: { o: Outing; onErr: (e: string 
   const sent = who && can.some((e) => e.id === who) ? who : undefined;
   const c = outingConflict(s, o, sent);
   const started = !!c && s.day >= c.startDay;
-  const run = (f: Parameters<typeof act>[0]) => onErr((act(f) as string | null | undefined) ?? null);
+  const run = (c: Command) => onErr((dispatch(c) as string | null | undefined) ?? null);
   const whoName = sent ? `${can.find((e) => e.id === sent)!.name}님의 ` : '';
   return (
     <>
@@ -502,16 +513,16 @@ export function OutingOfferActions({ o, onErr }: { o: Outing; onErr: (e: string 
       )}
       {c ? (
         !started && (
-          <button className="btn small" data-testid={`outing-replace-${o.id}`} title="취소한 일정의 비용은 돌려받지 못하고, 상대가 서운해합니다" onClick={() => run((g) => acceptOuting(g, o.id, true, sent))}>
+          <button className="btn small" data-testid={`outing-replace-${o.id}`} title="취소한 일정의 비용은 돌려받지 못하고, 상대가 서운해합니다" onClick={() => run({ type: 'acceptOuting', outingId: o.id, replace: true, delegateId: sent })}>
             기존 일정 취소하고 수락
           </button>
         )
       ) : (
-        <button className="btn small green" data-testid={`outing-accept-${o.id}`} onClick={() => run((g) => acceptOuting(g, o.id, false, sent))}>
+        <button className="btn small green" data-testid={`outing-accept-${o.id}`} onClick={() => run({ type: 'acceptOuting', outingId: o.id, replace: false, delegateId: sent })}>
           {sent ? '보내기' : '수락'}
         </button>
       )}
-      <button className="btn small ghost" data-testid={`outing-decline-${o.id}`} onClick={() => run((g) => declineOuting(g, o.id))}>
+      <button className="btn small ghost" data-testid={`outing-decline-${o.id}`} onClick={() => run({ type: 'declineOuting', outingId: o.id })}>
         {c ? '새 초대 거절' : '거절'}
       </button>
     </>

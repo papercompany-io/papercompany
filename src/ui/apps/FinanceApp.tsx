@@ -7,8 +7,8 @@ import { currentPL, debtBalance, loanInterestDue, loanPrincipalDue, runwayMonths
 import { wonShort } from '../../core/format';
 import { monthPlan } from '../../core/forecast';
 import { computeValuation } from '../../core/valuation';
-import { applyForLoan, earlyRepayCost, loanBlock, loanHint, repayEarly } from '../../core/loans';
-import { act, useGame } from '../store';
+import { earlyRepayCost, loanBlock, loanHint } from '../../core/loans';
+import { dispatch, useGame } from '../store';
 import { Money, Tabs, Help } from '../common';
 import type { MonthPL } from '../../core/types';
 import './apps.css';
@@ -162,7 +162,7 @@ function LoanDesk() {
               title={short ? '잔고가 부족합니다' : undefined}
               onClick={() => {
                 if (sure !== l.id) return setSure(l.id);
-                act((g) => repayEarly(g, l.id));
+                dispatch({ type: 'repayEarly', loanId: l.id });
                 setSure(null);
               }}
             >
@@ -179,7 +179,7 @@ function LoanDesk() {
               {k === 'policy' ? '정책자금' : '은행 대출'}
               <small>{why ?? loanHint(s, k)}</small>
             </span>
-            <button className="btn small" data-testid={`loan-apply-${k}`} disabled={!!why} onClick={() => act((g) => applyForLoan(g, k))}>
+            <button className="btn small" data-testid={`loan-apply-${k}`} disabled={!!why} onClick={() => dispatch({ type: 'applyForLoan', kind: k })}>
               {k === 'policy' ? '신청' : '빌리기'}
             </button>
           </div>

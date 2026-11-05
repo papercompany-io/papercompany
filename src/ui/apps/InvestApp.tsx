@@ -10,32 +10,24 @@ import { formatDate } from '../../core/calendar';
 import { totalShares } from '../../core/equity';
 import { pct, pctsSumTo100, wonShort } from '../../core/format';
 import {
-  acceptOffer,
   activeRound,
-  askCoInvest,
-  closeForOffer,
   coInvestProbability,
   coInvestors,
   decisionProbability,
   fits,
   letterGain,
   pendingDecision,
-  rejectOffer,
-  requestDecision,
   roundMath,
   selectableStages,
-  sendLetter,
   stageConditions,
-  startRound,
   canSafe,
-  cancelRound,
 } from '../../core/funding';
 import { externalChannelId } from '../../core/messenger';
 import { computeValuation } from '../../core/valuation';
-import { act, useGame } from '../store';
+import { dispatch, useGame } from '../store';
 import { Tabs, chanceLabel } from '../common';
 import { ExitApp } from './ExitApp';
-import { esopEntry, esopFree, investorPct, topUpEsop } from '../../core/equity';
+import { esopEntry, esopFree, investorPct } from '../../core/equity';
 import type { GameState, LetterThread, Round, StageId } from '../../core/types';
 import './apps.css';
 import './skin/InvestApp.css';
@@ -211,7 +203,7 @@ function RoundTab({ initialStage, goInvestors }: { initialStage?: string; goInve
           className="btn big"
           data-testid="round-open"
           onClick={() => {
-            const e = act((g) => startRound(g, stageId, room, safeOk ? instrument : 'equity'));
+            const e = dispatch({ type: 'startRound', stage: stageId, room, instrument: safeOk ? instrument : 'equity' }) as string | null | undefined;
             setErr(e ?? null);
             if (!e) goInvestors();
           }}
@@ -289,7 +281,7 @@ function OpenRound({ r, goInvestors }: { r: Round; goInvestors: () => void }) {
         {err && <div className="err">{err}</div>}
         <div className="row">
           {!r.leadId && (
-            <button className="btn ghost" data-testid="round-cancel" onClick={() => setErr(act((g) => cancelRound(g, r.id)) ?? null)}>
+            <button className="btn ghost" data-testid="round-cancel" onClick={() => setErr((dispatch({ type: 'cancelRound', roundId: r.id }) as string | null | undefined) ?? null)}>
               라운드 취소
             </button>
           )}
@@ -299,7 +291,7 @@ function OpenRound({ r, goInvestors }: { r: Round; goInvestors: () => void }) {
             data-testid="round-close-offer"
             disabled={!r.leadId}
             onClick={() => {
-              const e = act((g) => closeForOffer(g, r.id));
+              const e = dispatch({ type: 'closeForOffer', roundId: r.id }) as string | null | undefined;
               setErr(e ?? null);
             }}
           >
@@ -369,11 +361,11 @@ function OfferView({ r }: { r: Round }) {
         </div>
         {err && <div className="err">{err}</div>}
         <div className="row">
-          <button className="btn red" data-testid="offer-reject" onClick={() => setErr(act((g) => rejectOffer(g, r.id)) ?? null)}>
+          <button className="btn red" data-testid="offer-reject" onClick={() => setErr((dispatch({ type: 'rejectOffer', roundId: r.id }) as string | null | undefined) ?? null)}>
             거절
           </button>
           <div className="grow" />
-          <button className="btn green big" data-testid="offer-accept" onClick={() => setErr(act((g) => acceptOffer(g, r.id)) ?? null)}>
+          <button className="btn green big" data-testid="offer-accept" onClick={() => setErr((dispatch({ type: 'acceptOffer', roundId: r.id }) as string | null | undefined) ?? null)}>
             받기
           </button>
         </div>
@@ -519,8 +511,19 @@ interface NextCtx {
 type NextTone = 'go' | 'wait' | 'done' | 'warn';
 
 function nextStep(c: NextCtx): { text: string; tone: NextTone } {
-  // TODO(human)
-  return { text: '', tone: 'go' };
+  if (!c.open) return { text: '', tone: 'go' };
+  if (c.isLead) return { text: '리드 투자사로 확정됐습니다.', tone: 'done' };
+  if (c.t?.decision === 'declined') return { text: '투자하지 않기로 했습니다.', tone: 'done' };
+  if (c.t?.coInvest === 'declined' && !c.canDecide) return { text: '공동 투자를 거절했습니다.', tone: 'done' };
+  if (c.t?.coInvest === 'joined') return { text: '공동 투자자로 참여합니다.', tone: 'done' };
+  if (c.t?.decision === 'pending') return { text: '투자 결정을 기다리는 중입니다.', tone: 'wait' };
+  if (c.replyDue) return { text: '답장을 기다리는 중입니다.', tone: 'wait' };
+  if (c.canDecide) return { text: '투자 결정을 요청하세요.', tone: 'go' };
+  if (c.canCoInvest) return { text: '같이 투자하자고 제안하세요.', tone: 'go' };
+  if (c.waitingName) return { text: `${c.waitingName}의 결정을 먼저 기다립니다.`, tone: 'wait' };
+  if (!c.fit) return { text: '이 단계에 잘 투자하지 않는 투자사입니다.', tone: 'warn' };
+  if (!c.t || c.t.sent.length === 0) return { text: '소개나 투자 제안 레터를 보내세요.', tone: 'go' };
+  return { text: '관심을 더 높인 뒤 투자 결정을 요청하세요.', tone: 'go' };
 }
 
 function InvestorPanel({ inv, open, openChat }: { inv: Inv; open: Round | null; openChat?: (channelId: string) => void }) {
@@ -532,7 +535,7 @@ function InvestorPanel({ inv, open, openChat }: { inv: Inv; open: Round | null; 
   // 보낸 직후 관심이 얼마나 바뀌었는지 보여 줌(답장은 다음 날 와서 이유를 알려 줌)
   const send = (letterId: string, name: string) => {
     const v = letterGain(s, open!, inv.id, letterId, ask);
-    const e = act((g) => sendLetter(g, open!.id, inv.id, letterId, ask)) ?? null;
+    const e = (dispatch({ type: 'sendLetter', roundId: open!.id, investorId: inv.id, letterId, askId: ask }) as string | null | undefined) ?? null;
     setErr(e);
     setGain(e ? null : { name, v });
   };
@@ -602,7 +605,7 @@ function InvestorPanel({ inv, open, openChat }: { inv: Inv; open: Round | null; 
             </span>
             <span className="inv-why">{dp.factors.filter((f) => f.value < 0 || f.mult).map((f) => f.label).join(' · ') || '좋은 조건입니다'}</span>
           </div>
-          <button className="btn green" data-testid={`decide-${inv.id}`} onClick={() => setErr(act((g) => requestDecision(g, open!.id, inv.id)) ?? null)}>
+          <button className="btn green" data-testid={`decide-${inv.id}`} onClick={() => setErr((dispatch({ type: 'requestDecision', roundId: open!.id, investorId: inv.id }) as string | null | undefined) ?? null)}>
             요청
           </button>
         </div>
@@ -621,7 +624,7 @@ function InvestorPanel({ inv, open, openChat }: { inv: Inv; open: Round | null; 
               참여 가능성 <b>{chanceLabel(cp)}</b>
             </span>
           </div>
-          <button className="btn green" data-testid={`coinvest-${inv.id}`} onClick={() => setErr(act((g) => askCoInvest(g, open!.id, inv.id)) ?? null)}>
+          <button className="btn green" data-testid={`coinvest-${inv.id}`} onClick={() => setErr((dispatch({ type: 'askCoInvest', roundId: open!.id, investorId: inv.id }) as string | null | undefined) ?? null)}>
             제안
           </button>
         </div>
@@ -784,7 +787,7 @@ function EsopCard() {
       )}
       <div className="row">
         {[0.05, 0.1].map((p) => (
-          <button key={p} className="btn small ghost" data-testid={`esop-${p * 100}`} onClick={() => setErr(act((g) => topUpEsop(g, p)) ?? null)}>
+          <button key={p} className="btn small ghost" data-testid={`esop-${p * 100}`} onClick={() => setErr((dispatch({ type: 'topUpEsop', pct: p }) as string | null | undefined) ?? null)}>
             {pool ? '늘리기' : '만들기'} {p * 100}%
           </button>
         ))}
@@ -847,11 +850,17 @@ export function InvestorBar({ investorId, onPeek, onOpenInvest }: { investorId: 
   );
 }
 
-// 이 투자사와 다음에 할 일 한 문장(존댓말 보고체)
+// 이 투자사와 다음에 할 일 한 문장(존댓말 보고체). nextStep과 같은 판단, InvestorBar처럼 간단한 맥락에서 부름
 function investorNextStep(s: GameState, r: Round | null, investorId: string): string {
-  const t = r?.letters[investorId];
-  // TODO(human)
-  return '';
+  if (!r || r.status !== 'open') return '';
+  const t = r.letters[investorId];
+  const fit = fits(investorId, r.stage);
+  const isLead = r.leadId === investorId;
+  const waiting = pendingDecision(r);
+  const canDecide = !!(t && t.sent.length && !r.leadId && !t.decision && !waiting);
+  const canCoInvest = !!(t && t.sent.length && r.leadId && !isLead && !t.coInvest);
+  const waitingName = waiting && waiting.investorId !== investorId ? investor(waiting.investorId).name : null;
+  return nextStep({ open: r, t, fit, isLead, waitingName, canDecide, canCoInvest, replyDue: !!t?.pendingReplies.length }).text;
 }
 
 // 투자 요약 팝업(A-124): 메신저에서 "투자 메뉴 열기"를 누르면 창을 바꾸지 않고 지금 라운드와 이 투자사 상태만 간단히 보여 줍니다.

@@ -165,8 +165,8 @@ export function excessChurn(s: GameState, m: MarketId): number {
   const rivals = s.competitors.filter((c) => c.alive && c.markets.includes(m));
   const ref = rivals.length ? rivals.reduce((a, c) => a + c.appeal, 0) / rivals.length : 20;
   const ratio = appeal(s) / Math.max(1, ref); // 1 = 경쟁사 평균만큼 매력 있음
-  // TODO(human): ratio에 따라 base를 늘리거나 줄여 돌려주기
-  return base;
+  // 매력도가 경쟁사 평균보다 낮으면(ratio < 1) 더 빨리 떠나고, 높으면(ratio > 1) 덜 떠남. 0.5~2배로 제한
+  return base * Math.max(0.5, Math.min(2, 2 - ratio));
 }
 
 export interface DayPush {

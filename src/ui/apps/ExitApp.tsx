@@ -4,11 +4,11 @@ import { useState } from 'react';
 import { DATA } from '../../core/data';
 import { formatDate } from '../../core/calendar';
 import { founderPct } from '../../core/equity';
-import { acceptSale, annualRevenue, declineSale, distressMult, exitBlocked, exitProbability, saleProbability, startExit } from '../../core/exit';
+import { annualRevenue, distressMult, exitBlocked, exitProbability, saleProbability } from '../../core/exit';
 import { wonShort } from '../../core/format';
 import { pct } from '../../core/format';
 import { computeValuation } from '../../core/valuation';
-import { act, useGame } from '../store';
+import { dispatch, useGame } from '../store';
 import { Money, chanceLabel } from '../common';
 import { AppIcon, PxIcon } from '../icons';
 import './apps.css';
@@ -105,10 +105,10 @@ export function ExitApp() {
           </div>
           {err && <div className="err">{err}</div>}
           <div className="ex2-btns">
-            <button className="btn ghost" data-testid="sale-decline" onClick={() => setErr(act((g) => declineSale(g)) ?? null)}>
+            <button className="btn ghost" data-testid="sale-decline" onClick={() => setErr((dispatch({ type: 'declineSale' }) as string | null | undefined) ?? null)}>
               거절
             </button>
-            <button className="btn green big" data-testid="sale-accept" onClick={() => setErr(act((g) => acceptSale(g)) ?? null)}>
+            <button className="btn green big" data-testid="sale-accept" onClick={() => setErr((dispatch({ type: 'acceptSale' }) as string | null | undefined) ?? null)}>
               매각 진행(회사 종료)
             </button>
           </div>
@@ -218,7 +218,7 @@ export function ExitApp() {
                 className="btn"
                 data-testid="exit-confirm-yes"
                 onClick={() => {
-                  setErr(act((g) => startExit(g, confirm)) ?? null);
+                  setErr((dispatch({ type: 'startExit', method: confirm }) as string | null | undefined) ?? null);
                   setConfirm(null);
                 }}
               >

@@ -264,7 +264,7 @@ export function Guide({ blocked }: { blocked: boolean }) {
 }
 
 // 안내를 하나 닫은 뒤 다음 안내까지 쉬는지. today = 오늘(게임 날), last = 마지막으로 닫은 날(이번에 켠 뒤 없으면 null)
+// 같은 날 여러 안내가 연달아 뜨지 않게, 하루 쉼
 function guideRest(today: number, last: number | null): boolean {
-  // TODO(human)
-  return false;
+  return last !== null && today === last;
 }

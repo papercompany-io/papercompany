@@ -13,4 +13,12 @@ playtest/dumps*
 .env
 .env.*
 
+# wrangler 로컬 비밀값(AUTH_ENCRYPTION_KEY 등, A-250)
+.dev.vars
+.dev.vars.*
+
+# wrangler 로컬 실행 상태(D1, R2, 이메일 에뮬레이션 파일)
+.wrangler/
+
 .claude/worktrees/
+.omo/
