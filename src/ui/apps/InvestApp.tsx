@@ -511,8 +511,19 @@ interface NextCtx {
 type NextTone = 'go' | 'wait' | 'done' | 'warn';
 
 function nextStep(c: NextCtx): { text: string; tone: NextTone } {
-  // TODO(human)
-  return { text: '', tone: 'go' };
+  if (!c.open) return { text: '', tone: 'go' };
+  if (c.isLead) return { text: '리드 투자사로 확정됐습니다.', tone: 'done' };
+  if (c.t?.decision === 'declined') return { text: '투자하지 않기로 했습니다.', tone: 'done' };
+  if (c.t?.coInvest === 'declined' && !c.canDecide) return { text: '공동 투자를 거절했습니다.', tone: 'done' };
+  if (c.t?.coInvest === 'joined') return { text: '공동 투자자로 참여합니다.', tone: 'done' };
+  if (c.t?.decision === 'pending') return { text: '투자 결정을 기다리는 중입니다.', tone: 'wait' };
+  if (c.replyDue) return { text: '답장을 기다리는 중입니다.', tone: 'wait' };
+  if (c.canDecide) return { text: '투자 결정을 요청하세요.', tone: 'go' };
+  if (c.canCoInvest) return { text: '같이 투자하자고 제안하세요.', tone: 'go' };
+  if (c.waitingName) return { text: `${c.waitingName}의 결정을 먼저 기다립니다.`, tone: 'wait' };
+  if (!c.fit) return { text: '이 단계에 잘 투자하지 않는 투자사입니다.', tone: 'warn' };
+  if (!c.t || c.t.sent.length === 0) return { text: '소개나 투자 제안 레터를 보내세요.', tone: 'go' };
+  return { text: '관심을 더 높인 뒤 투자 결정을 요청하세요.', tone: 'go' };
 }
 
 function InvestorPanel({ inv, open, openChat }: { inv: Inv; open: Round | null; openChat?: (channelId: string) => void }) {
@@ -839,11 +850,17 @@ export function InvestorBar({ investorId, onPeek, onOpenInvest }: { investorId: 
   );
 }
 
-// 이 투자사와 다음에 할 일 한 문장(존댓말 보고체)
+// 이 투자사와 다음에 할 일 한 문장(존댓말 보고체). nextStep과 같은 판단, InvestorBar처럼 간단한 맥락에서 부름
 function investorNextStep(s: GameState, r: Round | null, investorId: string): string {
-  const t = r?.letters[investorId];
-  // TODO(human)
-  return '';
+  if (!r || r.status !== 'open') return '';
+  const t = r.letters[investorId];
+  const fit = fits(investorId, r.stage);
+  const isLead = r.leadId === investorId;
+  const waiting = pendingDecision(r);
+  const canDecide = !!(t && t.sent.length && !r.leadId && !t.decision && !waiting);
+  const canCoInvest = !!(t && t.sent.length && r.leadId && !isLead && !t.coInvest);
+  const waitingName = waiting && waiting.investorId !== investorId ? investor(waiting.investorId).name : null;
+  return nextStep({ open: r, t, fit, isLead, waitingName, canDecide, canCoInvest, replyDue: !!t?.pendingReplies.length }).text;
 }
 
 // 투자 요약 팝업(A-124): 메신저에서 "투자 메뉴 열기"를 누르면 창을 바꾸지 않고 지금 라운드와 이 투자사 상태만 간단히 보여 줍니다.
