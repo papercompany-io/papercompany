@@ -69,8 +69,7 @@ export function appOpen(s: GameState, id: AppId): boolean {
 
 // 외주 메뉴 뱃지(A-207): 업무 창 탭 이름에 붙던 "진행 중"·제안 수를 메뉴 숫자로
 function contractBadge(s: GameState): number {
-  // TODO(human)
-  return 0;
+  return s.contracts?.offers.length ?? 0;
 }
 
 export function badge(s: GameState, id: AppId): number {
