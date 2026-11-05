@@ -8,7 +8,7 @@ import { useProfile } from './meta';
 import { formatDate } from '../core/calendar';
 import { wonShort } from '../core/format';
 import { play } from './sound';
-import { online, type Account } from '../platform/online';
+import { online, setOnlineMode, type Account } from '../platform/online';
 import { BootOnline } from './BootOnline';
 import { BootLobby } from './BootLobby';
 import './boot.css';
@@ -101,6 +101,7 @@ export function Boot({ onNew, onContinue, onHall, onWeekly }: Props) {
             data-testid="new-career"
             onClick={() => {
               play('click');
+              if (me) setOnlineMode(true); // 로그인한 채 새 커리어를 시작하면 이 기기도 온라인 모드로 맞춤(로그인만 하고 클라우드에 동기화되지 않는 것 방지)
               onNew();
             }}
           >
