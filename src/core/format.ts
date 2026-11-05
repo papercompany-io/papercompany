@@ -6,6 +6,7 @@ export function won(n: number): string {
 
 // 짧은 표기: 1억 2,345만원
 export function wonShort(n: number): string {
+  if (!Number.isFinite(n)) return '0원'; // 거의 일어날 수 없지만 NaN/Infinity가 들어오어났을 뒠 "원"만 랒는 것보다 0이 낫다(QA)
   const sign = n < 0 ? '-' : '';
   let v = Math.round(Math.abs(n));
   if (v < 10000) return `${sign}${v.toLocaleString('ko-KR')}원`;
