@@ -283,7 +283,12 @@ function DealCard({ s, d, x, setMsg }: { s: GameState; d: AdDeal; x: DealFlow | 
 // 광고 단가 흥정 창(채용 협상 창과 같은 짜임): 왼쪽 위 광고주(형식·하루 노출·원하는 기간·인내심), 왼쪽 아래 제안(단가 슬라이더·기간), 오른쪽 대화
 function AdNegotiationDialog({ offerId, onClose, onDone }: { offerId: string; onClose: () => void; onDone: (text: string) => void }) {
   const s = useGame();
-  const o = adSalesOf(s).offers.find((x) => x.id === offerId);
+  const live = adSalesOf(s).offers.find((x) => x.id === offerId);
+  // A-261: 계약이 성립하면 sign()이 offer를 목록에서 바로 지워 o가 undefined가 됨.
+  // doneMsg(계약 완료 메시지)를 보여주는 동안은 사라지기 전 마지막 값을 붙잡아 창이 뚝 끊기지 않게 함.
+  const lastOffer = useRef(live);
+  if (live) lastOffer.current = live;
+  const o = live ?? lastOffer.current;
   // 창을 열면 광고주가 먼저 첫 제안을 말함
   useEffect(() => {
     dispatch({ type: 'openAdNegotiation', offerId });
