@@ -90,11 +90,32 @@ async function readJson(req: Request): Promise<Record<string, unknown>> {
   if (!(req.headers.get('content-type') ?? '').toLowerCase().startsWith('application/json')) {
     throw new HttpError(415, 'unsupported_media_type', 'Content-Type은 application/json이어야 합니다.');
   }
-  const text = await req.text();
-  if (new TextEncoder().encode(text).byteLength > AUTH_LIMITS.bodyBytes) throw new HttpError(413, 'too_large', '요청 본문이 너무 큽니다.');
+  const declared = Number(req.headers.get('content-length') ?? '0');
+  if (declared > AUTH_LIMITS.bodyBytes) throw new HttpError(413, 'too_large', '요청 본문이 너무 큽니다.');
+  if (!req.body) throw new HttpError(400, 'bad_request', '요청 본문이 없습니다.');
+  // content-length가 없거나 틀릴 수 있으므로 읽으면서도 상한을 지킵니다
+  const reader = req.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > AUTH_LIMITS.bodyBytes) {
+      await reader.cancel();
+      throw new HttpError(413, 'too_large', '요청 본문이 너무 큽니다.');
+    }
+    chunks.push(value);
+  }
+  const buf = new Uint8Array(total);
+  let at = 0;
+  for (const c of chunks) {
+    buf.set(c, at);
+    at += c.byteLength;
+  }
   let body: unknown;
   try {
-    body = JSON.parse(text);
+    body = JSON.parse(new TextDecoder().decode(buf));
   } catch {
     throw new HttpError(400, 'bad_json', '본문이 올바른 JSON이 아닙니다.');
   }
