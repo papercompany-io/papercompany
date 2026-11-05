@@ -90,7 +90,8 @@ export function Boot({ onNew, onContinue, onHall, onWeekly }: Props) {
               </span>
             </button>
           )}
-          {!live && !sv && !me && (
+          {/* A-263: sv(은퇴해 끝난 저장)가 있어도 덮어쓸 진행이 없으니 로그인 선택지를 숨길 이유가 없음 */}
+          {!live && !me && (
             <button className="btn big" data-testid="boot-online-open" onClick={() => setOnlinePick(true)}>
               로그인하고 온라인으로 시작
               <span className="boot-meta">다른 기기에서도 같은 판이 자동으로 맞습니다</span>
